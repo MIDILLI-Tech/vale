@@ -1,0 +1,604 @@
+{% extends "layout.twig" %}
+{% set entity_label = 'product' %}
+
+{% block title %}{{ product.metaTitle|default(product.name) }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ product.metaDescription|default(product.shortDescription) }}{% endblock %}
+{% block meta_robots %}{% if seo is defined and seo and seo.robots %}<meta name="robots" content="{{ seo.robots }}">{% endif %}{% endblock %}
+{% block canonical_url %}{{ site_url ~ routing_shop_prefix ~ '/' ~ product.slug }}{% endblock %}
+{% block og_title %}{% if seo is defined and seo %}{{ seo.effectiveOgTitle|default(product.metaTitle|default(product.name)) }}{% else %}{{ product.metaTitle|default(product.name) }}{% endif %}{% endblock %}
+{% block og_description %}{% if seo is defined and seo %}{{ seo.effectiveOgDescription|default(product.metaDescription|default(product.shortDescription)) }}{% else %}{{ product.metaDescription|default(product.shortDescription) }}{% endif %}{% endblock %}
+{% block og_type %}product{% endblock %}
+
+{% block content %}
+{% if is_preview %}
+<div class="sticky top-0 z-50 bg-amber-500 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm">
+  &#9888; {{ __('Preview Mode — this product is not yet published.') }}
+  <a href="{{ url('/admin/products/' ~ product.id ~ '/edit') }}" class="ml-3 underline hover:text-amber-900">{{ __('Edit') }}</a>
+</div>
+{% endif %}
+<div class="mx-auto max-w-4xl px-4 py-10">
+
+    {# Breadcrumb #}
+    <nav class="mb-6 text-sm text-slate-400">
+        <a href="{{ url(routing_shop_prefix) }}" class="text-blue-400 hover:text-blue-300">{{ __('Shop') }}</a> / <span class="text-slate-200">{{ product.name }}</span>
+    </nav>
+
+    <div class="grid md:grid-cols-2 gap-10 mb-12">
+        {# Gallery / Image #}
+        {% set _slides = [] %}
+        {% if featured_image %}{% set _slides = _slides|merge([featured_image]) %}{% endif %}
+        {% for img in gallery_images|default([]) %}{% set _slides = _slides|merge([img]) %}{% endfor %}
+        <div class="space-y-3"
+             x-data="productGallery({{ _slides|json_encode }})"
+             @variation-image.window="setOverride($event.detail)">
+
+            <div class="rounded-2xl overflow-hidden bg-slate-900 aspect-square relative">
+                <template x-if="override">
+                    <img :src="override.url" class="w-full h-full object-contain" alt="{{ product.name|e }}">
+                </template>
+                <template x-if="!override && slides.length > 0 && slides[current].is_video">
+                    <video :src="slides[current].url" controls preload="metadata" playsinline
+                           class="w-full h-full object-contain bg-black"></video>
+                </template>
+                <template x-if="!override && slides.length > 0 && !slides[current].is_video">
+                    <img :src="slides[current].url" class="w-full h-full object-contain" alt="{{ product.name|e }}">
+                </template>
+                <template x-if="!override && slides.length === 0">
+                    <div class="w-full h-full flex items-center justify-center text-slate-600">
+                        <svg class="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                </template>
+                <template x-if="!override && slides.length > 1">
+                    <div>
+                        <button type="button" @click="prev()"
+                                class="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-slate-800/80 hover:bg-slate-700 p-2 shadow-sm transition-colors">
+                            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" @click="next()"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-slate-800/80 hover:bg-slate-700 p-2 shadow-sm transition-colors">
+                            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </template>
+            </div>
+
+            <div x-show="!override && slides.length > 1" class="flex gap-2 overflow-x-auto pb-1">
+                <template x-for="(slide, i) in slides" :key="i">
+                    <button type="button" @click="pauseAll(); current = i"
+                            class="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors"
+                            :class="i === current ? 'border-blue-500' : 'border-transparent hover:border-slate-600'">
+                        <template x-if="slide.is_video">
+                            <span class="flex w-full h-full items-center justify-center bg-slate-900 text-2xl">🎬</span>
+                        </template>
+                        <template x-if="!slide.is_video">
+                            <img :src="slide.thumbnail || slide.url" class="w-full h-full object-cover" alt="">
+                        </template>
+                        <template x-if="slide.is_video">
+                            <span class="absolute left-0.5 top-0.5 rounded-sm bg-black/60 px-1 py-px text-[9px] font-semibold uppercase text-white">{{ __('Video') }}</span>
+                        </template>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        {# Details #}
+        <div {% if variations|default([])|length > 0 %}x-data="productVariations()"{% endif %}>
+            <h1 class="text-3xl font-bold text-white mb-2">{{ product.name }}</h1>
+
+            {# Star rating #}
+            {% if product.voteStatus == 'enabled' or (product.voteStatus == 'use_global' and (global_star_ratings_enabled ?? true)) %}
+            {% include 'partials/vote-widget.twig' with {product: product, vote: vote, user_vote: user_vote} %}
+            {% endif %}
+
+            <div class="mt-4 mb-6">
+                {% if variations|default([])|length > 0 %}
+                <template x-if="!selectedPrice">
+                    <div>
+                        {% if price_min is defined and price_min is not null %}
+                        {% if price_min == price_max %}
+                        <span class="text-3xl font-bold text-white">{{ (price_min * fx_rate)|price(current_currency) }}</span>
+                        {% else %}
+                        <span class="text-3xl font-bold text-white">{{ (price_min * fx_rate)|price(current_currency) }} – {{ (price_max * fx_rate)|price(current_currency) }}</span>
+                        {% endif %}
+                        {% elseif product.salePrice %}
+                        <span class="text-3xl font-bold text-red-400">{{ (product.salePrice * fx_rate)|price(current_currency) }}</span>
+                        <span class="ml-2 text-xl text-slate-500 line-through">{{ (product.price * fx_rate)|price(current_currency) }}</span>
+                        {% else %}
+                        <span class="text-3xl font-bold text-white">{{ (product.price * fx_rate)|price(current_currency) }}</span>
+                        {% endif %}
+                    </div>
+                </template>
+                <template x-if="selectedPrice">
+                    <span class="text-3xl font-bold text-white" x-text="new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(selectedPrice) * {{ fx_rate }})"></span>
+                </template>
+                {% else %}
+                {% if product.salePrice %}
+                <span class="text-3xl font-bold text-red-400">{{ (product.salePrice * fx_rate)|price(current_currency) }}</span>
+                <span class="ml-2 text-xl text-slate-500 line-through">{{ (product.price * fx_rate)|price(current_currency) }}</span>
+                {% else %}
+                <span class="text-3xl font-bold text-white">{{ (product.price * fx_rate)|price(current_currency) }}</span>
+                {% endif %}
+                {% endif %}
+
+                {% if tax_policy is defined %}
+                    {% if tax_policy.regime == 'normal_vat' and (product_tax_rate|default(0)) > 0 %}
+                    <p class="mt-1 text-xs text-slate-400">{{ __('Price includes VAT') }} ({{ product_tax_rate|num(2) }}%).</p>
+                    {% elseif tax_policy.zero_reason|default('') != '' %}
+                    <p class="mt-1 text-xs text-slate-400">{{ tax_policy.zero_reason }}</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            {% if product.shortDescription %}
+            <div class="prose prose-sm mb-6 text-slate-300">{{ product.shortDescription|raw }}</div>
+            {% endif %}
+
+            {% if has_access is defined and not has_access %}
+            <div class="mb-6 rounded-2xl border border-indigo-400/30 bg-slate-800/60 p-6 text-center shadow-xl">
+                <p class="text-lg font-bold text-white mb-2">{{ __('This product is for members only.') }}</p>
+                <p class="mt-2 text-sm text-slate-300 mb-4">{{ __('Subscribe to get access to purchase this product.') }}</p>
+                <a href="{{ url('/membership') }}" class="inline-block rounded-lg btn-neon px-5 py-2.5 text-sm font-bold text-white transition-colors">{{ __('View Membership Plans') }}</a>
+            </div>
+            {% endif %}
+            {% if variations|default([])|length > 0 %}
+            <template x-if="!selectedStockStatus">
+                <div>
+                    {% if product.stockStatus == 'in_stock' %}
+                    <p class="mb-4 text-sm text-green-400 font-medium">✓ {{ __('In Stock') }}</p>
+                    {% if low_stock_warning_enabled|default(false) and product.stockQuantity > 0 and product.stockQuantity <= (low_stock_warning_threshold|default(2)) %}
+                    <p class="mb-4 text-sm text-amber-400 font-medium">{{ __('Hurry! Only :count item(s) left in stock.', {':count': product.stockQuantity}) }}</p>
+                    {% elseif show_stock_count|default(false) and product.stockQuantity > 0 %}
+                    <p class="mb-4 text-sm text-slate-400 font-medium">{{ product.stockQuantity }} {{ __('in stock') }}</p>
+                    {% endif %}
+                    {% elseif product.stockStatus == 'on_backorder' %}
+                    <p class="mb-4 text-sm text-yellow-400 font-medium">⏱ {{ __('Available on Backorder') }}</p>
+                    {% endif %}
+                </div>
+            </template>
+            <template x-if="selectedStockStatus === 'in_stock'">
+                <div>
+                    <p class="mb-4 text-sm text-green-400 font-medium">✓ {{ __('In Stock') }}</p>
+                    {% if low_stock_warning_enabled|default(false) %}
+                    <p x-show="selectedStockQty > 0 && selectedStockQty <= ({{ low_stock_warning_threshold|default(2) }})"
+                       class="mb-4 text-sm text-amber-400 font-medium"
+                       x-text="'{{ __('Hurry! Only :count item(s) left in stock.')|e('js') }}'.replace(':count', selectedStockQty)"></p>
+                    {% endif %}
+                    {% if show_stock_count|default(false) %}
+                    <p x-show="selectedStockQty > 0{% if low_stock_warning_enabled|default(false) %} && selectedStockQty > ({{ low_stock_warning_threshold|default(2) }}){% endif %}"
+                       class="mb-4 text-sm text-slate-400 font-medium"
+                       x-text="selectedStockQty + ' {{ __('in stock')|e('js') }}'"></p>
+                    {% endif %}
+                </div>
+            </template>
+            <template x-if="selectedStockStatus === 'on_backorder'">
+                <p class="mb-4 text-sm text-yellow-400 font-medium">⏱ {{ __('Available on Backorder') }}</p>
+            </template>
+            <template x-if="selectedStockStatus === 'out_of_stock'">
+                <p class="mb-4 text-sm text-red-400 font-medium">✗ {{ __('Out of Stock') }}</p>
+            </template>
+            {% else %}
+            {% if product.stockStatus == 'in_stock' %}
+            <p class="mb-4 text-sm text-green-400 font-medium">✓ {{ __('In Stock') }}</p>
+            {% if low_stock_warning_enabled|default(false) and product.stockQuantity > 0 and product.stockQuantity <= (low_stock_warning_threshold|default(2)) %}
+            <p class="mb-4 text-sm text-amber-400 font-medium">{{ __('Hurry! Only :count item(s) left in stock.', {':count': product.stockQuantity}) }}</p>
+            {% elseif show_stock_count|default(false) and product.stockQuantity > 0 %}
+            <p class="mb-4 text-sm text-slate-400 font-medium">{{ product.stockQuantity }} {{ __('in stock') }}</p>
+            {% endif %}
+            {% elseif product.stockStatus == 'on_backorder' %}
+            <p class="mb-4 text-sm text-yellow-400 font-medium">⏱ {{ __('Available on Backorder') }}</p>
+            {% endif %}
+            {% endif %}
+            {% if variations|default([])|length > 0 %}
+            <div class="space-y-2 mb-2">
+                {# Variation selector #}
+                <template x-for="attrName in attributeNames" :key="attrName">
+                    <div :class="!isAttrAvailable(attrName) && 'opacity-40'">
+                        <label class="block text-sm font-medium text-slate-300 mb-1" x-text="attrName"></label>
+                        <template x-if="isSelectAttr(attrName)">
+                            <select @change="onSelectChange(attrName)" x-model="selectedAttrs[attrName]"
+                                    :disabled="!isAttrAvailable(attrName)"
+                                    class="w-full rounded-lg border-slate-700 bg-slate-800 text-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">{{ __('Select...') }}</option>
+                                <template x-for="val in getAllValuesFor(attrName)" :key="val">
+                                    <option :value="val" x-text="val"
+                                            :disabled="!isValueAvailable(attrName, val)"
+                                            :class="!isValueAvailable(attrName, val) && 'text-slate-500'"></option>
+                                </template>
+                            </select>
+                        </template>
+                        <template x-if="!isSelectAttr(attrName)">
+                            <input type="text" x-model="selectedAttrs[attrName]"
+                                   @input="selectedAttrs[attrName] = $event.target.value; onSelectChange(attrName)"
+                                   :disabled="!isAttrAvailable(attrName)"
+                                   :name="'custom_attrs[' + attrName + ']'"
+                                   :placeholder="attrName + '...'"
+                                   class="w-full rounded-lg border-slate-700 bg-slate-800 text-slate-200 text-sm placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500">
+                        </template>
+                    </div>
+                </template>
+                <button type="button" @click="resetSelections()"
+                        x-show="Object.values(selectedAttrs).some(v => v)"
+                        class="text-xs text-slate-400 hover:text-blue-400 underline">
+                    {{ __('Reset selections') }}
+                </button>
+            </div>
+
+            <template x-if="isDigitalParent && selectedVariationId > 0">
+                <div class="flex items-center gap-2 mb-3">
+                    <template x-if="selectedShippingClass === 'digital' || (selectedShippingClass === 'use_parent' && selectedDownloadMode !== 'non_digital')">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-900/50 text-indigo-300 border border-indigo-700 text-xs font-medium">
+                            ⬇️ {{ __('Digital product') }}
+                        </span>
+                    </template>
+                    <template x-if="selectedShippingClass === 'use_global' || selectedShippingClass === 'custom' || selectedShippingClass === 'free' || (selectedShippingClass === 'use_parent' && selectedDownloadMode === 'non_digital')">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-900/50 text-amber-300 border border-amber-700 text-xs font-medium">
+                            📦 {{ __('Physical item — shipping applies') }}
+                        </span>
+                    </template>
+                </div>
+            </template>
+
+            <template x-if="selectedShippingEstimate && (selectedShippingEstimate.min !== null || selectedShippingEstimate.max !== null) && selectedShippingClass !== 'digital'">
+                <div class="flex items-center gap-1.5 mb-3 text-sm text-slate-300">
+                    <span aria-hidden="true">🚚</span>
+                    <span x-text="'{{ __('Estimated delivery: :min–:max days')|e('js') }}'.replace(':min', selectedShippingEstimate.min).replace(':max', selectedShippingEstimate.max)"></span>
+                </div>
+            </template>
+            <template x-if="!selectedShippingEstimate && parentShippingEstimate && (parentShippingEstimate.min !== null || parentShippingEstimate.max !== null) && !isDigitalParent">
+                <div class="flex items-center gap-1.5 mb-3 text-sm text-slate-300">
+                    <span aria-hidden="true">🚚</span>
+                    <span>{{ __('Estimated delivery: :min–:max days', {':min': shipping_estimate.min, ':max': shipping_estimate.max}) }}</span>
+                </div>
+            </template>
+
+            {% if shop_enabled|default('1') == '1' and (has_access is not defined or has_access) %}
+                <template x-if="selectedStockStatus !== 'out_of_stock'">
+                    <form method="POST" action="{{ url('shop.cart.add') }}" class="flex flex-col gap-3">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="product_id" value="{{ product.id }}">
+                        <input type="hidden" name="variation_id" :value="selectedVariationId">
+                        <template x-for="attrName in attributeNames" :key="'selected_' + attrName">
+                            <input type="hidden" :name="'selected_attrs[' + attrName + ']'" :value="selectedAttrs[attrName] || ''">
+                        </template>
+
+                        <div class="flex items-center gap-3">
+                            <input type="number" name="qty" value="1" min="1"
+                                   :max="selectedStockQty > 0 ? selectedStockQty : ''"
+                                   class="w-20 rounded-lg border-slate-700 bg-slate-800 text-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500">
+                            <button type="submit" class="flex-1 rounded-lg btn-neon px-6 py-3 font-bold text-white"
+                                    :disabled="selectedVariationId == 0"
+                                    :class="selectedVariationId == 0 ? 'opacity-50 cursor-not-allowed' : ''"
+                                    x-text="selectedVariationId == 0 ? '{{ __('Select a variation') }}' : '{{ __('Add to Cart') }}'">
+                            </button>
+                        </div>
+                        {% if buy_now_enabled|default(settings.buy_now_enabled|default('0') == '1') %}
+                            <button type="submit" name="buy_now" value="1"
+                                    class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 font-bold transition-colors"
+                                    :disabled="selectedVariationId == 0"
+                                    :class="selectedVariationId == 0 ? 'opacity-50 cursor-not-allowed' : ''">
+                                {{ __('Buy Now') }}
+                            </button>
+                        {% endif %}
+                    </form>
+                </template>
+            {% endif %}
+            <template x-if="selectedStockStatus === 'out_of_stock'">
+                <p class="text-red-400 font-medium">{{ __('Out of Stock') }}</p>
+            </template>
+            {% else %}
+            {% if product.shippingClass == 'digital' %}
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-900/50 text-indigo-300 border border-indigo-700 text-xs font-medium mb-3">
+                ⬇️ {{ __('Digital product') }}
+            </div>
+            {% endif %}
+            {% if has_access is defined and not has_access %}
+            {# Purchase is restricted - the membership notice above is shown #}
+            {% elseif product.stockStatus in ['in_stock', 'on_backorder'] and shop_enabled|default('1') == '1' %}
+            <form method="POST" action="{{ url('shop.cart.add') }}" class="flex flex-col gap-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="product_id" value="{{ product.id }}">
+                <input type="hidden" name="variation_id" :value="selectedVariationId">
+
+                <div class="flex items-center gap-3">
+                    <input type="number" name="qty" value="1" min="1" {{ product.stockQuantity > 0 ? 'max="' ~ product.stockQuantity ~ '"' : '' }}
+                           class="w-20 rounded-lg border-slate-700 bg-slate-800 text-slate-200 text-sm focus:border-blue-500 focus:ring-blue-500">
+                    <button type="submit" class="flex-1 rounded-lg btn-neon px-6 py-3 font-bold text-white">
+                        {{ __('Add to Cart') }}
+                    </button>
+                </div>
+                {% if buy_now_enabled|default(settings.buy_now_enabled|default('0') == '1') %}
+                    <button type="submit" name="buy_now" value="1"
+                            class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 font-bold transition-colors">
+                        {{ __('Buy Now') }}
+                    </button>
+                {% endif %}
+            </form>
+            {% else %}
+            <p class="text-red-400 font-medium">{{ __('Out of Stock') }}</p>
+            {% endif %}
+            {% endif %}
+
+            {% if product.sku %}
+            <p class="mt-4 text-xs text-slate-500">{{ __('SKU') }}: {{ product.sku }}</p>
+            {% endif %}
+
+            {% if show_sold_count|default(false) and product.totalSold > 0 %}
+            <p class="mt-2 text-xs text-slate-500">{{ product.totalSold }} {{ __('sold') }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Full description #}
+    {% if product.description %}
+    <div class="mb-12">
+        <h2 class="text-xl font-bold text-white mb-4">{{ __('Description') }}</h2>
+        <div class="prose max-w-none text-slate-300">{{ product.description|shortcodes(product)|nl2br }}</div>
+    </div>
+    {% endif %}
+
+    {# Cross-sells #}
+    {% if cross_sells is defined and cross_sells|length > 0 %}
+    <div class="mb-12">
+        <h2 class="text-xl font-bold text-white mb-4">{{ __('You may also like') }}</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {% for cs in cross_sells %}
+            <a href="{{ cs.url }}" class="group rounded-xl border border-slate-700 bg-slate-800/50 p-4 hover:border-blue-500/30 hover:shadow-xl transition-shadow">
+                <div class="aspect-square rounded-lg bg-slate-900 mb-3 overflow-hidden">
+                    {% if cs.thumbnail %}
+                    <img src="{{ cs.thumbnail }}" alt="{{ cs.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-slate-600">
+                        <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    {% endif %}
+                </div>
+                <h3 class="text-sm font-medium text-slate-200 truncate">{{ cs.name }}</h3>
+                <p class="text-sm font-semibold text-slate-100 mt-1">{{ ((cs.sale_price ?: cs.price) * fx_rate)|price(current_currency) }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Comments #}
+    {% include 'partials/comments.twig' with {
+        entity_type: 'product',
+        entity_id: product.id,
+        entity_comment_status: product.commentStatus,
+        items: comments,
+        vote_status: product.voteStatus,
+        user_vote: user_vote,
+        user_comment: user_comment,
+        comment_ratings: comment_ratings,
+        global_star_ratings_enabled: global_star_ratings_enabled,
+        global_comments_enabled: global_comments_enabled,
+        allow_review_editing: allow_review_editing,
+        show_verified_badge: show_verified_badge,
+        cpage: cpage|default(1),
+        comments_total_pages: comments_total_pages|default(1),
+        comments_total: comments_total|default(0)
+    } %}
+
+</div>
+
+<script>
+function productGallery(slides) {
+    return {
+        slides: slides || [],
+        current: 0,
+        override: null,
+        pauseAll() {
+            this.$el.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (_) {} });
+        },
+        prev() { this.pauseAll(); this.current = (this.current - 1 + this.slides.length) % this.slides.length; },
+        next() { this.pauseAll(); this.current = (this.current + 1) % this.slides.length; },
+        setOverride(data) { this.override = data; },
+    };
+}
+</script>
+
+{% if variations|default([])|length > 0 %}
+<script>
+function productVariations() {
+    const variations = {{ variations|json_encode|raw }};
+    const attrNames = [];
+    const seen = {};
+    variations.forEach(v => {
+        Object.keys(v.attributes || {}).forEach(k => {
+            if (!seen[k]) { seen[k] = true; attrNames.push(k); }
+        });
+    });
+
+    const initAttrs = {};
+    attrNames.forEach(n => initAttrs[n] = '');
+
+    return {
+        variations,
+        attributeNames: attrNames,
+        selectedAttrs: { ...initAttrs },
+        selectedVariationId: 0,
+        selectedPrice: null,
+        selectedStockStatus: null,
+        selectedStockQty: null,
+        selectedDownloadMode: null,
+        selectedShippingClass: null,
+        selectedShippingEstimate: null,
+        parentShippingEstimate: {{ shipping_estimate|json_encode|raw }},
+        isDigitalParent: {{ product.shippingClass == 'digital' ? 'true' : 'false' }},
+
+        init() {
+            const params = new URLSearchParams(window.location.search);
+            const toSet = {};
+
+            for (const [key, value] of params.entries()) {
+                const attrName = this.attributeNames.find(n => n.trim().toLowerCase() === key.trim().toLowerCase());
+                if (attrName) {
+                    const val = value.trim();
+                    const allValues = this.getAllValuesFor(attrName);
+                    const matchValue = allValues.find(v => v.trim().toLowerCase() === val.toLowerCase());
+                    toSet[attrName] = matchValue || val;
+                }
+            }
+
+            if (Object.keys(toSet).length > 0) {
+                this.$nextTick(() => {
+                    Object.assign(this.selectedAttrs, toSet);
+                    this.onSelectChange();
+                    this.$nextTick(() => {
+                        this.onSelectChange();
+                    });
+                });
+            }
+        },
+
+        isAttrAvailable(attrName) {
+            const compat = this.getCompatibleExcluding(attrName);
+            return compat.some(v => (v.attributes || {}).hasOwnProperty(attrName));
+        },
+
+        getAllValuesFor(attrName) {
+            const vals = new Set();
+            this.variations.forEach(v => {
+                const raw = v.attributes && v.attributes[attrName];
+                if (raw) {
+                    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(val => vals.add(val));
+                }
+            });
+            return [...vals];
+        },
+
+        isValueAvailable(attrName, val) {
+            const compat = this.getCompatibleExcluding(attrName);
+            return compat.some(v => {
+                const raw = (v.attributes || {})[attrName];
+                if (!raw) return false;
+                return raw.split(',').map(s => s.trim()).includes(val);
+            });
+        },
+
+        getCompatibleExcluding(excludeAttr) {
+            return this.variations.filter(v => {
+                return this.attributeNames.every(n => {
+                    if (n === excludeAttr) return true;
+                    const sel = this.selectedAttrs[n];
+                    if (!sel) return true;
+                    const varVal = (v.attributes || {})[n];
+                    if (varVal === undefined) return false;
+                    if (varVal === '') return true;
+                    return varVal.split(',').map(s => s.trim()).includes(sel);
+                });
+            });
+        },
+
+        getCompatibleVariations() {
+            return this.variations.filter(v => {
+                return this.attributeNames.every(n => {
+                    const sel = this.selectedAttrs[n];
+                    if (!sel) return true;
+                    const varVal = (v.attributes || {})[n];
+                    if (varVal === undefined) return false;
+                    if (varVal === '') return true;
+                    return varVal.split(',').map(s => s.trim()).includes(sel);
+                });
+            });
+        },
+
+        isSelectAttr(attrName) {
+            return this.variations.some(v => {
+                const val = (v.attributes || {})[attrName];
+                return val && val.length > 0;
+            });
+        },
+
+        resetSelections() {
+            this.attributeNames.forEach(n => this.selectedAttrs[n] = '');
+            this.selectedVariationId = 0;
+            this.selectedPrice = null;
+            this.selectedStockStatus = null;
+            this.selectedStockQty = null;
+            this.selectedDownloadMode = null;
+            this.selectedShippingClass = null;
+            this.selectedShippingEstimate = null;
+            window.dispatchEvent(new CustomEvent('variation-image', { detail: null }));
+            this.updateUrl();
+        },
+
+        updateUrl() {
+            const url = new URL(window.location.href);
+            this.attributeNames.forEach(n => {
+                const paramsToDelete = [];
+                for (const key of url.searchParams.keys()) {
+                    if (key.toLowerCase() === n.toLowerCase()) {
+                        paramsToDelete.push(key);
+                    }
+                }
+                paramsToDelete.forEach(k => url.searchParams.delete(k));
+            });
+
+            Object.entries(this.selectedAttrs).forEach(([name, val]) => {
+                if (val) {
+                    url.searchParams.set(name, val);
+                }
+            });
+
+            const newUrl = url.toString();
+            if (window.location.href !== newUrl) {
+                window.history.replaceState({}, '', newUrl);
+            }
+        },
+
+        onSelectChange(changedAttr) {
+            this.attributeNames.forEach(n => {
+                if (n === changedAttr) return;
+                const sel = this.selectedAttrs[n];
+                if (!sel) return;
+                if (!this.isAttrAvailable(n)) {
+                    this.selectedAttrs[n] = '';
+                } else if (this.isSelectAttr(n) && !this.isValueAvailable(n, sel)) {
+                    this.selectedAttrs[n] = '';
+                }
+            });
+
+            const match = this.variations.find(v => {
+                return this.attributeNames.every(n => {
+                    const sel = this.selectedAttrs[n];
+                    const varVal = (v.attributes || {})[n];
+
+                    if (varVal === undefined) return !sel;
+                    if (varVal === '') return !!sel;
+                    if (!sel) return false;
+                    const options = varVal.split(',').map(s => s.trim());
+                    return options.includes(sel);
+                });
+            });
+
+            if (match) {
+                this.selectedVariationId = match.id;
+                this.selectedPrice = match.sale_price || match.price;
+                this.selectedStockQty = match.stock_quantity != null ? parseInt(match.stock_quantity) : 0;
+                const rawStatus = match.stock_status || '';
+                this.selectedStockStatus = rawStatus !== '' ? rawStatus : (this.selectedStockQty === 0 ? 'out_of_stock' : 'in_stock');
+                this.selectedDownloadMode = match.download_mode || null;
+                this.selectedShippingClass = match.shipping_class || 'use_parent';
+                this.selectedShippingEstimate = match.shipping_estimate || null;
+                window.dispatchEvent(new CustomEvent('variation-image', { detail: match.image_url || null }));
+            } else {
+                this.selectedVariationId = 0;
+                this.selectedPrice = null;
+                this.selectedStockStatus = null;
+                this.selectedStockQty = null;
+                this.selectedDownloadMode = null;
+                this.selectedShippingClass = null;
+                this.selectedShippingEstimate = null;
+                window.dispatchEvent(new CustomEvent('variation-image', { detail: null }));
+            }
+
+            this.updateUrl();
+        }
+    };
+}
+</script>
+{% endif %}
+{% endblock %}

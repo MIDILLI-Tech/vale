@@ -1,0 +1,29 @@
+{# Shared alias chips (slug card): +Add input, removable chips, comma-joined hidden field. #}
+{# Expects: alias_value (comma-separated string). Optional: alias_errors (string[]). #}
+<div class="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3"
+     x-data="{ aliases: [], input: '', init() { const raw = this.$el.dataset.aliases || ''; this.aliases = raw.split(',').map(s => s.trim().toLowerCase()).filter((v, i, a) => v !== '' && a.indexOf(v) === i); }, add() { const v = this.input.trim().toLowerCase(); if (v === '' || this.aliases.indexOf(v) !== -1 || this.aliases.length >= 10) { this.input = ''; return; } this.aliases.push(v); this.input = ''; }, remove(i) { this.aliases.splice(i, 1); } }"
+     data-aliases="{{ alias_value|default('') }}">
+    <div class="flex items-center justify-between mb-2">
+        <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Aliases') }}</h4>
+        <span class="text-[11px] text-gray-400 dark:text-gray-500">{{ __('Same section only') }}</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5 mb-2" x-show="aliases.length > 0">
+        <template x-for="(alias, idx) in aliases" :key="alias">
+            <span class="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-200">
+                <span x-text="alias"></span>
+                <button type="button" @click="remove(idx)" class="font-bold leading-none text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400" title="{{ __('Remove') }}">&times;</button>
+            </span>
+        </template>
+    </div>
+    <div class="flex gap-2">
+        <input type="text" x-model="input" @keydown.enter.prevent="add()"
+               placeholder="{{ __('Add alias slug…') }}"
+               class="block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+        <button type="button" @click="add()"
+                class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">+ {{ __('Add') }}</button>
+    </div>
+    <input type="hidden" name="aliases" :value="aliases.join(',')">
+    {% set _aliasErrors = alias_errors|default(errors.aliases|default([])) %}
+    {% if _aliasErrors|length > 0 %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ _aliasErrors|join(', ') }}</p>{% endif %}
+    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{{ __('Extra URLs for this content under the same section. No language prefix needed.') }}</p>
+</div>

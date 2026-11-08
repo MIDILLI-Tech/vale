@@ -1,0 +1,28 @@
+{#
+    Shared shop category list for the Nova theme — rendered by the desktop
+    sidebar and by the mobile drawer.
+
+    Params:
+      categories            list of categories (with `depth` and `slug`)
+      filters               current filter params (`filters.category`)
+      variant               'sidebar' (default) | 'drawer'
+#}
+{% set _is_drawer = variant|default('sidebar') == 'drawer' %}
+{% set _link_pad = _is_drawer ? 'px-3 py-2' : 'px-3 py-1.5' %}
+{% set _active = filters.category|default('') %}
+<ul class="space-y-1 text-sm">
+    <li>
+        <a href="{{ url(routing_shop_prefix) }}"
+           class="block rounded-lg {{ _link_pad }} {{ not _active ? 'bg-slate-800 text-white font-medium' : 'text-slate-300 hover:bg-slate-800/50' }}">
+            {{ __('All Products') }}
+        </a>
+    </li>
+    {% for cat in categories %}
+    <li class="tree-depth-indent" style="--depth-indent: {{ cat.depth|default(0) }}rem">
+        <a href="{{ url(routing_shop_prefix) }}?category={{ cat.slug }}"
+           class="block rounded-lg {{ _link_pad }} {{ _active == cat.slug ? 'bg-slate-800 text-white font-medium' : 'text-slate-300 hover:bg-slate-800/50' }}">
+            {% if cat.depth|default(0) > 0 %}<span class="text-slate-500">└ </span>{% endif %}{{ cat.name }}
+        </a>
+    </li>
+    {% endfor %}
+</ul>

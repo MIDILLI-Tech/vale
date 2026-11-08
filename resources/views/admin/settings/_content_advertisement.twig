@@ -1,0 +1,37 @@
+{# Content › Advertisement #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="{{ content_tab_id|default('content-tab-ads') }}" class="content-tab-panel {{ is_active ? '' : 'hidden' }}">
+<form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="PUT">
+    <input type="hidden" name="_group" value="content">
+    <input type="hidden" name="_subtab" value="ads">
+
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Advertisement') }}</p>
+    <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+        <div class="space-y-4">
+            <div {{ vl.attrs('content', __('Advertisement Code'), 'advertisement_code', 'ads', __('Advertisement'), 'adsense html javascript') }}>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Advertisement Code') }}</label>
+                <textarea name="advertisement_code" rows="5"
+                          class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 font-mono text-sm"
+                          placeholder='<script async src="..."></script>'>{{ settings.advertisement_code|default('') }}</textarea>
+                <p class="mt-1 text-xs text-blue-400">{{ __('Paste your HTML/JS ad code here (e.g. AdSense, Bing Ads, etc.)') }}</p>
+            </div>
+
+            <div {{ vl.attrs('content', __('Auto Placement'), 'advertisement_placement', 'ads', __('Advertisement'), 'header footer sidebar placement') }}>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Auto Placement') }}</label>
+                <select name="advertisement_placement" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+                    <option value="manual" {{ settings.advertisement_placement|default('manual') == 'manual' ? 'selected' }}>{{ __('Manual (Shortcode only)') }}</option>
+                    <option value="head" {{ settings.advertisement_placement|default('manual') == 'head' ? 'selected' }}>{{ __('Head (For Auto Ads / Scripts)') }}</option>
+                    <option value="header" {{ settings.advertisement_placement|default('manual') == 'header' ? 'selected' }}>{{ __('Header (Top of every page)') }}</option>
+                    <option value="footer" {{ settings.advertisement_placement|default('manual') == 'footer' ? 'selected' }}>{{ __('Footer (Bottom of every page)') }}</option>
+                    <option value="above_content" {{ settings.advertisement_placement|default('manual') == 'above_content' ? 'selected' }}>{{ __('Above Content (Posts & Pages)') }}</option>
+                    <option value="below_content" {{ settings.advertisement_placement|default('manual') == 'below_content' ? 'selected' }}>{{ __('Below Content (Posts & Pages)') }}</option>
+                    <option value="sidebar" {{ settings.advertisement_placement|default('manual') == 'sidebar' ? 'selected' }}>{{ __('Sidebar (Blog & Custom Types)') }}</option>
+                </select>
+                <p class="mt-1 text-xs text-blue-400">{{ __('Regardless of this setting, you can always use the [ad] shortcode inside your content.') }}</p>
+            </div>
+        </div>
+    </div>
+</form>
+</div>

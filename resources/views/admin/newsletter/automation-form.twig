@@ -1,0 +1,760 @@
+{% extends "admin/layout.twig" %}
+
+{% set panel_rail = true %}
+
+{% block title %}{{ sequence ? 'Edit' : 'New' }} Automation{% endblock %}
+
+{% block content %}
+<style>.drag-handle { cursor: move; }</style>
+{# Alpine component holds the steps array #}
+<div x-data="automationForm({{ steps|json_encode|e('html_attr') }})">
+
+<div class="mb-6 flex items-center gap-3 flex-wrap">
+    <a href="{{ url('/admin/newsletter/automations') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Automations</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ sequence ? 'Edit Automation' : 'New Automation Sequence' }}</h1>
+    {% if sequence %}<span x-show="!isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
+    <span x-show="isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% include 'admin/components/rail-toggle.twig' %}
+</div>
+
+<form method="POST" action="{{ url(sequence ? '/admin/newsletter/automations/' ~ sequence.id : '/admin/newsletter/automations') }}"
+      data-panel-reorder-key="automation"
+      @submit.prevent="prepareSubmit($event)">
+    {{ csrf_field() }}
+    {% if sequence %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {# ── LEFT: Steps editor ───────────────────────────────── #}
+        <div class="lg:col-span-2 space-y-6" data-panel-container="left">
+
+            {# Sequence name #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="name_card">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Sequence Information') }}</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Sequence Name') }} <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required value="{{ sequence.name|default('') }}"
+                           placeholder="e.g. Welcome Series"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                </div>
+            </div>
+
+            {% if cronConfig.cron_mode|default('none') == 'none' %}
+            <div class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <span>{{ __('Cron is currently disabled. Automations will not send emails until a cron job is configured. Enable it in') }} <a href="{{ url('/admin/settings') }}#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+            </div>
+            {% endif %}
+
+            {# Steps #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="steps_card">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Steps') }}</h3>
+                    <template x-if="steps.length > 1">
+                        <div class="flex gap-1 mr-20">
+                            <button type="button" @click="collapseAll"
+                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">Collapse all</button>
+                            <button type="button" @click="expandAll"
+                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">Expand all</button>
+                        </div>
+                    </template>
+                </div>
+
+                <template x-if="steps.length === 0">
+                    <p class="text-sm text-gray-400 py-4 text-center">No steps yet. Click "Add Step" to start building the sequence.</p>
+                </template>
+
+                <div id="steps-sortable" class="space-y-6">
+                    <template x-for="(step, i) in steps" :key="step._key"><div class="rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-5">
+
+                            {# Step header #}
+                                <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click="step.collapsed = !step.collapsed"
+                                            class="text-xs text-gray-400 hover:text-gray-700 w-4 text-center leading-none select-none"
+                                            x-html="step.collapsed ? '&#9654;' : '&#9660;'"></button>
+                                    <span class="drag-handle text-gray-300 hover:text-gray-500 dark:text-gray-400 select-none text-lg leading-none cursor-grab">⠿</span>
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                          x-text="'Step ' + (i + 1)"></span>
+                                    <span x-show="step.collapsed" class="text-sm text-gray-500 dark:text-gray-400 ml-1 truncate max-w-xs"
+                                          x-text="step.subject || '(no subject)'"></span>
+                                    <span x-show="step.collapsed" class="text-xs text-gray-400 ml-2"
+                                          x-text="'Send after ' + step.delay + ' ' + step.delay_unit + (i === 0 ? ' (from subscription)' : ' (from previous step)')"></span>
+                                    <div x-show="step.collapsed" class="flex gap-4 ml-4">
+                                        <div class="flex items-center gap-1">
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase">A:</span>
+                                            <span class="text-[10px] text-gray-500" x-text="(step.opens_count || 0) + ' opens, ' + (step.clicks_count || 0) + ' clicks'"></span>
+                                        </div>
+                                        <template x-if="step.ab_test_enabled">
+                                            <div class="flex items-center gap-1">
+                                                <span class="text-[10px] font-bold text-indigo-400 uppercase">B:</span>
+                                                <span class="text-[10px] text-indigo-500" x-text="(step.opens_count_b || 0) + ' opens, ' + (step.clicks_count_b || 0) + ' clicks'"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click="moveStepTop(i)" title="Move to top"
+                                            class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">⇈</button>
+                                    <button type="button" @click="moveStepUp(i)" title="Move up"
+                                            class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">↑</button>
+                                    <button type="button" @click="moveStepDown(i)" title="Move down"
+                                            class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">↓</button>
+                                    <button type="button" @click="moveStepBottom(i)" title="Move to bottom"
+                                            class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">⇊</button>
+                                    <span class="mx-1 text-gray-300">|</span>
+                                    <button type="button" @click="removeStep(i)"
+                                            class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                                </div>
+                            </div>
+
+                            <div x-show="!step.collapsed">
+                            <div class="grid grid-cols-2 gap-6 mb-4">
+                                {# Delay #}
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                                        <span x-text="i === 0 ? 'Send after (from subscription)' : 'Send after (from previous step)'"></span>
+                                    </label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="number" min="0" x-model.number="step.delay"
+                                               class="w-28 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                        <select x-model="step.delay_unit"
+                                                class="rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                            <option value="minutes">minutes</option>
+                                            <option value="hours">hours</option>
+                                            <option value="days">days</option>
+                                            <option value="weeks">weeks</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                {# A/B & Segmentation #}
+                                <div class="flex flex-col justify-end">
+                                    <div class="flex flex-col items-end gap-2">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" x-model="step.ab_test_enabled" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                                            <span class="text-sm font-medium text-gray-700">A/B Test Step</span>
+                                        </label>
+                                        <div x-show="step.ab_test_enabled" class="flex items-center gap-3 bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase">Weight:</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs text-gray-500">A: <span x-text="100 - (step.variation_b_weight || 50)"></span>%</span>
+                                                <input type="range" min="1" max="99" x-model.number="step.variation_b_weight" class="w-24 accent-indigo-600">
+                                                <span class="text-xs text-indigo-600 font-bold">B: <span x-text="step.variation_b_weight || 50"></span>%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Stats display in expanded mode #}
+                            <div class="mb-4 flex gap-8 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <div>
+                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase mb-1" x-text="step.ab_test_enabled ? 'Variant A Stats' : 'Step Stats'">Stats</h5>
+                                    <div class="flex gap-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-lg font-bold text-gray-700 dark:text-gray-200" x-text="step.opens_count || 0"></span>
+                                            <span class="text-[10px] text-gray-400 uppercase">Opens</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="text-lg font-bold text-gray-700 dark:text-gray-200" x-text="step.clicks_count || 0"></span>
+                                            <span class="text-[10px] text-gray-400 uppercase">Clicks</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <template x-if="step.ab_test_enabled">
+                                    <div class="border-l border-gray-100 dark:border-gray-800 pl-8">
+                                        <h5 class="text-[10px] font-bold text-indigo-400 uppercase mb-1">Variant B Stats</h5>
+                                        <div class="flex gap-4">
+                                            <div class="flex flex-col">
+                                                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="step.opens_count_b || 0"></span>
+                                                <span class="text-[10px] text-indigo-300 uppercase">Opens</span>
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="step.clicks_count_b || 0"></span>
+                                                <span class="text-[10px] text-indigo-300 uppercase">Clicks</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="mb-6 p-3 bg-gray-100 dark:bg-gray-900/50 rounded-lg">
+                                <button type="button" @click="step.segmentationCollapsed = !step.segmentationCollapsed"
+                                        class="flex items-center gap-2 mb-3 w-full text-left">
+                                    <span class="text-xs text-gray-400 w-4 text-center leading-none select-none"
+                                          x-html="step.segmentationCollapsed ? '&#9654;' : '&#9660;'"></span>
+                                    <span class="text-xs font-bold uppercase text-gray-500">Segmentation</span>
+                                    <span class="text-[10px] text-gray-400 ml-1"
+                                          x-text="_hasActiveFilters(step) ? '(filters active)' : '(no filters)'"></span>
+                                </button>
+                                <div x-show="!step.segmentationCollapsed" x-cloak class="grid grid-cols-2 gap-8">
+                                    <template x-if="window._VL_SHOP_ENABLED"><div class="space-y-4">
+                                        <div class="mb-3">
+                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Order Count</label>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <input type="number" min="0" x-model.number="step.min_orders_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <input type="number" min="0" x-model.number="step.max_orders_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                            </div>
+                                        </div>
+<div class="mb-3">
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Total Spent</label>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <input type="number" min="0" step="0.01" x-model.number="step.min_total_spend_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <input type="number" min="0" step="0.01" x-model.number="step.max_total_spend_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Last Purchase (days ago)</label>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <input type="number" min="0" x-model.number="step.min_days_since_last_purchase_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <input type="number" min="0" x-model.number="step.max_days_since_last_purchase_filter" placeholder="any"
+                                                           class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div></template>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Engagement Rates</label>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-500 uppercase">Min Open %:</span>
+                                                <input type="number" min="0" max="100" x-model.number="step.min_open_rate_filter" placeholder="any"
+                                                       class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-500 uppercase">Max Open %:</span>
+                                                <input type="number" min="0" max="100" x-model.number="step.max_open_rate_filter" placeholder="any"
+                                                       class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-500 uppercase">Min Click %:</span>
+                                                <input type="number" min="0" max="100" x-model.number="step.min_click_rate_filter" placeholder="any"
+                                                       class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] text-gray-500 uppercase">Max Click %:</span>
+                                                <input type="number" min="0" max="100" x-model.number="step.max_click_rate_filter" placeholder="any"
+                                                       class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p x-show="step.segmentationCollapsed" x-cloak class="text-xs text-gray-400"
+                                   x-text="_hasActiveFilters(step)
+                                       ? 'Segmentation filters are active — click the header to adjust them.'
+                                       : 'No segmentation filters set — applies to all subscribers.'"></p>
+                                <p class="text-[10px] text-gray-400 mt-1">If set, step will only execute for subscribers matching these criteria.</p>
+                            </div>
+
+                            {# Subject & Content with Variant tabs #}
+                            <div class="space-y-4">
+                                {# Tab bar (only when A/B test enabled) #}
+                                <template x-if="step.ab_test_enabled">
+                                    <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-2">
+                                        <button type="button" @click="step.variantTab = 'a'"
+                                                :class="step.variantTab === 'a' ? 'border-b-2 border-gray-900 dark:border-white text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600'"
+                                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant A</button>
+                                        <button type="button" @click="step.variantTab = 'b'"
+                                                :class="step.variantTab === 'b' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
+                                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant B</button>
+                                    </div>
+                                </template>
+
+                                {# Variant A content #}
+                                <div :class="step.ab_test_enabled && step.variantTab !== 'a' ? 'hidden' : ''">
+                                    <template x-if="step.ab_test_enabled">
+                                        <h4 class="text-xs font-bold uppercase text-gray-500">Variant A</h4>
+                                    </template>
+                                    {# Subject #}
+                                    <div class="mb-4">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
+                                        <input type="text" x-model="step.subject"
+                                               placeholder="Email subject line"
+                                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                    </div>
+
+                                    {# Body #}
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+{% include 'admin/newsletter/_template_vars.twig' %}
+                                    {#
+                                        x-init + $nextTick ensures the textarea exists in the DOM
+                                        before we call vlInitEditor (Alpine renders x-for asynchronously).
+                                        x-model is NOT used on the textarea — Tiptap replaces the textarea
+                                        with its own editor UI and syncs the value back on form submit.
+                                    #}
+                                        <div x-init="$nextTick(() => { const ta = $el.querySelector('textarea[data-editor]'); if (ta && window.vlInitEditor) window.vlInitEditor(ta); })">
+                                            <textarea :name="'steps[' + i + '][body_html]'"
+                                                      rows="10"
+                                                      data-editor
+                                                      class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500"
+                                                      x-html="step.body_html"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {# Variant B content #}
+                                <div :class="!step.ab_test_enabled || step.variantTab !== 'b' ? 'hidden' : ''" x-cloak>
+                                    <h4 class="text-xs font-bold uppercase text-indigo-500">Variant B</h4>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
+                                        <input type="text" x-model="step.subject_b"
+                                               placeholder="Email subject line"
+                                               class="w-full rounded-lg border-indigo-200 dark:border-indigo-800 shadow-xs text-sm focus:border-indigo-600 focus:ring-indigo-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+{% include 'admin/newsletter/_template_vars.twig' %}
+                                        <div x-init="$nextTick(() => { const ta = $el.querySelector('textarea[data-editor]'); if (ta && window.vlInitEditor) window.vlInitEditor(ta); })">
+                                            <textarea :name="'steps[' + i + '][body_html_b]'"
+                                                      rows="10"
+                                                      data-editor
+                                                      class="w-full rounded-lg border-indigo-200 dark:border-indigo-800 shadow-xs text-sm focus:border-indigo-600 focus:ring-indigo-500"
+                                                      x-html="step.body_html_b"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+
+                            {# Hidden fields for delay & subject carried through x-model on the inputs above.
+                               We need hidden inputs to ensure they end up in POST when editor JS overrides textarea. #}
+                            <input type="hidden" :name="'steps[' + i + '][delay]'" :value="step.delay">
+                            <input type="hidden" :name="'steps[' + i + '][delay_unit]'" :value="step.delay_unit">
+                            <input type="hidden" :name="'steps[' + i + '][subject]'" :value="step.subject">
+                            <input type="hidden" :name="'steps[' + i + '][subject_b]'" :value="step.subject_b">
+                            <input type="hidden" :name="'steps[' + i + '][ab_test_enabled]'" :value="step.ab_test_enabled ? '1' : ''">
+                            <input type="hidden" :name="'steps[' + i + '][variation_b_weight]'" :value="step.variation_b_weight || 50">
+                            <input type="hidden" :name="'steps[' + i + '][min_orders_filter]'" :value="step.min_orders_filter">
+                            <input type="hidden" :name="'steps[' + i + '][max_orders_filter]'" :value="step.max_orders_filter">
+                            <input type="hidden" :name="'steps[' + i + '][min_open_rate_filter]'" :value="step.min_open_rate_filter">
+                            <input type="hidden" :name="'steps[' + i + '][max_open_rate_filter]'" :value="step.max_open_rate_filter">
+                            <input type="hidden" :name="'steps[' + i + '][min_click_rate_filter]'" :value="step.min_click_rate_filter">
+                            <input type="hidden" :name="'steps[' + i + '][max_click_rate_filter]'" :value="step.max_click_rate_filter">
+                            <input type="hidden" :name="'steps[' + i + '][min_total_spend_filter]'" :value="step.min_total_spend_filter">
+                            <input type="hidden" :name="'steps[' + i + '][max_total_spend_filter]'" :value="step.max_total_spend_filter">
+                            <input type="hidden" :name="'steps[' + i + '][min_days_since_last_purchase_filter]'" :value="step.min_days_since_last_purchase_filter">
+                            <input type="hidden" :name="'steps[' + i + '][max_days_since_last_purchase_filter]'" :value="step.max_days_since_last_purchase_filter">
+                        </div></template>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button" @click="addStep"
+                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                        + Add Step
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# ── RIGHT: Trigger settings + Save ──────────────────── #}
+        <div class="space-y-6" data-panel-container="right">
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="trigger_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Trigger') }}</h3>
+
+                <div x-data="{ triggerType: '{{ (sequence ? sequence.triggerType : 'subscribe')|e('js') }}' }">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Trigger Type</label>
+                    <select name="trigger_type" x-model="triggerType"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                        <option value="subscribe" {{ (not sequence or sequence.triggerType == 'subscribe') ? 'selected' : '' }}>
+                            New subscriber confirms (double opt-in)
+                        </option>
+                        <option value="manual" {{ sequence and sequence.triggerType == 'manual' ? 'selected' : '' }}>
+                            Manual enrollment only (admin-triggered)
+                        </option>
+                        <option value="tag_assigned" {{ sequence and sequence.triggerType == 'tag_assigned' ? 'selected' : '' }}>
+                            Tag is assigned to subscriber
+                        </option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">
+                        <strong>Subscribe</strong> — auto-enrolls when a subscriber confirms double opt-in.<br>
+                        <strong>Manual</strong> — never auto-enrolls; use the admin subscriber edit to enroll manually.<br>
+                        <strong>Tag Assigned</strong> — auto-enrolls when the specified tag is added to a subscriber.
+                    </p>
+                </div>
+
+                {# Subscribe filters — hidden for other trigger types #}
+                <template x-if="triggerType === 'subscribe'">
+                <div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tag Filter (optional)</label>
+                        <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '{{ sequence.triggerTag|default('')|e('js') }}' })">
+                            <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                                <template x-for="(item, i) in items" :key="i">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200">
+                                        <span x-text="item"></span>
+                                        <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="relative">
+                                <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                       placeholder="e.g. premium, vip, beta"
+                                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                     class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                    <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                        <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                             :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                             class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                             x-text="s"></div>
+                                    </template>
+                                </div>
+                            </div>
+                            <input type="hidden" name="trigger_tag" :value="items.join(',')">
+                        </div>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            <label class="text-xs text-gray-500 dark:text-gray-400">Match:</label>
+                            <select name="trigger_tag_match"
+                                    class="rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:border-gray-600 focus:ring-gray-500">
+                                <option value="any" {{ sequence.triggerTagMatch|default('any') == 'any' ? 'selected' : '' }}>any (subscriber has at least one)</option>
+                                <option value="all" {{ sequence.triggerTagMatch|default('any') == 'all' ? 'selected' : '' }}>all (subscriber has every tag)</option>
+                            </select>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Comma-separated tags. Leave blank for all subscribers.</p>
+                    </div>
+
+<div class="mb-6">
+                        <template x-if="window._VL_FORMS_ENABLED">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Source Form Filter (optional)</label>
+                                <select name="trigger_form_id"
+                                        class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                    <option value="">— All forms —</option>
+                                    {% for f in forms|default([]) %}
+                                    <option value="{{ f.id }}" {{ sequence and sequence.triggerFormId == f.id ? 'selected' : '' }}>{{ f.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p class="text-xs text-gray-400 mt-1">Only enroll subscribers from this specific form.</p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                </template>
+
+                {# Tag assigned: which tag triggers enrollment? #}
+                <template x-if="triggerType === 'tag_assigned'">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Trigger Tag <span class="text-red-500">*</span></label>
+                    <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '{{ sequence.triggerTag|default('')|e('js') }}' })">
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="(item, i) in items" :key="i">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200">
+                                    <span x-text="item"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="relative">
+                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                   placeholder="e.g. customer"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                         :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                         x-text="s"></div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="trigger_tag" :value="items.join(',')">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Enroll subscribers when this tag is assigned. Only a single tag is supported.</p>
+                </div>
+                </template>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div x-data="{ tracking: {{ (sequence ? sequence.trackingEnabled : 3)|default(3) }} }">
+                        <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Tracking</h4>
+                        <input type="hidden" name="tracking_enabled" :value="tracking">
+                        <label class="flex items-center gap-2 cursor-pointer mb-2">
+                            <input type="checkbox" :checked="tracking &amp; 1" @change="tracking ^= 1"
+                                   class="text-gray-900 dark:text-gray-100 focus:ring-gray-500 rounded-sm">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Track opens</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" :checked="tracking &amp; 2" @change="tracking ^= 2"
+                                   class="text-gray-900 dark:text-gray-100 focus:ring-gray-500 rounded-sm">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Track clicks</span>
+                        </label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select one or both, or leave both unchecked to disable.</p>
+                        <p x-show="tracking &amp; 1" x-cloak class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                            ℹ️ Place <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code> before <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code> for open tracking to work.
+                        </p>
+                        <p x-show="tracking &amp; 2" x-cloak class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                            ℹ️ Click tracking is applied automatically to all links in your email body.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    {{ sequence ? 'Update Sequence' : 'Save Sequence' }}
+                </button>
+
+                {% if sequence %}
+                <div class="mt-2">
+                    {# Delete button triggers the separate delete form below (outside main form) #}
+                    <button type="button"
+                            onclick="if(confirm('Delete this automation? This cannot be undone.')) document.getElementById('delete-sequence-form').submit()"
+                            class="w-full rounded-lg border border-red-300 dark:border-red-700 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        Delete Sequence
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</form>
+
+{# Delete form must be OUTSIDE the main form to avoid nested-form HTML bug #}
+{% if sequence %}
+<form id="delete-sequence-form" method="POST" action="{{ url('/admin/newsletter/automations/' ~ sequence.id) }}" style="display:none">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="DELETE">
+</form>
+{% endif %}
+</div>
+
+<script>
+function automationForm(initialSteps) {
+    // Normalise: convert delay_minutes (from DB) → delay + delay_unit
+    function normalise(raw) {
+        const mins = raw.delay_minutes ?? raw.delay ?? 0;
+        let delay = mins, unit = 'minutes';
+        if (mins % 10080 === 0 && mins >= 10080) { delay = mins / 10080; unit = 'weeks'; }
+        else if (mins % 1440 === 0 && mins >= 1440) { delay = mins / 1440; unit = 'days'; }
+        else if (mins % 60 === 0 && mins >= 60)  { delay = mins / 60;   unit = 'hours'; }
+        const subject  = raw.subject    ?? '';
+        const body_html = raw.body_html  ?? raw.bodyHtml ?? '';
+        const hasContent = subject.trim() !== '' || body_html.trim() !== '';
+        const activeFilters = [
+            raw.min_orders_filter, raw.max_orders_filter,
+            raw.min_total_spend_filter, raw.max_total_spend_filter,
+            raw.min_days_since_last_purchase_filter, raw.max_days_since_last_purchase_filter,
+            raw.min_open_rate_filter, raw.max_open_rate_filter,
+            raw.min_click_rate_filter, raw.max_click_rate_filter,
+        ].filter(v => v !== null && v !== undefined && v !== '').length;
+        return {
+            _key:       Math.random(),
+            delay:      delay,
+            delay_unit: unit,
+            subject:    subject,
+            subject_b:  raw.subject_b ?? raw.subjectB ?? '',
+            body_html:  body_html,
+            body_html_b: raw.body_html_b ?? raw.bodyHtmlB ?? '',
+            ab_test_enabled: raw.ab_test_enabled ?? false,
+            variation_b_weight: raw.variation_b_weight ?? 50,
+            min_orders_filter: raw.min_orders_filter ?? null,
+            max_orders_filter: raw.max_orders_filter ?? null,
+            min_open_rate_filter: raw.min_open_rate_filter ?? null,
+            max_open_rate_filter: raw.max_open_rate_filter ?? null,
+            min_click_rate_filter: raw.min_click_rate_filter ?? null,
+            max_click_rate_filter: raw.max_click_rate_filter ?? null,
+            min_total_spend_filter: raw.min_total_spend_filter ?? null,
+            max_total_spend_filter: raw.max_total_spend_filter ?? null,
+            min_days_since_last_purchase_filter: raw.min_days_since_last_purchase_filter ?? null,
+            max_days_since_last_purchase_filter: raw.max_days_since_last_purchase_filter ?? null,
+            opens_count: raw.opens_count ?? 0,
+            clicks_count: raw.clicks_count ?? 0,
+            opens_count_b: raw.opens_count_b ?? 0,
+            clicks_count_b: raw.clicks_count_b ?? 0,
+            variantTab: 'a',
+            collapsed:  hasContent,
+            segmentationCollapsed: activeFilters === 0,
+        };
+    }
+
+    return {
+        steps: (initialSteps || []).map(normalise),
+        _formDirty: false,
+        _initialStepsJson: '[]',
+
+        _stepsSnapshot() {
+            return JSON.stringify(this.steps.map(s => {
+                const { _key, variantTab, collapsed, segmentationCollapsed, ...rest } = s;
+                return rest;
+            }));
+        },
+
+        get isDirty() {
+            return this._formDirty || this._stepsSnapshot() !== this._initialStepsJson;
+        },
+
+        _hasActiveFilters(step) {
+            return [
+                step.min_orders_filter, step.max_orders_filter,
+                step.min_total_spend_filter, step.max_total_spend_filter,
+                step.min_days_since_last_purchase_filter, step.max_days_since_last_purchase_filter,
+                step.min_open_rate_filter, step.max_open_rate_filter,
+                step.min_click_rate_filter, step.max_click_rate_filter,
+            ].some(v => v !== null && v !== undefined && v !== '');
+        },
+
+        addStep() {
+            this.steps.push({
+                _key: Math.random(),
+                delay: 1,
+                delay_unit: 'days',
+                subject: '',
+                subject_b: '',
+                body_html: '',
+                body_html_b: '',
+                ab_test_enabled: false,
+                variation_b_weight: 50,
+                min_orders_filter: null,
+                max_orders_filter: null,
+                min_open_rate_filter: null,
+                max_open_rate_filter: null,
+                min_click_rate_filter: null,
+                max_click_rate_filter: null,
+                min_total_spend_filter: null,
+                max_total_spend_filter: null,
+                min_days_since_last_purchase_filter: null,
+                max_days_since_last_purchase_filter: null,
+                collapsed: false,
+                variantTab: 'a',
+                segmentationCollapsed: true
+            });
+        },
+
+        removeStep(i) {
+            this.steps.splice(i, 1);
+        },
+
+        moveStepTop(i) {
+            const item = this.steps.splice(i, 1)[0];
+            this.steps.unshift(item);
+        },
+
+        moveStepUp(i) {
+            if (i <= 0) return;
+            const item = this.steps.splice(i, 1)[0];
+            this.steps.splice(i - 1, 0, item);
+        },
+
+        moveStepDown(i) {
+            if (i >= this.steps.length - 1) return;
+            const item = this.steps.splice(i, 1)[0];
+            this.steps.splice(i + 1, 0, item);
+        },
+
+        moveStepBottom(i) {
+            const item = this.steps.splice(i, 1)[0];
+            this.steps.push(item);
+        },
+
+        collapseAll() {
+            this.steps.forEach(s => s.collapsed = true);
+        },
+
+        expandAll() {
+            this.steps.forEach(s => s.collapsed = false);
+        },
+
+        // Before submitting, validate required subjects and sync editor content.
+        prepareSubmit($event) {
+            for (let i = 0; i < this.steps.length; i++) {
+                const step = this.steps[i];
+                if (!step.ab_test_enabled) {
+                    if (!step.subject || step.subject.trim() === '') {
+                        alert('Step ' + (i + 1) + ': Subject is required.');
+                        return;
+                    }
+                } else {
+                    if (!step.subject || step.subject.trim() === '') {
+                        alert('Step ' + (i + 1) + ': Variant A subject is required.');
+                        return;
+                    }
+                    if (!step.subject_b || step.subject_b.trim() === '') {
+                        alert('Step ' + (i + 1) + ': Variant B subject is required.');
+                        return;
+                    }
+                }
+            }
+
+            this.$nextTick(() => {
+                const taList = this.$el.querySelectorAll('textarea[data-editor]');
+                taList.forEach(function(ta) {
+                    if (ta && window.vlSyncEditor) {
+                        window.vlSyncEditor(ta);
+                    }
+                });
+                this._initialStepsJson = this._stepsSnapshot();
+                this._formDirty = false;
+                $event.target.submit();
+            });
+        },
+
+        init() {
+            this._initialStepsJson = this._stepsSnapshot();
+            this.$el.addEventListener('input', () => { this._formDirty = true; });
+            this.$el.addEventListener('change', () => { this._formDirty = true; });
+            window.addEventListener('beforeunload', (e) => {
+                if (this.isDirty) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            this.$nextTick(() => {
+                var el = document.getElementById('steps-sortable');
+                if (!el) return;
+                var self = this;
+                Sortable.create(el, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onStart: function () {
+                        var divs = el.querySelectorAll(':scope > div');
+                        divs.forEach(function (div, idx) {
+                            var tas = div.querySelectorAll('textarea[data-editor]');
+                            tas.forEach(function(ta) {
+                                if (ta && ta.value && self.steps[idx]) {
+                                    if (ta.name.includes('[body_html_b]')) {
+                                        self.steps[idx].body_html_b = ta.value;
+                                    } else {
+                                        self.steps[idx].body_html = ta.value;
+                                    }
+                                }
+                            });
+                        });
+                    },
+                    onEnd: function (evt) {
+                        var item = self.steps.splice(evt.oldIndex, 1)[0];
+                        self.steps.splice(evt.newIndex, 0, item);
+                    }
+                });
+            });
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{# Async searchable record picker (preload + server search via /admin/posts/list-json). #}
+{% include 'admin/components/entity-select.twig' with {
+    mode: 'async',
+    name: name|default(''),
+    value_field: value_field|default('id'),
+    content_type: content_type|default('page'),
+    exclude_id: exclude_id|default(''),
+    initial_value: initial_value|default(''),
+    initial_label: initial_label|default(''),
+    placeholder: placeholder|default(__('Search pages…')),
+    empty_label: empty_label|default(__('— None —')),
+    preload_per_page: preload_per_page|default(100),
+    wrapper_class: wrapper_class|default('')
+} %}

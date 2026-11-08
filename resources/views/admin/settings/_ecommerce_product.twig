@@ -1,0 +1,205 @@
+    {# ══ Product sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-product" class="ec-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="ecommerce">
+        <input type="hidden" name="_subtab" value="product">
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Product Reviews') }}</h3>
+            <div {{ vl.attrs('ecommerce', __('Enable product reviews'), 'product_reviews_enabled', 'product', __('Product Reviews'), 'reviews ratings feedback') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="product_reviews_enabled" value="0">
+                    <input type="checkbox" name="product_reviews_enabled" value="1"
+                           {{ settings.product_reviews_enabled|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block">{{ __('Enable product reviews') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('Shoppers can write reviews for products.') }}</span>
+                    </span>
+                </label>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Allow users to edit/remove their own reviews'), 'allow_review_editing', 'product', __('Product Reviews'), 'edit delete own reviews') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="allow_review_editing" value="0">
+                    <input type="checkbox" name="allow_review_editing" value="1"
+                           {{ settings.allow_review_editing|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block">{{ __('Allow users to edit/remove their own reviews') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('Logged-in users can edit and delete their own product reviews.') }}</span>
+                    </span>
+                </label>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Show verified badge next to reviews from verified buyers'), 'show_verified_badge', 'product', __('Product Reviews'), 'verified purchase badge') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="show_verified_badge" value="0">
+                    <input type="checkbox" name="show_verified_badge" value="1"
+                           {{ settings.show_verified_badge|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block">{{ __('Show verified badge next to reviews from verified buyers') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('Displays a "Verified Purchase" badge on reviews from customers who purchased the product.') }}</span>
+                    </span>
+                </label>
+            </div>
+            <div x-data="{ onlyLoggedIn: {{ settings.only_logged_in_can_review|default('0') == '1' ? 'true' : 'false' }} }">
+                <div {{ vl.attrs('ecommerce', __('Users must be logged in to review'), 'only_logged_in_can_review', 'product', __('Product Reviews'), 'login required review') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="only_logged_in_can_review" value="0">
+                        <input type="checkbox" name="only_logged_in_can_review" value="1"
+                               {{ settings.only_logged_in_can_review|default('0') == '1' ? 'checked' }}
+                               x-model="onlyLoggedIn"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span>
+                            <span class="block">{{ __('Users must be logged in to review') }}</span>
+                            <span class="block text-xs text-gray-500 mt-0.5">{{ __('Only allow logged-in users to submit product reviews.') }}</span>
+                        </span>
+                    </label>
+                </div>
+                <div x-show="onlyLoggedIn" x-cloak class="ml-7 border-l-2 border-gray-200 pl-4 py-1 space-y-3">
+                    <div {{ vl.attrs('ecommerce', __('Only allow verified buyers to review'), 'only_verified_buyers_can_review', 'product', __('Product Reviews'), 'verified buyer purchase required') }}>
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="hidden" name="only_verified_buyers_can_review" value="0">
+                            <input type="checkbox" name="only_verified_buyers_can_review" value="1"
+                                   {{ settings.only_verified_buyers_can_review|default('0') == '1' ? 'checked' }}
+                                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                            <span>
+                                <span class="block">{{ __('Only allow verified buyers to review') }}</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">{{ __('Only users who have purchased this product can write reviews.') }}</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Enable star ratings on product pages'), 'star_rating_enabled', 'product', __('Product Reviews'), 'stars rating display') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="star_rating_enabled" value="0">
+                    <input type="checkbox" name="star_rating_enabled" value="1"
+                           {{ settings.star_rating_enabled|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Enable star ratings on product pages') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Per-product setting can override.') }}</p>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Hold product reviews for moderation'), 'review_moderation', 'product', __('Product Reviews'), 'moderation approve pending') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="review_moderation" value="0">
+                    <input type="checkbox" name="review_moderation" value="1"
+                           {{ settings.review_moderation|default('0') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Hold product reviews for moderation') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('New reviews by guests must be manually approved before they appear. Logged-in users are auto-approved.') }}</p>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Review Captcha'), 'review_captcha_type', 'product', __('Product Reviews'), 'recaptcha captcha hcaptcha turnstile') }} x-data="{
+                type: '{{ settings.review_captcha_type|default('none') }}',
+                config: {
+                    hcaptcha: {{ captchaConfig.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    recaptcha: {{ captchaConfig.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    turnstile: {{ captchaConfig.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                }
+            }">
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Review Captcha') }}</label>
+                <select name="review_captcha_type" x-model="type"
+                        class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="none">{{ __('None') }}</option>
+                    <option value="math">{{ __('Math question (simple, no API key)') }}</option>
+                    <option value="hcaptcha">hCaptcha</option>
+                    <option value="recaptcha">Google reCAPTCHA v3</option>
+                    <option value="turnstile">Cloudflare Turnstile</option>
+                    <option value="honeypot">Honeypot (hidden field)</option>
+                </select>
+                <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
+                   class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
+                    ⚠ {{ __('This captcha is not configured in Privacy & Security settings.') }}
+                </p>
+                <p class="mt-1 text-xs text-gray-400">{{ __('API keys are configured in the Privacy & Settings tab.') }}</p>
+            </div>
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5"
+             x-data="{ refundsEnabled: {{ settings.refunds_enabled|default('1') == '1' ? 'true' : 'false' }} }">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Cancellation & Refund Settings') }}</h3>
+
+            <div {{ vl.attrs('ecommerce', __('Accept Refunds'), 'refunds_enabled', 'product', __('Cancellation & Refund Settings'), 'refund cancellation enable accept') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="refunds_enabled" value="0">
+                    <input type="checkbox" name="refunds_enabled" value="1"
+                           x-model="refundsEnabled"
+                           {{ settings.refunds_enabled|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block font-medium text-gray-900 dark:text-gray-100">{{ __('Accept Refunds & Cancellations') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('When disabled, refund request options are completely hidden across the frontend.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="max-w-xs" x-show="refundsEnabled" x-cloak {{ vl.attrs('ecommerce', __('Default Refund Period (Days)'), 'refund_period_days', 'product', __('Cancellation & Refund Settings'), 'refund period days window limit') }}>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Refund Request Window (Days)') }}</label>
+                <input type="number" min="1" max="365" name="refund_period_days"
+                       value="{{ settings.refund_period_days|default('14') }}"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Number of days from order placement during which customers can submit cancellation or refund requests.') }}</p>
+            </div>
+
+            <div x-show="refundsEnabled" x-cloak {{ vl.attrs('ecommerce', __('Auto-accept digital refunds if not downloaded'), 'auto_accept_digital_refunds', 'product', __('Cancellation & Refund Settings'), 'auto accept digital download refund') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="auto_accept_digital_refunds" value="0">
+                    <input type="checkbox" name="auto_accept_digital_refunds" value="1"
+                           {{ settings.auto_accept_digital_refunds|default('0') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block font-medium text-gray-900 dark:text-gray-100">{{ __('Auto-accept digital refunds if file has not been downloaded') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Automatically approves refund requests for digital orders if the customer has zero downloads.') }}</span>
+                        <span class="block text-xs text-amber-600 dark:text-amber-400 mt-0.5">{{ __('Note: For external URL downloads, enable "Hide URL / Proxy" on product settings so real link is hidden and access can be tracked.') }}</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Sales & Inventory Display') }}</h3>
+            <div {{ vl.attrs('ecommerce', __('Show sold count on product pages'), 'show_sold_count', 'product', __('Sales & Inventory Display'), 'sold units count display') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="show_sold_count" value="0">
+                    <input type="checkbox" name="show_sold_count" value="1"
+                           {{ settings.show_sold_count|default('0') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Show sold count on product pages') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Displays \'X sold\' under the product when at least one unit has been sold.') }}</p>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Always show remaining stock count if stock is tracked'), 'show_stock_count', 'product', __('Sales & Inventory Display'), 'stock quantity inventory display') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="show_stock_count" value="0">
+                    <input type="checkbox" name="show_stock_count" value="1"
+                           {{ settings.show_stock_count|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Always show remaining stock count if stock is tracked') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Displays \'X in stock\' on product pages. Hidden when the low-stock warning is shown.') }}</p>
+            </div>
+            <div {{ vl.attrs('ecommerce', __('Enable low stock warning on product page'), 'low_stock_warning_enabled', 'product', __('Sales & Inventory Display'), 'low stock alert warning') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="low_stock_warning_enabled" value="0">
+                    <input type="checkbox" name="low_stock_warning_enabled" value="1"
+                           {{ settings.low_stock_warning_enabled|default('0') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Enable low stock warning on product page') }}
+                </label>
+            </div>
+            <div class="max-w-xs" {{ vl.attrs('ecommerce', __('Low stock warning threshold'), 'low_stock_warning_threshold', 'product', __('Sales & Inventory Display'), 'stock threshold inventory alert') }}>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Low stock warning threshold') }}</label>
+                <input type="number" min="1" max="999" name="low_stock_warning_threshold"
+                       value="{{ settings.low_stock_warning_threshold|default('2') }}"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                <p class="mt-1 text-xs text-gray-400">{{ __('Show warning when stock is at or below this number and send an email to admin.') }}</p>
+            </div>
+        </div>
+
+    </form>
+    </div>{# /ec-tab-product #}

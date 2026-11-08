@@ -1,0 +1,199 @@
+    {# ══ Checkout sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-checkout" class="ec-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="ecommerce">
+        <input type="hidden" name="_subtab" value="checkout">
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Checkout Settings') }}</h3>
+
+            <div {{ vl.attrs('ecommerce', __('Enable guest checkout'), 'guest_checkout_enabled', 'checkout', __('Checkout Settings'), 'guest checkout anonymous') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="guest_checkout_enabled" value="0">
+                    <input type="checkbox" name="guest_checkout_enabled" value="1"
+                           {{ settings.guest_checkout_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700">{{ __('Enable guest checkout') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('Allow customers to checkout without creating an account. When disabled, customers must log in before checking out.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <div {{ vl.attrs('ecommerce', __('Enable Buy Now button'), 'buy_now_enabled', 'checkout', __('Checkout Settings'), 'buy now button checkout instant') }} class="rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-4">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="buy_now_enabled" value="0">
+                    <input type="checkbox" name="buy_now_enabled" value="1"
+                           {{ settings.buy_now_enabled|default('0') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable "Buy Now" button') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Displays a "Buy Now" button on product pages below the Add to Cart button to redirect directly to checkout.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Checkout Form') }}</h3>
+
+            <div {{ vl.attrs('ecommerce', __('Base Billing Fields'), 'checkout_display_first_name', 'checkout', __('Checkout Form'), 'billing fields checkout form') }}>
+                <label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Base Billing Fields') }}</label>
+                <p class="mb-3 text-xs text-gray-400">{{ __('Base checkout fields stay hardcoded. Use Display and Mandatory toggles per field.') }}</p>
+                {% set _checkoutDisplay = {
+                    'first_name': settings.checkout_display_first_name|default('1') == '1',
+                    'last_name': settings.checkout_display_last_name|default('1') == '1',
+                    'email': settings.checkout_display_email|default('1') == '1',
+                    'phone': settings.checkout_display_phone|default('1') == '1',
+                    'country': settings.checkout_display_country|default('1') == '1',
+                    'address': settings.checkout_display_address|default('1') == '1',
+                    'city': settings.checkout_display_city|default('1') == '1',
+                    'state': settings.checkout_display_state|default('1') == '1',
+                    'postcode': settings.checkout_display_postcode|default('1') == '1',
+                    'note': settings.checkout_display_note|default('1') == '1'
+                } %}
+                {% set _checkoutRequired = {
+                    'first_name': settings.checkout_required_first_name|default('1') == '1',
+                    'last_name': settings.checkout_required_last_name|default('1') == '1',
+                    'email': settings.checkout_required_email|default('1') == '1',
+                    'phone': settings.checkout_required_phone|default('1') == '1',
+                    'country': settings.checkout_required_country|default('1') == '1',
+                    'address': settings.checkout_required_address|default('1') == '1',
+                    'city': settings.checkout_required_city|default('1') == '1',
+                    'state': settings.checkout_required_state|default('1') == '1',
+                    'postcode': settings.checkout_required_postcode|default('1') == '1',
+                    'note': settings.checkout_required_note|default('0') == '1'
+                } %}
+
+                <div class="max-w-3xl overflow-x-auto rounded-lg border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-medium text-gray-600">{{ __('Field') }}</th>
+                            <th class="px-3 py-2 text-center font-medium text-gray-600">{{ __('Display') }}</th>
+                            <th class="px-3 py-2 text-center font-medium text-gray-600">{{ __('Mandatory') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% set _rows = [
+                            {'key': 'first_name', 'label': __('First Name')},
+                            {'key': 'last_name', 'label': __('Last Name')},
+                            {'key': 'email', 'label': __('Email')},
+                            {'key': 'phone', 'label': __('Phone')},
+                            {'key': 'country', 'label': __('Country')},
+                            {'key': 'address', 'label': __('Address')},
+                            {'key': 'city', 'label': __('City')},
+                            {'key': 'state', 'label': __('State / Region')},
+                            {'key': 'postcode', 'label': __('Postcode')},
+                            {'key': 'note', 'label': __('Order Notes')}
+                        ] %}
+                        {% for row in _rows %}
+                        <tr>
+                            <td class="px-3 py-2 text-gray-700">{{ row.label }}</td>
+                            <td class="px-3 py-2 text-center">
+                                <input type="checkbox" name="checkout_display_{{ row.key }}" value="1" {{ attribute(_checkoutDisplay, row.key) ? 'checked' : '' }} class="checkout-display-toggle rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" data-field="{{ row.key }}">
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <input type="checkbox" name="checkout_required_{{ row.key }}" value="1" {{ attribute(_checkoutRequired, row.key) ? 'checked' : '' }} class="checkout-required-toggle rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100" data-field="{{ row.key }}">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+{% if settings.form_builder_enabled|default('1') == '1' %}
+             <div {{ vl.attrs('ecommerce', __('Additional Form Fields'), 'checkout_form_id', 'checkout', __('Checkout Form'), 'custom form fields') }}>
+                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Additional Form Fields') }}</label>
+                 <select name="checkout_form_id" class="w-full max-w-xl rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                     <option value="">— {{ __('None') }} —</option>
+                     {% for f in checkoutForms %}
+                     <option value="{{ f.id }}" {{ settings.checkout_form_id|default('') == (f.id ~ '') ? 'selected' }}>{{ f.name }}</option>
+                     {% endfor %}
+                 </select>
+                 <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                     <p>{{ __('Select an additional form to be appended at the end.') }}</p>
+                     <p>• {{ __('Selected form fields are appended under Additional Information at checkout.') }}</p>
+                     <p>• {{ __('Use the form builder for extra checkbox/select/textarea/static text fields.') }}</p>
+                     <p>• <a href="{{ url('/admin/forms') }}" class="text-gray-700 underline hover:text-gray-900 dark:text-gray-100">{{ __('Manage forms') }}</a> · <a href="{{ url('/admin/forms/create') }}" class="text-gray-700 underline hover:text-gray-900 dark:text-gray-100">{{ __('Create new form') }}</a></p>
+                 </div>
+             </div>
+             {% endif %}
+
+            {# ── Abandoned Cart ── #}
+            <div class="border-t pt-4 space-y-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Abandoned Cart Recovery') }}</h3>
+                <div {{ vl.attrs('ecommerce', __('Enable abandoned cart emails'), 'abandoned_cart_enabled', 'checkout', __('Abandoned Cart Recovery'), 'cart recovery email reminder') }}>
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="abandoned_cart_enabled" value="0">
+                    <input type="checkbox" name="abandoned_cart_enabled" value="1"
+                           {{ settings.abandoned_cart_enabled|default('0') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700">{{ __('Enable abandoned cart emails') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('Send reminder emails to logged-in users who left items in their cart.') }}</span>
+                    </span>
+                </label>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <div {{ vl.attrs('ecommerce', __('Delay (hours)'), 'abandoned_cart_delay_hours', 'checkout', __('Abandoned Cart Recovery'), 'cart delay hours') }}>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Delay (hours)') }}</label>
+                        <input type="number" name="abandoned_cart_delay_hours" value="{{ settings.abandoned_cart_delay_hours|default('2') }}" min="1" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Hours after cart is abandoned before sending first reminder.') }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div {{ vl.attrs('ecommerce', __('Max reminders'), 'abandoned_cart_max_reminders', 'checkout', __('Abandoned Cart Recovery'), 'cart reminders count') }}>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Max reminders') }}</label>
+                        <input type="number" name="abandoned_cart_max_reminders" value="{{ settings.abandoned_cart_max_reminders|default('3') }}" min="1" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Maximum number of reminders to send.') }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <div {{ vl.attrs('ecommerce', __('Reminder interval (hours)'), 'abandoned_cart_reminder_interval_hours', 'checkout', __('Abandoned Cart Recovery'), 'cart reminder interval') }}>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Reminder interval (hours)') }}</label>
+                        <input type="number" name="abandoned_cart_reminder_interval_hours" value="{{ settings.abandoned_cart_reminder_interval_hours|default('24') }}" min="1" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Hours between subsequent reminders.') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t pt-4" id="tax-display-checkout-field">
+                <div {{ vl.attrs('ecommerce', __('Tax Display'), 'tax_display_mode', 'checkout', __('Checkout Settings'), 'vat tax display breakdown') }}>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tax Display') }}</label>
+                {% set _taxDisplay = settings.tax_display_mode|default('incl_and_breakdown') %}
+                <select name="tax_display_mode" class="w-full max-w-xl rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="incl_and_breakdown" {{ _taxDisplay == 'incl_and_breakdown' ? 'selected' : '' }}>{{ __('Show VAT included + breakdown') }}</option>
+                    <option value="incl_only" {{ _taxDisplay == 'incl_only' ? 'selected' : '' }}>{{ __('Show VAT included only') }}</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Controls how tax appears in checkout and order summary views.') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            function syncMandatoryState() {
+                document.querySelectorAll('.checkout-display-toggle').forEach(function(displayInput){
+                    var key = displayInput.getAttribute('data-field');
+                    var req = document.querySelector('.checkout-required-toggle[data-field="' + key + '"]');
+                    if (!req) return;
+                    var enabled = !!displayInput.checked;
+                    req.disabled = !enabled;
+                    req.closest('td')?.classList.toggle('opacity-50', !enabled);
+                    if (!enabled) req.checked = false;
+                });
+            }
+            document.querySelectorAll('.checkout-display-toggle').forEach(function(input){
+                input.addEventListener('change', syncMandatoryState);
+            });
+            syncMandatoryState();
+        })();
+        </script>
+
+    </form>
+    </div>{# /ec-tab-checkout #}

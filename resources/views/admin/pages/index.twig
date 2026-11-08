@@ -1,0 +1,136 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Pages') }}{% endblock %}
+
+{% block content %}
+{% set allIds = pages|map(p => p.id) %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Pages') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-text="tjs(':count pages total', {':count': visibleCount})"></p>
+    </div>
+    <a href="{{ url('/admin/pages/create') }}"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Create Page') }}
+    </a>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search(__('Search') ~ '…') }}
+    {{ table.contentSearch() }}
+    {{ table.columnsToggle() }}
+    {% if multi_language_content %}
+    <form method="get" action="{{ url('/admin/pages') }}">
+        <select name="language" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">{{ __('All Languages') }}</option>
+            {% for code, name in supported_locales %}
+                <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th(__('Title'), 'title') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
+                {{ table.th(__('Status'), 'status', 'center') }}
+                {{ table.th(__('Parent'), 'parent') }}
+                {{ table.th(__('Created'), 'created_at') }}
+                {{ table.th(__('Updated'), 'updated_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for p in pages %}
+            {% set parentName = titleMap[p.parentId]|default('') %}
+            <tr data-row-id="{{ p.id }}" data-sort="{{ {title: p.title, status: p.status, parent: parentName, created_at: p.createdAt ? p.createdAt.format('Y-m-d H:i:s') : '', updated_at: p.updatedAt ? p.updatedAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(p.id) }}
+                <td class="px-6 py-4">
+                    <a href="{{ url('/admin/pages/' ~ p.id ~ '/edit') }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ p.title }}</a>
+                    <p class="text-xs text-gray-400">/{{ path_map[p.id]|default(p.slug) }}</p>
+                </td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 text-center">
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 uppercase">
+                        {{ p.language }}
+                    </span>
+                </td>
+                {% endif %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-center">
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium
+                        {% if p.status == 'published' %}bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300
+                        {% elseif p.status == 'draft' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300
+                        {% elseif p.status == 'unlisted' %}bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300
+                        {% elseif p.status == 'expired' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                        {% elseif p.status == 'archived' %}bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ __(p.status)|capitalize }}
+                    </span>
+                    {% if p.status in ['draft', 'unlisted'] and p.publishedAt and p.publishedAt|date('Y-m-d H:i:s') > "now"|date('Y-m-d H:i:s') %}
+                    <span class="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">({{ __('scheduled')|capitalize }})</span>
+                    {% endif %}
+                    {% if p.status == 'scheduled' and not p.publishedAt %}
+                    <span class="mt-1 block inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" title="{{ __('No publish date set — this page will never publish automatically') }}">{{ __('No date') }}</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {% if p.parentId and parentName %}
+                    <a href="{{ url('/admin/pages/' ~ p.parentId ~ '/edit') }}" class="hover:underline">{{ parentName }}</a>
+                    {% else %}
+                    <span class="text-gray-300">—</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.createdAt ? p.createdAt.format('M j, Y') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.updatedAt ? p.updatedAt.format('M j, Y') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                    <div class="inline-flex items-center gap-2">
+                        {% set _page_view_url = (page_prefix ~ '/' ~ (path_map[p.id]|default(p.slug)))|replace({'//': '/'}) %}
+                        {% if p.status not in ['draft', 'archived', 'expired'] %}
+                        <a href="{{ absolute_url(_page_view_url) }}" target="_blank" rel="noopener"
+                           title="{{ _page_view_url|e }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
+                        {% endif %}
+                        <a href="{{ url('/admin/pages/' ~ p.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                        <form method="post" action="{{ url('/admin/pages/' ~ p.id ~ '/clone') }}" class="inline">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Clone') }}</button>
+                        </form>
+                        <form method="post" action="{{ url('/admin/pages/' ~ p.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="{% if multi_language_content %}7{% else %}6{% endif %}" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No pages found.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'posts', extraActions: [
+    {label: __('Publish'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+    {label: __('Unlisted'), action: 'unlisted', class: 'bg-purple-600/10 text-purple-700 dark:text-purple-400 hover:bg-purple-600/20'},
+    {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},
+]} %}
+</div>
+{% endblock %}

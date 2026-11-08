@@ -1,0 +1,41 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Home') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ seo_home_description }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    {% if not blog_enabled %}
+    <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-6 mb-8">
+        <p class="text-yellow-800 text-sm">
+            {{ __('Blog is disabled. Please set a homepage in Settings or enable the blog.') }}
+        </p>
+    </div>
+    {% endif %}
+
+    {# Hero #}
+    <section class="py-16 text-center">
+        <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            {{ __('Welcome to') }} <em>{{ site_name }}</em>
+        </h1>
+        <p class="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+            {{ __('A blazing-fast, lightweight CMS.') }}
+        </p>
+    </section>
+
+    <section class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-xl border bg-white p-6 shadow-xs">
+            <h3 class="text-lg font-semibold">{{ __('Lightning Fast') }}</h3>
+            <p class="mt-2 text-sm text-gray-600">{{ __('Optimized from the ground up for shared hosting.') }}</p>
+        </div>
+        <div class="rounded-xl border bg-white p-6 shadow-xs">
+            <h3 class="text-lg font-semibold">{{ __('Lightweight') }}</h3>
+            <p class="mt-2 text-sm text-gray-600">{{ __('No bloatware. Only what you need.') }}</p>
+        </div>
+        <div class="rounded-xl border bg-white p-6 shadow-xs">
+            <h3 class="text-lg font-semibold">{{ __('Secure') }}</h3>
+            <p class="mt-2 text-sm text-gray-600">{{ __('Built with security best practices from day one.') }}</p>
+        </div>
+    </section>
+</div>
+{% endblock %}

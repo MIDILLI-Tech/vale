@@ -1,0 +1,66 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve uploads from storage/uploads/ directory
+    RewriteCond %{DOCUMENT_ROOT}/storage/uploads/$1$2 -f
+    RewriteRule ^uploads(/.+)$ storage/uploads$1 [QSA,L]
+
+    # Serve static assets (css, js) from public/ directory
+    RewriteCond %{DOCUMENT_ROOT}/public/$1$2 -f
+    RewriteRule ^(assets|storage)(/.+)$ public/$1$2 [QSA,L]
+
+    # Route all other requests to index.php (which forwards to public/index.php)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+# Security: block access to sensitive files
+<FilesMatch "^(\.env|composer\.(json|lock)|phinx\.php)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block hidden files (.env, .git, etc.)
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block direct access to sensitive directories
+<IfModule mod_rewrite.c>
+    # Media is public, but code and markup never are: refuse executable and
+    # renderable extensions even if a file was dropped into storage/uploads by
+    # hand and registered with `vale media:scan`.
+    RewriteCond %{REQUEST_URI} ^/(uploads|storage/uploads)/
+    RewriteCond %{REQUEST_URI} \.(php\d?|phtml|pht|phar|cgi|pl|py|sh|html?|xhtml|shtml)$ [NC]
+    RewriteRule ^ - [F,L]
+
+    # Hidden segments are configuration by convention (.git/, .config/, …):
+    # never served — from media or anywhere else. Matching the decoded
+    # per-directory path (not REQUEST_URI) means encoded dots (%2E) cannot
+    # slip past. `.well-known/` stays reachable for ACME and similar checks.
+    RewriteCond %{REQUEST_URI} !^/\.well-known/
+    RewriteRule (^|/)\. - [F,L]
+
+    # Media lives in storage/uploads but is public: served straight by the web
+    # server when the document root is the project root (rewritten above), or
+    # through the vhost Alias in the Docker images (/uploads/...). Without this
+    # exception the sensitive-directory rule below answers 403.
+    RewriteCond %{REQUEST_URI} ^/(uploads|storage/uploads)/
+    RewriteRule ^ - [L]
+
+    RewriteRule ^(app|bootstrap|config|database|routes|src|storage|vendor|resources)(/.*)?$ - [F,L]
+</IfModule>
+
+Options -Indexes
+AddDefaultCharset UTF-8

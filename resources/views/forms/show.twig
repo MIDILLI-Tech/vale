@@ -1,0 +1,218 @@
+﻿{% extends "layout.twig" %}
+
+{% block title %}{{ form.name }}{% endblock %}
+{% block meta_description %}{{ __('Submit your information through our secure online form.') }}{% endblock %}
+
+{% block content %}
+{% set entity_label = 'form' %}
+{% include 'partials/_fallback_notice.twig' %}
+{% set allowMultiple = form.settings.allow_multiple ?? true %}
+{% set alreadySubmitted = already_submitted|default(false) %}
+{% if (success or alreadySubmitted) and not allowMultiple %}
+<script>
+    localStorage.setItem('vl_form_submitted_{{ form.id }}', '1');
+</script>
+{% endif %}
+<div class="container mx-auto px-4 py-10 max-w-2xl">
+
+    {% if success %}
+    <div class="rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 p-8 text-center">
+        <div class="text-green-600 dark:text-green-400 text-5xl mb-3">✓</div>
+        <h2 class="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">Thank you!</h2>
+        <p class="text-green-700 dark:text-green-400">{{ message|default(__('Thank you! Your message has been sent.')) }}</p>
+        {% if allowMultiple %}
+        <a href="" class="mt-4 inline-block text-sm text-green-600 hover:underline">Submit another response</a>
+        {% endif %}
+    </div>
+    {% elseif not allowMultiple %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('vl_form_submitted_{{ form.id }}')) {
+                var wrap = document.getElementById('vl-form-wrap');
+                if (wrap) {
+                    wrap.innerHTML = '<div class="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 p-8 text-center"><div class="text-blue-600 dark:text-blue-400 text-5xl mb-3">✓</div><h2 class="text-xl font-semibold text-blue-800 dark:text-blue-300 mb-2">Already submitted</h2><p class="text-blue-700 dark:text-blue-400">You have already submitted this form.</p></div>';
+                }
+            }
+        });
+    </script>
+    {% endif %}
+
+    {% if not success %}
+    <div id="vl-form-wrap">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{{ form.name }}</h1>
+    {% if form.description %}
+    <p class="text-gray-600 dark:text-gray-400 mb-8">{{ form.description }}</p>
+    {% endif %}
+
+    {% if has_access is defined and not has_access %}
+        {% if require_login %}
+        <div class="rounded-2xl border border-gray-200 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-900/80 p-8 text-center shadow-xs">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 mb-4">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{{ __('Sign in to access this form') }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ __('This form is restricted to registered users. Please log in or create an account.') }}</p>
+            <div class="flex items-center justify-center gap-3">
+                <a href="{{ url('/login') }}" class="rounded-lg btn-primary px-5 py-2.5 text-sm font-medium">{{ __('Sign In') }}</a>
+                {% if registration_enabled|default('1') == '1' %}
+                <a href="{{ url('/register') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">{{ __('Register') }}</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="rounded-3xl border border-indigo-100 bg-indigo-50/60 p-8 text-center backdrop-blur-xs shadow-xs dark:border-blue-500/20 dark:bg-slate-800/60 dark:shadow-xl">
+            <p class="text-xl font-bold text-slate-900 dark:text-white mb-2">{{ __('This form is for members only.') }}</p>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 mb-6">{{ __('Subscribe to get access to submit this form.') }}</p>
+            <a href="{{ url('/membership') }}" class="inline-block rounded-lg btn-primary px-5 py-2.5 text-sm font-medium text-white transition-colors">{{ __('View Membership Plans') }}</a>
+        </div>
+        {% endif %}
+    {% else %}
+
+    {% if errors|length > 0 %}
+    <div class="mb-6 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-4 text-sm text-red-700 dark:text-red-300">
+        <div class="space-y-1">
+            {% for err in errors %}<p>{{ err }}</p>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url('/form/' ~ form.slug) }}" class="space-y-5">
+        {{ csrf_field() }}
+
+        {# Honeypot (Local via dropdown) #}
+        {% if form.captchaType == 'honeypot' %}
+        <div style="display:none">
+            <input type="text" name="{{ form.honeypotFieldName }}" autocomplete="off" tabindex="-1" aria-hidden="true">
+        </div>
+        {% endif %}
+
+        {% set fields = form.fields %}
+        <div class="flex flex-wrap -mx-2.5">
+        {% for field in fields %}
+        {% set width = field.width|default('100') %}
+        {% set widthClass = width == '50' ? 'w-full md:w-1/2' : (width == '33' ? 'w-full md:w-1/3' : (width == '25' ? 'w-full md:w-1/4' : 'w-full')) %}
+        <div class="{{ widthClass }} px-2.5 mb-5">
+            {% if field.type == 'static_text' %}
+            <p class="text-sm leading-6 text-gray-600 whitespace-pre-line">{{ field.label }}</p>
+
+            {% elseif field.type == 'newsletter_subscribe' or (field.type == 'checkbox' and field.options is empty) %}
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="fields[{{ field.name }}]" value="1"
+                       {{ field.required ? 'required' : '' }}
+                       class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                {{ field.label }}{% if field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+
+            {% else %}
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ field.label }}
+                {% if field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+
+            {% if field.type == 'text' or field.type == 'email' or field.type == 'tel' or field.type == 'number' or field.type == 'url' %}
+            <input type="{{ field.type }}" name="fields[{{ field.type == 'email' ? 'email' : field.name }}]"
+                   placeholder="{{ field.placeholder|default('') }}"
+                   {{ field.required ? 'required' : '' }}
+                   value="{{ (old[field.name])|default('') }}"
+                   class="w-full rounded-lg border-gray-300 text-sm">
+
+            {% elseif field.type == 'textarea' %}
+            <textarea name="fields[{{ field.name }}]"
+                      placeholder="{{ field.placeholder|default('') }}"
+                      {{ field.required ? 'required' : '' }}
+                      rows="{{ field.rows|default(4) }}"
+                      class="w-full rounded-lg border-gray-300 text-sm">{{ (old[field.name])|default('') }}</textarea>
+
+            {% elseif field.type == 'select' %}
+            <select name="fields[{{ field.name }}]" {{ field.required ? 'required' : '' }}
+                    class="w-full rounded-lg border-gray-300 text-sm">
+                <option value="">— choose —</option>
+                {% for opt in field.options %}
+                {% set optValue = opt.value|default(opt) %}
+                {% set optTitle = opt.title|default('') %}
+                <option value="{{ optValue }}" title="{{ optTitle }}" {{ (old[field.name])|default('') == optValue ? 'selected' : '' }}>{{ optValue }}</option>
+                {% endfor %}
+            </select>
+
+            {% elseif field.type == 'checkbox' %}
+            <div class="space-y-2">
+                {% for opt in field.options %}
+                {% set optValue = opt.value|default(opt) %}
+                {% set optTitle = opt.title|default('') %}
+                <label class="flex items-center gap-2 text-sm" title="{{ optTitle }}">
+                    <input type="checkbox" name="fields[{{ field.name }}][]" value="{{ optValue }}"
+                            class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                    {{ optValue }}
+                </label>
+                {% endfor %}
+            </div>
+
+            {% elseif field.type == 'radio' %}
+            <div class="space-y-2">
+                {% for opt in field.options %}
+                {% set optValue = opt.value|default(opt) %}
+                {% set optTitle = opt.title|default('') %}
+                <label class="flex items-center gap-2 text-sm" title="{{ optTitle }}">
+                    <input type="radio" name="fields[{{ field.name }}]" value="{{ optValue }}"
+                           class="border-gray-300">
+                    {{ optValue }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
+        </div>
+
+        {# Captcha #}
+        {% if captcha_type is defined and captcha_type != 'none' and captcha_type != 'honeypot' %}
+        <div class="flex flex-col items-center justify-center py-2 max-w-full overflow-x-auto w-full bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            {% if captcha_type == 'math' %}
+                <div class="w-full text-center">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {{ captcha_question }} = ?
+                        <span class="text-red-500">*</span>
+                        <span class="text-xs text-gray-400 font-normal ml-1">({{ __('spam protection') }})</span>
+                    </label>
+                    <input type="number" name="captcha" required
+                           class="w-32 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm mx-auto">
+                </div>
+            {% elseif captcha_type == 'hcaptcha' and captcha_site_key %}
+                <div class="h-captcha max-w-full" data-sitekey="{{ captcha_site_key }}"></div>
+                <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+            {% elseif captcha_type == 'recaptcha' and captcha_site_key %}
+                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-form-response">
+                <script src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha_site_key }}"></script>
+                <script>
+                    grecaptcha.ready(function() {
+                        try {
+                            grecaptcha.execute('{{ captcha_site_key }}', {action: 'form_submission'}).then(function(token) {
+                                document.getElementById('g-recaptcha-form-response').value = token;
+                            }).catch(function(e) {
+                                console.warn('reCAPTCHA execute failed:', e);
+                            });
+                        } catch (e) {
+                            console.warn('reCAPTCHA execute failed:', e);
+                        }
+                    });
+                </script>
+            {% elseif captcha_type == 'turnstile' and captcha_site_key %}
+                <div class="cf-turnstile max-w-full" data-sitekey="{{ captcha_site_key }}" data-theme="auto" data-size="flexible"></div>
+                <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <button type="submit"
+                class="rounded-lg btn-primary px-6 py-3 font-medium">
+            {{ form.submitLabel|default('Send Message') }}
+        </button>
+    </form>
+    {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

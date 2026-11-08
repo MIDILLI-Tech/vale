@@ -1,0 +1,467 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Dashboard') }}{% endblock %}
+
+{% set _sa = user.role is defined and user.role == 'super_admin' %}
+
+{% block content %}
+{% set _p_can = _sa or (user_permissions is defined and 'pages.list' in user_permissions) %}
+{% set _po_can = _sa or (user_permissions is defined and 'posts.list' in user_permissions) %}
+{% set _pr_can = _sa or (user_permissions is defined and 'products.list' in user_permissions) %}
+{% set _o_can = _sa or (user_permissions is defined and 'orders.list' in user_permissions and shop_enabled) %}
+{% set _nl_can = _sa or (user_permissions is defined and 'newsletter.manage' in user_permissions) %}
+
+<div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Dashboard') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Welcome back.') }}</p>
+    </div>
+    {# Environment badge — only in debug mode; otherwise shown in the System card #}
+    {% if app_debug %}
+        {% if app_env == 'local' or app_env == 'development' %}
+            <span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-3 py-1 text-xs font-semibold text-green-800 dark:text-green-300">{{ app_env }}</span>
+        {% elseif app_env == 'staging' %}
+            <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/40 px-3 py-1 text-xs font-semibold text-yellow-800 dark:text-yellow-300">{{ app_env }}</span>
+        {% else %}
+            <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/40 px-3 py-1 text-xs font-semibold text-red-800 dark:text-red-300">{{ app_env ?? 'production' }}</span>
+        {% endif %}
+    {% endif %}
+</div>
+
+{# ── Configuration notices (hidden entirely when clean) ─────────── #}
+{% include 'admin/partials/_status_banner.twig' %}
+
+{# ── Stats: content counts only (system info lives in the right rail) ── #}
+<div class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+    {% if pages_enabled and _p_can %}
+    <a href="{{ url('/admin/pages') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Pages') }}</p>
+        <p class="mt-0.5 text-xl font-semibold text-gray-900 dark:text-gray-100">{{ page_count }}</p>
+    </a>
+    {% endif %}
+    {% if blog_enabled and _po_can %}
+    <a href="{{ url('/admin/posts') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Posts') }}</p>
+        <p class="mt-0.5 text-xl font-semibold text-gray-900 dark:text-gray-100">{{ post_count }}</p>
+    </a>
+    {% endif %}
+    {% if shop_enabled and _pr_can %}
+    <a href="{{ url('/admin/products') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Products') }}</p>
+        <p class="mt-0.5 text-xl font-semibold text-gray-900 dark:text-gray-100">{{ product_count }}</p>
+    </a>
+    {% endif %}
+    {% if _o_can %}
+    <a href="{{ url('/admin/orders') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Orders') }}</p>
+        <div class="mt-0.5 flex items-baseline gap-1">
+            <span class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ order_count }}</span>
+            {% if pending_orders > 0 %}
+            <span class="text-xs font-normal text-orange-500 dark:text-orange-400">({{ pending_orders }} {{ __('pending') }})</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endif %}
+    {% if _po_can %}
+    <a href="{{ url('/admin/comments') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Comments') }}</p>
+        <div class="mt-0.5 flex items-baseline gap-1">
+            <span class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ comment_count }}</span>
+            {% if pending_comments > 0 %}
+            <span class="text-xs font-normal text-orange-500 dark:text-orange-400">({{ pending_comments }} {{ __('pending') }})</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endif %}
+    {% if newsletter_enabled and _nl_can %}
+    <a href="{{ url('/admin/newsletter/subscribers') }}" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-shadow">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Subscribers') }}</p>
+        <p class="mt-0.5 text-xl font-semibold text-gray-900 dark:text-gray-100">{{ subscriber_count }}</p>
+    </a>
+    {% endif %}
+</div>
+
+{# ── Main grid: work on the left, news + system in the right rail ── #}
+<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12">
+
+    {# ── LEFT: quick actions + needs attention ── #}
+    <div class="space-y-6 lg:col-span-8">
+
+        {# ── Quick actions ── #}
+        <section x-data="lpQuickActions()" x-init="init()">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Quick Actions') }}</h2>
+                <div class="flex gap-2">
+                    <button x-show="!managing" @click="start()"
+                            class="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                        </svg>
+                        {{ __('Manage') }}
+                    </button>
+                    <button x-show="managing" x-cloak @click="save()"
+                            class="flex items-center gap-1.5 rounded-lg bg-gray-900 dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
+                        {{ __('Save Order') }}
+                    </button>
+                </div>
+            </div>
+
+            <div id="vl-qa-grid" class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {# qa_ordered + qa_icon_colors globals come from FlashMiddleware:
+                   same order + same permission/feature filter as the header menu.
+                   The hidden span keeps Tailwind CDN aware of the dynamic color classes. #}
+                <span class="hidden" aria-hidden="true">text-blue-500 dark:text-blue-400 text-green-500 dark:text-green-400 text-purple-500 dark:text-purple-400 text-amber-500 dark:text-amber-400 text-red-500 dark:text-red-400 text-cyan-500 dark:text-cyan-400 text-pink-500 dark:text-pink-400 text-orange-500 dark:text-orange-400 text-indigo-500 dark:text-indigo-400 opacity-50 ring-1 ring-dashed ring-gray-300 dark:ring-gray-600</span>
+
+                {% for action in qa_ordered|default([]) %}
+                <div class="vl-qa-card relative rounded-xl transition-opacity" data-id="{{ action.key }}"
+                     :class="managing && isHidden('{{ action.key }}') ? 'opacity-50 ring-1 ring-dashed ring-gray-300 dark:ring-gray-600' : ''">
+                    {# Hide/Show toggle (Manage mode) — hidden cards stay on the dashboard, dimmed and clickable #}
+                    <button type="button" x-show="managing" x-cloak
+                            @click.stop="toggleHidden('{{ action.key }}')"
+                            :title="isHidden('{{ action.key }}') ? '{{ __('Show in menu')|e('js') }}' : '{{ __('Hide from menu')|e('js') }}'"
+                            class="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-500 shadow-xs transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <svg x-show="!isHidden('{{ action.key }}')" x-cloak class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <svg x-show="isHidden('{{ action.key }}')" x-cloak class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243"/>
+                        </svg>
+                    </button>
+                    {% if action.key in ['optimize', 'warm_cache'] %}
+                    <form method="POST" action="{{ url(action.path) }}" class="h-full">
+                        {{ csrf_field() }}
+                        <button type="submit" class="h-full w-full flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-all text-center">
+                            <span x-show="managing" class="drag-handle cursor-grab text-gray-400 dark:text-gray-500 select-none" title="{{ __('Hold to drag') }}">⠿</span>
+                            <svg class="h-6 w-6 {{ qa_icon_colors[action.color]|default('text-gray-500 dark:text-gray-100') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ action.icon }}"/>
+                            </svg>
+                            <span class="text-xs font-medium leading-tight text-gray-700 dark:text-gray-200">{{ __(action.label) }}{% if action.key == 'optimize' %} <span class="font-normal text-gray-400 dark:text-gray-500">({{ cache_size }})</span>{% endif %}</span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{{ url(action.path) }}"
+                       class="flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xs hover:shadow-md transition-all text-center">
+                        <span x-show="managing" class="drag-handle cursor-grab text-gray-400 dark:text-gray-500 select-none" title="{{ __('Hold to drag') }}">⠿</span>
+                        <svg class="h-6 w-6 {{ qa_icon_colors[action.color]|default('text-gray-500 dark:text-gray-100') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ action.icon }}"/>
+                        </svg>
+                        <span class="text-xs font-medium leading-tight text-gray-700 dark:text-gray-200">{{ __(action.label) }}</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {# ── Needs attention: operational queue ── #}
+        {% include 'admin/partials/_attention.twig' %}
+    </div>
+
+    {# ── RIGHT: newsletter feed + system info (sticky on desktop) ── #}
+    <div class="space-y-6 lg:col-span-4 lg:sticky lg:top-4 lg:self-start">
+
+        {# ── Vale News card ── #}
+        {% set news_off = dashboard_news_disabled is defined and dashboard_news_disabled %}
+        {% if not news_off %}
+        <section class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs overflow-hidden"
+                 x-data="{ collapsed: localStorage.getItem('vl_dash_vale_news_collapsed') === '1' }">
+            <header class="px-5 py-4 flex items-center justify-between gap-3" id="vl-news-card"
+                    data-news-url="{{ url('/admin/dashboard/news') }}"
+                    data-empty-text="{{ __('No news available right now.')|e('html_attr') }}"
+                    data-disabled-text="{{ __('Vale News refresh is disabled. Enable it in General › Communications settings.')|e('html_attr') }}"
+                    data-news-word="{{ __('news')|e('html_attr') }}"
+                    data-new-word="{{ __('new')|e('html_attr') }}">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Vale News') }}</h2>
+                    <span id="vl-news-count" class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">{{ vale_news|default([])|length }} {{ __('news') }}</span>
+                    <span id="vl-news-new" class="hidden items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300"></span>
+                </div>
+                <div class="flex shrink-0 items-center gap-1">
+                    <button type="button" x-show="!collapsed"
+                            title="{{ __('Refresh')|e('html_attr') }}" onclick="vlRefreshNews(this)"
+                            class="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M21 3v5h-5"/>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                            <path d="M8 16H3v5"/>
+                        </svg>
+                    </button>
+                    <button type="button" @click="collapsed = !collapsed; localStorage.setItem('vl_dash_vale_news_collapsed', collapsed ? '1' : '0')"
+                            class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                            :title="collapsed ? '{{ __('Expand')|e('html_attr') }}' : '{{ __('Collapse')|e('html_attr') }}'">
+                        <svg x-show="!collapsed" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        <svg x-show="collapsed" x-cloak class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+            <div x-show="!collapsed" x-collapse class="px-5 pb-5">
+                <ul id="vl-news-list" class="space-y-4 {{ vale_news|default([])|length == 0 ? 'hidden' : '' }}">
+                    {% for item in vale_news %}
+                    <li class="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-3 last:pb-0">
+                        <a href="{{ item.link }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">{{ item.title }}</a>
+                        {% if item.date %}<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ item.date|local_date('medium') }}</p>{% endif %}
+                        {% if item.desc %}<p class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ item.desc }}</p>{% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p id="vl-news-empty" class="text-sm text-gray-500 dark:text-gray-400 {{ vale_news|default([])|length > 0 ? 'hidden' : '' }}">{{ __('No news available right now.') }}</p>
+                {% if vale_news_url is defined and vale_news_url is not empty %}
+                <div class="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+                    <a href="{{ vale_news_url }}" target="_blank" rel="noopener" class="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">{{ __('View all') }} →</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+
+        {# ── System card ── #}
+        <section class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs overflow-hidden"
+                 x-data="{ collapsed: localStorage.getItem('vl_dash_system_collapsed') === '1' }">
+            <header class="px-5 py-4 flex items-center justify-between gap-3">
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('System') }}</h2>
+                    {% if status|default([])|length > 0 %}
+                    <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">{{ status|length }} {{ status|length == 1 ? __('notice') : __('notices') }}</span>
+                    {% endif %}
+                </div>
+                <button type="button" @click="collapsed = !collapsed; localStorage.setItem('vl_dash_system_collapsed', collapsed ? '1' : '0')"
+                        class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                        :title="collapsed ? '{{ __('Expand')|e('html_attr') }}' : '{{ __('Collapse')|e('html_attr') }}'">
+                    <svg x-show="!collapsed" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    <svg x-show="collapsed" x-cloak class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </header>
+            <div x-show="!collapsed" x-collapse x-cloak class="px-5 pb-5">
+            {% set _notice_count = status|default([])|length %}
+            <dl class="space-y-2 text-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('PHP Version') }}</dt>
+                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ php_version }}</dd>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Vale Version') }}</dt>
+                    <dd class="flex flex-wrap items-center justify-end gap-1.5">
+                        <a href="{{ url('/admin/update') }}" class="font-medium text-gray-900 hover:underline dark:text-gray-100" title="{{ __('Go to updates') }}">{{ vale_version }}</a>
+                        {% if is_baked|default(false) %}
+                        <span class="text-xs font-normal text-gray-400 dark:text-gray-500" title="{{ __('Updates from admin may not persist') }}">{{ __('Baked') }}</span>
+                        {% endif %}
+                        {% if update_available_version is defined %}
+                        <a href="{{ url('/admin/update') }}" class="inline-flex items-center rounded-md bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">{{ __('New') }}: v{{ update_available_version }}</a>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% if plugin_update_count|default(0) > 0 %}
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Plugin updates') }}</dt>
+                    <dd>
+                        <a href="{{ url('/admin/plugins') }}"
+                           class="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60">
+                            {{ __(':count available', {':count': plugin_update_count}) }}
+                        </a>
+                    </dd>
+                </div>
+                {% endif %}
+                {% if not app_debug %}
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Environment') }}</dt>
+                    <dd>
+                        {% if app_env == 'local' or app_env == 'development' %}
+                        <span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:text-green-300">{{ app_env }}</span>
+                        {% elseif app_env == 'staging' %}
+                        <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/40 px-2.5 py-0.5 text-xs font-semibold text-yellow-800 dark:text-yellow-300">{{ app_env }}</span>
+                        {% else %}
+                        <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/40 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:text-red-300">{{ app_env ?? 'production' }}</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endif %}
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Cache') }}</dt>
+                    <dd class="font-medium text-gray-900 dark:text-gray-100">{{ cache_size }}</dd>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <dt class="text-gray-500 dark:text-gray-400">{{ __('Checks') }}</dt>
+                    <dd>
+                        {% if status|default([])|length > 0 %}
+                        <span class="inline-flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                            {{ __(':count to review', {':count': _notice_count ~ ''}) }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 font-medium text-green-600 dark:text-green-400">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            {{ __('OK') }}
+                        </span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function lpQuickActions() {
+    return {
+        managing: false,
+        hidden: [],
+        _sortable: null,
+        init() {
+            this.hidden = vlQaHiddenKeys();
+        },
+        isHidden(key) { return this.hidden.indexOf(key) > -1; },
+        toggleHidden(key) {
+            const at = this.hidden.indexOf(key);
+            if (at > -1) this.hidden.splice(at, 1);
+            else this.hidden.push(key);
+            vlQaSaveHidden(this.hidden);
+            vlQaApplyHidden(document);
+        },
+        start() {
+            this.managing = true;
+            this._sortable = Sortable.create(
+                document.getElementById('vl-qa-grid'),
+                { handle: '.drag-handle', animation: 150, ghostClass: 'opacity-40' }
+            );
+        },
+        save() {
+            const order = Array.from(
+                document.querySelectorAll('#vl-qa-grid .vl-qa-card[data-id]')
+            ).map(c => c.dataset.id);
+            vlPost('/admin/quick-actions-order', { order }).then(() => {
+                this.managing = false;
+                this._sortable && this._sortable.destroy();
+                this._sortable = null;
+            });
+        },
+    };
+}
+function vlNewsSeen() {
+    try {
+        const seen = JSON.parse(localStorage.getItem('vl_dash_vale_news_seen') || '[]');
+        return Array.isArray(seen) ? seen : [];
+    } catch (e) {
+        return [];
+    }
+}
+function vlNewsUpdateBadges(items) {
+    const card = document.getElementById('vl-news-card');
+    if (!card) { return; }
+    const newsWord = card.getAttribute('data-news-word') || 'news';
+    const newWord = card.getAttribute('data-new-word') || 'new';
+    const count = document.getElementById('vl-news-count');
+    if (count) {
+        count.textContent = items.length + ' ' + newsWord;
+    }
+    const fresh = document.getElementById('vl-news-new');
+    if (fresh) {
+        const seen = vlNewsSeen();
+        const freshCount = items.filter(item => seen.indexOf(item.link) === -1).length;
+        if (seen.length > 0 && freshCount > 0) {
+            fresh.textContent = freshCount + ' ' + newWord;
+            fresh.classList.remove('hidden');
+            fresh.classList.add('inline-flex');
+        } else {
+            fresh.textContent = '';
+            fresh.classList.add('hidden');
+            fresh.classList.remove('inline-flex');
+        }
+    }
+    localStorage.setItem('vl_dash_vale_news_seen', JSON.stringify(items.map(item => item.link)));
+}
+function vlNewsInitBadges() {
+    const list = document.getElementById('vl-news-list');
+    if (!list) { return; }
+    const items = Array.from(list.querySelectorAll('a[href]')).map(a => ({ link: a.getAttribute('href') }));
+    if (items.length === 0) { return; }
+    vlNewsUpdateBadges(items);
+}
+document.addEventListener('DOMContentLoaded', vlNewsInitBadges);
+function vlRefreshNews(btn) {
+    if (btn.disabled) { return; }
+    const card = document.getElementById('vl-news-card');
+    if (!card) { return; }
+    const url = card.getAttribute('data-news-url') + '?force=1';
+    const emptyText = card.getAttribute('data-empty-text') || '';
+    const icon = btn.querySelector('svg');
+    if (icon) { icon.classList.add('animate-spin'); }
+    btn.disabled = true;
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+            const list = document.getElementById('vl-news-list');
+            const empty = document.getElementById('vl-news-empty');
+            if (!list || !empty) { return; }
+            const disabledText = card.getAttribute('data-disabled-text') || '';
+            if (data && data.enabled === false) {
+                list.innerHTML = '';
+                list.classList.add('hidden');
+                empty.textContent = disabledText;
+                empty.classList.remove('hidden');
+                return;
+            }
+            const items = (data && Array.isArray(data.items)) ? data.items : [];
+            vlNewsUpdateBadges(items);
+            if (items.length === 0) {
+                list.innerHTML = '';
+                list.classList.add('hidden');
+                empty.textContent = emptyText;
+                empty.classList.remove('hidden');
+                return;
+            }
+            const esc = (s) => {
+                const d = document.createElement('div');
+                d.textContent = s == null ? '' : String(s);
+                return d.innerHTML;
+            };
+            const fmtDate = (d) => {
+                if (!d) { return ''; }
+                const t = Date.parse(d);
+                if (isNaN(t)) { return esc(d); }
+                try {
+                    return new Date(t).toLocaleDateString(
+                        document.documentElement.lang || undefined,
+                        { year: 'numeric', month: 'short', day: 'numeric' }
+                    );
+                } catch (e) {
+                    return esc(d);
+                }
+            };
+            list.innerHTML = items.map(item => {
+                const date = item.date ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">${fmtDate(item.date)}</p>` : '';
+                const desc = item.desc ? `<p class="text-xs text-gray-600 dark:text-gray-300 mt-1">${esc(item.desc)}</p>` : '';
+                return `<li class="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-3 last:pb-0">
+                    <a href="${esc(item.link)}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">${esc(item.title)}</a>
+                    ${date}${desc}
+                </li>`;
+            }).join('');
+            list.classList.remove('hidden');
+            empty.classList.add('hidden');
+        })
+        .catch(() => {
+            const empty = document.getElementById('vl-news-empty');
+            if (empty) {
+                empty.textContent = emptyText;
+                empty.classList.remove('hidden');
+            }
+        })
+        .finally(() => {
+            if (icon) { icon.classList.remove('animate-spin'); }
+            btn.disabled = false;
+        });
+}
+</script>
+{% endblock %}

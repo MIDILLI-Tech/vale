@@ -1,0 +1,37 @@
+<script>
+    function setLanguage(lang) {
+        const translations = {{ seo_state.translations|default({})|json_encode|raw }};
+        const basePath = '{{ base_path }}';
+        const defaultLocale = '{{ default_locale }}';
+        let targetUrl = null;
+
+        for (const [locale, path] of Object.entries(translations)) {
+            if (locale === lang && path) {
+                targetUrl = basePath + path;
+                break;
+            }
+        }
+
+        if (!targetUrl) {
+            const currentUrl = new URL(window.location.href);
+            let path = currentUrl.pathname;
+
+            if (basePath && path.startsWith(basePath)) {
+                path = path.substring(basePath.length);
+            }
+
+            const segments = path.split('/').filter(Boolean);
+            const supportedLocales = {{ supported_locales|keys|json_encode|raw }};
+
+            if (segments.length > 0 && supportedLocales.includes(segments[0])) {
+                segments.shift();
+            }
+
+            targetUrl = basePath + (segments.length ? '/' + segments.join('/') : '/');
+            targetUrl = targetUrl.replace(/\/+/g, '/');
+        }
+
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        window.location.href = targetUrl + separator + 'lang=' + encodeURIComponent(lang);
+    }
+</script>

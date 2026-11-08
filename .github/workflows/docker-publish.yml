@@ -1,0 +1,168 @@
+name: Publish Docker Images
+
+# Release channel: a version tag publishes the immutable images with their
+# pinned + rolling tags. Manual runs can publish either flavor, or build
+# without pushing (uncheck "push").
+#
+# Tag scheme (Docker Hub: midillitech/vale):
+#   immutable Apache : latest, apache, <ver>, <maj.min>, <maj>,
+#                      <ver>-apache, <maj.min>-apache, <maj>-apache
+#   immutable Nginx  : nginx, <ver>-nginx, <maj.min>-nginx, <maj>-nginx
+#   mutable Apache   : mutable-apache
+#   mutable Nginx    : mutable-nginx
+#
+# Secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (scoped read/write access token)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.75.0). Leave empty for edge tags.'
+        required: false
+        default: ''
+      flavor:
+        description: 'Flavors to build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - immutable
+          - mutable
+      push:
+        description: 'Push to Docker Hub (uncheck for a build + smoke only run)'
+        required: false
+        type: boolean
+        default: true
+  # Called by release-manual.yml so a manually created release can publish images
+  # in the same run (a tag made with GITHUB_TOKEN would not trigger this workflow).
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.75.0). A leading "v" is ignored. Leave empty for edge tags.'
+        required: false
+        type: string
+        default: ''
+      flavor:
+        description: 'Flavors to build: all, immutable or mutable'
+        required: false
+        type: string
+        default: 'all'
+      push:
+        description: 'Push to Docker Hub'
+        required: false
+        type: boolean
+        default: true
+      ref:
+        description: 'Git ref to build from (defaults to the caller ref)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish ${{ inputs.version || github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Full history so the script can resolve the exact release tag and sha
+          fetch-depth: 0
+          # Pinned when called from a release so the images match the released commit
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, sodium, curl
+          coverage: none
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' || inputs.push
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Resolve build arguments
+        id: args
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_FLAVOR: ${{ inputs.flavor }}
+        run: |
+          set -eu
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            FLAVOR="all"
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            # workflow_dispatch and workflow_call both read the declared inputs
+            FLAVOR="${INPUT_FLAVOR:-all}"
+            VERSION="${INPUT_VERSION:-}"
+            VERSION="${VERSION#v}"
+          fi
+
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.push }}" = "true" ]; then
+            PUSH="--push"
+          else
+            PUSH=""
+          fi
+
+          echo "flavor=${FLAVOR}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "push=${PUSH}" >> "$GITHUB_OUTPUT"
+
+          echo "flavor=${FLAVOR} version=${VERSION} push=${PUSH:-no}"
+
+      - name: Build, smoke test and push
+        env:
+          VERSION: ${{ steps.args.outputs.version }}
+          PUSH: ${{ steps.args.outputs.push }}
+        run: |
+          set -eu
+
+          ARGS=(--flavor="${{ steps.args.outputs.flavor }}" --variants=apache,nginx --smoke)
+          if [ -n "$VERSION" ]; then
+            ARGS+=(--version="$VERSION")
+          else
+            # No version supplied: publish pre-release tags instead of silently
+            # promoting whatever version.php happens to hold.
+            ARGS+=(--edge)
+          fi
+          if [ -n "$PUSH" ]; then
+            ARGS+=(--push)
+          fi
+
+          php scripts/publish-docker.php "${ARGS[@]}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Docker publish"
+            echo ""
+            echo "- Version: \`${{ steps.args.outputs.version || 'edge' }}\`"
+            echo "- Flavor: \`${{ steps.args.outputs.flavor }}\`"
+            echo "- Push: \`${{ steps.args.outputs.push != '' && 'yes' || 'no' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

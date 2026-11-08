@@ -1,0 +1,7 @@
+{#
+    Renders the "load more" sentinel on its own so the AJAX endpoints can
+    return it as `more_html` after replacing a list body. The markup itself
+    lives in more.twig (macro) and stays identical to the server-rendered one.
+#}
+{% import 'admin/analytics/rows/more.twig' as more %}
+{{ more.button(list, offset, show, series, type) }}

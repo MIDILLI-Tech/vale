@@ -1,0 +1,524 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Edit Theme') }}: {{ theme_slug }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <a href="{{ url('/admin/themes') }}" class="hover:text-gray-900 dark:hover:text-gray-100">{{ __('Themes') }}</a>
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+        <span>{{ theme_slug }}</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Edit Templates') }}</h1>
+</div>
+
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
+    {# Sidebar: Template List #}
+    <div class="lg:col-span-1">
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Theme Templates') }}</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{{ __('Main Templates') }}</label>
+                    <nav class="space-y-1">
+                        {% set hasMainTemplates = false %}
+                        {% for tpl in templates %}
+                        {% if tpl.type == 'main' %}
+                        {% set hasMainTemplates = true %}
+                        <button onclick="loadTemplate('{{ tpl.path|e('js') }}')"
+                                id="btn-{{ tpl.path|e('js') }}"
+                                title="{{ (tpl.description is defined and tpl.description ? tpl.description : tpl.name)|e('html_attr') }}"
+                                class="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
+                            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            <span class="truncate min-w-0">{{ tpl.description is defined and tpl.description ? tpl.description : tpl.name }}</span>
+                        </button>
+                        {% endif %}
+                        {% endfor %}
+                        {% if not hasMainTemplates %}
+                        <div class="px-3 py-2 text-xs text-gray-400 italic">{{ __('No editable templates found') }}</div>
+                        {% endif %}
+                    </nav>
+                </div>
+
+                {% if pages_enabled|default(true) %}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{{ __('Page Templates') }}</label>
+                    <nav class="space-y-1">
+                        {% set hasPageTemplates = false %}
+                        {% for tpl in templates %}
+                        {% if tpl.type == 'page-template' %}
+                        {% set hasPageTemplates = true %}
+                        <div class="flex items-center gap-1">
+                            <button onclick="loadTemplate('{{ tpl.path|e('js') }}')"
+                                    id="btn-{{ tpl.path|e('js') }}"
+                                    title="{{ (tpl.description is defined and tpl.description ? tpl.description : tpl.name)|e('html_attr') }}"
+                                    class="flex-1 min-w-0 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 text-left">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="truncate min-w-0">{{ tpl.description is defined and tpl.description ? tpl.description : tpl.name }}</span>
+                            </button>
+                            {% if is_writable %}
+                            {% set isBlocked = tpl.is_core or tpl.in_use %}
+                            {% set disabledReason = tpl.is_core ? __('Core template cannot be deleted.') : (tpl.in_use ? __('This template is in use and cannot be deleted.') : '') %}
+                            {% if isBlocked %}
+                            <div title="{{ disabledReason|e('html_attr') }}" class="shrink-0 p-1.5 rounded-md text-gray-300 dark:text-gray-600 opacity-50 cursor-not-allowed">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </div>
+                            {% else %}
+                            <form action="{{ url('/admin/themes/' ~ theme_slug ~ '/templates/delete') }}" method="post"
+                                  onsubmit="return confirm('{{ __('Are you sure you want to delete this template?')|e('js') }}')"
+                                  class="shrink-0">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="file" value="{{ tpl.path|e('html_attr') }}">
+                                <button type="submit" title="{{ __('Delete') }}"
+                                        class="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% if not hasPageTemplates %}
+                        <div class="px-3 py-2 text-xs text-gray-400 italic">{{ __('No page templates found') }}</div>
+                        {% endif %}
+                    </nav>
+
+                    {% if is_writable %}
+                    <div class="mt-4 pt-4 border-t dark:border-gray-800">
+                        <form action="{{ url('/admin/themes/' ~ theme_slug ~ '/templates/create') }}" method="post">
+                            {{ csrf_field() }}
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('New Page Template') }}</label>
+                            <div class="flex gap-2">
+                                <input type="text" name="name" placeholder="e.g. full-width" required
+                                       class="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-xs">
+                                <button type="submit" class="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
+                                    {{ __('Add') }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if content_types is defined and content_types|length > 0 %}
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{{ __('Custom Content Templates') }}</label>
+                    <nav class="space-y-1">
+                        {% set hasCptTemplates = false %}
+                        {% for tpl in templates %}
+                        {% if tpl.type == 'cpt-template' %}
+                        {% set hasCptTemplates = true %}
+                        <div class="flex items-center gap-1">
+                            <button onclick="loadTemplate('{{ tpl.path|e('js') }}')"
+                                    id="btn-{{ tpl.path|e('js') }}"
+                                    title="{{ (tpl.description is defined and tpl.description ? tpl.description : tpl.name)|e('html_attr') }}"
+                                    class="flex-1 min-w-0 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 text-left">
+                                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="truncate min-w-0">{{ tpl.description is defined and tpl.description ? tpl.description : tpl.name }}</span>
+                            </button>
+                            {% if is_writable %}
+                            <form action="{{ url('/admin/themes/' ~ theme_slug ~ '/templates/delete') }}" method="post"
+                                  onsubmit="return confirm('{{ __('Are you sure you want to delete this template?')|e('js') }}')"
+                                  class="shrink-0">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="file" value="{{ tpl.path|e('html_attr') }}">
+                                <button type="submit" title="{{ __('Delete') }}"
+                                        class="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% if not hasCptTemplates %}
+                        <div class="px-3 py-2 text-xs text-gray-400 italic">{{ __('No templates found') }}</div>
+                        {% endif %}
+                    </nav>
+
+                    {% if is_writable %}
+                    {% set availableTypes = content_types|filter(ct => not ct.has_template) %}
+                    {% if availableTypes|length > 0 %}
+                    <div class="mt-4 pt-4 border-t dark:border-gray-800">
+                        <form action="{{ url('/admin/themes/' ~ theme_slug ~ '/templates/create') }}" method="post">
+                            {{ csrf_field() }}
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('New Template for') }}</label>
+                            <div class="flex gap-2">
+                                <select name="type" class="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-xs">
+                                    {% for ct in availableTypes %}
+                                    <option value="{{ ct.slug }}">{{ ct.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
+                                    {{ __('Add') }}
+                                </button>
+                            </div>
+                            <label class="mt-2 flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <input type="checkbox" name="extend_post" value="1" checked
+                                       class="rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800">
+                                {{ __('Extend post.twig') }}
+                            </label>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Editor Area #}
+    <div class="lg:col-span-3">
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+            <div id="editor-empty" class="flex flex-col items-center justify-center py-24 text-center">
+                <div class="rounded-full bg-gray-100 dark:bg-gray-800 p-4 mb-4">
+                    <svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Select a template to edit') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ __('Choose a file from the sidebar to begin editing.') }}</p>
+            </div>
+
+            <div id="editor-form" class="hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100" id="editor-filename"></h2>
+                        {% if not is_writable %}
+                        <span class="rounded-sm bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            {{ __('Read Only') }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="loading-indicator" class="hidden flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            {{ __('Processing…') }}
+                        </span>
+                        <span id="save-status-top" class="hidden text-sm text-green-600 font-medium">{{ __('Saved!') }}</span>
+                    </div>
+                </div>
+
+                {% if is_bundled_theme|default(false) %}
+                <div id="theme-update-warning" class="mb-4 hidden rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                    <div class="flex gap-3">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        <div>
+                            <p class="font-semibold">{{ __('This theme ships with Vale.') }}</p>
+                            <p class="mt-1">
+                                {{ __('Template files that ship with this theme are replaced by the next Vale update. Templates you create here are not protected: they normally survive, but a future release with the same filename can overwrite them. For changes you want to keep, create a child theme that inherits :theme and edit the copy instead.', {':theme': theme_slug}) }}
+                                <a href="{{ url('/admin/themes') }}" class="font-medium underline hover:no-underline">{{ __('Back to Themes') }}</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800/50 p-3 text-xs">
+                    <div class="font-medium text-blue-700 dark:text-blue-400 mb-1" id="placeholder-title">{{ __('Available Placeholders') }}</div>
+                    <div class="flex flex-wrap gap-1" id="placeholder-chips"></div>
+                </div>
+
+                <div id="editor-container" class="relative flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span class="font-mono text-xs flex items-center gap-2">
+                            <span>Twig & HTML Syntax Highlighting</span>
+                            <span class="text-gray-400 dark:text-gray-500">(Ctrl+S / Cmd+S to save)</span>
+                        </span>
+                        <button type="button" onclick="toggleFullscreen()" id="fullscreen-btn"
+                                class="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-xs">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                            </svg>
+                            <span id="fullscreen-text">{{ __('Fullscreen') }}</span>
+                        </button>
+                    </div>
+                    <div id="editor-wrapper" class="codejar-wrapper min-h-[500px] max-h-[700px]">
+                        <div class="codejar-gutter"></div>
+                        <div id="theme-code-editor" class="codejar-editor" spellcheck="false" {% if not is_writable %}contenteditable="false"{% endif %}></div>
+                    </div>
+                    <div id="editor-loading" style="display:none" class="min-h-[500px] items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        {{ __('Loading…') }}
+                    </div>
+                </div>
+
+                <div class="mt-4 flex items-center gap-3">
+                    {% if is_writable %}
+                    <button type="button" onclick="saveTemplate()" id="save-btn"
+                            class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600">
+                        {{ __('Save Changes') }}
+                    </button>
+                    {% endif %}
+                    <span id="save-status" class="text-sm text-green-600 font-medium hidden">{{ __('Saved!') }}</span>
+                    <span id="error-status" class="text-sm text-red-600 font-medium"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentFile = '';
+let isLoading = false;
+let themeJar = null;
+
+function initJarIfNeeded() {
+    if (!themeJar && window.initTwigEditor) {
+        const editorEl = document.getElementById('theme-code-editor');
+        const wrapper = document.getElementById('editor-wrapper');
+        if (!document.documentElement.classList.contains('dark')) {
+            wrapper.classList.add('light-theme');
+        } else {
+            wrapper.classList.remove('light-theme');
+        }
+        themeJar = window.initTwigEditor(editorEl);
+    }
+}
+
+// Guarantees visible line numbers even when CodeJar/highlighting is
+// unavailable: fills the gutter from the plain-text line count and syncs
+// its scroll with the editor. No-op when CodeJar already painted.
+function paintGutterFallback() {
+    const ed = document.getElementById('theme-code-editor');
+    const gutter = document.querySelector('#editor-wrapper .codejar-gutter');
+    if (!ed || !gutter || gutter.childElementCount > 0) return;
+    const n = (ed.textContent || '').split('\n').length;
+    let html = '';
+    for (let i = 1; i <= n; i++) html += '<div>' + i + '</div>';
+    gutter.innerHTML = html;
+    gutter.style.transform = 'translateY(' + (-ed.scrollTop) + 'px)';
+    if (!ed._gutterSyncFallback) {
+        ed._gutterSyncFallback = true;
+        // translateY (not scrollTop): the gutter box may not be
+        // programmatically scrollable, transform always works.
+        ed.addEventListener('scroll', function() {
+            gutter.style.transform = 'translateY(' + (-ed.scrollTop) + 'px)';
+        });
+    }
+}
+
+const defaultChips = {{ placeholders.common|json_encode|raw }};
+const cptSets = {
+{% for ct in content_types %}
+  '{{ ct.slug }}': { name: '{{ ct.name|e('js') }}', chips: {{ ct.placeholders|json_encode|raw }} },
+{% endfor %}
+};
+
+const systemTemplates = {
+{% for tpl in templates %}
+  '{{ tpl.path|e('js') }}': {{ tpl.is_system|default(false) ? 'true' : 'false' }}{{ not loop.last ? ',' : '' }}
+{% endfor %}
+};
+
+function renderPlaceholders(file) {
+    const slug = file.replace(/\.twig$/, '');
+    const set = cptSets[slug];
+    const chips = set ? set.chips : defaultChips;
+    const titleEl = document.getElementById('placeholder-title');
+    titleEl.textContent = set ? '{{ __('Available Placeholders') }} — ' + set.name : '{{ __('Available Placeholders') }}';
+    const container = document.getElementById('placeholder-chips');
+    container.innerHTML = '';
+    chips.forEach(function(code) {
+        const el = document.createElement('code');
+        el.textContent = code;
+        el.className = 'cursor-pointer rounded-sm border border-blue-200 bg-white px-1.5 py-0.5 text-blue-600 hover:bg-blue-100 dark:bg-gray-800 dark:border-blue-900/50 dark:text-blue-400';
+        el.onmousedown = function(e) { e.preventDefault(); };
+        el.onclick = function() { insertPlaceholder(code); };
+        container.appendChild(el);
+    });
+}
+
+function loadTemplate(file) {
+    if (isLoading) return;
+    currentFile = file;
+
+    const updateWarning = document.getElementById('theme-update-warning');
+    if (updateWarning) {
+        updateWarning.classList.toggle('hidden', !systemTemplates[file]);
+    }
+
+    isLoading = true;
+
+    // Update active button
+    document.querySelectorAll('[id^="btn-"]').forEach(function(btn) {
+        btn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-900', 'dark:text-white');
+        btn.classList.add('text-gray-600', 'dark:text-gray-400');
+    });
+    const activeBtn = document.getElementById('btn-' + file);
+    if (activeBtn) {
+        activeBtn.classList.remove('text-gray-600', 'dark:text-gray-400');
+        activeBtn.classList.add('bg-gray-100', 'dark:bg-gray-800', 'text-gray-900', 'dark:text-white');
+    }
+
+    // Show editor area with a loading placeholder instead of an empty box.
+    // (Inline display styles: the unlayered .codejar-wrapper{display:flex}
+    // rule would override Tailwind's .hidden utility class.)
+    document.getElementById('editor-empty').classList.add('hidden');
+    document.getElementById('editor-form').classList.remove('hidden');
+    document.getElementById('editor-filename').textContent = file;
+    document.getElementById('editor-wrapper').style.display = 'none';
+    document.getElementById('editor-loading').style.display = 'flex';
+    document.getElementById('loading-indicator').classList.remove('hidden');
+    document.getElementById('save-status').classList.add('hidden');
+    document.getElementById('save-status-top').classList.add('hidden');
+    document.getElementById('error-status').textContent = '';
+
+    renderPlaceholders(file);
+
+    fetch('{{ url('/admin/themes/' ~ theme_slug ~ '/templates/get') }}?file=' + encodeURIComponent(file))
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                initJarIfNeeded();
+                if (themeJar) {
+                    themeJar.updateCode(data.content || '');
+                } else {
+                    document.getElementById('theme-code-editor').textContent = data.content || '';
+                }
+                paintGutterFallback();
+            } else {
+                document.getElementById('error-status').textContent = data.error || '{{ __('Failed to load') }}';
+            }
+        })
+        .catch(function() {
+            document.getElementById('error-status').textContent = '{{ __('Failed to load template.') }}';
+        })
+        .finally(function() {
+            document.getElementById('loading-indicator').classList.add('hidden');
+            document.getElementById('editor-loading').style.display = 'none';
+            document.getElementById('editor-wrapper').style.display = '';
+            isLoading = false;
+        });
+}
+
+function saveTemplate() {
+    if (!currentFile || isLoading) return;
+    isLoading = true;
+
+    const content = themeJar ? themeJar.toString() : document.getElementById('theme-code-editor').textContent;
+    const saveBtn = document.getElementById('save-btn');
+    if (saveBtn) saveBtn.disabled = true;
+    document.getElementById('loading-indicator').classList.remove('hidden');
+
+    fetch('{{ url('/admin/themes/' ~ theme_slug ~ '/templates/save') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ file: currentFile, content: content })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            document.getElementById('save-status').classList.remove('hidden');
+            document.getElementById('save-status-top').classList.remove('hidden');
+            setTimeout(function() {
+                document.getElementById('save-status').classList.add('hidden');
+                document.getElementById('save-status-top').classList.add('hidden');
+            }, 2000);
+        } else {
+            document.getElementById('error-status').textContent = data.error || '{{ __('Failed to save') }}';
+        }
+    })
+    .catch(function() {
+        document.getElementById('error-status').textContent = '{{ __('Failed to save template.') }}';
+    })
+    .finally(function() {
+        if (saveBtn) saveBtn.disabled = false;
+        document.getElementById('loading-indicator').classList.add('hidden');
+        isLoading = false;
+    });
+}
+
+function insertPlaceholder(ph) {
+    if (!document.getElementById('theme-code-editor')) return;
+
+    if (themeJar) {
+        if (typeof themeJar.insertAtCursor === 'function') {
+            themeJar.insertAtCursor(ph);
+        } else {
+            themeJar.updateCode(themeJar.toString() + ph);
+        }
+    }
+}
+
+function toggleFullscreen() {
+    const container = document.getElementById('editor-container');
+    const wrapper = document.getElementById('editor-wrapper');
+    const btnText = document.getElementById('fullscreen-text');
+    if (!container || !wrapper) return;
+
+    if (container.classList.contains('fixed')) {
+        container.classList.add('relative');
+        container.classList.remove('fixed', 'inset-0', 'z-[9999]', 'bg-white', 'dark:bg-gray-900', 'p-6', 'gap-3');
+        wrapper.classList.remove('flex-1', 'max-h-none!');
+        wrapper.classList.add('min-h-[500px]', 'max-h-[700px]');
+        btnText.textContent = '{{ __('Fullscreen') }}';
+    } else {
+        container.classList.remove('relative');
+        container.classList.add('fixed', 'inset-0', 'z-[9999]', 'bg-white', 'dark:bg-gray-900', 'p-6', 'gap-3');
+        wrapper.classList.remove('min-h-[500px]', 'max-h-[700px]');
+        wrapper.classList.add('flex-1', 'max-h-none!');
+        btnText.textContent = '{{ __('Exit Fullscreen') }}';
+    }
+    // Layout change can clamp the editor scroll without firing a scroll
+    // event — force gutter re-sync.
+    container.querySelectorAll('.codejar-editor').forEach(function(ed) {
+        ed.dispatchEvent(new Event('scroll'));
+    });
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const container = document.getElementById('editor-container');
+        if (container && container.classList.contains('fixed')) {
+            toggleFullscreen();
+            return;
+        }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        const editorForm = document.getElementById('editor-form');
+        if (editorForm && !editorForm.classList.contains('hidden')) {
+            e.preventDefault();
+            saveTemplate();
+        }
+    }
+});
+
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const file = params.get('file');
+    if (file) {
+        loadTemplate(decodeURIComponent(file));
+    }
+})();
+</script>
+{% endblock %}

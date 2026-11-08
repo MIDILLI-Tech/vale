@@ -1,0 +1,27 @@
+{#
+    "Load more" trigger for analytics lists.
+
+    Rendered immediately after the rows container of a list; the handler in
+    admin/analytics/index.twig appends the fetched rows to that container,
+    either on click/keyboard activation or automatically once this sentinel
+    scrolls into view. `show` decides whether the trigger is rendered at all.
+
+    The element is a 1px sentinel — invisible while idle, so no "Load more"
+    button sits at the bottom of the card. While a request is in flight it
+    receives `.is-loading` (see admin-style.css), which reveals the spinner
+    plus the loading label inside `.vl-analytics-more-label`. The `data-vl-*`
+    attributes feed the AJAX request and are left untouched by the handler.
+#}
+{% macro button(list, offset, show, series, type) %}
+{%- if show -%}
+<button type="button"
+        class="vl-analytics-more vl-analytics-more--sentinel"
+        aria-label="{{ __('Load more')|e('html_attr') }}"
+        data-vl-analytics-more data-vl-list="{{ list }}" data-vl-offset="{{ offset }}"
+        data-vl-label="{{ __('Loading...')|e('html_attr') }}"
+        {% if series is not empty %}data-vl-series="{{ series }}"{% endif %}
+        {% if type is not empty %}data-vl-type="{{ type }}"{% endif %}>
+    <span class="vl-analytics-more-label"></span>
+</button>
+{%- endif -%}
+{% endmacro %}

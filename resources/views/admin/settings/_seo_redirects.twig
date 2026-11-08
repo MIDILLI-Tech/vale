@@ -1,0 +1,433 @@
+<div id="seo-tab-redirects" class="seo-tab-panel hidden">
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <script>
+    window.seoRedirectData = function() {
+        return {
+            autoRedirect: {{ settings.auto_redirect_enabled|default('1') == '1' ? 'true' : 'false' }},
+            showPages: {{ pages_enabled ? 'true' : 'false' }},
+            showBlog: {{ blog_enabled ? 'true' : 'false' }},
+            showTaxonomies: {{ (blog_enabled or custom_content_types_enabled) ? 'true' : 'false' }},
+            showShop: {{ shop_enabled ? 'true' : 'false' }},
+            showMembership: {{ subscriptions_enabled ? 'true' : 'false' }},
+            showRegister: {{ registration_enabled|default('1') == '1' ? 'true' : 'false' }},
+            {% set default_lang = settings.default_locale|default('en') %}
+            {% set content_lang_codes = settings.content_languages|default(default_lang)|split(',')|filter(c => c) %}
+            {% set active_locales = supported_locales|filter((name, code) => code in content_lang_codes) %}
+            {% if active_locales is empty %}
+                {% set active_locales = supported_locales|filter((name, code) => code == default_lang) %}
+            {% endif %}
+            langs: {{ active_locales|keys|json_encode|raw }},
+            defaultLang: '{{ default_lang }}',
+            originalPrefixes: {
+                {% for code in active_locales|keys %}
+                '{{ code }}': {
+                    page: {{ (settings['routing_page_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('') == '/' ? '' : settings['routing_page_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default(''))|json_encode|raw }},
+                    blog: {{ settings['routing_blog_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/blog')|json_encode|raw }},
+                    category: {{ settings['routing_category_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/category')|json_encode|raw }},
+                    tag: {{ settings['routing_tag_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/tag')|json_encode|raw }},
+                    shop: {{ settings['routing_shop_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/shop')|json_encode|raw }},
+                    cart: {{ settings['routing_cart_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/cart')|json_encode|raw }},
+                    checkout: {{ settings['routing_checkout_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/checkout')|json_encode|raw }},
+                    membership: {{ settings['routing_membership_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/membership')|json_encode|raw }},
+                    account: {{ settings['routing_account_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/account')|json_encode|raw }},
+                    login: {{ settings['routing_login_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/login')|json_encode|raw }},
+                    register: {{ settings['routing_register_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/register')|json_encode|raw }},
+                    forgot_password: {{ settings['routing_forgot_password_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/forgot-password')|json_encode|raw }},
+                    reset_password: {{ settings['routing_reset_password_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/reset-password')|json_encode|raw }},
+                    verify_email: {{ settings['routing_verify_email_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/verify-email')|json_encode|raw }},
+                    logout: {{ settings['routing_logout_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/logout')|json_encode|raw }}
+                },
+                {% endfor %}
+            },
+            prefixes: {
+                {% for code in active_locales|keys %}
+                '{{ code }}': {
+                    page: {{ (settings['routing_page_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('') == '/' ? '' : settings['routing_page_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default(''))|json_encode|raw }},
+                    blog: {{ settings['routing_blog_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/blog')|json_encode|raw }},
+                    category: {{ settings['routing_category_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/category')|json_encode|raw }},
+                    tag: {{ settings['routing_tag_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/tag')|json_encode|raw }},
+                    shop: {{ settings['routing_shop_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/shop')|json_encode|raw }},
+                    cart: {{ settings['routing_cart_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/cart')|json_encode|raw }},
+                    checkout: {{ settings['routing_checkout_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/checkout')|json_encode|raw }},
+                    membership: {{ settings['routing_membership_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/membership')|json_encode|raw }},
+                    account: {{ settings['routing_account_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/account')|json_encode|raw }},
+                    login: {{ settings['routing_login_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/login')|json_encode|raw }},
+                    register: {{ settings['routing_register_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/register')|json_encode|raw }},
+                    forgot_password: {{ settings['routing_forgot_password_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/forgot-password')|json_encode|raw }},
+                    reset_password: {{ settings['routing_reset_password_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/reset-password')|json_encode|raw }},
+                    verify_email: {{ settings['routing_verify_email_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/verify-email')|json_encode|raw }},
+                    logout: {{ settings['routing_logout_prefix' ~ (code == default_lang ? '' : '_' ~ code)]|default('/logout')|json_encode|raw }}
+                },
+                {% endfor %}
+            },
+            normalizePrefix(value) {
+                value = (value || '').trim();
+                if (value === '' || value === '/') return '';
+                return '/' + value.replace(/^\/+/, '');
+            },
+            get changedPrefixes() {
+                const changed = [];
+                for (const lang of this.langs) {
+                    const p = this.prefixes[lang];
+                    const o = this.originalPrefixes[lang];
+                    const langLabel = this.langs.length > 1 ? ` (${lang.toUpperCase()})` : '';
+
+                    if (this.showPages && this.normalizePrefix(p.page) !== this.normalizePrefix(o.page)) changed.push('Page' + langLabel);
+                    if (this.showBlog && this.normalizePrefix(p.blog) !== this.normalizePrefix(o.blog)) changed.push('Blog' + langLabel);
+                    if (this.showTaxonomies && this.normalizePrefix(p.category) !== this.normalizePrefix(o.category)) changed.push('Category' + langLabel);
+                    if (this.showTaxonomies && this.normalizePrefix(p.tag) !== this.normalizePrefix(o.tag)) changed.push('Tag' + langLabel);
+                    if (this.showShop && this.normalizePrefix(p.shop) !== this.normalizePrefix(o.shop)) changed.push('Shop' + langLabel);
+                    if (this.normalizePrefix(p.cart) !== this.normalizePrefix(o.cart)) changed.push('Cart' + langLabel);
+                    if (this.showShop && this.normalizePrefix(p.checkout) !== this.normalizePrefix(o.checkout)) changed.push('Checkout' + langLabel);
+                    if (this.showMembership && this.normalizePrefix(p.membership) !== this.normalizePrefix(o.membership)) changed.push('Membership' + langLabel);
+                    if (this.normalizePrefix(p.account) !== this.normalizePrefix(o.account)) changed.push('Account' + langLabel);
+                    if (this.normalizePrefix(p.login) !== this.normalizePrefix(o.login)) changed.push('Login' + langLabel);
+                    if (this.normalizePrefix(p.register) !== this.normalizePrefix(o.register)) changed.push('Register' + langLabel);
+                    if (this.normalizePrefix(p.forgot_password) !== this.normalizePrefix(o.forgot_password)) changed.push('Forgot Password' + langLabel);
+                    if (this.normalizePrefix(p.reset_password) !== this.normalizePrefix(o.reset_password)) changed.push('Reset Password' + langLabel);
+                    if (this.normalizePrefix(p.verify_email) !== this.normalizePrefix(o.verify_email)) changed.push('Verify Email' + langLabel);
+                    if (this.normalizePrefix(p.logout) !== this.normalizePrefix(o.logout)) changed.push('Logout' + langLabel);
+                }
+                return changed;
+            },
+            get hasChangedPrefixes() {
+                return this.changedPrefixes.length > 0;
+            },
+            get changedPrefixText() {
+                return this.changedPrefixes.join(', ');
+            }
+        };
+    };
+    </script>
+
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs" x-data="seoRedirectData()">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="seo">
+        <input type="hidden" name="_subtab" value="redirects">
+
+        <div :class="!seoEnabled && 'opacity-50 pointer-events-none grayscale select-none'" class="space-y-6 transition-all duration-300">
+
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Automatic Redirects') }}</p>
+            <div {{ vl.attrs('seo', __('Enable automatic 301 redirects when slugs change'), 'auto_redirect_enabled', 'redirects', __('Automatic Redirects'), '301 redirect slug url') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="auto_redirect_enabled" value="0">
+                    <input type="checkbox" name="auto_redirect_enabled" value="1"
+                           x-model="autoRedirect"
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Enable automatic 301 redirects when slugs change') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Automatically creates a permanent redirect from the old URL to the new URL whenever a post, page, product, category, tag or content type slug/prefix is updated.') }}</p>
+            </div>
+
+            <div x-show="hasChangedPrefixes"
+                 class="rounded-lg border p-4"
+                 :class="autoRedirect ? 'border-blue-200 bg-blue-50' : 'border-amber-200 bg-amber-50'">
+                <div x-show="autoRedirect">
+                    <label class="flex items-start gap-3" {{ vl.attrs('seo', __('Create 301 redirects for changed URL prefixes'), 'create_redirects', 'redirects', __('Automatic Redirects'), 'prefix redirect 301') }}>
+                        <input type="hidden" name="create_redirects" value="0">
+                        <input type="checkbox" name="create_redirects" value="1" checked
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                        <span>
+                            <span class="block text-sm font-medium text-gray-700">{{ __('Create 301 redirects for changed URL prefixes') }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Changed:') }} <span x-text="changedPrefixText"></span></span>
+                        </span>
+                    </label>
+                </div>
+                <div x-show="!autoRedirect" class="text-xs text-amber-800">
+                    <strong>{{ __('Warning:') }}</strong> {{ __('Old URLs will not be redirected unless you enable automatic 301 redirects above.') }}
+                </div>
+            </div>
+
+            <hr class="border-gray-200">
+            <div class="space-y-3">
+                <div class="flex items-center">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('URL Prefixes') }}</p>
+                </div>
+                {% if routingPrefixErrors|default([]) is not empty %}
+                <div class="rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40 p-4 text-xs text-red-800 dark:text-red-200">
+                    <p class="font-semibold mb-1">{{ __('These prefixes were not saved because they conflict with existing URLs:') }}</p>
+                    <ul class="list-disc ml-4 space-y-0.5">
+                        {% for errKey, errMsg in routingPrefixErrors %}
+                        <li><span class="font-mono">{{ errKey }}</span> — {{ errMsg }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if active_locales|length > 1 %}
+                <div class="flex w-fit gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800" x-data="{ activeLang: '{{ default_lang }}' }" @lang-change.window="activeLang = $event.detail">
+                    {% for code, name in active_locales %}
+                    <button type="button"
+                            @click="$dispatch('lang-change', '{{ code }}')"
+                            :class="activeLang === '{{ code }}' ? 'bg-white shadow-xs text-gray-900 dark:bg-gray-600 dark:text-white dark:shadow-sm dark:ring-1 dark:ring-gray-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                            class="rounded-md px-3 py-1 text-xs font-medium transition-all">
+                        {{ locale_name(code) }} ({{ code|upper }})
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div x-data="{ activeLang: '{{ default_lang }}' }" @lang-change.window="activeLang = $event.detail">
+                {% for code, name in active_locales %}
+                <div x-show="activeLang === '{{ code }}'" class="space-y-4">
+                    {% set suffix = (code == default_lang ? '' : '_' ~ code) %}
+
+                    {# ── Content Group ── #}
+                    <div x-show="showPages || showBlog || showTaxonomies" class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Content') }}</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                            <div x-show="showPages" {{ vl.attrs('seo', __('Page URL Prefix'), 'routing_page_prefix', 'redirects', __('URL Prefixes'), 'page slug prefix url') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Page URL Prefix') }}</label>
+                                <input type="text" name="routing_page_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].page"
+                                       placeholder="Default: /"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+                                {% if routingPrefixErrors['routing_page_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_page_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <p class="mt-1 text-xs text-gray-400">{{ __('Use / to serve pages from the root (e.g. /my-page). If set, pages will be at /prefix/my-page.') }}</p>
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].page) !== normalizePrefix(originalPrefixes['{{ code }}'].page)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Page prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="showBlog" {{ vl.attrs('seo', __('Blog URL Prefix'), 'routing_blog_prefix', 'redirects', __('URL Prefixes'), 'blog post prefix url') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Blog URL Prefix') }}</label>
+                                <input type="text" name="routing_blog_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].blog"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                       placeholder="Default: /blog">
+                                {% if routingPrefixErrors['routing_blog_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_blog_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <p class="mt-1 text-xs text-gray-400">{{ __('Posts will have a prefix for the given text (e.g. /my-blog/post-name).') }}</p>
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].blog) !== normalizePrefix(originalPrefixes['{{ code }}'].blog)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Blog prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="showTaxonomies" {{ vl.attrs('seo', __('Category URL Prefix'), 'routing_category_prefix', 'redirects', __('URL Prefixes'), 'category taxonomy prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Category URL Prefix') }}</label>
+                                <input type="text" name="routing_category_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].category"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                       placeholder="Default: /category">
+                                {% if routingPrefixErrors['routing_category_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_category_prefix' ~ suffix] }}</p>
+                                {% endif %}
+
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].category) !== normalizePrefix(originalPrefixes['{{ code }}'].category)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Category prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="showTaxonomies" {{ vl.attrs('seo', __('Tag URL Prefix'), 'routing_tag_prefix', 'redirects', __('URL Prefixes'), 'tag taxonomy prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Tag URL Prefix') }}</label>
+                                <input type="text" name="routing_tag_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].tag"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /tag">
+                                {% if routingPrefixErrors['routing_tag_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_tag_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].tag) !== normalizePrefix(originalPrefixes['{{ code }}'].tag)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Tag prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Shop Group ── #}
+                    <div x-show="showShop" class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Shop') }}</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                            <div {{ vl.attrs('seo', __('Shop URL Prefix'), 'routing_shop_prefix', 'redirects', __('URL Prefixes'), 'shop ecommerce prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Shop URL Prefix') }}</label>
+                                <input type="text" name="routing_shop_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].shop"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /shop">
+                                {% if routingPrefixErrors['routing_shop_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_shop_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].shop) !== normalizePrefix(originalPrefixes['{{ code }}'].shop)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Shop prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Cart URL Prefix'), 'routing_cart_prefix', 'redirects', __('URL Prefixes'), 'cart prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Cart URL Prefix') }}</label>
+                                <input type="text" name="routing_cart_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].cart"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /cart">
+                                {% if routingPrefixErrors['routing_cart_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_cart_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].cart) !== normalizePrefix(originalPrefixes['{{ code }}'].cart)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Cart prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Checkout URL Prefix'), 'routing_checkout_prefix', 'redirects', __('URL Prefixes'), 'checkout prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Checkout URL Prefix') }}</label>
+                                <input type="text" name="routing_checkout_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].checkout"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /checkout">
+                                {% if routingPrefixErrors['routing_checkout_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_checkout_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].checkout) !== normalizePrefix(originalPrefixes['{{ code }}'].checkout)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Checkout prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Membership Group ── #}
+                    <div x-show="showMembership" class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Membership') }}</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                            <div {{ vl.attrs('seo', __('Membership URL Prefix'), 'routing_membership_prefix', 'redirects', __('URL Prefixes'), 'membership subscription prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Membership URL Prefix') }}</label>
+                                <input type="text" name="routing_membership_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].membership"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /membership">
+                                {% if routingPrefixErrors['routing_membership_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_membership_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].membership) !== normalizePrefix(originalPrefixes['{{ code }}'].membership)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Membership prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Account Group ── #}
+                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Account') }}</p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-4">
+                            <div {{ vl.attrs('seo', __('Account URL Prefix'), 'routing_account_prefix', 'redirects', __('URL Prefixes'), 'account user prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Account URL Prefix') }}</label>
+                                <input type="text" name="routing_account_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].account"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /account">
+                                {% if routingPrefixErrors['routing_account_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_account_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].account) !== normalizePrefix(originalPrefixes['{{ code }}'].account)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Account prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Login URL Prefix'), 'routing_login_prefix', 'redirects', __('URL Prefixes'), 'login auth prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Login URL Prefix') }}</label>
+                                <input type="text" name="routing_login_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].login"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /login">
+                                {% if routingPrefixErrors['routing_login_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_login_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].login) !== normalizePrefix(originalPrefixes['{{ code }}'].login)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Login prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="showRegister" {{ vl.attrs('seo', __('Register URL Prefix'), 'routing_register_prefix', 'redirects', __('URL Prefixes'), 'register signup prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Register URL Prefix') }}</label>
+                                <input type="text" name="routing_register_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].register"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /register">
+                                {% if routingPrefixErrors['routing_register_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_register_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].register) !== normalizePrefix(originalPrefixes['{{ code }}'].register)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Register prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Forgot Password URL Prefix'), 'routing_forgot_password_prefix', 'redirects', __('URL Prefixes'), 'forgot password reset prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Forgot Password URL Prefix') }}</label>
+                                <input type="text" name="routing_forgot_password_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].forgot_password"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /forgot-password">
+                                {% if routingPrefixErrors['routing_forgot_password_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_forgot_password_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].forgot_password) !== normalizePrefix(originalPrefixes['{{ code }}'].forgot_password)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Forgot Password prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Reset Password URL Prefix'), 'routing_reset_password_prefix', 'redirects', __('URL Prefixes'), 'reset password prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Reset Password URL Prefix') }}</label>
+                                <input type="text" name="routing_reset_password_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].reset_password"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /reset-password">
+                                {% if routingPrefixErrors['routing_reset_password_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_reset_password_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].reset_password) !== normalizePrefix(originalPrefixes['{{ code }}'].reset_password)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Reset Password prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Verify Email URL Prefix'), 'routing_verify_email_prefix', 'redirects', __('URL Prefixes'), 'verify email prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Verify Email URL Prefix') }}</label>
+                                <input type="text" name="routing_verify_email_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].verify_email"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /verify-email">
+                                {% if routingPrefixErrors['routing_verify_email_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_verify_email_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].verify_email) !== normalizePrefix(originalPrefixes['{{ code }}'].verify_email)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Verify Email prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+
+                            <div {{ vl.attrs('seo', __('Logout URL Prefix'), 'routing_logout_prefix', 'redirects', __('URL Prefixes'), 'logout prefix') }}>
+                                <label class="block text-sm font-medium text-gray-700">{{ __('Logout URL Prefix') }}</label>
+                                <input type="text" name="routing_logout_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].logout"
+                                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
+                                                                               placeholder="Default: /logout">
+                                {% if routingPrefixErrors['routing_logout_prefix' ~ suffix]|default(null) %}
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_logout_prefix' ~ suffix] }}</p>
+                                {% endif %}
+                                <div x-show="normalizePrefix(prefixes['{{ code }}'].logout) !== normalizePrefix(originalPrefixes['{{ code }}'].logout)"
+                                     class="mt-2 rounded-sm px-3 py-1.5 text-xs border"
+                                     :class="autoRedirect ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                                    <span x-text="'{{ __('Logout prefix changed.') }}' + (autoRedirect ? '' : ' {{ __('Enable auto-redirects above.') }}')"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </form>
+</div>

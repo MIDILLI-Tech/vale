@@ -1,0 +1,51 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Order Status Updated') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Order Status Updated') }}</h2>
+<p>{{ __('Your order :number has been updated.', {':number': '<strong>#' ~ order.orderNumber ~ '</strong>'})|raw }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Previous Status') }}</td>
+    <td style="padding:8px 0; text-transform:capitalize;">{{ old_status ? __(old_status) : '—' }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('New Status') }}</td>
+    <td style="padding:8px 0; font-weight:700; color:#059669; text-transform:capitalize;">{{ order.status ? __(order.status) : '—' }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+{% if order.items %}
+<h3 style="margin:24px 0 12px; font-size:16px; color:{{ email_text }};">{{ __('Items') }}</h3>
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:2px solid {{ email_border }};">
+      <th style="padding:8px 0; text-align:left; font-size:13px; color:{{ email_text_muted }};">{{ __('Product') }}</th>
+      <th style="padding:8px 0; text-align:center; font-size:13px; color:{{ email_text_muted }};">{{ __('Qty') }}</th>
+      <th style="padding:8px 0; text-align:right; font-size:13px; color:{{ email_text_muted }};">{{ __('Price') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in order.items %}
+    <tr style="border-bottom:1px solid {{ email_border }};">
+      <td style="padding:8px 0; font-size:14px;">{{ item.name }}</td>
+      <td style="padding:8px 0; text-align:center; font-size:14px;">{{ item.quantity ?? item.qty }}</td>
+      <td style="padding:8px 0; text-align:right; font-size:14px;">{{ ((item.price) * (item.quantity ?? item.qty))|price(order.currency) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<p style="margin-top:24px;">{{ __('If you have any questions, please reply to this email.') }}</p>
+{% endblock %}

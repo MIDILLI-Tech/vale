@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="{{ locale ?? 'en' }}" class="dark">
+{# ── Recursive primary nav (unlimited depth: dropdown below, flyout to the side) ── #}
+{% macro nav_desktop(menu_items, parent_id, depth) %}
+    {% import _self as nav %}
+    {% if depth <= 10 %}
+    {% for item in menu_items %}
+        {% if item.parentId == parent_id %}
+        {% set kids = menu_items|filter(v => v.parentId == item.id) %}
+        {% if depth == 0 and kids|length > 0 %}
+        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            <a href="{{ item.url }}" target="{{ item.target }}"
+               class="nav-link inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors">
+                {{ item.label }}
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </a>
+            <div x-show="open" x-cloak class="absolute left-0 top-full z-50 w-52 rounded-xl bg-slate-800 border border-slate-600 shadow-xl py-2">
+                {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
+            </div>
+        </div>
+        {% elseif depth == 0 %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="nav-link px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+            {{ item.label }}
+        </a>
+        {% elseif kids|length > 0 %}
+        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            <a href="{{ item.url }}" target="{{ item.target }}"
+               class="flex items-center justify-between gap-1 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+                <span>{{ item.label }}</span>
+                <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+            <div x-show="open" x-cloak class="absolute left-full top-0 z-50 w-52 rounded-xl bg-slate-800 border border-slate-600 shadow-xl py-2">
+                {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+            {{ item.label }}
+        </a>
+        {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+{% endmacro %}
+{# ── Recursive mobile nav (unlimited depth: accordion below, arrow toggle) ── #}
+{% macro nav_mobile(menu_items, parent_id, depth) %}
+    {% import _self as nav %}
+    {% if depth <= 10 %}
+    {% for item in menu_items %}
+        {% if item.parentId == parent_id %}
+        {% set kids = menu_items|filter(v => v.parentId == item.id) %}
+        {% if kids|length > 0 %}
+        <div x-data="{ sub: false }">
+            {% if item.url and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+            <div class="flex items-center justify-between rounded-lg hover:bg-slate-800/50 transition-colors">
+                <a href="{{ item.url }}" target="{{ item.target }}"
+                   class="flex-1 px-3 {{ depth == 0 ? 'py-3 text-lg font-medium text-slate-200' : 'py-2.5 text-base text-slate-300' }} hover:text-blue-400 transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                    {{ item.label }}
+                </a>
+                <button type="button" @click="sub = !sub"
+                        class="px-3 {{ depth == 0 ? 'py-3' : 'py-2.5' }} text-slate-400 hover:text-slate-200 focus:outline-none"
+                        aria-label="{{ __('Toggle submenu') }}">
+                    <svg class="h-4 w-4 transition-transform" :class="sub && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+            </div>
+            {% else %}
+            <button type="button" @click="sub = !sub"
+                    class="flex w-full items-center justify-between rounded-lg px-3 {{ depth == 0 ? 'py-3 text-lg font-medium text-slate-200' : 'py-2.5 text-base text-slate-300' }} hover:bg-slate-800/50 transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                <span>{{ item.label }}</span>
+                <svg class="h-4 w-4 transition-transform" :class="sub && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            {% endif %}
+            <div x-show="sub" x-cloak class="ml-4 space-y-1">
+                {{ nav.nav_mobile(menu_items, item.id, depth + 1) }}
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="block rounded-lg px-3 {{ depth == 0 ? 'py-3 text-lg font-medium text-slate-200' : 'py-2.5 text-base text-slate-300' }} hover:bg-slate-800/50 hover:text-blue-400 transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+{% endmacro %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% block title_tag %}<title>{% block title %}{{ effective_title|default(site_name) }}{% endblock %}</title>{% endblock %}
+    <meta name="description" content="{% block meta_description %}{{ effective_desc|default('') }}{% endblock %}">
+
+    {% if site_logo %}<link rel="icon" href="{{ site_logo }}">{% endif %}
+
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800&family=space-grotesk:600,700" rel="stylesheet">
+
+    {% if assets_use_cdn %}
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+        @theme {
+            --color-dark-950: #020617;
+            --color-dark-900: #0f172a;
+            --color-dark-800: #1e293b;
+            --color-neon-blue: #3b82f6;
+            --color-neon-indigo: #818cf8;
+            --color-neon-cyan: #22d3ee;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {# App logic (lightbox, visitor timezone) has no CDN copy:
+       it always comes from the local bundle and uses the CDN globals above. #}
+    <script defer src="{{ asset('assets/build/app.js') }}"></script>
+    {% else %}
+    {% include 'partials/_build_assets.twig' %}
+    {% endif %}
+
+    <style>
+        [x-cloak] { display: none !important; }
+
+        @layer base {
+            button, [type='button'], [type='reset'], [type='submit'], a, [role="button"] {
+                cursor: pointer;
+            }
+        }
+
+        :root {
+            --theme-primary: #3b82f6;
+            --theme-primary-hover: #2563eb;
+            --theme-secondary: #818cf8;
+            --theme-cyan: #22d3ee;
+            --theme-bg: #020617;
+            --theme-surface: #0f172a;
+            --theme-text: #f8fafc;
+            --theme-hero-bg: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+            --theme-accent: #22d3ee;
+            --theme-nav-bg: #0f172a;
+            --theme-border: rgba(255, 255, 255, 0.1);
+            --neon-gradient: linear-gradient(45deg, var(--theme-primary), var(--theme-secondary));
+            --header-height: 96px;
+            --depth-indent: 0rem;
+            --admin-bar-bg: rgba(30, 41, 59, 0.8);
+            --admin-bar-border: rgba(59, 130, 246, 0.3);
+        }
+
+        body {
+            background-color: var(--theme-bg);
+            color: var(--theme-text);
+        }
+
+        /* ── Dynamic Header & Spacing Utilities ── */
+        .top-header-offset { top: var(--header-height); }
+        .top-header-offset-24 { top: calc(var(--header-height) + 24px); }
+        .pt-header-offset { padding-top: var(--header-height); }
+        .pt-header-offset-16 { padding-top: calc(var(--header-height) + 16px); }
+        .tree-depth-indent { padding-left: var(--depth-indent); }
+
+        .glass {
+            background: color-mix(in srgb, var(--theme-nav-bg, #0f172a) 60%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        .neon-border {
+            position: relative;
+        }
+
+        .neon-border::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(45deg, #3b82f6, #818cf8, #22d3ee);
+            z-index: -1;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .neon-border:hover::after {
+            opacity: 1;
+        }
+
+        .text-neon-gradient {
+            background: linear-gradient(to right, var(--theme-primary), var(--theme-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .vl-nova-hero {
+            background: var(--theme-hero-bg);
+        }
+
+        .btn-neon, .btn-primary {
+            background: var(--neon-gradient);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+            color: #fff;
+        }
+
+        .btn-neon:hover, .btn-primary:hover {
+            background: linear-gradient(45deg, var(--theme-primary-hover), var(--theme-secondary));
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background: rgba(51, 65, 85, 0.8);
+            color: #fff;
+        }
+        select.btn-secondary option { background-color: var(--theme-surface); color: var(--theme-text); }
+
+        /* ── Admin Edit Bar ── */
+        .vl-admin-bar {
+            position: fixed; bottom: 1rem; right: 1rem; z-index: 9999;
+            background: var(--admin-bar-bg);
+            border: 1px solid var(--admin-bar-border);
+            border-radius: 1rem; padding: 0.5rem;
+            display: flex; align-items: center; gap: 0.75rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .vl-admin-bar-icon { background: var(--theme-primary); padding: 0.5rem; border-radius: 0.75rem; }
+        .vl-admin-bar-link { font-size: 0.875rem; font-weight: 700; color: #ffffff; padding-right: 0.5rem; text-decoration: none; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        .prose { color: #cbd5e1; max-width: none; }
+        .prose h1, .prose h2, .prose h3, .prose h4 { color: #f8fafc; font-family: 'Space Grotesk', sans-serif; }
+        .prose a { color: #3b82f6; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+        .prose a:hover { border-color: #3b82f6; }
+        .prose strong { color: #f8fafc; }
+        .prose code { color: #818cf8; background: #1e293b; padding: 2px 4px; border-radius: 4px; }
+
+        /* ── Table of Contents ([toc]) ── */
+        .vl-toc { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 16px 20px; margin: 24px 0; display: inline-block; min-width: 200px; max-width: 100%; }
+        .vl-toc-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin: 0 0 10px; }
+        .vl-toc-list { list-style: none; margin: 0; padding: 0; line-height: 1; }
+        .vl-toc-item { margin: 6px 0; font-size: 14px; }
+        .vl-toc-item a { color: #93c5fd; text-decoration: none; }
+        .vl-toc-item a:hover { text-decoration: underline; }
+        .vl-toc-h1 { padding-left: 0; }
+        .vl-toc-h2 { padding-left: 16px; }
+        .vl-toc-h3 { padding-left: 32px; font-size: 13px; }
+
+        /* ── Compact prose scale ──
+           Typography sizes are em-based, so scaling the root font-size
+           shrinks body text, headings and spacing proportionally. */
+        .prose {
+            font-size: 0.9375rem; /* 15px */
+            line-height: 1.7;
+        }
+        .prose h1 { margin-bottom: 0.67em; }
+        .prose h2 { margin-top: 1.5em; margin-bottom: 0.83em; }
+        .prose h3 { margin-top: 1.2em; margin-bottom: 0.5em; }
+
+        /* ── Tables ── */
+        /* Editor parity contract (resources/js/editor/table-controls.js and
+           extensions/table-cells.js): the <table> inline style carries border,
+           width, alignment and the --vl-cell-border / --vl-table-cell-padding
+           variables; cell backgrounds and alignments are inline on <td>/<th>.
+           Every theme keeps these rules so the editor preview matches. */
+        .prose table {
+            border-collapse: collapse;
+            width: auto;
+            max-width: 100%;
+            margin: 1em 0;
+        }
+        .prose table th,
+        .prose table td {
+            border: var(--vl-cell-border, 1px solid #374151);
+            padding: var(--vl-table-cell-padding, 8px);
+        }
+        .prose table th { background: #1f2937; font-weight: 600; }
+        .prose table p { margin: 0; }
+
+        /* Legacy content may still contain text-align on the table itself. */
+        .prose table[style*="text-align:center"] { margin-left: auto; margin-right: auto; }
+
+        /* ── Mobile-friendly tables: horizontal scroll on narrow screens ── */
+        @media (max-width: 640px) {
+            .prose { overflow-x: hidden; }
+            .prose table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* ── Tables outside prose (blog listing previews, etc.) ── */
+        table[style*="--vl-cell-border"] {
+            border-collapse: collapse;
+            width: auto;
+            max-width: 100%;
+            margin: 1em 0;
+        }
+        table[style*="--vl-cell-border"] th,
+        table[style*="--vl-cell-border"] td {
+            border: var(--vl-cell-border);
+            padding: var(--vl-table-cell-padding, 8px);
+        }
+        table[style*="--vl-cell-border"] p { margin: 0; }
+        table[style*="--vl-cell-border"] th { background: #1f2937; font-weight: 600; }
+
+        /* Nav links hover effect */
+        .nav-link {
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px; left: 0; width: 0;
+            height: 2px;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        /* ── Account page semantic tokens ── */
+        :root {
+            --account-primary: #818cf8;
+            --account-primary-hover: #a5b4fc;
+            --account-primary-soft: rgba(99, 102, 241, .12);
+            --account-primary-border: rgba(129, 140, 248, .28);
+            --account-primary-text: #c7d2fe;
+            --account-primary-strong: #e0e7ff;
+            --account-danger: #f87171;
+            --account-danger-hover: #fca5a5;
+            --account-danger-soft: rgba(239, 68, 68, .14);
+            --account-danger-border: rgba(248, 113, 113, .30);
+            --account-warning: #fbbf24;
+            --account-warning-soft: rgba(251, 191, 36, .12);
+            --account-warning-border: rgba(251, 191, 36, .28);
+            --account-muted: #64748b;
+            --account-text: #f1f5f9;
+            --account-border: #334155;
+            --account-surface: #1e293b;
+            --account-surface-soft: #0f172a;
+        }
+        .account-nav { border-color: var(--account-border); }
+        .account-tab { color: var(--account-muted); transition: color .15s ease, font-weight .15s ease; }
+        .account-tab:hover { color: var(--account-primary); }
+        .account-tab-active { color: var(--account-primary-strong); font-weight: 600; }
+        .account-tab-danger:hover { color: var(--account-danger); }
+        .account-link { color: var(--account-primary); transition: color .15s ease; }
+        .account-link:hover { color: var(--account-primary-hover); }
+        .account-table { border-color: var(--account-primary-border); }
+        .account-table-scroll { -webkit-overflow-scrolling: touch; }
+        .account-table-head { background: var(--account-primary-soft); color: var(--account-primary-strong); }
+        .account-table-body { background: var(--account-surface); }
+        .account-table-row:hover { background: rgba(148, 163, 184, .08); }
+        .account-table-muted { color: var(--account-muted); }
+        .account-table-action { color: var(--account-primary); transition: color .15s ease; }
+        .account-table-action:hover { color: var(--account-primary-hover); }
+        .account-secondary-button { border-color: var(--account-primary-border); background: var(--account-surface); color: var(--account-primary-strong); transition: background-color .15s ease, border-color .15s ease; }
+        .account-secondary-button:hover { border-color: var(--account-primary-border); background: #334155; }
+        .account-badge-success { background: var(--account-primary-soft); color: var(--account-primary-strong); }
+        .account-badge-warning { background: var(--account-warning-soft); color: #fde68a; }
+        .account-badge-danger { background: var(--account-danger-soft); color: #fecaca; }
+        .account-badge-neutral { background: var(--account-surface-soft); color: #cbd5e1; }
+        .account-card { border-color: var(--account-border); background: var(--account-surface); }
+        .account-card-muted { border-color: var(--account-primary-border); background: var(--account-primary-soft); }
+        .account-card-warning { border-color: var(--account-warning-border); background: var(--account-warning-soft); }
+        .account-card-muted-text { color: var(--account-primary-text); }
+        .account-card-muted-strong { color: var(--account-primary-strong); }
+        .account-card-warning-text { color: #fde68a; }
+        .account-empty-card { border-color: var(--account-primary-border); background: var(--account-surface); }
+        .account-form-label { color: #cbd5e1; }
+        .account-form-field { border-color: #475569; background: var(--account-surface-soft); color: #e2e8f0; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+        .account-form-field:focus { border-color: #818cf8; --tw-ring-color: rgba(129,140,248,.3); }
+        .account-checkbox { border-color: #475569; accent-color: var(--account-primary); background-color: var(--account-surface-soft); }
+        .account-text { color: var(--account-text); }
+        .account-danger-card { border-color: var(--account-danger-border); background: var(--account-danger-soft); }
+        .account-danger-text { color: var(--account-danger); }
+        .account-danger-input { border-color: rgba(248, 113, 113, .45); background: var(--account-surface-soft); color: #e2e8f0; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+        .account-danger-input:focus { border-color: var(--account-danger); --tw-ring-color: rgba(248,113,113,.22); }
+        .account-danger-button { background: var(--account-danger); color: #ffffff; }
+        .account-danger-button:hover { background: var(--account-danger-hover); }
+
+        /* ── Global dark overrides for core views ── */
+        main .bg-white { background: var(--theme-surface) !important; }
+        main .bg-gray-50 { background: var(--theme-bg) !important; }
+        main .text-gray-900 { color: var(--theme-text, #f8fafc) !important; }
+        main .text-gray-800 { color: var(--theme-text, #e2e8f0) !important; }
+        main .text-zinc-800 { color: var(--theme-text, #e2e8f0) !important; }
+        main .text-gray-700 { color: var(--theme-text-muted, #cbd5e1) !important; }
+        main .text-gray-600 { color: var(--theme-text-muted, #94a3b8) !important; }
+        main .text-gray-500 { color: var(--theme-text-muted, #64748b) !important; }
+        main .text-gray-400 { color: var(--theme-text-muted, #94a3b8) !important; }
+        main .text-zinc-600 { color: var(--theme-text-muted, #94a3b8) !important; }
+        main .text-zinc-500 { color: var(--theme-text-muted, #64748b) !important; }
+        main .border-gray-200,
+        main .border-gray-300,
+        main .border-gray-100 { border-color: var(--theme-border, rgba(51, 65, 85, 0.5)) !important; }
+        main .divide-gray-200 > *,
+        main .divide-y > * { border-color: rgba(51, 65, 85, 0.5) !important; }
+        main th.bg-gray-50 { background: rgba(15, 23, 42, 0.8) !important; }
+        main tr.bg-gray-50 { background: rgba(15, 23, 42, 0.8) !important; }
+        main td.text-gray-500 { color: var(--theme-text-muted, #94a3b8) !important; }
+        main .btn-primary {
+            background: var(--neon-gradient) !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
+            color: #fff !important;
+        }
+        main .btn-primary:hover {
+            background: linear-gradient(45deg, var(--theme-primary-hover), var(--theme-secondary)) !important;
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6) !important;
+            transform: scale(1.02);
+        }
+        main input[type="text"],
+        main input[type="email"],
+        main input[type="password"],
+        main input[type="number"],
+        main input[type="url"],
+        main input[type="tel"],
+        main input[type="search"],
+        main input[type="date"],
+        main input[type="time"],
+        main input[type="datetime-local"],
+        main select,
+        main textarea {
+            background-color: rgba(30, 41, 59, 0.8) !important;
+            border-color: rgba(51, 65, 85, 0.8) !important;
+            color: #e2e8f0 !important;
+        }
+        main select option { background: #1e293b; color: #e2e8f0; }
+        main input[type="checkbox"] {
+            accent-color: #3b82f6;
+            background-color: rgba(30, 41, 59, 0.8) !important;
+            border-color: rgba(51, 65, 85, 0.8) !important;
+        }
+        main input[type="radio"] {
+            accent-color: #3b82f6;
+        }
+    </style>
+
+    {% include 'partials/_language_switcher_js.twig' %}
+    {{ theme_hook('head') }}
+    {% block head %}{% endblock %}
+
+    {% if settings.custom_css %}
+    <style>{{ settings.custom_css|raw }}</style>
+    {% endif %}
+
+    {% if settings.custom_header_scripts %}
+    {{ settings.custom_header_scripts|raw }}
+    {% endif %}
+</head>
+    <body class="min-h-screen selection:bg-blue-500/30 selection:text-blue-200" style="background-color: var(--theme-bg); color: var(--theme-text);">
+
+    {% set showShopAccountLinks = shop_enabled == true %}
+    {% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+
+    {# Shared Alpine scope: dynamic header height for main padding #}
+    <div x-data="{ mobileOpen: false, scrolled: false, headerHeight: 96 }"
+         x-init="$nextTick(() => headerHeight = $refs.header.offsetHeight)"
+         @scroll.window="scrolled = (window.pageYOffset > 20); $nextTick(() => headerHeight = $refs.header.offsetHeight)"
+         :style="'--header-height: ' + headerHeight + 'px'">
+
+    {# Header #}
+    <header x-ref="header"
+            :class="scrolled ? 'glass py-3' : 'bg-transparent py-5'"
+            class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                {# Logo #}
+                <a href="{{ url('/') }}" class="flex items-center gap-3 group">
+                    <div class="relative">
+                        <div class="absolute -inset-1 bg-linear-to-r from-blue-600 to-cyan-400 rounded-lg blur-sm opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                        {% if site_logo %}
+                        <img src="{{ site_logo }}" alt="{{ site_name }}" class="relative h-9 w-auto">
+                        {% else %}
+                        <div class="relative h-10 w-10 flex items-center justify-center rounded-lg bg-slate-900 border border-slate-800 text-white font-bold text-xl">
+                            <span class="text-neon-gradient">{{ site_name|slice(0,1)|upper }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <span class="text-2xl font-display font-bold tracking-tight text-white">{{ site_name }}</span>
+                </a>
+
+                {# Desktop Nav #}
+                <nav class="hidden md:flex items-center gap-1">
+                    {% import _self as nav %}
+                    {% if menu_primary is defined and menu_primary|length > 0 %}
+                        {{ nav.nav_desktop(menu_primary, null, 0) }}
+                    {% else %}
+                        <a href="{{ url('/') }}" class="nav-link px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">{{ __('Home') }}</a>
+                        <a href="{{ url(routing_blog_prefix) }}" class="nav-link px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">{{ __('Blog') }}</a>
+                        <a href="{{ url(routing_shop_prefix) }}" class="nav-link px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">{{ __('Shop') }}</a>
+                    {% endif %}
+                </nav>
+
+                {# Actions #}
+                <div class="hidden md:flex items-center gap-5">
+                    {% if multi_language_content == '1' %}
+                    {% set langs = content_languages|split(',')|filter(v => v != '') %}
+                    {% if langs|length > 1 %}
+                    <div class="relative">
+                        <select onchange="setLanguage(this.value)"
+                                aria-label="{{ __('Language') }}"
+                                class="h-9 rounded-lg border-slate-700 bg-slate-800 py-0 pl-3 pr-8 text-sm font-semibold uppercase text-slate-300 shadow-xs focus:border-blue-500 focus:ring-blue-500">
+                            {% for code in langs %}
+                            <option value="{{ code }}" {{ current_locale() == code ? 'selected' : '' }}>{{ code|upper }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if user is defined %}
+                    <div class="relative" x-data="{ userMenu: false }" @click.away="userMenu = false">
+                        <button @click="userMenu = !userMenu"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors">
+                            <svg class="h-5 w-5 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            <span>{{ user.name|default(user.email)|default('Account') }}</span>
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="userMenu" x-cloak
+                             class="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl bg-slate-800 border border-slate-600 py-1 shadow-xl">
+                            <a href="{{ url(routing_account_prefix) }}" class="block px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700 hover:text-white transition-colors">{{ __('My Account') }}</a>
+                            <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">{{ __('Profile') }}</a>
+                            {% if showShopAccountLinks %}
+                            <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">{{ __('Order History') }}</a>
+                            {% if showSubscriptionAccountLink %}
+                            <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">{{ __('Subscription') }}</a>
+                            {% endif %}
+                            {% endif %}
+                            {% if user_role is defined and user_role in ['admin', 'super_admin'] %}
+                            <a href="{{ url('/admin') }}" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">{{ __('Site Admin') }}</a>
+                            {% endif %}
+                            <div class="border-t border-slate-700"></div>
+                            <form method="POST" action="{{ url('/logout') }}" class="block">
+                                {{ csrf_field() }}
+                                <button type="submit" class="block w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white text-left transition-colors">{{ __('Logout') }}</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{{ url('/login') }}" class="text-sm font-medium text-slate-300 hover:text-white">
+                        {{ __('Login') }}
+                    </a>
+                    <a href="{{ url('/register') }}" class="btn-neon px-5 py-2.5 rounded-full text-sm font-bold text-white">
+                        {{ __('Get Started') }}
+                    </a>
+                    {% endif %}
+                </div>
+
+                {# Mobile Actions & Toggle #}
+                <div class="flex items-center gap-2 md:hidden">
+                    {% if showShopAccountLinks %}
+                    <a href="{{ url('shop.cart') }}" class="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:text-white" title="{{ __('Cart') }}">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.52 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                        {% if cart_count is defined and cart_count > 0 %}
+                        <span class="cart-badge absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold">{{ cart_count }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    <button type="button"
+                            @click="mobileOpen = !mobileOpen"
+                            class="p-2 text-slate-300"
+                            :aria-expanded="mobileOpen ? 'true' : 'false'"
+                            aria-controls="site-mobile-nav"
+                            :aria-label="mobileOpen ? '{{ __('Close menu')|e('js') }}' : '{{ __('Open menu')|e('js') }}'">
+                        <svg x-show="!mobileOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <svg x-show="mobileOpen" x-cloak class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# Mobile Menu #}
+        <div id="site-mobile-nav" x-show="mobileOpen"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="md:hidden glass border-t border-slate-800 mt-3 p-4 space-y-1">
+             {% import _self as nav %}
+             {% if menu_primary is defined and menu_primary|length > 0 %}
+                {{ nav.nav_mobile(menu_primary, null, 0) }}
+             {% else %}
+                <a href="{{ url('/') }}" class="block rounded-lg px-3 py-3 text-lg font-medium text-slate-200">{{ __('Home') }}</a>
+                <a href="{{ url(routing_blog_prefix) }}" class="block rounded-lg px-3 py-3 text-lg font-medium text-slate-200">{{ __('Blog') }}</a>
+             {% endif %}
+             <div class="pt-4 border-t border-slate-800 space-y-1">
+                {% if user is defined %}
+                    <a href="{{ url(routing_account_prefix) }}" class="block rounded-lg px-3 py-3 text-base font-medium text-blue-400">{{ user.name }}</a>
+                    <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="block rounded-lg px-3 py-2 text-base text-slate-300 hover:bg-slate-800/50 hover:text-blue-400 transition-colors">{{ __('Profile') }}</a>
+                    {% if showShopAccountLinks %}
+                    <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="block rounded-lg px-3 py-2 text-base text-slate-300 hover:bg-slate-800/50 hover:text-blue-400 transition-colors">{{ __('Order History') }}</a>
+                    {% if showSubscriptionAccountLink %}
+                    <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="block rounded-lg px-3 py-2 text-base text-slate-300 hover:bg-slate-800/50 hover:text-blue-400 transition-colors">{{ __('Subscription') }}</a>
+                    {% endif %}
+                    {% endif %}
+                    {% if user_role is defined and user_role in ['admin', 'super_admin'] %}
+                    <a href="{{ url('/admin') }}" class="block rounded-lg px-3 py-2 text-base text-slate-300 hover:bg-slate-800/50 hover:text-blue-400 transition-colors">{{ __('Site Admin') }}</a>
+                    {% endif %}
+                    <form method="POST" action="{{ url('/logout') }}">
+                        {{ csrf_field() }}
+                        <button type="submit" class="block w-full text-left rounded-lg px-3 py-2 text-base text-slate-300 hover:bg-slate-800/50 hover:text-red-400 transition-colors">{{ __('Logout') }}</button>
+                    </form>
+                {% else %}
+                    <a href="{{ url('/login') }}" class="block text-slate-300 mb-4">{{ __('Login') }}</a>
+                    <a href="{{ url('/register') }}" class="btn-neon block w-full text-center py-3 rounded-xl font-bold">{{ __('Get Started') }}</a>
+                {% endif %}
+                {% if multi_language_content == '1' %}
+                {% set langs = content_languages|split(',')|filter(v => v != '') %}
+                {% if langs|length > 1 %}
+                <div class="border-t border-slate-800 mt-2 pt-2 flex gap-2 px-3">
+                    {% for code in langs %}
+                    <button onclick="setLanguage('{{ code }}')" class="text-xs font-medium text-slate-400 uppercase {{ current_locale() == code ? 'text-blue-400 font-bold' : '' }}">
+                        {{ code|upper }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+             </div>
+        </div>
+    </header>
+
+    {# Flash messages #}
+    <div class="fixed left-0 right-0 z-60 pointer-events-none top-header-offset">
+        {% if flash is defined %}
+            {% for type, messages in flash %}
+                {% for message in messages %}
+                <div class="mx-auto mb-3 max-w-md px-4 pointer-events-auto" x-data="{ show: true }" x-show="show">
+                    <div class="glass p-4 rounded-xl shadow-2xl flex items-center justify-between border-l-4 {{ type == 'success' ? 'border-emerald-500' : (type == 'error' ? 'border-red-500' : 'border-blue-500') }}">
+                        <p class="text-sm font-medium">{{ message }}</p>
+                        <button @click="show = false" class="ml-4 text-slate-400 hover:text-white">&times;</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    {# Fallback language notice — Nova theme closeable popup #}
+    {% if is_fallback_lang is defined and is_fallback_lang and entity_label is defined %}
+    <div x-data="{ closed: false }" x-show="!closed" x-cloak
+         class="fixed right-4 z-[70] max-w-sm top-header-offset-24">
+        <div class="glass rounded-xl shadow-2xl border border-blue-500/30 p-4 flex items-start gap-3">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-blue-300">
+                    {% if has_translation_in_current_locale %}
+                        {{ __('This :label is also available in :language.', {':label': entity_label|default('content'), ':language': locale_name(content_language)}) }}
+                        <a href="javascript:void(0)" onclick="setLanguage('{{ content_language }}')" class="underline ml-1 hover:text-white">
+                            {{ __('View in :language', {':language': locale_name(content_language)}) }}
+                        </a>
+                    {% else %}
+                        {{ __('This :label is only available in :language.', {':label': entity_label|default('content'), ':language': locale_name(content_language)}) }}
+                    {% endif %}
+                </p>
+            </div>
+            <button @click="closed = true" class="text-slate-400 hover:text-white flex-shrink-0">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% set _skip_sticky_fallback = true %}
+
+    {# ── Advertisement: Header ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'header' and advertisement_code %}
+    <div class="vl-ad-header flex justify-center py-4 relative z-40 pt-header-offset-16">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# Main Content #}
+    <main class="relative {{ advertisement_enabled == '1' and advertisement_placement == 'header' and advertisement_code ? '' : 'pt-header-offset' }}">
+        {# Background Decorative Elements #}
+        <div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+            <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
+            <div class="absolute top-[20%] right-[-5%] w-[30%] h-[30%] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-[10%] left-[20%] w-[25%] h-[25%] bg-cyan-600/5 rounded-full blur-[100px]"></div>
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+    </div>
+
+    {# ── Advertisement: Footer ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'footer' and advertisement_code %}
+    <div class="vl-ad-footer flex justify-center py-6 bg-slate-950 border-t border-slate-900">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# Footer #}
+    <footer class="bg-slate-950 border-t border-slate-900 pt-20 pb-10">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <a href="{{ url('/') }}" class="flex items-center gap-3 mb-6">
+                        <span class="text-2xl font-display font-bold tracking-tight text-white">{{ site_name }}</span>
+                    </a>
+                    <p class="text-slate-400 max-w-sm mb-8 leading-relaxed">
+                        {{ site_tagline|default(__('Nova: Shaping the future of digital presence with high-impact design and technology.')) }}
+                    </p>
+                    <div class="flex gap-4">
+                        {# Social placeholder icons #}
+                        <a href="#" class="h-10 w-10 rounded-lg glass flex items-center justify-center text-slate-400 hover:text-blue-400 transition-colors">
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+                        </a>
+                        <a href="#" class="h-10 w-10 rounded-lg glass flex items-center justify-center text-slate-400 hover:text-blue-400 transition-colors">
+                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-6">{{ __('Links') }}</h4>
+                    <ul class="space-y-4">
+                        <li><a href="{{ url('/') }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Home') }}</a></li>
+                        <li><a href="{{ url(routing_blog_prefix) }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Blog') }}</a></li>
+                        <li><a href="{{ url(routing_shop_prefix) }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Shop') }}</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold mb-6">{{ __('Account') }}</h4>
+                    <ul class="space-y-4">
+                        <li><a href="{{ url(routing_account_prefix) }}" class="text-slate-400 hover:text-white transition-colors">{{ __('My Account') }}</a></li>
+                        <li><a href="{{ url('/login') }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Login') }}</a></li>
+                        <li><a href="{{ url('/register') }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Register') }}</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-slate-500 text-sm">
+                    &copy; {{ "now"|date("Y") }} {{ site_name }}. {{ __('All rights reserved.') }}
+                </p>
+                <div class="flex items-center gap-1 text-slate-600 text-sm">
+                    <span>Powered by</span>
+                    <span class="font-bold text-slate-400">Vale</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+
+    {% if settings.custom_footer_scripts %}
+    {{ settings.custom_footer_scripts|raw }}
+    {% endif %}
+
+    {# Admin edit bar #}
+    {% if user_role is defined and user_role in ['admin', 'super_admin'] and admin_edit_url is defined and admin_edit_url %}
+    <div id="vl-admin-bar" class="vl-admin-bar">
+        <div class="vl-admin-bar-icon">
+            <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </div>
+        <a href="{{ admin_edit_url }}" class="vl-admin-bar-link">{{ __('Edit Page') }}</a>
+    </div>
+    {% endif %}
+</body>
+</html>

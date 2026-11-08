@@ -1,0 +1,239 @@
+{# Discussion #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="tab-discussion" class="tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="discussion">
+
+        {# ── Global: Allow comments ── #}
+        <div {{ vl.attrs('discussion', __('Allow comments on posts'), 'comments_enabled', '', __('Comment System'), 'comments enable disable') }} class="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="comments_enabled" value="0">
+                <input type="checkbox" name="comments_enabled" value="1"
+                       {{ settings.comments_enabled|default('1') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Allow comments on posts') }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Individual posts can override this in their own settings.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        <hr class="border-gray-200 dark:border-gray-700">
+
+        {# ── Comment System ── #}
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Comment System') }}</p>
+
+        <div {{ vl.attrs('discussion', __('Comment System'), 'comment_system', '', __('Comment System'), 'disqus giscus facebook local') }} x-data="{ commentSystem: '{{ settings.comment_system|default('local') }}' }">
+            <div class="mb-4">
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="comment_system" value="local" x-model="commentSystem"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        {{ __('Local') }}
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="comment_system" value="disqus" x-model="commentSystem"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Disqus
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="comment_system" value="giscus" x-model="commentSystem"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Giscus (GitHub)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="comment_system" value="facebook" x-model="commentSystem"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Facebook
+                    </label>
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700 mt-1 mb-4">
+
+            {# ── Local Config ── #}
+            <div x-show="commentSystem === 'local'" class="space-y-4" x-cloak>
+                <div {{ vl.attrs('discussion', __('Users must be logged in to comment'), 'comments_login_required', '', __('Comment System'), 'login required auth') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="hidden" name="comments_login_required" value="0">
+                        <input type="checkbox" name="comments_login_required" value="1"
+                               {{ settings.comments_login_required|default('0') == '1' ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Users must be logged in to comment') }}
+                    </label>
+                </div>
+                <div {{ vl.attrs('discussion', __('Hold comments for moderation'), 'comment_moderation', '', __('Comment System'), 'moderation approve') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="hidden" name="comment_moderation" value="0">
+                        <input type="checkbox" name="comment_moderation" value="1"
+                               {{ settings.comment_moderation|default('0') == '1' ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Hold comments for moderation') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 ml-5">{{ __('New comments by guests must be manually approved before they appear. Logged-in users are auto-approved.') }}</p>
+                </div>
+                <div {{ vl.attrs('discussion', __('Enable comment replies'), 'allow_comment_replies', '', __('Comment System'), 'replies threading nested') }} x-data="{ repliesEnabled: {{ settings.allow_comment_replies|default('1') == '1' ? 'true' : 'false' }} }">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="hidden" name="allow_comment_replies" value="0">
+                        <input type="checkbox" name="allow_comment_replies" value="1"
+                               x-model="repliesEnabled"
+                               {{ settings.allow_comment_replies|default('1') == '1' ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Enable comment replies') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 ml-5">{{ __('Allow users to reply to comments on posts and custom content types.') }}</p>
+
+                    <div x-show="repliesEnabled" x-cloak class="mt-3" {{ vl.attrs('discussion', __('Maximum reply depth'), 'comment_max_depth', '', __('Comment System'), 'reply depth nesting') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Maximum reply depth') }}</label>
+                        <input type="number" name="comment_max_depth" value="{{ settings.comment_max_depth|default('2') }}" min="1" max="10"
+                               class="mt-1 w-24 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('How many levels deep users can reply. After 3 levels, replies flatten with a "Replying to @name" label.') }}</p>
+                    </div>
+                </div>
+
+                <hr class="border-gray-200 dark:border-gray-700">
+
+                <div {{ vl.attrs('discussion', __('Allow users to edit/remove their own comments'), 'allow_comment_editing', '', __('Comment System'), 'edit delete comments') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="hidden" name="allow_comment_editing" value="0">
+                        <input type="checkbox" name="allow_comment_editing" value="1"
+                               {{ settings.allow_comment_editing|default('1') == '1' ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Allow users to edit/remove their own comments') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 ml-5">{{ __('Logged-in users can edit and delete their own comments.') }}</p>
+                </div>
+
+                <hr class="border-gray-200 dark:border-gray-700">
+
+                <div {{ vl.attrs('discussion', __('Comments per page'), 'comments_per_page', '', __('Comment System'), 'pagination per page') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Comments per page') }}</label>
+                    <input type="number" name="comments_per_page" value="{{ settings.comments_per_page|default('5') }}" min="1" max="100"
+                           class="mt-1 w-24 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Number of comments to show per page on posts and products.') }}</p>
+                </div>
+
+                {# Captcha #}
+                <div {{ vl.attrs('discussion', __('Comment Captcha'), 'comment_captcha_type', '', __('Comment System'), 'recaptcha captcha hcaptcha turnstile honeypot') }} x-data="{
+                    type: '{{ comment_captcha_type }}',
+                    config: {
+                        hcaptcha: {{ captchaConfig.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                        recaptcha: {{ captchaConfig.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                        turnstile: {{ captchaConfig.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                    }
+                }">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Comment Captcha') }}</label>
+                    <select name="comment_captcha_type" x-model="type"
+                            class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                        <option value="none"      {{ comment_captcha_type == 'none'       ? 'selected' }}>{{ __('None') }}</option>
+                        <option value="math"      {{ comment_captcha_type == 'math'       ? 'selected' }}>{{ __('Math question (simple, no API key)') }}</option>
+                        <option value="hcaptcha"  {{ comment_captcha_type == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
+                        <option value="recaptcha" {{ comment_captcha_type == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
+                        <option value="turnstile" {{ comment_captcha_type == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
+                        <option value="honeypot"  {{ comment_captcha_type == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                    </select>
+                    <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
+                       class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
+                        ⚠ {{ __('This captcha is not configured in Privacy & Security settings.') }}
+                    </p>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('API keys are configured in the Privacy & Settings tab.') }}</p>
+                </div>
+            </div>
+
+            {# ── Disqus Config ── #}
+            <div x-show="commentSystem === 'disqus'" class="space-y-4 pb-3" x-cloak>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 mb-2">
+                    <p class="font-bold mb-1">{{ __('How to setup Disqus:') }}</p>
+                    <ul class="list-disc ml-4 space-y-0.5">
+                        <li>{{ __('Create an account at') }} <a href="https://disqus.com/" target="_blank" class="underline font-medium">disqus.com</a>.</li>
+                        <li>{{ __('Add your site and choose a "Shortname".') }}</li>
+                        <li>{{ __('Enter that Shortname below.') }}</li>
+                    </ul>
+                </div>
+                <div {{ vl.attrs('discussion', __('Disqus Shortname'), 'disqus_shortname', '', __('Comment System'), 'disqus forum shortname') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Disqus Shortname') }}</label>
+                    <input type="text" name="disqus_shortname" value="{{ settings.disqus_shortname|default('') }}"
+                           class="w-full max-w-md rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Your Disqus forum shortname.') }}</p>
+                </div>
+            </div>
+
+            {# ── Giscus Config ── #}
+            <div x-show="commentSystem === 'giscus'" class="space-y-4 pb-3" x-cloak>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 mb-2">
+                    <p class="font-bold mb-1">{{ __('How to setup Giscus:') }}</p>
+                    <ul class="list-disc ml-4 space-y-0.5">
+                        <li>{{ __('Go to') }} <a href="https://giscus.app/" target="_blank" class="underline font-medium">giscus.app</a>.</li>
+                        <li>{{ __('Follow instructions: Public repo, Discussions enabled, Giscus App installed.') }}</li>
+                        <li>{{ __('Copy repo ID, category name/ID from the giscus.app generator.') }}</li>
+                    </ul>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div {{ vl.attrs('discussion', 'GitHub Repository', 'giscus_repo', '', __('Comment System'), 'giscus github repository') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GitHub Repository</label>
+                        <input type="text" name="giscus_repo" value="{{ settings.giscus_repo|default('') }}" placeholder="owner/repo"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    </div>
+                    <div {{ vl.attrs('discussion', 'Repository ID', 'giscus_repo_id', '', __('Comment System'), 'giscus repo id') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Repository ID</label>
+                        <input type="text" name="giscus_repo_id" value="{{ settings.giscus_repo_id|default('') }}"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    </div>
+                    <div {{ vl.attrs('discussion', 'Category Name', 'giscus_category', '', __('Comment System'), 'giscus category') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
+                        <input type="text" name="giscus_category" value="{{ settings.giscus_category|default('Announcements') }}"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    </div>
+                    <div {{ vl.attrs('discussion', 'Category ID', 'giscus_category_id', '', __('Comment System'), 'giscus category id') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category ID</label>
+                        <input type="text" name="giscus_category_id" value="{{ settings.giscus_category_id|default('') }}"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div {{ vl.attrs('discussion', __('Mapping'), 'giscus_mapping', '', __('Comment System'), 'giscus mapping pathname') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Mapping') }}</label>
+                        <select name="giscus_mapping" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                            {% set g_map = settings.giscus_mapping|default('pathname') %}
+                            <option value="pathname" {{ g_map == 'pathname' ? 'selected' }}>Pathname</option>
+                            <option value="url" {{ g_map == 'url' ? 'selected' }}>URL</option>
+                            <option value="title" {{ g_map == 'title' ? 'selected' }}>Title</option>
+                            <option value="og:title" {{ g_map == 'og:title' ? 'selected' }}>OG:Title</option>
+                        </select>
+                    </div>
+                    <div {{ vl.attrs('discussion', __('Theme'), 'giscus_theme', '', __('Comment System'), 'giscus dark light theme') }}>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Theme') }}</label>
+                        <select name="giscus_theme" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                            {% set g_theme = settings.giscus_theme|default('') %}
+                            <option value="" {{ g_theme == '' ? 'selected' }}>{{ __('Automatic (theme default)') }}</option>
+                            <option value="light" {{ g_theme == 'light' ? 'selected' }}>Light</option>
+                            <option value="dark" {{ g_theme == 'dark' ? 'selected' }}>Dark</option>
+                            <option value="preferred_color_scheme" {{ g_theme == 'preferred_color_scheme' ? 'selected' }}>Preferred Color Scheme</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Facebook Config ── #}
+            <div x-show="commentSystem === 'facebook'" class="space-y-4 pb-3" x-cloak>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-300 mb-2">
+                    <p class="font-bold mb-1">{{ __('How to setup Facebook Comments:') }}</p>
+                    <ul class="list-disc ml-4 space-y-0.5">
+                        <li>{{ __('Go to') }} <a href="https://developers.facebook.com/" target="_blank" class="underline font-medium">developers.facebook.com</a> {{ __('and create an App.') }}</li>
+                        <li>{{ __('Copy the "App ID" and paste it below.') }}</li>
+                        <li>{{ __('Make sure your domain is whitelisted in the App settings.') }}</li>
+                    </ul>
+                </div>
+                <div {{ vl.attrs('discussion', 'Facebook App ID', 'facebook_app_id', '', __('Comment System'), 'facebook comments plugin') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Facebook App ID</label>
+                    <input type="text" name="facebook_app_id" value="{{ settings.facebook_app_id|default('') }}"
+                           class="w-full max-w-md rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Your Facebook App ID for the Comments plugin.') }}</p>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>

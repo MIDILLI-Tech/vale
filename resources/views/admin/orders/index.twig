@@ -1,0 +1,174 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}Orders{% endblock %}
+
+{% block content %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Orders</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> order(s)</p>
+    </div>
+    <a href="{{ url('/admin/orders/create') }}"
+       class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Order
+    </a>
+</div>
+
+<div class="mb-4 flex items-center gap-3 flex-wrap" x-data="datePresets()">
+    <form method="get" action="{{ url('/admin/orders') }}" class="flex items-center gap-2 flex-wrap">
+        <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">All Statuses</option>
+            {% for s in ['pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded'] %}
+            <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="from" x-ref="fromInput" value="{{ filters.from|default('') }}"
+               class="rounded-lg border border-gray-300 dark:border-gray-700 px-2 py-2 text-sm w-36">
+        <input type="date" name="to" x-ref="toInput" value="{{ filters.to|default('') }}"
+               class="rounded-lg border border-gray-300 dark:border-gray-700 px-2 py-2 text-sm w-36">
+        {% if filters.product_id %}
+            <div class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                <span>Product: {{ filters.product_name }}</span>
+                <a href="{{ removeProductUrl }}" class="hover:text-blue-900 dark:hover:text-blue-200">&times;</a>
+                <input type="hidden" name="product_name" value="{{ filters.product_name }}">
+            </div>
+        {% endif %}
+        {% if filters.coupon_code %}
+            <div class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+                <span>Coupon: {{ filters.coupon_code }}</span>
+                <a href="{{ removeCouponUrl }}" class="hover:text-purple-900 dark:hover:text-purple-200">&times;</a>
+                <input type="hidden" name="coupon_code" value="{{ filters.coupon_code }}">
+            </div>
+        {% endif %}
+        <p class="text-sm text-gray-700 dark:text-gray-300">Presets:</p>
+        <div class="flex flex-wrap gap-1" @click.prevent.stop>
+            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
+            <button type="button" @click="setPreset('thisMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">This month</button>
+            <button type="button" @click="setPreset('lastMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Last month</button>
+            <button type="button" @click="setPreset('thisYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">This year</button>
+            <button type="button" @click="setPreset('lastYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Last year</button>
+            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">180d</button>
+        </div>
+        <button type="submit" class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
+    </form>
+    {{ table.search('Search…') }}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th('Order', 'order_number') }}
+                {{ table.th_static('Customer', 'left') }}
+                {{ table.th('Total', 'total') }}
+                {{ table.th('Coupon', 'coupon_code') }}
+                {{ table.th('Status', 'status') }}
+                {{ table.th('Date', 'created_at') }}
+                {{ table.th_static('Actions', 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for o in orders %}
+            <tr data-row-id="{{ o.id }}" data-sort="{{ {order_number: o.orderNumber, total: o.total, status: o.status, created_at: o.createdAt ? o.createdAt.format('Y-m-d H:i:s') : '', coupon_code: o.couponCode}|json_encode|e('html_attr') }}">
+                <td class="px-6 py-4 text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
+                    <a href="{{ url('/admin/orders/' ~ o.id ~ '') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ o.orderNumber }}</a>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                    {% set billing = o.billing %}
+                    {{ billing.first_name|default('') }} {{ billing.last_name|default('') }}
+                    {% if billing.email is defined %}<p class="text-xs text-gray-400 dark:text-gray-500">{{ billing.email }}</p>{% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {{ o.total|price(o.currency) }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% if o.couponCode %}
+                        <a href="{{ url('/admin/coupons?search=' ~ o.couponCode) }}" class="inline-flex rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:hover:bg-purple-900/60">{{ o.couponCode }}</a>
+                    {% else %}
+                        <span class="text-gray-400">—</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% set sc = {completed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', refunded: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[o.status]|default('bg-gray-100') }}">{{ __(o.status)|capitalize }}</span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ o.createdAt|date('Y-m-d') }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <a href="{{ url('/admin/orders/' ~ o.id ~ '') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800/50">{{ __('View') }}</a>
+                        <form method="POST" action="{{ url('/admin/orders/' ~ o.id ~ '/delete') }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button type="submit" class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="px-6 py-12 text-center text-gray-400">{{ __('No orders yet.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('datePresets', function () {
+        function fmt(d) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
+        }
+        return {
+            setPreset(key) {
+                var today = new Date();
+                var from, to;
+
+                switch (key) {
+                    case '7d':
+                        from = new Date(today); from.setDate(from.getDate() - 7); to = new Date(today);
+                        break;
+                    case '30d':
+                        from = new Date(today); from.setDate(from.getDate() - 30); to = new Date(today);
+                        break;
+                    case '180d':
+                        from = new Date(today); from.setDate(from.getDate() - 180); to = new Date(today);
+                        break;
+                    case 'thisMonth':
+                        from = new Date(today.getFullYear(), today.getMonth(), 1); to = new Date(today);
+                        break;
+                    case 'lastMonth':
+                        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        to = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    case 'thisYear':
+                        from = new Date(today.getFullYear(), 0, 1); to = new Date(today);
+                        break;
+                    case 'lastYear':
+                        from = new Date(today.getFullYear() - 1, 0, 1);
+                        to = new Date(today.getFullYear() - 1, 11, 31);
+                        break;
+                }
+
+                this.$refs.fromInput.value = fmt(from);
+                this.$refs.toInput.value = fmt(to);
+            }
+        };
+    });
+});
+</script>
+{% endblock %}

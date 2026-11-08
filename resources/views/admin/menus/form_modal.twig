@@ -1,0 +1,1233 @@
+{# Menu Edit/Create Modal #}
+<style>
+.menu-ghost { opacity: 0.4; outline: 2px dashed #93c5fd; outline-offset: 2px; border-radius: 0.5rem; }
+.menu-chosen { box-shadow: 0 0 0 2px #3b82f6; border-radius: 0.5rem; }
+.menu-item { transition: margin-left 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease; }
+.menu-item:hover .indent-btn, .menu-item:hover .outdent-btn { opacity: 1; }
+.indent-btn, .outdent-btn { opacity: 0.35; transition: opacity 0.15s ease, color 0.15s ease; }
+.menu-item:hover .move-btn { opacity: 1; }
+.move-btn { opacity: 0.35; transition: opacity 0.15s ease; }
+.menu-drop-before { box-shadow: inset 0 3px 0 #2563eb; }
+.menu-item.menu-drop-child { box-shadow: inset 0 0 0 2px #f59e0b; background-color: rgba(245, 158, 11, 0.10); }
+.menu-drop-after { box-shadow: inset 0 -3px 0 #2563eb; }
+.dark .menu-drop-before { box-shadow: inset 0 3px 0 #60a5fa; }
+.dark .menu-item.menu-drop-child { box-shadow: inset 0 0 0 2px #fbbf24; background-color: rgba(251, 191, 36, 0.12); }
+.dark .menu-drop-after { box-shadow: inset 0 -3px 0 #60a5fa; }
+.collapse-toggle { cursor: pointer; user-select: none; color: #6b7280; opacity: 0.7; transition: opacity 0.15s ease, transform 0.15s ease; }
+.collapse-toggle:hover { opacity: 1; }
+.dark .collapse-toggle { color: #d1d5db; opacity: 0.8; }
+.menu-item.collapsed > .flex > .collapse-toggle { transform: rotate(0deg); }
+.menu-item:not(.collapsed) > .flex > .collapse-toggle { transform: rotate(90deg); }
+.collapse-toggle.no-children { visibility: hidden; }
+.menu-item.picker-open { position: relative; z-index: 30; }
+</style>
+<div x-show="open" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    @keydown.escape.window="closeModal()">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col mx-4 overflow-hidden" @click.stop>
+        {# Modal Header #}
+        <div class="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-gray-50 dark:bg-gray-800/50">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100" x-text="isEdit ? '{{ __('Edit Menu') }}' : '{{ __('New Menu') }}'"></h2>
+            <button type="button" @click="closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+        </div>
+
+        {# Modal Body — flex column: fixed top bar + scroll area + fixed footer #}
+        <div class="flex-1 flex flex-col min-h-0">
+            <div x-show="loading" class="flex items-center justify-center py-12">
+                <span class="vl-icon-refresh vl-icon-spin mr-2 dark:text-gray-200"></span> <span class="dark:text-gray-200">{{ __('Loading menu details...') }}</span>
+            </div>
+
+            <form x-show="!loading" id="menu-form" method="post" :action="isEdit ? (window.APP_BASE_PATH || '') + '/admin/menus/' + editId : (window.APP_BASE_PATH || '') + '/admin/menus'" class="flex-1 flex flex-col min-h-0">
+                {{ csrf_field() }}
+                <input type="hidden" name="_METHOD" value="PUT" :disabled="!isEdit">
+
+                {# Scrollable area: details + items + preview (no padding here — sections carry their own margins so the sticky bar sticks flush) #}
+                <div id="menu-modal-scroll" class="flex-1 overflow-y-auto">
+                {# Menu Details #}
+                <div class="mx-6 mt-6 mb-6 rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Name') }} *</label>
+                            <input type="text" id="menu-name" name="name" required x-model="menuName"
+                                   class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Location') }}</label>
+                            <select id="menu-location" name="location" x-model="menuLocation" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                                {# Options populated by initLocationDropdown #}
+                            </select>
+                        </div>
+                    </div>
+
+                    {% if multi_language_content %}
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t dark:border-gray-800">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Language') }}</label>
+                            <select name="language" x-model="menuLanguage" x-effect="if (menuTranslationOf && allMenus.some(m => String(m.id) === String(menuTranslationOf) && m.language === menuLanguage)) menuTranslationOf = ''" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 text-sm">
+                                {% for code, name in supported_locales %}
+                                    <option value="{{ code }}">{{ locale_name(code) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Translation Of') }}</label>
+                            <select name="translation_of" x-model="menuTranslationOf"
+                                    class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 text-sm">
+                                <option value="">— {{ __('None') }} —</option>                                <template x-for="m in allMenus.filter(menu => menu.id !== editId && menu.language !== menuLanguage)" :key="m.id">
+                                <option :value="m.id"
+                                        x-bind:disabled="String(m.id) !== String(menuTranslationOf) && allMenus.some(other => (other.id !== editId) && (other.translationOf === m.id) && other.language === menuLanguage)"
+                                        x-text="m.name + ' (' + m.language.toUpperCase() + ')' + (isEdit && String(m.id) === String(menuTranslationOf) ? ' ({{ __('Current')|e('js') }})' : (allMenus.some(other => (other.id !== editId) && (other.translationOf === m.id) && other.language === menuLanguage) ? ' (' + '{{ __('Translated')|e('js') }}' + ')' : ''))"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t dark:border-gray-800" x-show="isEdit" x-cloak>
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Translations') }}</h4>
+                        <div class="space-y-1.5">
+                            {% for code, name in supported_locales %}
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-4 text-[9px] font-medium text-gray-400">{{ code|upper }}</span>
+                                    <span class="text-gray-600 dark:text-gray-400">{{ locale_name(code) }}</span>
+                                </span>
+                                <template x-if="loading">
+                                    <span class="text-gray-400" title="{{ __('Loading…') }}"><span class="vl-icon-refresh vl-icon-spin"></span></span>
+                                </template>
+                                <template x-if="!loading && menuTranslations.find(t => t.language === '{{ code }}')">
+                                    <span class="flex gap-2">
+                                        <template x-if="menuTranslations.find(t => t.language === '{{ code }}').id === editId">
+                                            <span class="font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 rounded-sm">{{ __('Current') }}</span>
+                                        </template>
+                                        <template x-if="menuTranslations.find(t => t.language === '{{ code }}').id !== editId">
+                                            <button type="button" @click="openEdit(menuTranslations.find(t => t.language === '{{ code }}').id)" class="text-blue-600 hover:underline">{{ __('Edit') }}</button>
+                                        </template>
+                                    </span>
+                                </template>
+                                <template x-if="!loading && !menuTranslations.find(t => t.language === '{{ code }}')">
+                                    <button type="button" @click="addTranslation('{{ code }}')" class="text-gray-400 hover:text-gray-600">+ {{ __('Add') }}</button>
+                                </template>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Menu Items — sticky action bar, flush to scrollport top (no margins: margins offset the stuck position and leave a see-through gap) #}
+                <div id="menu-sticky-bar" class="sticky top-0 z-10 px-6 py-3 flex items-center justify-between flex-wrap gap-2 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{ __('Menu Items') }}</h2>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="expandAll()"
+                                class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            {{ __('Expand All') }}
+                        </button>
+                        <button type="button" onclick="collapseAll()"
+                                class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            {{ __('Collapse All') }}
+                        </button>
+                        <button type="button" id="add-item"
+                                class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            + {{ __('Add Item') }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mx-6 mt-4 min-w-0 pb-2 max-sm:overflow-x-auto">
+                    <div id="items-container" class="space-y-1 min-w-[600px] sm:min-w-0">
+                        {# Dynamic Items #}
+                    </div>
+                </div>
+
+                {# Preview #}
+                <div class="mx-6 mb-6 mt-6 rounded-xl border bg-gray-50 dark:bg-gray-800/50 p-5 shadow-xs">
+                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        {{ __('Menu Preview') }}
+                        <span class="text-xs font-normal text-gray-400 dark:text-gray-500">{{ __('— may look different depending on your theme') }}</span>
+                    </h2>
+                    <div id="menu-preview" class="bg-white dark:bg-gray-900 rounded-lg border dark:border-gray-700 p-4 font-mono text-sm text-gray-600 dark:text-gray-400 min-h-[2.5rem]">
+                        <span class="text-gray-400 dark:text-gray-500 italic">{{ __('Add menu items to see a preview') }}</span>
+                    </div>
+                </div>
+                </div>{# /scroll area #}
+
+                {# Form footer — fixed at bottom, always visible #}
+                <div class="shrink-0 px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50">
+                    <button type="button" @click="closeModal()" class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 hover:bg-white dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300">{{ __('Cancel') }}</button>
+                    <button type="submit"
+                            class="rounded-lg bg-gray-900 dark:bg-gray-700 px-6 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600">
+                        {{ __('Save') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<template id="item-template">
+    <div class="menu-item rounded-lg border bg-gray-50 dark:bg-gray-800/50 p-3 space-y-2" data-parent-index="-1" data-item-index="0" data-depth="0">
+        <input type="hidden" name="item_sort_order[]" value="0" class="sort-order-input">
+        <input type="hidden" name="item_parent_index[]" value="-1" class="parent-index-input">
+        <div class="flex items-center gap-1.5">
+            <span class="collapse-toggle no-children" onclick="toggleCollapse(this)" title="{{ __('Toggle children') }}">▶</span>
+            <span class="drag-handle cursor-move text-gray-300 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-300 select-none text-lg leading-none" title="{{ __('Drag to reorder') }}">⠿</span>
+            <button type="button" onclick="moveItemUp(this)" title="{{ __('Move up') }}" class="move-btn text-xs px-0.5 leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">↑</button>
+            <button type="button" onclick="moveItemDown(this)" title="{{ __('Move down') }}" class="move-btn text-xs px-0.5 leading-none text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">↓</button>
+            <button type="button" onclick="indentItem(this)" title="{{ __('Indent (make sub-item)') }}" class="indent-btn text-xs px-1 leading-none text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold">→</button>
+            <button type="button" onclick="outdentItem(this)" title="{{ __('Outdent (make top-level)') }}" class="outdent-btn text-xs px-1 leading-none text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-bold">←</button>
+            <div class="flex-1 min-w-0 relative">
+                <input type="text" name="item_label[]" placeholder="{{ __('Label') }}" class="w-full rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 pr-8 focus:border-gray-600 focus:ring-gray-500">
+                <span class="label-clear absolute right-1.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-gray-400 cursor-pointer hidden select-none" title="{{ __('Clear') }}">&times;</span>
+            </div>
+            <select name="item_type[]" class="item-type-select flex-none w-28 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 focus:border-gray-600 focus:ring-gray-500">
+                <option value="custom">{{ __('Custom') }}</option>
+                {% if blog_enabled %}<option value="blog">{{ __('Blog') }}</option>{% endif %}
+                {% if blog_enabled or custom_content_types|default([])|length > 0 %}<option value="category">{{ __('Blog Category') }}</option>{% endif %}
+                <option value="home">{{ __('Home') }}</option>
+                {% if subscriptions_enabled %}<option value="membership">{{ __('Membership') }}</option>{% endif %}
+                {% if pages_enabled %}<option value="page">{{ __('Page') }}</option>{% endif %}
+                {% if blog_enabled %}<option value="post">{{ __('Post') }}</option>{% endif %}
+                {% if shop_enabled %}<option value="product">{{ __('Product') }}</option>{% endif %}
+                {% if shop_enabled %}<option value="shop">{{ __('Shop') }}</option>{% endif %}
+                {% for ct in custom_content_types|default([]) %}
+                <option value="{{ ct.slug }}">{{ ct.name }}</option>
+                {% endfor %}
+            </select>
+            <div class="content-picker-container flex-1 min-w-0 hidden">
+                <div class="relative">
+                    <input type="text" class="content-picker-search w-full rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 pr-8 focus:border-gray-600 focus:ring-gray-500"
+                           placeholder="{{ __('Search…') }}" autocomplete="off">
+                    <span class="content-picker-clear absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer hidden">&times;</span>
+                    <div class="content-picker-results absolute z-20 mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto hidden"></div>
+                </div>
+            </div>
+            <input type="text" name="item_url[]" placeholder="URL"
+                   class="url-wrapper flex-1 min-w-0 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 focus:border-gray-600 focus:ring-gray-500"
+                   style="display:none">
+            <input type="hidden" name="item_reference_id[]">
+            <select name="item_target[]" class="flex-none w-20 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 focus:border-gray-600 focus:ring-gray-500" title="{{ __('Link target') }}">
+                <option value="_self" title="{{ __('Same tab') }}">{{ __('Same Tab') }}</option>
+                <option value="_blank" title="{{ __('New tab') }}">{{ __('New Tab') }}</option>
+            </select>
+            <input type="text" name="item_css_class[]" placeholder="CSS"
+                     class="flex-none w-24 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm dark:text-gray-200 focus:border-gray-600 focus:ring-gray-500">
+            <button type="button" class="remove-item text-red-500 hover:text-red-700 text-lg leading-8 flex-none">&times;</button>
+        </div>
+    </div>
+</template>
+
+<script>
+var _searchCache = {};
+var _definedMenus = {{ defined_menus|json_encode|raw }};
+var _menuFormDirty = false;
+
+function initLocationDropdown(currentLocation) {
+    var sel = document.getElementById('menu-location');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— {{ __('None') }} —</option>';
+    Object.keys(_definedMenus).forEach(function(key) {
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.text = _definedMenus[key];
+        if (key === currentLocation) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    if (currentLocation && !_definedMenus[currentLocation]) {
+        var opt = document.createElement('option');
+        opt.value = currentLocation;
+        opt.text = currentLocation + ' ({{ __('missing') }})';
+        opt.selected = true;
+        opt.classList.add('text-red-600');
+        sel.appendChild(opt);
+    }
+}
+
+// ── Dirty Check ──────────────────────────────────────────────────
+window.addEventListener('beforeunload', function(e) {
+    if (_menuFormDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+function markMenuDirty() {
+    _menuFormDirty = true;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+function getMenuScroller() {
+    return document.getElementById('menu-modal-scroll');
+}
+
+function scrollMenuRowIntoView(row) {
+    if (!row || typeof row.scrollIntoView !== 'function') return;
+    try {
+        row.scrollIntoView({ block: 'nearest' });
+    } catch (e) {
+        row.scrollIntoView(false);
+    }
+}
+
+function refocusMenuButton(row, title) {
+    if (!row) return;
+    var btn = row.querySelector('button[title="' + title + '"]');
+    if (btn && typeof btn.focus === 'function') {
+        try { btn.focus({ preventScroll: true }); } catch (e) { btn.focus(); }
+    }
+}
+
+function refreshAll() {
+    var sc = getMenuScroller();
+    var top = sc ? sc.scrollTop : null;
+    reorderDomByParent();
+    refreshAllDepths();
+    refreshSortOrders();
+    refreshParentIndexInputs();
+    reorderDomByParent();
+    buildPreview();
+    if (sc && top !== null) sc.scrollTop = top;
+}
+
+function getAllDescendants(row) {
+    var descendants = [];
+    var queue = [row];
+    while (queue.length) {
+        var current = queue.shift();
+        var items = itemsContainer.querySelectorAll('.menu-item');
+        items.forEach(function(item) {
+            if (item.dataset.parentIndex === current.dataset.itemIndex && item !== row) {
+                descendants.push(item);
+                queue.push(item);
+            }
+        });
+    }
+    return descendants;
+}
+
+function getParentRow(row) {
+    var pi = row.dataset.parentIndex;
+    if (pi === undefined || pi === '-1') return null;
+    return itemsContainer.querySelector('[data-item-index="' + pi + '"]');
+}
+
+function moveRowAfter(row, refRow) {
+    if (!refRow || !refRow.parentNode) return;
+    var next = refRow.nextElementSibling;
+    if (next) {
+        itemsContainer.insertBefore(row, next);
+    } else {
+        itemsContainer.appendChild(row);
+    }
+}
+
+// ── Move Up / Down (same level, with children) ──────────────────
+function moveItemUp(btn) {
+    var row = btn.closest('.menu-item');
+    var parentIndex = row.dataset.parentIndex;
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    var prev = null;
+    for (var i = 0; i < items.length; i++) {
+        if (items[i] === row) {
+            for (var j = i - 1; j >= 0; j--) {
+                if (items[j].dataset.parentIndex === parentIndex) {
+                    prev = items[j];
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    if (!prev) return;
+    markMenuDirty();
+    var prevDesc = getAllDescendants(prev);
+    var rowDesc = getAllDescendants(row);
+    prevDesc.forEach(function(d) { d.remove(); });
+    rowDesc.forEach(function(d) { d.remove(); });
+    row.remove();
+    if (prev.parentNode) {
+        prev.parentNode.insertBefore(row, prev);
+    } else {
+        itemsContainer.prepend(row);
+    }
+    var afterRow = row;
+    rowDesc.forEach(function(d) {
+        moveRowAfter(d, afterRow);
+        afterRow = d;
+    });
+    prevDesc.forEach(function(d) {
+        moveRowAfter(d, afterRow);
+        afterRow = d;
+    });
+    refreshAll();
+    scrollMenuRowIntoView(row);
+    refocusMenuButton(row, 'Move up');
+}
+
+function moveItemDown(btn) {
+    var row = btn.closest('.menu-item');
+    var parentIndex = row.dataset.parentIndex;
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    var next = null;
+    for (var i = 0; i < items.length; i++) {
+        if (items[i] === row) {
+            for (var j = i + 1; j < items.length; j++) {
+                if (items[j].dataset.parentIndex === parentIndex) {
+                    next = items[j];
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    if (!next) return;
+    markMenuDirty();
+    var rowDesc = getAllDescendants(row);
+    var nextDesc = getAllDescendants(next);
+    var nextBlockLast = nextDesc.length ? nextDesc[nextDesc.length - 1] : next;
+    var insertBefore = nextBlockLast.nextElementSibling;
+    rowDesc.forEach(function(d) { d.remove(); });
+    nextDesc.forEach(function(d) { d.remove(); });
+    row.remove();
+    if (insertBefore) {
+        itemsContainer.insertBefore(row, insertBefore);
+    } else {
+        itemsContainer.appendChild(row);
+    }
+    var afterRow = row;
+    nextDesc.forEach(function(d) {
+        moveRowAfter(d, afterRow);
+        afterRow = d;
+    });
+    afterRow = row;
+    nextDesc.forEach(function(d) { afterRow = d; });
+    if (nextDesc.length === 0) afterRow = row;
+    rowDesc.forEach(function(d) {
+        moveRowAfter(d, afterRow);
+        afterRow = d;
+    });
+    refreshAll();
+    scrollMenuRowIntoView(row);
+    refocusMenuButton(row, 'Move down');
+}
+
+// ── Indent / Outdent ────────────────────────────────────────────
+function indentItem(btn) {
+    var row = btn.closest('.menu-item');
+    var depth = getItemDepth(row);
+    // New parent = nearest previous *visible* row at the same depth (the
+    // previous sibling). Raw previousElementSibling is wrong here: when the
+    // previous tree is expanded it points at a deep descendant and the item
+    // would jump several levels instead of exactly one.
+    var prev = row.previousElementSibling;
+    var newParent = null;
+    while (prev) {
+        if (prev.classList && prev.classList.contains('menu-item') && prev.style.display !== 'none') {
+            var prevDepth = getItemDepth(prev);
+            if (prevDepth === depth) {
+                newParent = prev;
+                break;
+            }
+            if (prevDepth < depth) break; // first child — nothing to indent under
+        }
+        prev = prev.previousElementSibling;
+    }
+    if (!newParent) return;
+    markMenuDirty();
+    row.dataset.parentIndex = newParent.dataset.itemIndex;
+    newParent.classList.remove('collapsed');
+    refreshAll();
+    scrollMenuRowIntoView(row);
+    refocusMenuButton(row, 'Indent (make sub-item)');
+}
+
+function outdentItem(btn) {
+    var row = btn.closest('.menu-item');
+    var currentParentIndex = row.dataset.parentIndex;
+    if (currentParentIndex === undefined || currentParentIndex === '-1') return;
+    markMenuDirty();
+    var grandparentIndex = '-1';
+    var parentRow = itemsContainer.querySelector('[data-item-index="' + currentParentIndex + '"]');
+    if (parentRow) {
+        grandparentIndex = parentRow.dataset.parentIndex || '-1';
+    }
+    row.dataset.parentIndex = grandparentIndex;
+    refreshAll();
+    scrollMenuRowIntoView(row);
+    refocusMenuButton(row, 'Outdent (make top-level)');
+}
+
+function getItemDepth(row) {
+    var depth = 0;
+    var current = row;
+    var seen = {};
+    while (current && current.dataset.parentIndex !== undefined && current.dataset.parentIndex !== '-1') {
+        if (seen[current.dataset.itemIndex]) break;
+        seen[current.dataset.itemIndex] = true;
+        depth++;
+        current = itemsContainer.querySelector('[data-item-index="' + current.dataset.parentIndex + '"]');
+    }
+    return Math.min(depth, 6);
+}
+
+function refreshAllDepths() {
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    // Build old→new index mapping before re-indexing
+    var oldToNew = {};
+    items.forEach(function(row, newIdx) {
+        var oldIdx = row.dataset.itemIndex;
+        if (oldIdx !== undefined && oldIdx !== String(newIdx)) {
+            oldToNew[oldIdx] = newIdx;
+        }
+    });
+    // Remap parentIndex values to match new indices
+    if (Object.keys(oldToNew).length > 0) {
+        items.forEach(function(row) {
+            var pi = row.dataset.parentIndex;
+            if (pi !== undefined && pi !== '-1' && oldToNew[pi] !== undefined) {
+                row.dataset.parentIndex = String(oldToNew[pi]);
+            }
+        });
+    }
+    // Re-index by DOM order
+    items.forEach(function(row, idx) {
+        row.dataset.itemIndex = idx;
+    });
+    items.forEach(function(row) {
+        var depth = getItemDepth(row);
+        row.dataset.depth = depth;
+        row.style.marginLeft = (depth * 24) + 'px';
+    });
+    // Update collapse toggles: show only for items that have children
+    var allToggles = itemsContainer.querySelectorAll('.collapse-toggle');
+    allToggles.forEach(function(toggle) {
+        var row = toggle.closest('.menu-item');
+        var idx = row.dataset.itemIndex;
+        var hasChildren = itemsContainer.querySelector('[data-parent-index="' + idx + '"]');
+        if (hasChildren) {
+            toggle.classList.remove('no-children');
+        } else {
+            toggle.classList.add('no-children');
+            toggle.classList.remove('collapsed');
+            row.classList.remove('collapsed');
+        }
+    });
+    // Show/hide children of collapsed items
+    var visibleSet = {};
+    items.forEach(function(row) {
+        var pi = row.dataset.parentIndex;
+        if (pi === undefined || pi === '-1') {
+            visibleSet[row.dataset.itemIndex] = true;
+        }
+    });
+    // Walk top-down: if parent visible & not collapsed → mark children visible
+    var changed = true;
+    while (changed) {
+        changed = false;
+        items.forEach(function(row) {
+            var pi = row.dataset.parentIndex;
+            if (pi !== undefined && pi !== '-1' && visibleSet[pi] && !itemsContainer.querySelector('[data-item-index="' + pi + '"]').classList.contains('collapsed')) {
+                if (!visibleSet[row.dataset.itemIndex]) {
+                    visibleSet[row.dataset.itemIndex] = true;
+                    changed = true;
+                }
+            }
+        });
+    }
+    items.forEach(function(row) {
+        var pi = row.dataset.parentIndex;
+        if (pi !== undefined && pi !== '-1' && !visibleSet[row.dataset.itemIndex]) {
+            row.style.display = 'none';
+        } else {
+            row.style.display = '';
+        }
+    });
+}
+
+function refreshSortOrders() {
+    itemsContainer.querySelectorAll('.menu-item').forEach(function(row, idx) {
+        var input = row.querySelector('.sort-order-input');
+        if (input) input.value = idx;
+    });
+}
+
+function refreshParentIndexInputs() {
+    itemsContainer.querySelectorAll('.menu-item').forEach(function(row) {
+        var input = row.querySelector('.parent-index-input');
+        if (input) input.value = row.dataset.parentIndex || '-1';
+    });
+}
+
+// ── Collapse Toggle ──────────────────────────────────────────────
+function toggleCollapse(btn) {
+    var row = btn.closest('.menu-item');
+    markMenuDirty();
+    row.classList.toggle('collapsed');
+    refreshAll();
+    scrollMenuRowIntoView(row);
+}
+
+function expandAll() {
+    markMenuDirty();
+    itemsContainer.querySelectorAll('.menu-item.collapsed').forEach(function(row) {
+        row.classList.remove('collapsed');
+    });
+    refreshAll();
+}
+
+function collapseAll() {
+    markMenuDirty();
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    items.forEach(function(row) {
+        var idx = row.dataset.itemIndex;
+        var hasChildren = itemsContainer.querySelector('[data-parent-index="' + idx + '"]');
+        if (hasChildren) row.classList.add('collapsed');
+    });
+    refreshAll();
+}
+
+// ── Content Picker ──────────────────────────────────────────────
+function initContentPicker(row) {
+    var typeSelect  = row.querySelector('.item-type-select');
+    var container   = row.querySelector('.content-picker-container');
+    var searchInput = container.querySelector('.content-picker-search');
+    var resultsDiv  = container.querySelector('.content-picker-results');
+    var clearBtn    = container.querySelector('.content-picker-clear');
+    var labelInput  = row.querySelector('input[name="item_label[]"]');
+    var urlInput    = row.querySelector('input[name="item_url[]"]');
+    var urlWrapper  = row.querySelector('.url-wrapper');
+    var refInput    = row.querySelector('input[name="item_reference_id[]"]');
+
+    var selectedItem = null;
+    var searchT      = null;
+
+    function showPanel() {
+        resultsDiv.classList.remove('hidden');
+        var row = container.closest('.menu-item');
+        if (row) row.classList.add('picker-open');
+    }
+
+    function hidePanel() {
+        resultsDiv.classList.add('hidden');
+        var row = container.closest('.menu-item');
+        if (row) row.classList.remove('picker-open');
+    }
+
+    function toggleUrl(type) {
+        if (urlWrapper) {
+            urlWrapper.style.display = type === 'custom' ? '' : 'none';
+        }
+    }
+
+    function togglePicker(type) {
+        if (type === 'custom' || type === 'home') {
+            container.classList.add('hidden');
+            hidePanel();
+            resultsDiv.innerHTML = '';
+            return;
+        }
+        container.classList.remove('hidden');
+        selectedItem = null;
+        searchInput.value = '';
+        resultsDiv.innerHTML = '';
+        hidePanel();
+        clearBtn.classList.add('hidden');
+        searchInput.readOnly = false;
+        searchInput.placeholder = '{{ __('Search…') }}';
+    }
+
+    function doSearch(q) {
+        var type = typeSelect.value;
+        var cacheKey = type + '::' + q;
+
+        if (type === 'shop') {
+            if (window._VL_SHOP_ENABLED === '0') { renderResults([]); return; }
+            var _bp = window.APP_BASE_PATH || '';
+            var shopItems = [
+                { id: 'shop-homepage', label: '{{ __('Shop Homepage') }}', url: _bp + '{{ routing_shop_prefix }}' },
+                { id: 'cart', label: '{{ __('Cart') }}', url: _bp + '{{ routing_cart_prefix }}' }
+            ];
+            renderResults(shopItems);
+            return;
+        }
+
+        if (type === 'membership') {
+            if (window._VL_SUBSCRIPTIONS_ENABLED === '0') { renderResults([]); return; }
+            var _bp = window.APP_BASE_PATH || '';
+            renderResults([{ id: 'membership-plans', label: '{{ __('Membership Plans') }}', url: _bp + '{{ routing_membership_prefix }}' }]);
+            return;
+        }
+
+        if (_searchCache[cacheKey]) {
+            renderResults(_searchCache[cacheKey]);
+            return;
+        }
+
+        var url = (window.APP_BASE_PATH || '') + '/admin/menus/content-items'
+            + '?type=' + encodeURIComponent(type)
+            + '&q=' + encodeURIComponent(q);
+
+        resultsDiv.innerHTML = '<div class="p-3 text-sm text-gray-400 dark:text-gray-500 text-center"><span class="vl-icon-refresh vl-icon-spin mr-2"></span>{{ __('Searching…') }}</div>';
+        showPanel();
+
+        fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (items) {
+                _searchCache[cacheKey] = items;
+                renderResults(items);
+            })
+            .catch(function () {
+                resultsDiv.innerHTML = '<div class="p-3 text-sm text-red-500 text-center">{{ __('Error loading.') }}</div>';
+            });
+    }
+
+    function renderResults(items) {
+        clearBtn.classList.toggle('hidden', !searchInput.value);
+        items = (items || []).filter(function (item) {
+            return item && String(item.label || '').trim() !== '';
+        });
+        if (!items.length) {
+            resultsDiv.innerHTML = '<div class="p-3 text-sm text-gray-400 text-center">{{ __('No results.') }}</div>';
+            showPanel();
+            return;
+        }
+        resultsDiv.innerHTML = '';
+        items.forEach(function (item) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer';
+            btn.textContent = item.label;
+            btn.dataset.id = item.id;
+            btn.dataset.url = item.url;
+            btn.addEventListener('mousedown', function (e) { e.preventDefault(); selectItem(item); });
+            resultsDiv.appendChild(btn);
+        });
+        showPanel();
+    }
+
+    function selectItem(item) {
+        markMenuDirty();
+        selectedItem = item;
+        searchInput.value = item.label;
+        hidePanel();
+        clearBtn.classList.remove('hidden');
+        urlInput.value = item.url || '';
+        if (refInput) refInput.value = item.id;
+        if (!labelInput.value) labelInput.value = item.label;
+        buildPreview();
+    }
+
+    function clearSelection() {
+        markMenuDirty();
+        selectedItem = null;
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        urlInput.value = '';
+        if (refInput) refInput.value = '';
+        if (typeSelect.value === 'blog' || typeSelect.value === 'shop' || typeSelect.value === 'membership') {
+            searchInput.readOnly = true;
+            searchInput.placeholder = '{{ __('Select…') }}';
+            doSearch('');
+        } else if (typeSelect.value !== 'custom' && typeSelect.value !== 'home') {
+            doSearch('');
+        } else {
+            hidePanel();
+            searchInput.focus();
+        }
+    }
+
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchT);
+        var q = this.value.trim();
+        if (q === '') {
+            var type = typeSelect.value;
+            if (type !== 'custom' && type !== 'home' && type !== 'blog' && type !== 'shop' && type !== 'membership') {
+                doSearch('');
+            } else {
+                hidePanel();
+            }
+            clearBtn.classList.add('hidden');
+            return;
+        }
+        searchT = setTimeout(function () { doSearch(q); }, 250);
+    });
+
+    searchInput.addEventListener('focus', function () {
+        if (resultsDiv.children.length > 0) {
+            showPanel();
+        }
+    });
+
+    searchInput.addEventListener('blur', function () {
+        setTimeout(hidePanel, 200);
+    });
+
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') hidePanel();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var firstBtn = resultsDiv.querySelector('button');
+            if (firstBtn && !resultsDiv.classList.contains('hidden')) firstBtn.click();
+        }
+    });
+
+    clearBtn.addEventListener('click', function () {
+        clearSelection();
+        searchInput.focus();
+    });
+
+    var labelClearBtn = row.querySelector('.label-clear');
+    function syncLabelClear() {
+        if (labelClearBtn) labelClearBtn.classList.toggle('hidden', !labelInput.value);
+    }
+    labelInput.addEventListener('input', syncLabelClear);
+    if (labelClearBtn) {
+        labelClearBtn.addEventListener('click', function () {
+            markMenuDirty();
+            labelInput.value = '';
+            syncLabelClear();
+            buildPreview();
+            labelInput.focus();
+        });
+    }
+    syncLabelClear();
+
+    typeSelect.addEventListener('change', function () {
+        var type = this.value;
+        toggleUrl(type);
+        togglePicker(type);
+        if (type === 'home') {
+            var _bp = window.APP_BASE_PATH || '';
+            urlInput.value = _bp + '/';
+            if (!labelInput.value) labelInput.value = 'Home';
+            if (refInput) refInput.value = '';
+            return;
+        }
+        if (type === 'custom') {
+            if (refInput) refInput.value = '';
+            return;
+        }
+        if (type === 'blog') {
+            searchInput.placeholder = '{{ __('Select…') }}';
+            searchInput.readOnly = true;
+            var _bp = window.APP_BASE_PATH || '';
+            renderResults([{ id: '0', label: '{{ __('Blog Homepage') }}', url: _bp + '{{ routing_blog_prefix }}' }]);
+            return;
+        }
+        if (type === 'shop') {
+            if (window._VL_SHOP_ENABLED === '0') {
+                resultsDiv.innerHTML = '';
+                hidePanel();
+                searchInput.readOnly = true;
+                searchInput.placeholder = '{{ __('Select…') }}';
+                return;
+            }
+            searchInput.placeholder = '{{ __('Select…') }}';
+            searchInput.readOnly = true;
+            var _bp = window.APP_BASE_PATH || '';
+            var items = [
+                { id: '0', label: '{{ __('Shop Homepage') }}', url: _bp + '{{ routing_shop_prefix }}' },
+                { id: '0', label: '{{ __('Cart') }}', url: _bp + '{{ routing_cart_prefix }}' }
+            ];
+            renderResults(items);
+            return;
+        }
+        if (type === 'membership') {
+            if (window._VL_SUBSCRIPTIONS_ENABLED === '0') {
+                resultsDiv.innerHTML = '';
+                hidePanel();
+                searchInput.readOnly = true;
+                searchInput.placeholder = '{{ __('Select…') }}';
+                return;
+            }
+            searchInput.placeholder = '{{ __('Select…') }}';
+            searchInput.readOnly = true;
+            var _bp = window.APP_BASE_PATH || '';
+            renderResults([{ id: '0', label: '{{ __('Membership Plans') }}', url: _bp + '{{ routing_membership_prefix }}' }]);
+            return;
+        }
+        // Preload first 50 items for content types
+        doSearch('');
+    });
+
+    // Sync initial visibility with the preselected type (add + edit paths).
+    // Without this the URL field stays hidden until the type is changed.
+    toggleUrl(typeSelect.value);
+
+    // Restore existing selection on edit
+    var existingRef = row.dataset.referenceId || urlInput.value;
+    if (typeSelect.value !== 'custom' && typeSelect.value !== 'home' && existingRef) {
+        container.classList.remove('hidden');
+        if (labelInput.value) {
+            searchInput.value = labelInput.value;
+            clearBtn.classList.remove('hidden');
+            if (refInput) refInput.value = existingRef;
+        }
+    }
+}
+
+// ── Preview ─────────────────────────────────────────────────────
+function buildPreview() {
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    var previewEl = document.getElementById('menu-preview');
+    if (!items.length) {
+        previewEl.innerHTML = '<span class="text-gray-400 dark:text-gray-500 italic">{{ __('Add menu items to see a preview') }}</span>';
+        return;
+    }
+    items.forEach(function(row, idx) { row.dataset.itemIndex = idx; });
+
+    var nodeByIndex = {};
+    var roots = [];
+    items.forEach(function(row) {
+        var label = row.querySelector('input[name="item_label[]"]').value || 'Untitled';
+        var node = { label: label, children: [] };
+        nodeByIndex[row.dataset.itemIndex] = node;
+    });
+    items.forEach(function(row) {
+        var pi = row.dataset.parentIndex;
+        var ii = row.dataset.itemIndex;
+        if (pi !== undefined && pi !== '-1' && nodeByIndex[pi]) {
+            nodeByIndex[pi].children.push(nodeByIndex[ii]);
+        } else {
+            roots.push(nodeByIndex[ii]);
+        }
+    });
+    var html = '<ul class="list-none space-y-0.5">';
+    roots.forEach(function(node) {
+        html += renderPreviewNode(node);
+    });
+    html += '</ul>';
+    previewEl.innerHTML = html;
+}
+
+function renderPreviewNode(node) {
+    if (!node.children || !node.children.length) {
+        return '<li class="text-gray-700 dark:text-gray-300">• ' + escHtml(node.label) + '</li>';
+    }
+    var html = '<li><span class="font-medium text-gray-800 dark:text-gray-200">▸ ' + escHtml(node.label) + '</span>';
+    html += '<ul class="list-none ml-5 mt-0.5">';
+    node.children.forEach(function(child) {
+        html += renderPreviewNode(child);
+    });
+    html += '</ul></li>';
+    return html;
+}
+
+function escHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// ── Item Management ─────────────────────────────────────────────
+var itemsContainer = document.getElementById('items-container');
+var itemTpl = document.getElementById('item-template');
+
+function addMenuItem(itemData) {
+    var clone = itemTpl.content.cloneNode(true);
+    itemsContainer.appendChild(clone);
+    var newRow = itemsContainer.lastElementChild;
+    newRow.dataset.itemIndex = String(itemsContainer.querySelectorAll('.menu-item').length - 1);
+
+    if (itemData) {
+        newRow.dataset.dbId = itemData.id || '';
+        newRow.dataset.referenceId = itemData.referenceId || '';
+        newRow.dataset.parentId = itemData.parentId || '';
+        newRow.querySelector('input[name="item_label[]"]').value = itemData.label || '';
+        newRow.querySelector('.item-type-select').value = itemData.type || 'custom';
+        newRow.querySelector('input[name="item_url[]"]').value = itemData.url || '';
+        newRow.querySelector('input[name="item_reference_id[]"]').value = itemData.referenceId || '';
+        newRow.querySelector('select[name="item_target[]"]').value = itemData.target || '_self';
+        newRow.querySelector('input[name="item_css_class[]"]').value = itemData.cssClass || '';
+    }
+    initContentPicker(newRow);
+    refreshAll();
+    if (!itemData) {
+        scrollMenuRowIntoView(newRow);
+        var labelInput = newRow.querySelector('input[name="item_label[]"]');
+        if (labelInput && typeof labelInput.focus === 'function') {
+            try { labelInput.focus({ preventScroll: true }); } catch (e) { labelInput.focus(); }
+        }
+    }
+}
+
+function resolveParentIds() {
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    var dbIdToIndex = {};
+    var missing = [];
+    items.forEach(function(row, idx) {
+        var dbId = row.dataset.dbId;
+        if (dbId) {
+            dbIdToIndex[dbId] = String(idx);
+            row.dataset._resolvedParent = 'no-parent';
+        }
+    });
+    var changed = false;
+    items.forEach(function(row) {
+        var parentDbId = row.dataset.parentId;
+        if (parentDbId && dbIdToIndex[parentDbId] !== undefined) {
+            var newParentIndex = dbIdToIndex[parentDbId];
+            if (row.dataset.parentIndex !== newParentIndex) {
+                row.dataset.parentIndex = newParentIndex;
+                changed = true;
+            }
+            row.dataset._resolvedParent = parentDbId + '->idx' + newParentIndex;
+        } else if (parentDbId && !dbIdToIndex[parentDbId]) {
+            missing.push(parentDbId);
+        }
+    });
+    if (changed) {
+        reorderDomByParent();
+        refreshAll();
+    }
+}
+
+function reorderDomByParent() {
+    var items = itemsContainer.querySelectorAll('.menu-item');
+    var byIndex = {};
+    items.forEach(function(row) {
+        byIndex[row.dataset.itemIndex] = row;
+    });
+    var childrenOf = {};
+    var roots = [];
+    items.forEach(function(row) {
+        var pi = row.dataset.parentIndex;
+        if (pi !== undefined && pi !== '-1' && byIndex[pi]) {
+            if (!childrenOf[pi]) childrenOf[pi] = [];
+            childrenOf[pi].push(row);
+        } else {
+            roots.push(row);
+        }
+    });
+    var fragment = document.createDocumentFragment();
+    function appendNode(row) {
+        fragment.appendChild(row);
+        var kids = childrenOf[row.dataset.itemIndex];
+        if (kids) {
+            kids.forEach(function(child) {
+                appendNode(child);
+            });
+        }
+    }
+    roots.forEach(function(root) {
+        appendNode(root);
+    });
+    itemsContainer.appendChild(fragment);
+}
+
+// ── Init ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('add-item').addEventListener('click', function () {
+        markMenuDirty();
+        addMenuItem(null);
+    });
+
+    itemsContainer.addEventListener('click', function (e) {
+        if (e.target.closest('button') && !e.target.closest('.content-picker-results')) {
+            markMenuDirty();
+        }
+        if (e.target.classList.contains('remove-item')) {
+            e.target.closest('.menu-item').remove();
+            refreshAll();
+        }
+    });
+
+    itemsContainer.addEventListener('input', function (e) {
+        markMenuDirty();
+        if (e.target.name === 'item_label[]') {
+            buildPreview();
+        }
+    });
+
+    document.getElementById('menu-form').addEventListener('change', function () {
+        markMenuDirty();
+    });
+
+    document.getElementById('menu-form').addEventListener('input', function () {
+        markMenuDirty();
+    });
+
+    // Sticky bar shadow — signals the stuck state while scrolling
+    var _menuScroller = document.getElementById('menu-modal-scroll');
+    var _menuStickyBar = document.getElementById('menu-sticky-bar');
+    if (_menuScroller && _menuStickyBar) {
+        _menuScroller.addEventListener('scroll', function () {
+            _menuStickyBar.classList.toggle('shadow-sm', _menuScroller.scrollTop > 4);
+        }, { passive: true });
+    }
+
+    // Form submit resets dirty flag
+    document.getElementById('menu-form').addEventListener('submit', function() {
+        _menuFormDirty = false;
+    });
+
+    // SortableJS — flat reorder with drag handle
+    // Drop target/mode is always computed from the live pointer position, never from
+    // Sortable's internal state: Sortable rewrites the DOM itself when onMove returns
+    // truthy (Sortable.js ~1846) and skips the onMove callback entirely when the dragged
+    // row is already adjacent to the target (Sortable.js ~1838). Both make Sortable's
+    // related/willInsertAfter unreliable here, so we keep our own hit test.
+    var _menuDragPointer = null;
+    window.VL_MENU_DRAG_DEBUG = false;
+
+    function menuDragLog() {
+        if (window.VL_MENU_DRAG_DEBUG) {
+            console.log.apply(console, ['[menu-drag]'].concat(Array.prototype.slice.call(arguments)));
+        }
+    }
+
+    function clientYFromEvent(pointerEvent) {
+        if (!pointerEvent) return null;
+        if (pointerEvent.touches && pointerEvent.touches.length) return pointerEvent.touches[0].clientY;
+        return typeof pointerEvent.clientY === 'number' ? pointerEvent.clientY : null;
+    }
+
+    function clearMenuDropHighlight() {
+        itemsContainer.querySelectorAll('.menu-drop-before, .menu-drop-child, .menu-drop-after')
+            .forEach(function (row) {
+                row.classList.remove('menu-drop-before', 'menu-drop-child', 'menu-drop-after');
+            });
+    }
+
+    function isMenuDragExcluded(row, draggedRow) {
+        if (!row || !draggedRow) return true;
+        if (row === draggedRow) return true;
+        if (row.style.display === 'none') return true;
+        // Excluding descendants is what prevents a parent/child cycle.
+        return getAllDescendants(draggedRow).indexOf(row) !== -1;
+    }
+
+    // Nearest visible row to clientY → { row, mode, ratio }.
+    // mode: before (top 20%) | child (middle 60%) | after (bottom 20%)
+    function computeMenuDropTarget(clientY, draggedRow) {
+        var draggedRect = draggedRow.getBoundingClientRect();
+        // Pointer still on the row's own slot → no movement intent, treat as a no-op.
+        if (clientY >= draggedRect.top + 2 && clientY <= draggedRect.bottom - 2) {
+            return null;
+        }
+        var rows = itemsContainer.querySelectorAll('.menu-item');
+        var best = null;
+        var bestRow = null;
+        var bestDist = Infinity;
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            if (isMenuDragExcluded(row, draggedRow)) continue;
+            var rect = row.getBoundingClientRect();
+            if (rect.height <= 0) continue;
+            var dist = clientY < rect.top ? rect.top - clientY : (clientY > rect.bottom ? clientY - rect.bottom : 0);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = rect;
+                bestRow = row;
+            }
+            if (dist === 0) break;
+        }
+        if (!bestRow) return null;
+        var ratio = (clientY - best.top) / best.height;
+        var mode = ratio < 0.2 ? 'before' : ratio > 0.8 ? 'after' : 'child';
+        return { row: bestRow, mode: mode, ratio: ratio };
+    }
+
+    function applyMenuDropHighlight(target) {
+        clearMenuDropHighlight();
+        if (target) target.row.classList.add('menu-drop-' + target.mode);
+    }
+
+    if (typeof Sortable !== 'undefined') {
+        Sortable.create(itemsContainer, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'menu-ghost',
+            chosenClass: 'menu-chosen',
+            onStart: function (evt) {
+                _menuDragPointer = null;
+                clearMenuDropHighlight();
+            },
+            onMove: function (evt) {
+                var clientY = clientYFromEvent(evt.originalEvent);
+                if (clientY === null) return false;
+                _menuDragPointer = clientY;
+                var target = computeMenuDropTarget(clientY, evt.dragged);
+                applyMenuDropHighlight(target);
+                menuDragLog('move y=' + Math.round(clientY),
+                    'target=' + (target ? target.row.dataset.itemIndex : 'none'),
+                    'mode=' + (target ? target.mode : '-'));
+                return false;   // never let Sortable move the DOM itself
+            },
+            onEnd: function (evt) {
+                var draggedRow = evt.item;
+                clearMenuDropHighlight();
+                markMenuDirty();
+
+                // Recompute at drop time — anything recorded during onMove may be stale
+                // because Sortable skips that callback when the row is already adjacent.
+                var dropY = clientYFromEvent(evt.originalEvent);
+                if (dropY === null || dropY <= 0) dropY = _menuDragPointer;
+                var target = (dropY === null) ? null : computeMenuDropTarget(dropY, draggedRow);
+                _menuDragPointer = null;
+
+                if (!target) {
+                    menuDragLog('end: no target, nothing moves');
+                    refreshAll();
+                    return;
+                }
+
+                var dropTarget = target.row;
+                var dropMode = target.mode;
+                var descendants = getAllDescendants(draggedRow);
+                var targetDescendants = getAllDescendants(dropTarget).filter(function (desc) {
+                    return desc !== draggedRow && descendants.indexOf(desc) === -1;
+                });
+                var anchor = targetDescendants.length ? targetDescendants[targetDescendants.length - 1] : dropTarget;
+
+                descendants.forEach(function (desc) { desc.remove(); });
+                draggedRow.remove();
+
+                if (dropMode === 'before') {
+                    draggedRow.dataset.parentIndex = dropTarget.dataset.parentIndex || '-1';
+                    itemsContainer.insertBefore(draggedRow, dropTarget);
+                } else {
+                    // child → nests under the target; after → becomes its next sibling
+                    draggedRow.dataset.parentIndex = (dropMode === 'child')
+                        ? dropTarget.dataset.itemIndex
+                        : (dropTarget.dataset.parentIndex || '-1');
+                    moveRowAfter(draggedRow, anchor);
+                }
+
+                var afterRow = draggedRow;
+                descendants.forEach(function (desc) {
+                    moveRowAfter(desc, afterRow);
+                    afterRow = desc;
+                });
+
+                // Never hide the row we just moved: refreshAllDepths() hides rows whose
+                // ancestors are collapsed, which would look like the drop did nothing.
+                if (dropMode === 'child') {
+                    dropTarget.classList.remove('collapsed');
+                } else {
+                    var newParent = getParentRow(draggedRow);
+                    if (newParent) newParent.classList.remove('collapsed');
+                }
+
+                menuDragLog('end target=' + dropTarget.dataset.itemIndex, 'mode=' + dropMode);
+                refreshAll();
+            }
+        });
+
+        // Sortable skips onMove when the dragged row is already beside the target, which
+        // would freeze the highlight. This keeps pointer tracking live in that case.
+        document.addEventListener('dragover', function (e) {
+            var dragged = Sortable.dragged;
+            if (!dragged || !itemsContainer.contains(dragged)) return;
+            var clientY = clientYFromEvent(e);
+            if (clientY === null) return;
+            _menuDragPointer = clientY;
+            applyMenuDropHighlight(computeMenuDropTarget(clientY, dragged));
+        });
+
+        // Safety net: never leave a highlight painted if a drag ends without onEnd.
+        document.addEventListener('dragend', function () {
+            _menuDragPointer = null;
+            clearMenuDropHighlight();
+        });
+    }
+});
+</script>

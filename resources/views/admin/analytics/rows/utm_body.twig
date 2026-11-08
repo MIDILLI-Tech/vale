@@ -1,0 +1,39 @@
+{#
+    Body of the UTM Campaign Tracking card.
+
+    Rendered server-side on first paint and re-rendered by
+    GET /admin/analytics/utm-panel on every facet/sort change, so both paths
+    produce exactly the same markup. `utm_panels` carries the visible
+    dimensions; the active facets themselves are shown as chips in the card
+    header (utm_filters.twig), not here.
+#}
+{% import 'admin/analytics/rows/more.twig' as more %}
+{% import 'admin/analytics/partials/sort_control.twig' as sort %}
+{% import 'admin/analytics/rows/utm_labels.twig' as labels %}
+
+<div class="mb-1 flex items-center justify-end px-1 text-xs font-medium text-gray-400">
+    {{ sort.th('utm', 'views', __('Views'), 'desc', true) }}
+</div>
+
+<div class="grid gap-6 md:grid-cols-2 {{ utm_panels|length > 4 ? 'xl:grid-cols-3' : 'xl:grid-cols-4' }}">
+    {% for panel in utm_panels %}
+    <div class="min-w-0">
+        <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ labels.title(panel.key) }}</h4>
+        {% if panel.rows is empty %}
+        <p class="text-xs text-gray-400">{{ labels.empty(panel.key) }}</p>
+        {% else %}
+        <div class="space-y-1.5 max-h-40 overflow-y-auto pr-2"
+             data-vl-list-body="{{ 'utm-' ~ panel.key }}"
+             data-vl-sort-card="utm"
+             data-vl-utm-panel="{{ panel.key }}">
+            {% for row in panel.rows %}
+            {{ include('admin/analytics/rows/utm.twig', {row: row, mode: panel.key}) }}
+            {% endfor %}
+            {% if panel.has_more %}
+            {{ more.button('utm-' ~ panel.key, panel.rows|length, true) }}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>

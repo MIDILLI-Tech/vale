@@ -1,0 +1,35 @@
+{# Product upsell / cross-sell picker (chips + live search). #}
+<div{% if wrapper_class|default('') %} class="{{ wrapper_class }}"{% endif %}{% if open_var|default('') %} @click.outside="{{ open_var }} = false"{% endif %}>
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ label }}</label>
+    <p class="text-xs text-gray-400 mb-2">{{ hint }}</p>
+    <input type="hidden" name="{{ hidden_name }}" x-model="{{ hidden_model }}">
+    <div class="relative">
+        <input type="text" x-model="{{ query_model }}"
+               {% if focus_method|default('') %}@focus="{{ open_var|default('') }} = true; {{ focus_method }}()"{% elseif open_var|default('') %}@focus="{{ open_var }} = true"{% endif %}
+               placeholder="{{ __('Search products...') }}"
+               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+        <div x-show="{% if open_var|default('') %}{{ open_var }} && {% endif %}({{ results_var }}.length > 0 || {{ loading_var|default('false') }})" x-cloak
+             class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+            <p x-show="{{ loading_var|default('false') }}" class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 text-center">
+                <span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}
+            </p>
+            <template x-for="p in {{ results_var }}" :key="p.id">
+                <button type="button" @click="{{ add_method }}(p)"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <span class="font-medium dark:text-gray-200" x-text="p.name"></span>
+                    <span class="text-xs text-gray-400 ml-2" x-text="p.sku"></span>
+                </button>
+            </template>
+            <p x-show="!{{ loading_var|default('false') }} && {{ results_var }}.length === 0 && {{ query_model }}.trim() !== ''"
+               class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 text-center">{{ __('No products found') }}</p>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-2">
+        <template x-for="p in {{ selected_var }}" :key="p.id">
+            <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300">
+                <span x-text="p.name"></span>
+                <button type="button" @click="{{ remove_method }}(p.id)" class="text-gray-400 hover:text-red-500">&times;</button>
+            </span>
+        </template>
+    </div>
+</div>

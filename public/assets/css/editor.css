@@ -1,0 +1,1398 @@
+/* ── Vale Block Editor styles ──────────────────────────────────────── */
+
+:root {
+  /* Editor Wrapper & Surfaces */
+  --vl-editor-bg: #ffffff;
+  --vl-editor-border: #d1d5db;
+  --vl-editor-text: #1f2937;
+
+  /* Toolbar */
+  --vl-toolbar-bg: #f9fafb;
+  --vl-toolbar-border: #e5e7eb;
+  --vl-toolbar-btn-text: #334155;
+  --vl-toolbar-btn-hover: #e5e7eb;
+  --vl-toolbar-btn-active-bg: #fce7bf;
+  --vl-toolbar-btn-active-text: #92400e;
+  --vl-toolbar-dropdown-bg: #ffffff;
+  --vl-toolbar-dropdown-border: #e5e7eb;
+
+  /* Content & Prose */
+  --vl-prose-heading: #1f2937;
+  --vl-prose-text: #1f2937;
+  --vl-prose-code-bg: #f3f4f6;
+  --vl-prose-code-text: #1f2937;
+  --vl-prose-pre-bg: #1e293b;
+  --vl-prose-pre-text: #e2e8f0;
+  --vl-prose-quote-border: #c7d2fe;
+  --vl-prose-quote-text: #6b7280;
+  --vl-prose-hr: #e5e7eb;
+
+  /* Embed & Interactive Blocks */
+  --vl-block-bg: #fafafa;
+  --vl-block-border: #e5e7eb;
+  --vl-block-header-bg: #f3f4f6;
+  --vl-block-header-text: #374151;
+
+  /* Table defaults mirror the active front-end theme (theme.json "tables").
+     Overridden from admin/layout.twig, which knows the active theme; they are
+     deliberately identical in light and dark admin mode. */
+  --vl-table-border: #d1d5db;
+  --vl-table-head-bg: #f3f4f6;
+  --vl-table-head-text: #111827;
+
+  /* Slash Menu & Popovers */
+  --vl-popover-bg: #ffffff;
+  --vl-popover-border: #e5e7eb;
+  --vl-popover-item-hover: #f0f4ff;
+  --vl-popover-item-text: #111827;
+  --vl-popover-subtext: #9ca3af;
+  --vl-popover-icon-bg: #e5e7eb;
+  --vl-popover-icon-text: #374151;
+
+  /* Modals & Dialogs */
+  --vl-editor-modal-bg: #ffffff;
+  --vl-editor-modal-header-border: #e5e7eb;
+  --vl-editor-modal-item-bg: #ffffff;
+  --vl-editor-modal-item-border: #e5e7eb;
+  --vl-editor-modal-item-hover: #f9fafb;
+  --vl-editor-modal-item-selected: #e5e7eb;
+}
+
+.dark {
+  /* Editor Wrapper & Surfaces */
+  --vl-editor-bg: #111827;
+  --vl-editor-border: #374151;
+  --vl-editor-text: #e2e8f0;
+
+  /* Toolbar */
+  --vl-toolbar-bg: #1f2937;
+  --vl-toolbar-border: #374151;
+  --vl-toolbar-btn-text: #d1d5db;
+  --vl-toolbar-btn-hover: #374151;
+  --vl-toolbar-btn-active-bg: #4b5563;
+  --vl-toolbar-btn-active-text: #fbbf24;
+  --vl-toolbar-dropdown-bg: #1f2937;
+  --vl-toolbar-dropdown-border: #4b5563;
+
+  /* Content & Prose */
+  --vl-prose-heading: #f3f4f6;
+  --vl-prose-text: #f3f4f6;
+  --vl-prose-code-bg: #374151;
+  --vl-prose-code-text: #fca5a5;
+  --vl-prose-pre-bg: #111827;
+  --vl-prose-pre-text: #f3f4f6;
+  --vl-prose-quote-border: #4b5563;
+  --vl-prose-quote-text: #9ca3af;
+  --vl-prose-hr: #374151;
+
+  /* Embed & Interactive Blocks */
+  --vl-block-bg: #1f2937;
+  --vl-block-border: #374151;
+  --vl-block-header-bg: #1f2937;
+  --vl-block-header-text: #e5e7eb;
+
+  /* Slash Menu & Popovers */
+  --vl-popover-bg: #1f2937;
+  --vl-popover-border: #374151;
+  --vl-popover-item-hover: #374151;
+  --vl-popover-item-text: #d1d5db;
+  --vl-popover-subtext: #9ca3af;
+  --vl-popover-icon-bg: #4b5563;
+  --vl-popover-icon-text: #d1d5db;
+
+  /* Modals & Dialogs */
+  --vl-editor-modal-bg: #1f2937;
+  --vl-editor-modal-header-border: #374151;
+  --vl-editor-modal-item-bg: #1f2937;
+  --vl-editor-modal-item-border: #374151;
+  --vl-editor-modal-item-hover: #374151;
+  --vl-editor-modal-item-selected: #4b5563;
+}
+
+/* Wrapper */
+.vl-editor-wrapper {
+  position: relative;
+  border: 1px solid var(--vl-editor-border);
+  border-radius: 0.5rem;
+  overflow: visible;
+  background: var(--vl-editor-bg);
+}
+
+/* ── Fullscreen mode ──────────────────────────────────────────── */
+.vl-editor-wrapper.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+  background: var(--vl-editor-bg);
+  display: flex;
+  flex-direction: column;
+}
+.vl-editor-wrapper.is-fullscreen .vl-editor-toolbar {
+  flex: none;
+}
+.vl-editor-wrapper.is-fullscreen .vl-editor-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.vl-editor-wrapper.is-fullscreen .vl-html-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  resize: none;
+  overflow-y: auto;
+}
+.vl-editor-wrapper.is-fullscreen .vl-editor-stats {
+  flex: none;
+}
+
+.vl-editor-content .ProseMirror .tableWrapper {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.vl-editor-content .ProseMirror .tableWrapper > table {
+  width: auto;
+}
+.vl-editor-content .ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 25;
+  background-color: rgba(129, 140, 248, 0.6);
+  pointer-events: auto;
+  cursor: col-resize;
+  transition: background-color 0.15s;
+}
+.vl-editor-content .ProseMirror .column-resize-handle:hover {
+  background-color: #818cf8;
+}
+.vl-editor-content .ProseMirror table {
+  width: auto;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.vl-editor-content .ProseMirror table[style*="text-align:center"],
+.vl-editor-content .ProseMirror table[style*="margin-left:auto;margin-right:auto"] {
+  width: auto;
+  display: table;
+}
+.vl-editor-content .ProseMirror th,
+.vl-editor-content .ProseMirror td {
+  /* Same cascade contract as the four front-end themes: the table's inline
+     --vl-cell-border / --vl-table-cell-padding win, otherwise the active
+     theme's defaults apply. */
+  border: var(--vl-cell-border, 1px solid var(--vl-table-border, #d1d5db));
+  padding: var(--vl-table-cell-padding, 8px);
+}
+
+.vl-editor-content .ProseMirror th {
+  background: var(--vl-table-head-bg, #f3f4f6);
+  color: var(--vl-table-head-text, inherit);
+}
+
+/* Dark admin canvas: a light theme's table header would be a bright block in
+   the middle of the dark editor. Fall back to the editor's own dark palette
+   there (higher specificity than the theme palette on :root). Cell backgrounds
+   and borders the author set explicitly are inline and still win. */
+.dark .vl-editor-content .ProseMirror {
+  --vl-table-border: var(--vl-editor-border);
+  --vl-table-head-bg: var(--vl-block-header-bg);
+  --vl-table-head-text: var(--vl-editor-text);
+}
+
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 25;
+  background-color: rgba(129, 140, 248, 0.6);
+  pointer-events: auto;
+  cursor: col-resize;
+  transition: background-color 0.15s;
+}
+.ProseMirror .column-resize-handle:hover {
+  background-color: #818cf8;
+}
+.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Toolbar */
+.vl-editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--vl-toolbar-bg);
+  border-bottom: 1px solid var(--vl-toolbar-border);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+.vl-editor-wrapper.is-sticky .vl-editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-radius: 0;
+}
+.vl-editor-wrapper .vl-editor-toolbar.is-pinned {
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  border-radius: 0;
+}
+.vl-editor-wrapper.is-fullscreen .vl-editor-toolbar {
+  border-radius: 0;
+}
+
+.vl-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vl-toolbar-btn-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+}
+
+.vl-toolbar-btn:hover {
+  background: var(--vl-toolbar-btn-hover);
+}
+
+.vl-toolbar-btn.is-active {
+  background: var(--vl-toolbar-btn-active-bg);
+  color: var(--vl-toolbar-btn-active-text);
+}
+
+.vl-toolbar-dropdown {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.vl-toolbar-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 180px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--vl-toolbar-dropdown-bg);
+  border: 1px solid var(--vl-toolbar-dropdown-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.vl-toolbar-dropdown-item {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+  min-height: 36px;
+  font-size: 14px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.vl-toolbar-dropdown-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.vl-toolbar-dropdown-label {
+  display: inline-block;
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: var(--vl-toolbar-btn-text);
+  text-align: left;
+}
+
+.vl-toolbar-dropdown-item:hover,
+.vl-toolbar-dropdown-item.is-active {
+  background: var(--vl-toolbar-btn-hover);
+}
+
+.vl-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--vl-toolbar-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Editor content area */
+.vl-editor-content {
+  min-height: 480px;
+  padding: 16px 20px;
+  outline: none;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+  color: var(--vl-editor-text);
+}
+
+.vl-editor-content:focus-within {
+  box-shadow: inset 0 0 0 2px #a5b4fc;
+}
+
+/* ProseMirror base */
+.vl-editor-content .ProseMirror {
+  outline: none;
+  min-height: 440px;
+  color: var(--vl-prose-text);
+}
+
+.vl-editor-content .ProseMirror > * + * {
+  margin-top: 0.8em;
+}
+
+.vl-editor-content .ProseMirror h1,
+.vl-editor-content .ProseMirror h2,
+.vl-editor-content .ProseMirror h3,
+.vl-editor-content .ProseMirror h4,
+.vl-editor-content .ProseMirror p {
+  color: var(--vl-prose-heading);
+}
+
+.vl-editor-content .ProseMirror h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; }
+.vl-editor-content .ProseMirror h2 { font-size: 1.375rem; font-weight: 600; line-height: 1.35; }
+.vl-editor-content .ProseMirror h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+
+.vl-editor-content .ProseMirror blockquote {
+  border-left: 3px solid var(--vl-prose-quote-border);
+  margin: 0;
+  padding-left: 1em;
+  color: var(--vl-prose-quote-text);
+  font-style: italic;
+}
+
+.vl-editor-content .ProseMirror code {
+  background: var(--vl-prose-code-bg);
+  color: var(--vl-prose-code-text);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.875em;
+  font-family: 'Fira Code', ui-monospace, monospace;
+}
+
+.vl-editor-content .ProseMirror pre {
+  background: var(--vl-prose-pre-bg);
+  color: var(--vl-prose-pre-text);
+  border-radius: 6px;
+  padding: 14px 18px;
+  overflow-x: auto;
+  font-size: 0.875em;
+  border: 1px solid var(--vl-editor-border);
+}
+
+.vl-editor-content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.vl-editor-content .ProseMirror ul { list-style: disc; padding-left: 1.5em; }
+.vl-editor-content .ProseMirror ol { list-style: decimal; padding-left: 1.5em; }
+
+.vl-editor-content .ProseMirror a {
+  color: #4f46e5;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.dark .vl-editor-content .ProseMirror a {
+  color: #93c5fd;
+}
+
+.vl-editor-content .ProseMirror hr {
+  border: none;
+  border-top: 2px solid var(--vl-prose-hr);
+  margin: 1.5em 0;
+}
+
+/* Placeholder */
+.vl-editor-content .ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* ── Slash command menu ───────────────────────────────────────────── */
+.vl-slash-menu {
+  background: var(--vl-popover-bg);
+  border: 1px solid var(--vl-popover-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.vl-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+  color: var(--vl-popover-item-text);
+}
+
+.vl-slash-item:hover,
+.vl-slash-item.is-selected {
+  background: var(--vl-popover-item-hover);
+}
+
+.vl-slash-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: var(--vl-popover-icon-bg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--vl-popover-icon-text);
+  flex-shrink: 0;
+}
+
+.vl-slash-text strong {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--vl-popover-item-text);
+}
+
+.vl-slash-text small {
+  font-size: 0.75rem;
+  color: var(--vl-popover-subtext);
+}
+
+/* ── HTML code editor ─────────────────────────────────────────────── */
+.vl-html-editor {
+  width: 100%;
+  min-height: 320px;
+  padding: 16px 20px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: var(--vl-prose-pre-text);
+  background: var(--vl-prose-pre-bg);
+  tab-size: 2;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.vl-html-editor:focus {
+  box-shadow: inset 0 0 0 2px #a5b4fc;
+}
+
+/* ── Media + Text block ───────────────────────────── */
+.vl-media-text-block {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 2px solid var(--vl-block-border);
+  border-radius: 10px;
+  background: var(--vl-block-bg);
+}
+
+.vl-form-embed-block,
+.vl-toc-embed-block,
+.vl-pages-embed-block,
+.vl-video-embed-block,
+.vl-newsletter-embed-block,
+.vl-carousel-embed-block,
+.vl-product-embed-block,
+.vl-media-text-block,
+.vl-spacer-block {
+  background: var(--vl-block-bg);
+  border-color: var(--vl-block-border);
+  color: var(--vl-editor-text);
+}
+
+.vl-editor-content .ProseMirror .ProseMirror-selectednode {
+  outline: none;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Standalone images: square selection by default. When the user sets
+   Rounded in Image Size, the radius is written inline on the figure/img
+   and wins over this rule, so the halo follows the image corners. */
+.vl-editor-content .ProseMirror img.ProseMirror-selectednode,
+.vl-editor-content .ProseMirror .vl-image-figure.ProseMirror-selectednode {
+  border-radius: 0;
+}
+
+/* Keep every editor block wrapper visually consistent, including selected nodes. */
+.vl-editor-content .ProseMirror [class*="embed-block"],
+.vl-editor-content .ProseMirror .vl-media-text-block,
+.vl-editor-content .ProseMirror .vl-link-button-group-block,
+.vl-editor-content .ProseMirror .vl-link-button-block,
+.vl-editor-content .ProseMirror .vl-more-divider,
+.vl-editor-content .ProseMirror .vl-nextpage-divider,
+.vl-editor-content .ProseMirror .vl-spacer-block {
+  border-radius: 12px;
+}
+
+/* Drop cursor (drag & drop target line) — ProseMirror sets inline black.
+   Note: the element only gets prosemirror-dropcursor-{block|inline} classes. */
+.dark .prosemirror-dropcursor-block,
+.dark .prosemirror-dropcursor-inline {
+  background-color: #e5e7eb !important;
+}
+
+.vl-media-text-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.vl-media-text-actions button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.vl-media-text-actions button:hover {
+  color: var(--vl-block-header-text);
+  background: var(--vl-toolbar-btn-hover);
+}
+.vl-media-text-actions button:last-child:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+.vl-media-text-image {
+  flex: 0 0 40%;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 120px;
+  background: var(--vl-toolbar-btn-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #9ca3af;
+}
+.vl-media-text-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.vl-media-text-content {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border: 1px dashed var(--vl-editor-border);
+  border-radius: 8px;
+  background: var(--vl-editor-bg);
+  color: var(--vl-editor-text);
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+}
+.vl-media-text-content:focus {
+  border-color: #3b82f6;
+}
+
+/* ── Form, TOC, and Pages embed blocks ──────────────────────────────── */
+.vl-form-embed-block,
+.vl-toc-embed-block,
+.vl-pages-embed-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--vl-block-border);
+  border-radius: 8px;
+  user-select: none;
+  cursor: default;
+}
+.vl-select {
+  user-select: none;
+}
+.vl-form-embed-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vl-editor-text);
+}
+.vl-form-embed-delete {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #a5b4fc;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.vl-form-embed-delete:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+/* ── Color button trigger ─────────────────────────────────────── */
+.vl-color-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--vl-editor-border);
+  cursor: pointer;
+  padding: 0;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ── Color picker popover ─────────────────────────────────────── */
+.vl-color-picker {
+  position: fixed;
+  z-index: 10000;
+  background: var(--vl-popover-bg);
+  border: 1px solid var(--vl-popover-border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  width: 230px;
+}
+.vl-color-swatches {
+  display: grid;
+  grid-template-columns: repeat(7, 26px);
+  gap: 4px;
+}
+.vl-color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: 2px solid var(--vl-popover-border);
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  appearance: none;
+  box-sizing: border-box;
+}
+.vl-color-swatch.is-active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #fff;
+}
+.vl-color-swatch:hover {
+  transform: scale(1.15);
+}
+.vl-color-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.vl-color-hex-input {
+  flex: 1;
+  background: var(--vl-editor-bg);
+  color: var(--vl-editor-text);
+  border: 1px solid var(--vl-editor-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: monospace;
+  outline: none;
+  width: 80px;
+}
+.vl-color-hex-input:focus {
+  border-color: var(--vl-text-main, #111827);
+}
+.vl-color-remove-btn {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-right: auto;
+}
+.vl-color-remove-btn:hover {
+  background: #fef2f2;
+}
+.dark .vl-color-remove-btn:hover {
+  background: rgba(254, 242, 242, 0.08);
+}
+
+/* ── Color picker: theme section, HSV area, hue slider ────────── */
+.vl-color-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+.dark .vl-color-section-label {
+  color: #6b7280;
+}
+.vl-color-picker .vl-color-swatches {
+  margin-top: 8px;
+}
+.vl-color-picker .vl-color-section-label + .vl-color-swatches {
+  margin-top: 0;
+}
+.vl-color-sv {
+  position: relative;
+  height: 110px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--vl-popover-border);
+  cursor: crosshair;
+  touch-action: none;
+}
+.vl-color-sv-pointer,
+.vl-color-hue-pointer {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.vl-color-hue {
+  position: relative;
+  height: 12px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 17%,
+    #00ff00 33%,
+    #00ffff 50%,
+    #0000ff 67%,
+    #ff00ff 83%,
+    #ff0000 100%
+  );
+  cursor: pointer;
+  touch-action: none;
+}
+.vl-color-current {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid var(--vl-popover-border);
+  box-sizing: border-box;
+}
+
+/* ── Emoji picker popover ─────────────────────────────────────── */
+.vl-emoji-picker {
+  position: fixed;
+  z-index: 10000;
+  background: var(--vl-popover-bg);
+  border: 1px solid var(--vl-popover-border);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.vl-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 34px);
+  gap: 2px;
+}
+.vl-emoji-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vl-editor-text);
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+.vl-emoji-btn:hover {
+  background: var(--vl-popover-item-hover);
+  transform: scale(1.2);
+}
+
+/* ── Word & character counter ─────────────────────────────────── */
+.vl-editor-stats {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--vl-popover-subtext);
+  border-top: 1px solid var(--vl-toolbar-border);
+  background: var(--vl-toolbar-bg);
+  text-align: right;
+  user-select: none;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+.vl-editor-wrapper.is-fullscreen .vl-editor-stats {
+  border-radius: 0;
+}
+
+/* ── More divider block styling ───────────────────────────────── */
+.vl-more-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  position: relative;
+  user-select: none;
+  width: 100%;
+  cursor: grab;
+  border-radius: 10px;
+}
+
+.vl-more-divider:active {
+  cursor: grabbing;
+}
+
+.vl-more-bar {
+  flex-grow: 1;
+  height: 2px;
+  border-top: 2px dashed var(--vl-editor-border);
+}
+
+.vl-more-label {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vl-popover-subtext);
+  background: var(--vl-toolbar-bg);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--vl-toolbar-border);
+  white-space: nowrap;
+}
+
+.vl-more-divider .vl-form-embed-delete {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #9ca3af;
+  padding: 4px 8px;
+  background: var(--vl-toolbar-bg);
+  border: 1px solid var(--vl-toolbar-border);
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.vl-more-text-input {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--vl-toolbar-border);
+  border-radius: 4px;
+  background: var(--vl-input-bg, #fff);
+  color: var(--vl-text-main, #111827);
+  outline: none;
+  width: 180px;
+}
+
+.vl-more-text-input:focus {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 1px #6b7280;
+}
+
+/* ── NextPage divider block styling ───────────────────────────── */
+.vl-nextpage-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  position: relative;
+  user-select: none;
+  width: 100%;
+  cursor: grab;
+  border-radius: 10px;
+}
+
+.vl-nextpage-divider:active {
+  cursor: grabbing;
+}
+
+/* ── Drag grip (shared by draggable divider blocks) ──────────── */
+.vl-block-grip {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -1px;
+  color: #9ca3af;
+  user-select: none;
+}
+
+.dark .vl-block-grip {
+  color: #6b7280;
+}
+
+.vl-more-divider .vl-more-text-input,
+.vl-nextpage-divider .vl-nextpage-title-input {
+  cursor: text;
+}
+
+.vl-nextpage-bar {
+  flex-grow: 1;
+  height: 2px;
+  border-top: 2px dashed #0284c7;
+}
+
+.vl-nextpage-label {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0284c7;
+  background: var(--vl-toolbar-bg);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--vl-toolbar-border);
+  white-space: nowrap;
+}
+
+.vl-nextpage-title-input {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid var(--vl-toolbar-border);
+  border-radius: 4px;
+  background: var(--vl-input-bg, #fff);
+  color: var(--vl-text-main, #111827);
+  outline: none;
+  width: 180px;
+}
+
+.vl-nextpage-title-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.dark .vl-nextpage-bar {
+  border-top-color: #38bdf8;
+}
+
+.dark .vl-nextpage-label {
+  color: #38bdf8;
+}
+
+.dark .vl-nextpage-title-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 1px #38bdf8;
+}
+
+.vl-nextpage-divider .vl-form-embed-delete {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #9ca3af;
+  padding: 4px 8px;
+  background: var(--vl-toolbar-bg);
+  border: 1px solid var(--vl-toolbar-border);
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ── Spacer block styling ───────────────────────────────────── */
+.vl-spacer-block {
+  position: relative;
+  margin: 8px 0;
+  user-select: none;
+  min-width: 30px;
+  min-height: 24px;
+}
+.vl-spacer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--vl-toolbar-bg);
+  border: 1px solid var(--vl-toolbar-border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  color: var(--vl-popover-subtext);
+}
+.vl-spacer-header button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--vl-popover-subtext);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.vl-spacer-header button:hover {
+  color: var(--vl-block-header-text);
+  background: var(--vl-toolbar-btn-hover);
+}
+
+/* ── Refactored Modal Classes for Editor Modals ── */
+.vl-editor-modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--vl-editor-modal-header-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── Structured modal layout (site-wide pattern) ─────────────────────────
+   Sticky title on top, scrolling body, pinned action row at the bottom.
+   Applied via the `vl-modal--structured` modifier; the modal panel keeps
+   `.vl-modal` (flex column, 80vh cap) from admin-style.css. */
+.vl-modal.vl-modal--structured {
+  padding: 0;
+  overflow: hidden;
+}
+.vl-editor-modal-head {
+  flex-shrink: 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--vl-editor-modal-header-border);
+}
+.vl-editor-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+.vl-editor-modal-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--vl-editor-modal-header-border);
+  background: var(--vl-editor-modal-bg);
+}
+
+.vl-editor-modal-list {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.vl-editor-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--vl-editor-modal-item-border);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: background .15s;
+  text-align: left;
+  background: var(--vl-editor-modal-item-bg);
+  color: var(--vl-editor-text);
+}
+.vl-editor-modal-item:hover { background: var(--vl-editor-modal-item-hover); }
+.vl-editor-modal-item.is-selected { background: var(--vl-editor-modal-item-selected); }
+
+.vl-link-check {
+  display: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--vl-editor-modal-bg, #fff);
+  background: var(--vl-text-main, #111827);
+}
+.vl-editor-modal-item.is-selected .vl-link-check { display: flex; }
+
+.vl-editor-modal-title { font-weight: 700; font-size: 16px; margin: 0 0 4px; color: var(--vl-editor-text); }
+.vl-editor-modal-sub { font-size: 12px; color: var(--vl-popover-subtext); margin: 0 0 18px; }
+
+.vl-editor-modal-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--vl-block-header-text);
+  margin: 0 0 6px;
+}
+
+.vl-editor-modal-input-row { display: flex; gap: 6px; align-items: center; }
+.vl-editor-modal-help-text { font-size: 12px; color: var(--vl-popover-subtext); margin: 0 0 6px; }
+
+.vl-editor-modal-results {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--vl-editor-modal-item-border);
+  border-radius: 8px;
+}
+
+.vl-bg-soft { background: var(--vl-toolbar-bg); }
+
+.vl-editor-modal-tab {
+  flex: 1;
+  padding: 7px 12px;
+  border: none;
+  background: var(--vl-editor-modal-item-bg);
+  color: var(--vl-editor-text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background .15s, color .15s;
+}
+.vl-editor-modal-tab.is-active {
+  background: var(--vl-toolbar-btn-hover);
+  color: var(--vl-editor-text);
+}
+
+/* ── Bubble Menu ────────────────────────────────────────── */
+.vl-bubble-menu {
+  display: flex;
+  background: var(--vl-popover-bg);
+  padding: 4px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--vl-popover-border);
+  gap: 2px;
+}
+.vl-bubble-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--vl-toolbar-btn-text);
+  transition: background 0.1s;
+}
+.vl-bubble-menu-btn:hover {
+  background: var(--vl-toolbar-btn-hover);
+}
+.vl-bubble-menu-btn.is-active {
+  background: var(--vl-toolbar-btn-active-bg);
+  color: var(--vl-toolbar-btn-active-text);
+}
+.vl-bubble-icon {
+  font-size: 14px;
+  font-weight: bold;
+}
+.vl-bubble-menu-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--vl-popover-border);
+  margin: 4px 2px;
+}
+.vl-link-blank-label { color: var(--vl-editor-text); }
+
+/* ── Product embed block ───────────────────────────── */
+.vl-product-embed-block {
+  margin: 1rem 0;
+  padding: 0;
+  border: 2px dashed var(--vl-block-border);
+  border-radius: 10px;
+  background: var(--vl-block-bg);
+  user-select: none;
+}
+.vl-product-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--vl-block-header-bg);
+  border-bottom: 1px solid var(--vl-block-border);
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vl-block-header-text);
+  cursor: grab;
+}
+.vl-product-header button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--vl-popover-subtext);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  margin-left: 4px;
+}
+.vl-product-header button:hover {
+  color: var(--vl-block-header-text);
+  background: var(--vl-toolbar-btn-hover);
+}
+.vl-product-body {
+  padding: 12px;
+}
+.vl-product-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--vl-popover-subtext);
+  cursor: pointer;
+  border: 1px dashed var(--vl-block-border);
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.vl-product-empty:hover {
+  background: var(--vl-toolbar-btn-hover);
+}
+.vl-product-preview-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vl-editor-text);
+}
+.vl-product-preview-desc {
+  font-size: 12px;
+  color: var(--vl-popover-subtext);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Product Picker Modal Grid & Cards ─────────────────── */
+.vl-product-results {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.vl-product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--vl-editor-modal-item-border);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--vl-editor-modal-item-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vl-product-card:hover {
+  background: var(--vl-editor-modal-item-hover);
+  border-color: #9ca3af;
+}
+.vl-product-card.is-selected {
+  border-color: var(--vl-text-main, #111827);
+  background: var(--vl-editor-modal-item-selected);
+}
+.vl-product-card-img {
+  width: 100%;
+  height: 110px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--vl-toolbar-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.vl-product-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vl-product-card-img-placeholder {
+  font-size: 28px;
+}
+.vl-product-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vl-product-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vl-editor-text);
+}
+.vl-product-card-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+}
+.vl-product-card-desc {
+  font-size: 11px;
+  color: var(--vl-popover-subtext);
+  margin: 2px 0 0;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.vl-product-card-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--vl-text-main, #111827);
+  color: var(--vl-editor-modal-bg, #fff);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+.vl-product-card.is-selected .vl-product-card-check {
+  display: flex;
+}
+
+/* Helper layout classes for editor JS modals & settings to avoid inline style attribute bloat */
+.vl-modal-flex-col { display: flex; flex-direction: column; gap: 12px; }
+.vl-modal-flex-row { display: flex; gap: 8px; align-items: center; }
+.vl-modal-actions-right { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.vl-modal-label-check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.vl-modal-subtext { font-size: 11px; color: var(--vl-popover-subtext); margin: 4px 0 0; }
+

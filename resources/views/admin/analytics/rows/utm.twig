@@ -1,0 +1,26 @@
+{#
+    One UTM row.
+
+    `mode` is the dimension key: source / medium / campaign / term / content
+    render as facet toggles that filter the whole card, `destination` renders
+    as a link to the page (destinations are not a facet). Facet state is
+    handled by the UTM card script in admin/analytics/index.twig.
+#}
+{% if mode == 'destination' %}
+<a href="{{ site_url }}{{ row.label }}" target="_blank"
+   class="flex min-w-0 items-center justify-between gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+   title="{{ row.label }}">
+    <span class="truncate font-mono">↳ {{ row.label }}</span>
+    <span class="shrink-0 tabular-nums font-medium">{{ row.views }}</span>
+</a>
+{% else %}
+<button type="button"
+        data-vl-utm-facet="{{ mode }}"
+        data-vl-utm-value="{{ row.wire }}"
+        aria-pressed="{{ row.selected ? 'true' : 'false' }}"
+        title="{{ row.label ?? __('(not set)') }}"
+        class="w-full flex min-w-0 items-center justify-between gap-1 text-xs rounded-sm px-1.5 py-0.5 transition-colors cursor-pointer {{ row.selected ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+    <span class="truncate font-mono">{{ row.label ?? __('(not set)') }}</span>
+    <span class="shrink-0 tabular-nums font-medium text-gray-900 dark:text-gray-100">{{ row.views }}</span>
+</button>
+{% endif %}

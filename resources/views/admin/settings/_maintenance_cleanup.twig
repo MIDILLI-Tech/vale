@@ -1,0 +1,188 @@
+    {# ══ Maintenance Cleanup sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="maintenance-tab-cleanup" class="maintenance-tab-panel hidden space-y-6">
+    {# ── Revision Cleanup ──────────────────────────────────── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-4">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100" {{ vl.attrs('maintenance', __('Revisions'), 'revisions', 'cleanup', __('Revisions'), 'prune revisions cleanup old content versions') }}>{{ __('Revisions') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Old content revisions stored in the database.') }}</p>
+            </div>
+            <div class="shrink-0 text-right" data-maintenance-stats="revision">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300" data-stat-text>
+                    {% if revision_count is not null %}
+                        {{ revision_count }} {{ __('revisions') }}
+                    {% else %}
+                        {{ __('Not counted yet') }}
+                    {% endif %}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400" data-stat-sub>
+                    {% if revision_prunable is not null and revision_prunable > 0 %}
+                        {{ __(':count can be pruned (keep latest 10).', {':count': revision_prunable}) }}
+                    {% endif %}
+                </p>
+                {% if revision_count is null %}
+                <button type="button" data-count-btn="revision"
+                        class="mt-1 rounded-md border border-gray-300 dark:border-gray-600 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    {{ __('Count') }}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <form method="post" action="{{ url('/admin/maintenance/prune-revisions') }}"
+              class="flex flex-wrap items-center gap-3">
+            {{ csrf_field() }}
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                {{ __('Keep latest') }}
+                <select name="keep_count"
+                        class="rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-800 px-4 py-2 text-sm shadow-xs text-gray-700 dark:text-gray-300 min-w-48">
+                    {% for n in [3, 5, 10, 25, 50] %}
+                        <option value="{{ n }}" {{ n == 10 ? 'selected' }}>{{ n }}</option>
+                    {% endfor %}
+                </select>
+                {{ __('per item') }}
+            </label>
+            <button type="submit"
+                    class="rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                <svg class="-ml-0.5 mr-1.5 inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                {{ __('Prune Revisions') }}
+            </button>
+            <span class="text-xs text-gray-400 dark:text-gray-500" data-stat-sub data-maintenance-stats="revision-prunable">
+                {% if revision_prunable is not null %}
+                    {{ __(':count can be pruned (keep latest 10).', {':count': revision_prunable}) }}
+                {% endif %}
+            </span>
+        </form>
+    </div>
+
+    {# ── Database Optimization ─────────────────────────── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-4"
+         x-data="{
+             allOps: ['spam','trash','orphaned-meta','orphaned-media-files','orphaned-media-unused','pageviews','optimize-tables'],
+             selected: [],
+             init() {
+                 this.$watch('selected', val => {
+                     if (!val.includes('all')) return;
+                     const withoutAll = val.filter(v => v !== 'all');
+                     if (!this.allOps.every(op => withoutAll.includes(op))) {
+                         this.selected = withoutAll;
+                     }
+                 });
+             }
+         }">
+        <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100" {{ vl.attrs('maintenance', __('Database Optimization'), 'db-optimize', 'cleanup', __('Database Optimization'), 'optimize database tables spam trash orphaned pageviews cleanup') }}>{{ __('Database Optimization') }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Clean up orphaned data and optimize database tables.') }}</p>
+        </div>
+
+        <form method="post" action="{{ url('/admin/maintenance/db-optimize') }}" class="space-y-4">
+            {{ csrf_field() }}
+
+            <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" name="operations[]" value="all"
+                           :checked="selected.includes('all')"
+                           @change="selected = $el.checked ? ['all', ...allOps] : []"
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                    <span class="font-medium text-gray-800 dark:text-gray-200">{{ __('Run all operations') }}</span>
+                </label>
+
+                <div class="ml-6 space-y-1.5 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="spam"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Delete spam comments') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="spam">({% if spam_comment_count is not null %}{{ spam_comment_count }}{% else %}<button type="button" data-count-btn="spam" class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors">{{ __('Count') }}</button>{% endif %})</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="trash"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Delete trashed comments') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="trash">({% if trash_comment_count is not null %}{{ trash_comment_count }}{% else %}<button type="button" data-count-btn="trash" class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors">{{ __('Count') }}</button>{% endif %})</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="orphaned-meta"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Clean orphaned post meta') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="orphaned-meta">({% if orphaned_meta_count is not null %}{{ orphaned_meta_count }}{% else %}<button type="button" data-count-btn="orphaned-meta" class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors">{{ __('Count') }}</button>{% endif %})</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="orphaned-media-files"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Delete orphaned media files (missing on disk)') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="orphaned-media-files">({% if orphaned_media_file_count is not null %}{{ orphaned_media_file_count }}{% else %}<button type="button" data-count-btn="orphaned-media-files" class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors">{{ __('Count') }}</button>{% endif %})</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="orphaned-media-unused"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Delete unused media (not referenced in content)') }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="orphaned-media-unused">({% if orphaned_media_unused_count is not null %}{{ orphaned_media_unused_count }}{% else %}<button type="button" data-count-btn="orphaned-media-unused" class="underline hover:text-gray-600 dark:hover:text-gray-300 transition-colors">{{ __('Count') }}</button>{% endif %})</span>
+                    </label>
+
+                    <div class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="operations[]" value="pageviews"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <label class="cursor-pointer text-gray-700 dark:text-gray-300">{{ __('Purge old pageviews') }}</label>
+                        <label class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                            <span>({{ __('older than') }}</span>
+                            <input type="number" name="pageview_days" value="{{ pageview_retention_days|default(120) }}"
+                                   class="w-16 rounded-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 px-1.5 py-0.5 text-xs text-center text-gray-700 dark:text-gray-300">
+                            <span>{{ __('days') }})</span>
+                        </label>
+                    </div>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="operations[]" value="optimize-tables"
+                               x-model="selected"
+                               class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ __('Optimize database tables (OPTIMIZE TABLE)') }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit"
+                    class="rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                <svg class="-ml-0.5 mr-1.5 inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                {{ __('Run DB Optimize') }}
+            </button>
+        </form>
+
+        {% if seo_enabled %}
+        <hr class="border-gray-200 dark:border-gray-700">
+        <form method="post" action="{{ url('/admin/maintenance/clear-redirects') }}"
+              onsubmit="return confirm('{{ __('Delete all redirect rules? This cannot be undone.')|e('js') }}')"
+              class="flex flex-wrap items-center justify-between gap-3">
+            {{ csrf_field() }}
+            <div>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200" {{ vl.attrs('maintenance', __('Clear redirect table'), 'redirects', 'cleanup', __('Database Optimization'), 'redirect 301 clear rules') }}>{{ __('Clear redirect table') }}</p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('Remove all 301 redirect rules stored in the database.') }}</p>
+            </div>
+            <button type="submit"
+                    class="rounded-lg border border-red-300 dark:border-red-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                {{ __('Clear redirect table') }}
+                <span class="text-xs text-gray-400 dark:text-gray-500" data-maintenance-stats="redirects">({% if redirect_count is not null %}{{ redirect_count }}{% else %}{{ __('not counted') }}{% endif %})</span>
+            </button>
+            {% if redirect_count is null %}
+            <button type="button" data-count-btn="redirects"
+                    class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                {{ __('Count') }}
+            </button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
+    </div>

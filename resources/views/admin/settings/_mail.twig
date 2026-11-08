@@ -1,0 +1,16 @@
+{# Mail #}
+<div id="tab-mail" class="tab-panel hidden">
+
+    {# ── Mail Sub-tabs ── #}
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex gap-4 overflow-x-auto" id="mail-subtabs">
+            <button type="button" data-subtab="notifications" class="mail-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors duration-150 md:hover:bg-blue-50 md:hover:text-blue-700 dark:md:hover:bg-blue-900/20 dark:md:hover:text-blue-300">{{ __('Notifications') }}</button>
+            <button type="button" data-subtab="setup" class="mail-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Mail Setup') }}</button>
+            <button type="button" data-subtab="templates" class="mail-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Templates') }}</button>
+        </nav>
+    </div>
+
+    {{ include('admin/settings/_mail_notifications.twig') }}
+    {{ include('admin/settings/_mail_setup.twig') }}
+    {{ include('admin/settings/_mail_templates.twig') }}
+</div>{# /tab-mail #}

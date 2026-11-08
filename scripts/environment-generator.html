@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<!--
+  The UPDATE_PUBLIC_KEY_ED25519 default value (in two locations) is auto-synced from ../vale/.env.example during docs build.
+  DO NOT EDIT THE PUBLIC KEY VALUE MANUALLY — it will be overwritten.
+  Other changes to this file are preserved.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vale — Environment File (.env) Generator</title>
+<script>
+  (function() {
+    var savedTheme = localStorage.getItem('vl_env_theme') || localStorage.getItem('vl_install_theme');
+    var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  })();
+</script>
+<style>
+  :root {
+    --bg-color: #0B0F19;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-shadow: rgba(0, 0, 0, 0.4);
+    --text-primary: #cbd5e1;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --heading-color: #d1d5db;
+    --input-bg: rgba(255, 255, 255, 0.06);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-text: #e2e8f0;
+    --placeholder-color: rgba(255, 255, 255, 0.25);
+    --select-option-bg: #1a1f2e;
+    --accent-color: #38bdf8;
+    --focus-shadow: rgba(56, 189, 248, 0.2);
+    --btn-bg: #d1d5db;
+    --btn-text: #0B0F19;
+    --btn-sec-bg: rgba(255, 255, 255, 0.06);
+    --btn-sec-border: rgba(255, 255, 255, 0.08);
+    --btn-sec-text: #94a3b8;
+    --btn-sec-hover-bg: rgba(255, 255, 255, 0.1);
+    --check-border: rgba(255, 255, 255, 0.06);
+    --success-bg: rgba(74, 222, 128, 0.1);
+    --success-text: #4ade80;
+    --info-bg: rgba(56, 189, 248, 0.08);
+    --info-border: rgba(56, 189, 248, 0.25);
+    --info-text: #38bdf8;
+    --warning-bg: rgba(251, 191, 36, 0.08);
+    --warning-text: #fbbf24;
+    --warning-border: rgba(251, 191, 36, 0.25);
+    --output-bg: #030712;
+    --output-text: #a7f3d0;
+  }
+  :root[data-theme="light"] {
+    --bg-color: #f3f4f6;
+    --card-bg: #ffffff;
+    --card-border: #e5e7eb;
+    --card-shadow: rgba(0, 0, 0, 0.08);
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+    --heading-color: #111827;
+    --input-bg: #f9fafb;
+    --input-border: #d1d5db;
+    --input-text: #1f2937;
+    --placeholder-color: rgba(0, 0, 0, 0.35);
+    --select-option-bg: #ffffff;
+    --accent-color: #2563eb;
+    --focus-shadow: rgba(37, 99, 235, 0.15);
+    --btn-bg: #111827;
+    --btn-text: #ffffff;
+    --btn-sec-bg: #f3f4f6;
+    --btn-sec-border: #e5e7eb;
+    --btn-sec-text: #4b5563;
+    --btn-sec-hover-bg: #e5e7eb;
+    --check-border: #e5e7eb;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --success-text: #15803d;
+    --info-bg: rgba(37, 99, 235, 0.08);
+    --info-border: rgba(37, 99, 235, 0.25);
+    --info-text: #1d4ed8;
+    --warning-bg: rgba(217, 119, 6, 0.08);
+    --warning-text: #b45309;
+    --warning-border: rgba(217, 119, 6, 0.25);
+    --output-bg: #1e293b;
+    --output-text: #6ee7b7;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg-color); color: var(--text-secondary); min-height: 100vh; display: flex;
+         align-items: center; justify-content: center; padding: 2rem; transition: background 0.15s, color 0.15s; }
+  .card { background: var(--card-bg); backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--card-border);
+          border-radius: 1.25rem; box-shadow: 0 8px 40px var(--card-shadow);
+          max-width: 860px; width: 100%; padding: 3rem; position: relative; transition: background 0.15s, border-color 0.15s; }
+  h1 { font-size: 1.6rem; font-weight: 700; color: var(--heading-color); margin-bottom: .25rem; }
+  .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: .9rem; }
+
+  .notice-box {
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    border-radius: .75rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+    color: var(--info-text);
+    font-size: .875rem;
+    line-height: 1.5;
+  }
+  .notice-box strong { font-weight: 600; }
+
+  .section-title {
+    font-size: .8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    margin: 2rem 0 .75rem;
+    padding-bottom: .35rem;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .section-title:first-of-type { margin-top: 1rem; }
+
+  label { display: block; font-size: .85rem; font-weight: 600; color: var(--text-primary); margin-bottom: .35rem; }
+  .hint { font-size: .78rem; color: var(--text-muted); margin-top: -.15rem; margin-bottom: .5rem; line-height: 1.35; }
+  .warning-hint { font-size: .78rem; color: var(--warning-text); margin-top: .35rem; margin-bottom: .5rem; line-height: 1.35; }
+
+  input[type=text], input[type=email], input[type=password], input[type=url], input[type=number], select {
+    width: 100%; padding: .55rem .75rem; background: var(--input-bg);
+    border: 1px solid var(--input-border); border-radius: .5rem;
+    font-size: .95rem; color: var(--input-text); outline: none; transition: border .15s, background .15s, color 0.15s; margin-bottom: .75rem; }
+  input::placeholder { color: var(--placeholder-color); }
+  select option { background: var(--select-option-bg); color: var(--input-text); }
+  input:focus, select:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px var(--focus-shadow); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  /* Labels align at the top, inputs at the bottom (hints vary in length) */
+  .row2 > .field-group { display: flex; flex-direction: column; }
+  .row2 > .field-group > .hint { margin-bottom: .5rem; }
+  .row2 > .field-group > input,
+  .row2 > .field-group > select,
+  .row2 > .field-group > .input-with-btn { margin-top: auto; }
+  @media (max-width: 640px) { .row2 { grid-template-columns: 1fr; } body { padding: 1rem; } .card { padding: 1.5rem; } }
+
+  .input-with-btn { display: flex; gap: .5rem; }
+  .input-with-btn input { flex: 1; margin-bottom: 0; }
+  .input-with-btn .btn-inline {
+    background: var(--btn-sec-bg); color: var(--btn-sec-text); border: 1px solid var(--btn-sec-border);
+    border-radius: .5rem; padding: 0 .9rem; font-size: .825rem; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: background .15s; height: 38px;
+  }
+  .input-with-btn .btn-inline:hover { background: var(--btn-sec-hover-bg); }
+
+  .field-group { margin-bottom: .5rem; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+         background: var(--btn-bg); color: var(--btn-text); border: none;
+         border-radius: .5rem; padding: .65rem 1.5rem; font-size: .95rem; font-weight: 700;
+         cursor: pointer; transition: opacity .15s, background 0.15s; text-decoration: none; }
+  .btn:hover { opacity: .88; }
+  .btn-sec { background: var(--btn-sec-bg); color: var(--btn-sec-text); border: 1px solid var(--btn-sec-border); }
+  .btn-sec:hover { background: var(--btn-sec-hover-bg); }
+
+  .output-container { margin-top: 2rem; }
+  .output-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+  .output-title { font-size: .9rem; font-weight: 700; color: var(--heading-color); }
+  .output-actions { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; flex-wrap: nowrap; }
+
+  textarea.env-output {
+    width: 100%; height: 340px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .85rem; line-height: 1.45; background: var(--output-bg); color: var(--output-text);
+    border: 1px solid var(--card-border); border-radius: .5rem; padding: 1rem; outline: none; resize: vertical;
+    white-space: pre; overflow-x: auto;
+  }
+
+  a {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  a:visited, a:visited:hover { color: var(--accent-color); }
+  a:hover { filter: brightness(1.15); }
+
+  .theme-toggle-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: var(--btn-sec-bg);
+    border: 1px solid var(--btn-sec-border);
+    color: var(--text-primary);
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .theme-toggle-btn:hover {
+    background: var(--btn-sec-hover-bg);
+  }
+
+  .advanced-toggle-box {
+    margin-top: 1.5rem;
+    background: var(--btn-sec-bg);
+    border: 1px solid var(--btn-sec-border);
+    border-radius: .75rem;
+    padding: .85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  .advanced-toggle-box label {
+    margin-bottom: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .9rem;
+    user-select: none;
+  }
+
+  code { background: var(--btn-sec-bg); color: var(--text-primary); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: .85em; }
+</style>
+</head>
+<body>
+<div class="card">
+  <button type="button" class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle dark/light theme">
+    <span class="theme-icon">☀️</span> <span class="theme-label">Light Mode</span>
+  </button>
+  <script>
+    function updateThemeUI() {
+      var theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      var label = document.querySelector('.theme-toggle-btn .theme-label');
+      var icon = document.querySelector('.theme-toggle-btn .theme-icon');
+      if (label && icon) {
+        if (theme === 'light') {
+          label.textContent = 'Dark Mode';
+          icon.textContent = '🌙';
+        } else {
+          label.textContent = 'Light Mode';
+          icon.textContent = '☀️';
+        }
+      }
+    }
+    function toggleTheme() {
+      var current = document.documentElement.getAttribute('data-theme');
+      if (current === 'light') {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('vl_env_theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('vl_env_theme', 'light');
+      }
+      updateThemeUI();
+    }
+    document.addEventListener('DOMContentLoaded', updateThemeUI);
+  </script>
+
+  <h1>Vale</h1>
+  <p class="subtitle">Environment Configuration File (.env) Generator</p>
+
+  <div class="notice-box">
+    <strong>🔒 100% Client-Side &amp; Private:</strong> All values are processed directly inside your web browser. No data is ever sent to any remote server or stored externally.<br>
+    💡 <em>Tip:</em> You can save this HTML page locally (Ctrl+S / Cmd+S) and run it offline at any time.<br>
+    📖 <em>Reference:</em> For full details on every variable — descriptions, defaults, and security notes — see the <a href="https://docs.getvale.org/en/latest/developer/env.html" target="_blank" rel="noopener noreferrer">Environment Variables Reference</a>.
+  </div>
+
+  <form id="env-form" oninput="generateEnvContent()" onchange="generateEnvContent()">
+
+    <!-- Application -->
+    <div class="section-title">Application Settings</div>
+
+    <div class="row2">
+      <div class="field-group">
+        <label for="APP_ENV">Environment (APP_ENV)</label>
+        <p class="hint">Use <code>production</code> for live websites or <code>dev</code> for local debugging.</p>
+        <select id="APP_ENV" name="APP_ENV">
+          <option value="production" selected>production</option>
+          <option value="dev">dev</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label for="APP_DEBUG">Debug Mode (APP_DEBUG)</label>
+        <p class="hint">Shows detailed error traces. Keep <code>false</code> in production!</p>
+        <select id="APP_DEBUG" name="APP_DEBUG">
+          <option value="false" selected>false</option>
+          <option value="true">true</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field-group">
+        <label for="APP_URL">Site Base URL (APP_URL)</label>
+        <p class="hint">Required — Vale will not start without it. The full web address of your website, including any subdirectory path (e.g. https://example.com or https://example.com/cms).</p>
+        <input type="url" id="APP_URL" name="APP_URL" value="http://localhost" placeholder="http://localhost">
+      </div>
+      <div class="field-group">
+        <label for="APP_LOCALE">Default Language (APP_LOCALE)</label>
+        <p class="hint">Default language for administration and content.</p>
+        <!-- NOTE: options below are auto-synced from ../resources/lang/*.json by
+             vale-docs/scripts/sync-env-locales.js during docs build. Do NOT edit by hand. -->
+        <select id="APP_LOCALE" name="APP_LOCALE">
+          <option value="en" selected>English (en)</option>
+          <option value="tr">Türkçe (tr)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label for="APP_KEY">Application Encryption Key (APP_KEY)</label>
+      <p class="hint">A 64-character random hexadecimal key used for encryption and session security.</p>
+      <div class="input-with-btn">
+        <input type="text" id="APP_KEY" name="APP_KEY" placeholder="64-character hex key">
+        <button type="button" class="btn-inline" onclick="generateAppKey()">🔑 Generate Key</button>
+      </div>
+      <p class="warning-hint">⚠️ <strong>Important Note:</strong> You can leave this blank if you intend to generate it on your server using CLI. However, without an <code>APP_KEY</code>, your server cannot handle encrypted cookies or sessions. Never lose or change this key after installation, as it decrypts stored sensitive data!</p>
+    </div>
+
+    <div class="field-group">
+      <label for="ENCRYPT_PII">Encrypt Addresses (ENCRYPT_PII)</label>
+      <p class="hint">Encrypt customer/order address PII at rest. When enabled, these addresses become permanently unreadable if <code>APP_KEY</code> is lost or changed.</p>
+      <select id="ENCRYPT_PII" name="ENCRYPT_PII">
+        <option value="false" selected>false (default)</option>
+        <option value="true">true — encrypt addresses at rest</option>
+      </select>
+    </div>
+
+    <!-- Database -->
+    <div class="section-title">Database Settings</div>
+
+    <div class="row2">
+      <div class="field-group">
+        <label for="DB_DRIVER">Database Driver (DB_DRIVER)</label>
+        <p class="hint">Database engine type (MySQL, PostgreSQL, or SQLite).</p>
+        <select id="DB_DRIVER" name="DB_DRIVER" onchange="toggleDbDriverFields(this.value)">
+          <option value="mysql" selected>MySQL / MariaDB (mysql)</option>
+          <option value="pgsql">PostgreSQL (pgsql)</option>
+          <option value="sqlite">SQLite (sqlite)</option>
+        </select>
+      </div>
+      <div class="field-group" id="db-host-group">
+        <label for="DB_HOST">Database Host (DB_HOST)</label>
+        <p class="hint">Server address (e.g. 127.0.0.1 or Docker container name like 'db').</p>
+        <input type="text" id="DB_HOST" name="DB_HOST" value="127.0.0.1">
+      </div>
+    </div>
+
+    <div class="row2" id="db-server-fields">
+      <div class="field-group">
+        <label for="DB_PORT">Port (DB_PORT)</label>
+        <p class="hint">Database port (3306 for MySQL, 5432 for PostgreSQL).</p>
+        <input type="number" id="DB_PORT" name="DB_PORT" value="3306">
+      </div>
+      <div class="field-group">
+        <label for="DB_USER">Username (DB_USER)</label>
+        <p class="hint">Database user name.</p>
+        <input type="text" id="DB_USER" name="DB_USER" value="root">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field-group">
+        <label for="DB_NAME" id="db-name-label">Database Name (DB_NAME)</label>
+        <p class="hint" id="db-name-hint">Name of the database or SQLite file path.</p>
+        <input type="text" id="DB_NAME" name="DB_NAME" value="vale">
+      </div>
+      <div class="field-group" id="db-pass-group">
+        <label for="DB_PASS">Database Password (DB_PASS)</label>
+        <p class="hint">Password for database user connection.</p>
+        <input type="password" id="DB_PASS" name="DB_PASS" value="">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field-group">
+        <label for="DB_PREFIX">Table Prefix (DB_PREFIX)</label>
+        <p class="hint">Prefix added to database table names (e.g. vl_).</p>
+        <input type="text" id="DB_PREFIX" name="DB_PREFIX" value="vl_">
+      </div>
+      <div class="field-group">
+        <label for="DB_CHARSET">Charset (DB_CHARSET)</label>
+        <p class="hint">Character set encoding (default: utf8mb4).</p>
+        <input type="text" id="DB_CHARSET" name="DB_CHARSET" value="utf8mb4">
+      </div>
+    </div>
+
+    <div class="field-group" id="db-root-pass-group">
+      <label for="DB_ROOT_PASSWORD">Root Password (DB_ROOT_PASSWORD)</label>
+      <p class="hint">Container root password (used only for Docker Compose setup).</p>
+      <input type="password" id="DB_ROOT_PASSWORD" name="DB_ROOT_PASSWORD" value="" placeholder="Leave empty if none">
+    </div>
+
+    <!-- Toggle Advanced Settings -->
+    <div class="advanced-toggle-box" onclick="toggleAdvancedSettings()">
+      <label style="cursor:pointer;">
+        ⚙️ <strong>Show Advanced &amp; Optional Settings</strong> (CDN, Rate Limits, Search Buffers)
+      </label>
+      <span id="advanced-arrow" style="color:var(--text-muted); font-size: 0.8rem;">▼</span>
+    </div>
+
+    <div id="advanced-settings-wrapper" style="display: none; margin-top: 1rem;">
+
+      <!-- Mail: configured entirely inside Admin → Settings → Mail (database).
+           No MAIL_* keys belong in this .env — they are intentionally omitted. -->
+
+      <!-- Assets -->
+      <div class="section-title">Assets Configuration</div>
+      <div class="field-group">
+        <label for="ASSETS_USE_CDN">Use CDN for Static Assets (ASSETS_USE_CDN)</label>
+        <p class="hint">Set <code>true</code> to load frontend CSS/JS assets from a CDN instead of local builds. Faster development.</p>
+        <select id="ASSETS_USE_CDN" name="ASSETS_USE_CDN">
+          <option value="false" selected>false (local build)</option>
+          <option value="true">true (CDN)</option>
+        </select>
+      </div>
+
+      <!-- Session -->
+      <div class="section-title">Session &amp; Cookies</div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="SESSION_LIFETIME">Session Lifetime (SESSION_LIFETIME)</label>
+          <p class="hint">Session duration in minutes (120 = 2 hours).</p>
+          <input type="number" id="SESSION_LIFETIME" name="SESSION_LIFETIME" value="120">
+        </div>
+        <div class="field-group">
+          <label for="SESSION_SECURE">Secure Cookie (SESSION_SECURE)</label>
+          <p class="hint">Send cookie over HTTPS only. Set <code>false</code> only in plain HTTP dev.</p>
+          <select id="SESSION_SECURE" name="SESSION_SECURE">
+            <option value="true" selected>true (HTTPS required)</option>
+            <option value="false">false (HTTP local dev)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="SESSION_HTTPONLY">HTTP Only Cookie (SESSION_HTTPONLY)</label>
+          <p class="hint">Blocks JavaScript access to cookies (protects against XSS attacks).</p>
+          <select id="SESSION_HTTPONLY" name="SESSION_HTTPONLY">
+            <option value="true" selected>true (recommended)</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="SESSION_SAMESITE">SameSite Policy (SESSION_SAMESITE)</label>
+          <p class="hint">CSRF protection policy level.</p>
+          <select id="SESSION_SAMESITE" name="SESSION_SAMESITE">
+            <option value="Lax" selected>Lax (recommended)</option>
+            <option value="Strict">Strict</option>
+            <option value="None">None</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Storage & Cache -->
+      <div class="section-title">Storage &amp; Cache</div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="STORAGE_DRIVER">Storage Driver (STORAGE_DRIVER)</label>
+          <p class="hint">File storage driver mechanism.</p>
+          <select id="STORAGE_DRIVER" name="STORAGE_DRIVER">
+            <option value="local" selected>local</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label for="CACHE_DRIVER">Cache Driver (CACHE_DRIVER)</label>
+          <p class="hint">System caching engine driver.</p>
+          <select id="CACHE_DRIVER" name="CACHE_DRIVER">
+            <option value="file" selected>file</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="CACHE_TTL">Data Cache TTL (CACHE_TTL)</label>
+          <p class="hint">Data cache duration in seconds (3600 = 1 hour).</p>
+          <input type="number" id="CACHE_TTL" name="CACHE_TTL" value="3600">
+        </div>
+        <div class="field-group">
+          <label for="PAGE_CACHE_ENABLED">Page Cache Enabled (PAGE_CACHE_ENABLED)</label>
+          <p class="hint">Enable full-page HTML caching for guest visitors.</p>
+          <select id="PAGE_CACHE_ENABLED" name="PAGE_CACHE_ENABLED">
+            <option value="true" selected>true (enabled)</option>
+            <option value="false">false (disabled)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="PAGE_CACHE_TTL">Page Cache TTL (PAGE_CACHE_TTL)</label>
+        <p class="hint">Full-page HTML cache duration in seconds (86400 = 24 hours).</p>
+        <input type="number" id="PAGE_CACHE_TTL" name="PAGE_CACHE_TTL" value="86400">
+      </div>
+
+      <!-- Rate Limiting -->
+      <div class="section-title">Rate Limiting &amp; Protection</div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="RATE_LIMIT_LOGIN">Login Rate Limit (RATE_LIMIT_LOGIN)</label>
+          <p class="hint">Max login attempts per minute per IP address.</p>
+          <input type="number" id="RATE_LIMIT_LOGIN" name="RATE_LIMIT_LOGIN" value="5">
+        </div>
+        <div class="field-group">
+          <label for="RATE_LIMIT_FORM">Form Rate Limit (RATE_LIMIT_FORM)</label>
+          <p class="hint">Max form submissions per minute per IP address.</p>
+          <input type="number" id="RATE_LIMIT_FORM" name="RATE_LIMIT_FORM" value="3">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="RATE_LIMIT_API">API Rate Limit (RATE_LIMIT_API)</label>
+        <p class="hint">Max API requests per minute per IP address.</p>
+        <input type="number" id="RATE_LIMIT_API" name="RATE_LIMIT_API" value="60">
+      </div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="RATE_LIMIT_PROBE">Probe Rate Limit (RATE_LIMIT_PROBE)</label>
+          <p class="hint">Max error responses (404/405) per window per IP before the address is throttled. Stops scanner noise (xmlrpc, wp-login, .env probes). Normal traffic and logged-in sessions never count.</p>
+          <input type="number" id="RATE_LIMIT_PROBE" name="RATE_LIMIT_PROBE" value="60">
+        </div>
+        <div class="field-group">
+          <label for="RATE_LIMIT_PROBE_WINDOW">Probe Window (RATE_LIMIT_PROBE_WINDOW)</label>
+          <p class="hint">Probe window in seconds — the IP stays throttled with HTTP 429 for this long after crossing the limit.</p>
+          <input type="number" id="RATE_LIMIT_PROBE_WINDOW" name="RATE_LIMIT_PROBE_WINDOW" value="600">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="TRUSTED_PROXIES">Trusted Proxies (TRUSTED_PROXIES)</label>
+        <p class="hint">Comma-separated proxy IPs or CIDRs to trust for <code>X-Forwarded-For</code>. Required only when Vale runs behind Cloudflare, Nginx, Traefik, or another reverse proxy. Leave empty to use REMOTE_ADDR.</p>
+        <input type="text" id="TRUSTED_PROXIES" name="TRUSTED_PROXIES" value="" placeholder="e.g. 1.2.3.4, 172.16.0.0/12">
+      </div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="HEALTH_DEEP_LIMIT">Deep Health Limit (HEALTH_DEEP_LIMIT)</label>
+          <p class="hint">Max ?deep=1 external health probes per minute per IP before HTTP 429. The plain endpoint is never limited.</p>
+          <input type="number" id="HEALTH_DEEP_LIMIT" name="HEALTH_DEEP_LIMIT" value="30">
+        </div>
+        <div class="field-group">
+          <label for="HEALTH_DEEP_WINDOW">Deep Health Window (HEALTH_DEEP_WINDOW)</label>
+          <p class="hint">Deep health window in seconds.</p>
+          <input type="number" id="HEALTH_DEEP_WINDOW" name="HEALTH_DEEP_WINDOW" value="60">
+        </div>
+      </div>
+
+      <!-- Listings & Search -->
+      <div class="section-title">Listings &amp; Search</div>
+
+      <div class="row2">
+        <div class="field-group">
+          <label for="CLIENT_SIDE_SEARCH_FETCH_LIMIT">Search Fetch Limit (CLIENT_SIDE_SEARCH_FETCH_LIMIT)</label>
+          <p class="hint">Max records loaded in-browser before switching to server queries.</p>
+          <input type="number" id="CLIENT_SIDE_SEARCH_FETCH_LIMIT" name="CLIENT_SIDE_SEARCH_FETCH_LIMIT" value="100">
+        </div>
+        <div class="field-group">
+          <label for="SHOP_BUFFER_SIZE">Storefront Buffer Size (SHOP_BUFFER_SIZE)</label>
+          <p class="hint">Number of items storefront pager loads per server request.</p>
+          <input type="number" id="SHOP_BUFFER_SIZE" name="SHOP_BUFFER_SIZE" value="50">
+        </div>
+      </div>
+
+      <!-- Update Checker -->
+      <div class="section-title">System Update Settings</div>
+
+      <div class="field-group">
+        <label for="UPDATE_MANIFEST_URL">Release Manifest URL (UPDATE_MANIFEST_URL)</label>
+        <p class="hint">URL to check for available software update releases.</p>
+        <input type="url" id="UPDATE_MANIFEST_URL" name="UPDATE_MANIFEST_URL" value="https://github.com/MIDILLI-Tech/vale/releases/latest/download/manifest.json">
+      </div>
+
+      <div class="field-group">
+        <label for="UPDATE_REQUIRE_SIGNATURE">Require Release Signature (UPDATE_REQUIRE_SIGNATURE)</label>
+        <p class="hint">Enforces cryptographically signed update package verification.</p>
+        <select id="UPDATE_REQUIRE_SIGNATURE" name="UPDATE_REQUIRE_SIGNATURE">
+          <option value="true" selected>true (recommended)</option>
+          <option value="false">false (insecure)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="UPDATE_PUBLIC_KEY_ED25519">Ed25519 Public Key (UPDATE_PUBLIC_KEY_ED25519)</label>
+        <p class="hint">Base64-encoded Ed25519 public key used to verify releases.</p>
+        <input type="text" id="UPDATE_PUBLIC_KEY_ED25519" name="UPDATE_PUBLIC_KEY_ED25519" value="JOVBRKCK2mIIDwY5FgkAwMmHSo1lTNo/V1EjqGicQxQ=">
+      </div>
+
+      <div class="field-group">
+        <label for="UPDATE_PUBLIC_KEY_GPG">GPG Public Key (UPDATE_PUBLIC_KEY_GPG)</label>
+        <p class="hint">Optional ASCII-armored GPG public key for update verification.</p>
+        <input type="text" id="UPDATE_PUBLIC_KEY_GPG" name="UPDATE_PUBLIC_KEY_GPG" value="" placeholder="Optional ASCII GPG key">
+      </div>
+
+      <!-- Emergency Reset -->
+      <div class="section-title">Emergency Security</div>
+
+      <div class="field-group">
+        <label for="EMERGENCY_RESET_TOKEN">Emergency Reset Token (EMERGENCY_RESET_TOKEN)</label>
+        <p class="hint">Set a random secret token to enable emergency password reset at <code>/emergency-reset/&lt;token&gt;</code>. Leave blank to disable.</p>
+        <div class="input-with-btn">
+          <input type="text" id="EMERGENCY_RESET_TOKEN" name="EMERGENCY_RESET_TOKEN" placeholder="Optional random 64-char token">
+          <button type="button" class="btn-inline" onclick="generateEmergencyToken()">🎲 Generate Token</button>
+        </div>
+      </div>
+
+    </div>
+
+  </form>
+
+  <!-- Output & Actions -->
+  <div class="output-container">
+    <div class="output-header">
+      <span class="output-title">Generated .env File Preview</span>
+      <div class="output-actions">
+        <select id="output-format" onchange="toggleDockerComments();" style="width:auto; margin-bottom:0; padding:.4rem .6rem; font-size:.82rem;">
+          <option value="standard" selected>Standard (.env)</option>
+          <option value="docker">Docker (-e flags)</option>
+        </select>
+        <label class="output-checkbox" style="display:inline-flex; align-items:center; gap:.35rem; font-size:.8rem; font-weight:600; color:var(--text-primary); cursor:pointer; white-space:nowrap;">
+          <input type="checkbox" id="output-show-comments" checked onchange="generateEnvContent()">
+          Display comments
+        </label>
+      </div>
+    </div>
+    <div style="display:flex; gap:.5rem; margin-bottom:.5rem; justify-content:flex-end;">
+      <button type="button" class="btn btn-sec" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+      <button type="button" class="btn" onclick="downloadEnvFile()">💾 Download .env</button>
+    </div>
+    <p class="hint" style="margin: .25rem 0 .5rem;">Save this file as <code>.env</code> in your Vale project root, or set each <code>KEY=value</code> as an environment variable in Docker / your app container.</p>
+    <textarea id="env-result" class="env-output" readonly></textarea>
+  </div>
+
+</div>
+
+<script>
+  function toggleAdvancedSettings() {
+    var wrapper = document.getElementById('advanced-settings-wrapper');
+    var arrow = document.getElementById('advanced-arrow');
+    if (wrapper.style.display === 'none') {
+      wrapper.style.display = 'block';
+      arrow.textContent = '▲';
+    } else {
+      wrapper.style.display = 'none';
+      arrow.textContent = '▼';
+    }
+    generateEnvContent();
+  }
+
+  function generateHexKey(byteLength) {
+    var array = new Uint8Array(byteLength);
+    window.crypto.getRandomValues(array);
+    var hex = '';
+    for (var i = 0; i < array.length; i++) {
+      hex += array[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+  }
+
+  function generateAppKey() {
+    document.getElementById('APP_KEY').value = generateHexKey(32);
+    generateEnvContent();
+  }
+
+  function generateEmergencyToken() {
+    document.getElementById('EMERGENCY_RESET_TOKEN').value = generateHexKey(32);
+    generateEnvContent();
+  }
+
+  function toggleDbDriverFields(driver) {
+    var isSqlite = (driver === 'sqlite');
+    var isPgsql = (driver === 'pgsql');
+
+    var hostGroup = document.getElementById('db-host-group');
+    var serverFields = document.getElementById('db-server-fields');
+    var passGroup = document.getElementById('db-pass-group');
+    var rootPassGroup = document.getElementById('db-root-pass-group');
+    var nameLabel = document.getElementById('db-name-label');
+    var nameHint = document.getElementById('db-name-hint');
+    var nameInput = document.getElementById('DB_NAME');
+    var portInput = document.getElementById('DB_PORT');
+    var userInput = document.getElementById('DB_USER');
+
+    if (isSqlite) {
+      hostGroup.style.display = 'none';
+      serverFields.style.display = 'none';
+      passGroup.style.display = 'none';
+      rootPassGroup.style.display = 'none';
+      nameLabel.textContent = 'SQLite File Path (DB_NAME)';
+      nameHint.textContent = 'Path to the SQLite database file (e.g. storage/database.sqlite).';
+      if (nameInput.value === 'vale') {
+        nameInput.value = 'storage/database.sqlite';
+      }
+    } else {
+      hostGroup.style.display = 'block';
+      serverFields.style.display = 'grid';
+      passGroup.style.display = 'block';
+      rootPassGroup.style.display = 'block';
+      nameLabel.textContent = 'Database Name (DB_NAME)';
+      nameHint.textContent = 'Name of the database on your database server.';
+      if (nameInput.value === 'storage/database.sqlite') {
+        nameInput.value = 'vale';
+      }
+
+      if (isPgsql) {
+        if (portInput.value === '3306') portInput.value = '5432';
+        if (userInput.value === 'root') userInput.value = 'postgres';
+      } else {
+        if (portInput.value === '5432') portInput.value = '3306';
+        if (userInput.value === 'postgres') userInput.value = 'root';
+      }
+    }
+    generateEnvContent();
+  }
+
+  // Docker (-e flags) output carries no comments, so the "Display comments"
+  // checkbox is meaningless there: disable + uncheck it while that format is
+  // active, and restore the previous state when switching back.
+  function toggleDockerComments() {
+    var cb = document.getElementById('output-show-comments');
+    var format = document.getElementById('output-format');
+    if (!cb || !format) return;
+    if (format.value === 'docker') {
+      if (!cb._savedChecked) cb._savedChecked = cb.checked;
+      cb.checked = false;
+      cb.disabled = true;
+      cb.closest('label').style.opacity = '.5';
+    } else {
+      cb.checked = cb._savedChecked !== false;
+      cb._savedChecked = false;
+      cb.disabled = false;
+      cb.closest('label').style.opacity = '1';
+    }
+    generateEnvContent();
+  }
+
+  function generateEnvContent() {
+    var val = function(id) {
+      var el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    };
+
+    var showAdvanced = document.getElementById('advanced-settings-wrapper').style.display !== 'none';
+
+    var appEnv = val('APP_ENV') || 'production';
+    var appDebug = val('APP_DEBUG') || 'false';
+    var appUrl = val('APP_URL') || 'http://localhost';
+    var appKey = val('APP_KEY');
+    var appLocale = val('APP_LOCALE') || 'en';
+    var encryptPii = val('ENCRYPT_PII') || 'false';
+
+    var dbDriver = val('DB_DRIVER') || 'mysql';
+    var dbHost = val('DB_HOST') || '127.0.0.1';
+    var dbPort = val('DB_PORT') || '3306';
+    var dbName = val('DB_NAME') || 'vale';
+    var dbUser = val('DB_USER') || 'root';
+    var dbPass = val('DB_PASS');
+    var dbRootPass = val('DB_ROOT_PASSWORD');
+    var dbCharset = val('DB_CHARSET') || 'utf8mb4';
+    var dbPrefix = val('DB_PREFIX') || 'vl_';
+    var updateKeyEd = val('UPDATE_PUBLIC_KEY_ED25519') || 'JOVBRKCK2mIIDwY5FgkAwMmHSo1lTNo/V1EjqGicQxQ=';
+
+    var rawEntries = [
+      { type: 'comment', text: '# =============================================================================' },
+      { type: 'comment', text: '# Vale — Environment Configuration' },
+      { type: 'comment', text: '# Generated via Vale Environment Configurator' },
+      { type: 'comment', text: '# =============================================================================' },
+      { type: 'blank' },
+      { type: 'comment', text: '# Application' },
+      { key: 'APP_ENV', val: appEnv, comment: 'Environment: production | dev' },
+      { key: 'APP_DEBUG', val: appDebug, comment: 'Save detailed error info (set true only in dev)' },
+      { key: 'APP_URL', val: appUrl, comment: 'Required: canonical base URL incl. subfolder (must match actual domain)' },
+      { key: 'APP_KEY', val: (appKey !== '' ? appKey : 'change-this-to-a-random-32-char-string'), comment: 'Encryption key (64 hex chars); never change after install' },
+      { key: 'ENCRYPT_PII', val: encryptPii, comment: 'Encrypt customer/order address PII at rest (true | false). Enabling it makes addresses unreadable if APP_KEY is lost/changed.' },
+      { key: 'APP_LOCALE', val: appLocale, comment: 'Default locale: en | tr' },
+      { type: 'blank' },
+      { type: 'comment', text: '# Database' },
+      { key: 'DB_DRIVER', val: dbDriver, comment: 'Database driver: mysql | sqlite | pgsql' },
+      { key: 'DB_HOST', val: dbHost, comment: 'Database hostname (mysql, pgsql only, Docker compose uses "db")' },
+      { key: 'DB_PORT', val: dbPort, comment: 'Database port (mysql or pgsql only)' },
+      { key: 'DB_NAME', val: dbName, comment: 'Database name (mysql or pgsql) or path (sqlite, e.g. storage/database.sqlite)' },
+      { key: 'DB_USER', val: dbUser, comment: 'Database username (mysql or pgsql only)' },
+      { key: 'DB_PASS', val: dbPass, comment: '' },
+      { key: 'DB_ROOT_PASSWORD', val: dbRootPass, comment: 'Root password for MySQL / PostgreSQL container (Docker only)' },
+      { key: 'DB_CHARSET', val: dbCharset, comment: 'Database charset' },
+      { key: 'DB_PREFIX', val: dbPrefix, comment: 'Database table prefix' },
+      { type: 'blank' },
+      { type: 'comment', text: '# Update Checker' },
+      { key: 'UPDATE_PUBLIC_KEY_ED25519', val: updateKeyEd, comment: '' }
+    ];
+
+    if (showAdvanced) {
+      var assetsCdn = val('ASSETS_USE_CDN') || 'false';
+      var sessionLifetime = val('SESSION_LIFETIME') || '120';
+      var sessionSecure = val('SESSION_SECURE') || 'true';
+      var sessionHttponly = val('SESSION_HTTPONLY') || 'true';
+      var sessionSamesite = val('SESSION_SAMESITE') || 'Lax';
+
+      var storageDriver = val('STORAGE_DRIVER') || 'local';
+      var cacheDriver = val('CACHE_DRIVER') || 'file';
+      var cacheTtl = val('CACHE_TTL') || '3600';
+      var pageCacheEnabled = val('PAGE_CACHE_ENABLED') || 'true';
+      var pageCacheTtl = val('PAGE_CACHE_TTL') || '86400';
+
+      var rateLimitLogin = val('RATE_LIMIT_LOGIN') || '5';
+      var rateLimitForm = val('RATE_LIMIT_FORM') || '3';
+      var rateLimitApi = val('RATE_LIMIT_API') || '60';
+      var rateLimitProbe = val('RATE_LIMIT_PROBE') || '60';
+      var rateLimitProbeWindow = val('RATE_LIMIT_PROBE_WINDOW') || '600';
+      var trustedProxies = val('TRUSTED_PROXIES');
+      var healthDeepLimit = val('HEALTH_DEEP_LIMIT') || '30';
+      var healthDeepWindow = val('HEALTH_DEEP_WINDOW') || '60';
+
+      var searchLimit = val('CLIENT_SIDE_SEARCH_FETCH_LIMIT') || '100';
+      var shopBuffer = val('SHOP_BUFFER_SIZE') || '50';
+
+      var updateUrl = val('UPDATE_MANIFEST_URL') || 'https://github.com/MIDILLI-Tech/vale/releases/latest/download/manifest.json';
+      var updateSig = val('UPDATE_REQUIRE_SIGNATURE') || 'true';
+      var updateKeyGpg = val('UPDATE_PUBLIC_KEY_GPG');
+      var emergencyToken = val('EMERGENCY_RESET_TOKEN');
+
+      rawEntries.push(
+        { type: 'blank' },
+        { type: 'comment', text: '# Assets' },
+        { key: 'ASSETS_USE_CDN', val: assetsCdn, comment: 'Set true to load assets from CDN instead of local build' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Session' },
+        { key: 'SESSION_LIFETIME', val: sessionLifetime, comment: 'Session lifetime in minutes (120 = 2 hours)' },
+        { key: 'SESSION_SECURE', val: sessionSecure, comment: 'Send cookie only over HTTPS (default)' },
+        { key: 'SESSION_HTTPONLY', val: sessionHttponly, comment: 'Block JavaScript access to session cookie (XSS protection)' },
+        { key: 'SESSION_SAMESITE', val: sessionSamesite, comment: 'SameSite policy: Lax | Strict | None (CSRF protection)' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Storage' },
+        { key: 'STORAGE_DRIVER', val: storageDriver, comment: 'Storage driver: local (only local supported currently)' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Cache' },
+        { key: 'CACHE_DRIVER', val: cacheDriver, comment: 'Cache driver: file (only file supported currently)' },
+        { key: 'CACHE_TTL', val: cacheTtl, comment: 'Data cache TTL in seconds (default 3600 = 1 hour)' },
+        { key: 'PAGE_CACHE_ENABLED', val: pageCacheEnabled, comment: 'Enable full-page HTML cache for guest visitors' },
+        { key: 'PAGE_CACHE_TTL', val: pageCacheTtl, comment: 'Page cache TTL in seconds (default 86400 = 24h)' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Rate Limiting' },
+        { key: 'RATE_LIMIT_LOGIN', val: rateLimitLogin, comment: 'Max login attempts per minute per IP' },
+        { key: 'RATE_LIMIT_FORM', val: rateLimitForm, comment: 'Max form submissions per minute per IP' },
+        { key: 'RATE_LIMIT_API', val: rateLimitApi, comment: 'Max API requests per minute per IP' },
+        { key: 'RATE_LIMIT_PROBE', val: rateLimitProbe, comment: 'Max error responses (404/405) per window per IP before throttling scanner noise (logged-in sessions exempt)' },
+        { key: 'RATE_LIMIT_PROBE_WINDOW', val: rateLimitProbeWindow, comment: 'Probe window in seconds (lockout duration after RATE_LIMIT_PROBE error responses)' },
+        (trustedProxies !== ''
+          ? { key: 'TRUSTED_PROXIES', val: trustedProxies, comment: 'Trusted proxy IPs (comma-separated) for X-Forwarded-For' }
+          : { key: 'TRUSTED_PROXIES', val: '', comment: 'Trusted proxy IPs (comma-separated); leave empty to use REMOTE_ADDR' }),
+        { key: 'HEALTH_DEEP_LIMIT', val: healthDeepLimit, comment: 'Max ?deep=1 health checks per window per IP (plain endpoint never limited)' },
+        { key: 'HEALTH_DEEP_WINDOW', val: healthDeepWindow, comment: 'Deep health window in seconds' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Listings & Search' },
+        { key: 'CLIENT_SIDE_SEARCH_FETCH_LIMIT', val: searchLimit, comment: 'Max records loaded into browser for client-side search' },
+        { key: 'SHOP_BUFFER_SIZE', val: shopBuffer, comment: 'Product pager fetch buffer size' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Update Checker' },
+        { key: 'UPDATE_MANIFEST_URL', val: updateUrl, comment: '' },
+        { key: 'UPDATE_REQUIRE_SIGNATURE', val: updateSig, comment: 'Require signature for updates: true | false' },
+        { key: 'UPDATE_PUBLIC_KEY_GPG', val: updateKeyGpg, comment: '' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Emergency Password Reset' },
+        (emergencyToken !== ''
+          ? { key: 'EMERGENCY_RESET_TOKEN', val: emergencyToken, comment: '' }
+          : { type: 'comment', text: '# EMERGENCY_RESET_TOKEN=' })
+      );
+    }
+
+    // Calculate maximum length of KEY=VALUE strings to align comments neatly
+    var showComments = document.getElementById('output-show-comments').checked;
+    var format = document.getElementById('output-format').value;
+
+    var maxKeyValLen = 0;
+    // Long values (e.g. UPDATE_MANIFEST_URL) would push every comment far to
+    // the right, so they are excluded from the alignment calculation and get
+    // their own short separator instead.
+    var ALIGN_MAX_LEN = 48;
+    rawEntries.forEach(function(entry) {
+      if (entry.key !== undefined) {
+        var str = entry.key + '=' + entry.val;
+        if (str.length > ALIGN_MAX_LEN) return;
+        if (str.length > maxKeyValLen) {
+          maxKeyValLen = str.length;
+        }
+      }
+    });
+
+    // Target comment start column (at least 36 chars, plus 3 spaces buffer)
+    var alignCol = Math.max(36, maxKeyValLen + 3);
+
+    var formattedLines = rawEntries.map(function(entry) {
+      if (entry.type === 'blank') return '';
+      if (entry.type === 'comment') return showComments ? entry.text : '';
+
+      var keyValStr = entry.key + '=' + entry.val;
+      if (showComments && entry.comment) {
+        var padded = keyValStr.length + 3 <= alignCol
+          ? keyValStr.padEnd(alignCol, ' ')
+          : keyValStr + '   ';
+        return padded + '# ' + entry.comment;
+      }
+      return keyValStr;
+    });
+
+    // Drop comment-only lines when comments are hidden
+    var lines = formattedLines.filter(function(line) {
+      return showComments || line.trim() !== '';
+    });
+
+    var output = lines.join('\n');
+
+    // Docker format: convert each KEY=VALUE to -e KEY=VALUE (comments dropped)
+    if (format === 'docker') {
+      var dockerFlags = [];
+      lines.forEach(function(line) {
+        var trimmed = line.trim();
+        if (trimmed === '' || trimmed.charAt(0) === '#') return;
+        // Strip any trailing inline comment for clean -e flags
+        var commentIdx = trimmed.indexOf('  # ');
+        if (commentIdx > -1) trimmed = trimmed.substring(0, commentIdx).trim();
+        var eq = trimmed.indexOf('=');
+        if (eq === -1) return;
+        dockerFlags.push('-e ' + trimmed);
+      });
+      output = dockerFlags.join(' ');
+    }
+
+    document.getElementById('env-result').value = output;
+  }
+
+  function copyToClipboard() {
+    var resultTextarea = document.getElementById('env-result');
+    resultTextarea.select();
+    resultTextarea.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(resultTextarea.value).then(function() {
+      alert('.env configuration copied to clipboard!');
+    }).catch(function() {
+      document.execCommand('copy');
+      alert('.env configuration copied to clipboard!');
+    });
+  }
+
+  function downloadEnvFile() {
+    var content = document.getElementById('env-result').value;
+    var format = document.getElementById('output-format').value;
+    var filename = format === 'docker' ? '.env.docker' : '.env';
+    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Initialize key and output on load
+  document.addEventListener('DOMContentLoaded', function() {
+    generateAppKey();
+  });
+</script>
+</body>
+</html>

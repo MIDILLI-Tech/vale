@@ -1,0 +1,34 @@
+{% extends "mail/layout.twig" %}
+
+{% block body %}
+<p style="font-size:16px; font-weight:600; color:{{ email_text }}; margin-bottom:12px;">{{ __('Your Refund Request Has Been Approved') }}</p>
+
+<p style="margin-bottom:16px; color:{{ email_text }};">
+    {{ __('Hello :name,', {':name': customer_name|default(__('Customer'))}) }}
+</p>
+
+<p style="margin-bottom:16px; color:{{ email_text }};">
+    {{ __('Your cancellation/refund request for order #:number has been automatically approved as no digital files were downloaded.', {':number': order.orderNumber}) }}
+</p>
+
+<table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:14px;">
+  <tr>
+    <td style="padding:8px 0; border-bottom:1px solid {{ email_border }}; color:{{ email_text_muted }};">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; border-bottom:1px solid {{ email_border }}; text-align:right; font-weight:600; color:{{ email_text }};">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0; border-bottom:1px solid {{ email_border }}; color:{{ email_text_muted }};">{{ __('Status') }}</td>
+    <td style="padding:8px 0; border-bottom:1px solid {{ email_border }}; text-align:right; font-weight:600; color:#16a34a;">{{ __('Refunded') }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0; color:{{ email_text_muted }};">{{ __('Total Refunded') }}</td>
+    <td style="padding:8px 0; text-align:right; font-weight:700; color:{{ email_text }};">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+{% if order_status_url is defined and order_status_url %}
+<p style="margin-top:16px;">
+  <a href="{{ order_status_url }}" style="display:inline-block; padding:10px 16px; background:#16a34a; color:#ffffff; border-radius:6px; text-decoration:none; font-size:14px; font-weight:600;">{{ __('View Order Details') }}</a>
+</p>
+{% endif %}
+{% endblock %}

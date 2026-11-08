@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="{{ locale ?? 'en' }}" class="dark">
+{# ── Recursive primary nav (unlimited depth: dropdown below, flyout to the side) ── #}
+{% macro nav_desktop(menu_items, parent_id, depth) %}
+    {% import _self as nav %}
+    {% if depth <= 10 %}
+    {% for item in menu_items %}
+        {% if item.parentId == parent_id %}
+        {% set kids = menu_items|filter(v => v.parentId == item.id) %}
+        {% if depth == 0 and kids|length > 0 %}
+        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            <a href="{{ item.url }}" target="{{ item.target }}"
+               class="inline-flex items-center text-sm font-medium text-gray-300 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                {{ item.label }}
+                <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </a>
+            <div x-show="open" x-cloak
+                 class="absolute left-0 top-full z-50 w-48 rounded-md bg-gray-800">
+                <div class="rounded-md py-1 shadow-lg ring-1 ring-black ring-opacity-70">
+                    {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
+                </div>
+            </div>
+        </div>
+        {% elseif depth == 0 %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="text-sm font-medium text-gray-300 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% elseif kids|length > 0 %}
+        <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            <a href="{{ item.url }}" target="{{ item.target }}"
+               class="flex items-center justify-between px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                <span>{{ item.label }}</span>
+                <svg class="ml-1 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+            <div x-show="open" x-cloak
+                 class="absolute left-full top-0 z-50 w-48 rounded-md bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-70">
+                {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+{% endmacro %}
+{# ── Recursive mobile nav (unlimited depth: accordion below, arrow toggle) ── #}
+{% macro nav_mobile(menu_items, parent_id, depth) %}
+    {% import _self as nav %}
+    {% if depth <= 10 %}
+    {% for item in menu_items %}
+        {% if item.parentId == parent_id %}
+        {% set kids = menu_items|filter(v => v.parentId == item.id) %}
+        {% if kids|length > 0 %}
+        <div x-data="{ sub: false }">
+            {% if item.url and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+            <div class="flex items-center justify-between rounded-sm hover:bg-gray-700">
+                <a href="{{ item.url }}" target="{{ item.target }}"
+                   class="flex-1 px-3 py-2 {{ depth == 0 ? 'text-base font-medium text-gray-300' : 'text-sm text-gray-400' }} hover:text-white{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                    {{ item.label }}
+                </a>
+                <button type="button" @click="sub = !sub"
+                        class="px-3 py-2 text-gray-400 hover:text-gray-200 focus:outline-none"
+                        aria-label="{{ __('Toggle submenu') }}">
+                    <svg class="h-4 w-4 transition-transform" :class="sub && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+            </div>
+            {% else %}
+            <button type="button" @click="sub = !sub"
+                    class="flex w-full items-center justify-between rounded-sm px-3 py-2 {{ depth == 0 ? 'text-base font-medium text-gray-300' : 'text-sm text-gray-400' }} hover:bg-gray-700{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                <span>{{ item.label }}</span>
+                <svg class="h-4 w-4 transition-transform" :class="sub && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            {% endif %}
+            <div x-show="sub" x-cloak class="ml-4 space-y-1">
+                {{ nav.nav_mobile(menu_items, item.id, depth + 1) }}
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ item.url }}" target="{{ item.target }}"
+           class="block rounded-sm px-3 py-2 {{ depth == 0 ? 'text-base font-medium text-gray-300' : 'text-sm text-gray-400' }} hover:bg-gray-700{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+{% endmacro %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% block title_tag %}<title>{% block title %}{{ effective_title|default(site_name) }}{% endblock %}</title>{% endblock %}
+    <meta name="description" content="{% block meta_description %}{{ effective_desc|default('') }}{% endblock %}">
+
+    {% if site_logo %}<link rel="icon" href="{{ site_logo }}">{% endif %}
+    {% if assets_use_cdn %}
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    {% set font_family_setting = font_family|default('inter') %}
+    {% set bunny_font_query = font_family_setting == 'inter' ? 'inter:400,500,600,700,800' :
+                             (font_family_setting == 'roboto' ? 'roboto:400,500,700' :
+                             (font_family_setting == 'open-sans' ? 'open-sans:400,600,700' :
+                             (font_family_setting == 'montserrat' ? 'montserrat:400,600,700' : 'inter:400,500,600,700,800'))) %}
+    <link href="https://fonts.bunny.net/css?family={{ bunny_font_query }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
+    {# App logic (lightbox, visitor timezone) is Alpine-free and has no CDN
+       copy: it always comes from the local bundle. #}
+    <script defer src="{{ asset('assets/build/app.js') }}"></script>
+    {% else %}
+    {% include 'partials/_build_assets.twig' %}
+    {% endif %}
+    <style>
+        [x-cloak] { display: none !important; }
+
+        .site-title { color: #0ea5e9; }
+        .site-title:hover { color: #38bdf8; }
+
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        html.dark { scrollbar-color: #0ea5e9 #0f172a; scrollbar-width: thin; }
+
+        @layer base {
+            button, [type='button'], [type='reset'], [type='submit'], a, [role="button"] {
+                cursor: pointer;
+            }
+        }
+
+        body {
+            font-family: {% if font_family == 'roboto' %}'Roboto'{% elseif font_family == 'open-sans' %}'Open Sans'{% elseif font_family == 'montserrat' %}'Montserrat'{% else %}'Inter'{% endif %}, sans-serif;
+        }
+        :root,
+        html.dark {
+            --theme-primary: #0ea5e9;
+            --theme-primary-hover: #0284c7;
+            --theme-secondary: #1e293b;
+            --theme-secondary-hover: #334155;
+            --theme-bg: #030712;
+            --theme-surface: #1e293b;
+            --theme-text: #f9fafb;
+            --theme-text-muted: #94a3b8;
+            --theme-nav-bg: #111827;
+            --admin-bar-bg: #111827;
+            --admin-bar-btn-bg: #1f2937;
+            --admin-bar-text: #ffffff;
+            --admin-bar-muted: #9ca3af;
+            --account-primary: #818cf8;
+            --account-primary-hover: #a5b4fc;
+            --account-primary-soft: rgba(99, 102, 241, .12);
+            --account-primary-border: rgba(129, 140, 248, .28);
+            --account-primary-text: #c7d2fe;
+            --account-primary-strong: #e0e7ff;
+            --account-danger: #f87171;
+            --account-danger-hover: #fca5a5;
+            --account-danger-soft: rgba(239, 68, 68, .14);
+            --account-danger-border: rgba(248, 113, 113, .30);
+            --account-warning: #fbbf24;
+            --account-warning-soft: rgba(251, 191, 36, .12);
+            --account-warning-border: rgba(251, 191, 36, .28);
+            --account-muted: #64748b;
+            --account-text: #f1f5f9;
+            --account-border: #334155;
+            --account-surface: #1e293b;
+            --account-surface-soft: #0f172a;
+        }
+        .account-nav { border-color: var(--account-border); }
+        .account-tab { color: var(--account-muted); transition: color .15s ease, font-weight .15s ease; }
+        .account-tab:hover { color: var(--account-primary); }
+        .account-tab-active { color: var(--account-primary-strong); font-weight: 600; }
+        .account-tab-danger:hover { color: var(--account-danger); }
+        .account-link { color: var(--account-primary); transition: color .15s ease; }
+        .account-link:hover { color: var(--account-primary-hover); }
+        .account-table { border-color: var(--account-border); }
+        .account-table-scroll { -webkit-overflow-scrolling: touch; }
+        .account-table-head { background: var(--account-primary-soft); color: var(--account-primary-strong); }
+        .account-table-body { background: var(--account-surface); }
+        .account-table-row:hover { background: rgba(148, 163, 184, .08); }
+        .account-table-muted { color: var(--account-muted); }
+        .account-table-action { color: var(--account-primary); transition: color .15s ease; }
+        .account-table-action:hover { color: var(--account-primary-hover); }
+        .account-secondary-button { border-color: #475569; background: var(--account-surface); color: #cbd5e1; transition: background-color .15s ease, border-color .15s ease; }
+        .account-secondary-button:hover { border-color: #475569; background: #334155; }
+        .account-badge-success { background: var(--account-primary-soft); color: var(--account-primary-strong); }
+        .account-badge-warning { background: var(--account-warning-soft); color: #fde68a; }
+        .account-badge-danger { background: var(--account-danger-soft); color: #fecaca; }
+        .account-badge-neutral { background: var(--account-surface-soft); color: #cbd5e1; }
+        .account-card { border-color: var(--account-border); background: var(--account-surface); }
+        .account-card-muted { border-color: var(--account-primary-border); background: var(--account-primary-soft); }
+        .account-card-warning { border-color: var(--account-warning-border); background: var(--account-warning-soft); }
+        .account-card-muted-text { color: var(--account-primary-text); }
+        .account-card-muted-strong { color: var(--account-primary-strong); }
+        .account-card-warning-text { color: #fde68a; }
+        .account-empty-card { border-color: var(--account-primary-border); background: var(--account-surface); }
+        .account-form-label { color: #cbd5e1; }
+        .account-form-field { border-color: #475569; background: var(--account-surface-soft); color: #e2e8f0; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+        .account-form-field:focus { border-color: #818cf8; --tw-ring-color: rgba(129,140,248,.3); }
+        .account-checkbox { border-color: #475569; accent-color: var(--account-primary); background-color: var(--account-surface-soft); }
+        .account-text { color: var(--account-text); }
+        .account-danger-card { border-color: var(--account-danger-border); background: var(--account-danger-soft); }
+        .account-danger-text { color: var(--account-danger); }
+        .account-danger-input { border-color: rgba(248, 113, 113, .45); background: var(--account-surface-soft); color: #e2e8f0; transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease; }
+        .account-danger-input:focus { border-color: var(--account-danger); --tw-ring-color: rgba(248,113,113,.22); }
+        .account-danger-button { background: var(--account-danger); color: #ffffff; }
+        .account-danger-button:hover { background: var(--account-danger-hover); }
+        html.dark { color-scheme: dark; }
+
+        /* ── Table of Contents ── */
+        .vl-toc { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px 20px; margin: 24px 0; display: inline-block; min-width: 200px; max-width: 100%; }
+        .vl-toc-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin: 0 0 10px; }
+        .vl-toc-list { list-style: none; margin: 0; padding: 0; line-height: 1; }
+        .vl-toc-item { margin: 6px 0; font-size: 14px; }
+        .vl-toc-item a { color: #818cf8; text-decoration: none; }
+        .vl-toc-item a:hover { text-decoration: underline; }
+        .vl-toc-h1 { padding-left: 0; }
+        .vl-toc-h2 { padding-left: 16px; }
+        .vl-toc-h3 { padding-left: 32px; font-size: 13px; }
+
+        /* ═══════════════════════════════════════════════════════
+           Dark theme: override all hardcoded light-mode classes
+           that live in the shared content templates.
+           ═══════════════════════════════════════════════════════ */
+
+        /* — Backgrounds — */
+        html.dark .bg-white         { background-color: var(--theme-surface) !important; }
+        html.dark .bg-gray-50       { background-color: var(--theme-bg) !important; }
+        html.dark .bg-gray-100      { background-color: var(--theme-surface) !important; }
+        html.dark .bg-gray-200      { background-color: #334155 !important; }
+        html.dark .bg-slate-50     { background-color: var(--theme-surface) !important; }
+
+        /* — Text — */
+        html.dark .text-gray-900    { color: var(--theme-text, #f1f5f9) !important; }
+        html.dark .text-gray-800    { color: var(--theme-text, #e2e8f0) !important; }
+        html.dark .text-gray-700    { color: var(--theme-text-muted, #cbd5e1) !important; }
+        html.dark .text-gray-600    { color: var(--theme-text-muted, #94a3b8) !important; }
+        html.dark .text-gray-500    { color: var(--theme-text-muted, #64748b) !important; }
+        html.dark .text-gray-400    { color: var(--theme-text-muted, #475569) !important; }
+        html.dark .text-indigo-600  { color: #818cf8 !important; }
+        html.dark .text-indigo-700  { color: #818cf8 !important; }
+        html.dark .text-indigo-800  { color: #a5b4fc !important; }
+        html.dark .text-red-600     { color: #f87171 !important; }
+        html.dark .text-red-500     { color: #f87171 !important; }
+        html.dark .text-green-600   { color: #4ade80 !important; }
+
+        /* — Borders — */
+        html.dark .border           { border-color: var(--theme-border, #334155) !important; }
+        html.dark .border-b         { border-color: var(--theme-border, #334155) !important; }
+        html.dark .border-t         { border-color: var(--theme-border, #334155) !important; }
+        html.dark .border-gray-300  { border-color: var(--theme-border, #475569) !important; }
+        html.dark .border-gray-200  { border-color: var(--theme-border, #334155) !important; }
+
+        /* — Hover states — */
+        html.dark .hover\:bg-gray-50:hover  { background-color: #1e293b !important; }
+        html.dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
+        html.dark .hover\:bg-gray-700:hover { background-color: #334155 !important; }
+        html.dark .hover\:text-indigo-600:hover { color: var(--theme-accent, #818cf8) !important; }
+        html.dark .hover\:text-indigo-800:hover { color: var(--theme-accent, #a5b4fc) !important; }
+        html.dark .group:hover .group-hover\:text-indigo-600 { color: var(--theme-accent, #818cf8) !important; }
+
+        /* — Shadows — */
+        html.dark .shadow-xs        { box-shadow: 0 1px 2px 0 rgba(0,0,0,.4) !important; }
+
+        /* — Prose (rich text content) — */
+        html.dark .prose,
+        html.dark .prose-sm         { color: #cbd5e1; }
+        html.dark .prose h1, html.dark .prose h2,
+        html.dark .prose h3, html.dark .prose h4,
+        html.dark .prose h5, html.dark .prose h6 { color: #f1f5f9; }
+        html.dark .prose strong     { color: #f1f5f9; }
+        html.dark .prose a          { color: var(--theme-accent, #818cf8); }
+        html.dark .prose blockquote { color: #94a3b8; border-left-color: var(--theme-accent, #4f46e5); }
+        html.dark .prose code       { color: var(--theme-accent, #a5b4fc); background-color: #1e293b; border-radius: 4px; padding: 0 4px; }
+        html.dark .prose pre        { background-color: #0f172a; }
+        html.dark .prose hr         { border-color: #334155; }
+        html.dark .prose table { width: auto; max-width: 100%; }
+        html.dark .prose thead      { color: #f1f5f9; }
+        html.dark .prose thead th   { border-bottom-color: #475569; }
+        html.dark .prose tbody tr   { border-top-color: #334155; }
+
+        /* — Form fields — */
+        html.dark input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+        html.dark textarea,
+        html.dark select {
+            background-color: #0f172a;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        html.dark input::placeholder,
+        html.dark textarea::placeholder { color: #475569; }
+        html.dark input:focus:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]),
+        html.dark textarea:focus,
+        html.dark select:focus {
+            border-color: #818cf8;
+            --tw-ring-color: rgba(129,140,248,.3);
+        }
+        html.dark select option { background-color: #1e293b; color: #e2e8f0; }
+
+        /* ── Checkboxes / radios on dark backgrounds ── */
+        html.dark input[type="checkbox"],
+        html.dark input[type="radio"] {
+            accent-color: #818cf8 !important;
+            border-color: #475569 !important;
+            background-color: #1e293b !important;
+        }
+        html.dark input[type="checkbox"]:checked,
+        html.dark input[type="radio"]:checked {
+            accent-color: #818cf8 !important;
+            border-color: #818cf8 !important;
+            background-color: #818cf8 !important;
+        }
+
+        /* ── Compact prose scale ──
+           Typography sizes are em-based, so scaling the root font-size
+           shrinks body text, headings and spacing proportionally. */
+        .prose {
+            font-size: 0.9375rem; /* 15px */
+            line-height: 1.7;
+        }
+        .prose h1 { margin-bottom: 0.67em; }
+        .prose h2 { margin-top: 1.5em; margin-bottom: 0.83em; }
+        .prose h3 { margin-top: 1.2em; margin-bottom: 0.5em; }
+
+        /* ── Tables ── */
+        /* Editor parity contract (resources/js/editor/table-controls.js and
+           extensions/table-cells.js): the <table> inline style carries border,
+           width, alignment and the --vl-cell-border / --vl-table-cell-padding
+           variables; cell backgrounds and alignments are inline on <td>/<th>.
+           Every theme keeps these rules so the editor preview matches. */
+        .prose table {
+            border-collapse: collapse;
+            width: auto;
+            max-width: 100%;
+            margin: 1em 0;
+        }
+        .prose table th,
+        .prose table td {
+            border: var(--vl-cell-border, 1px solid #475569);
+            padding: var(--vl-table-cell-padding, 8px);
+        }
+        .prose table th { background: #1e293b; font-weight: 600; }
+        .prose table p { margin: 0; }
+
+        /* Legacy content may still contain text-align on the table itself. */
+        .prose table[style*="text-align:center"] { margin-left: auto; margin-right: auto; }
+
+        /* ── Mobile-friendly tables: horizontal scroll on narrow screens ── */
+        @media (max-width: 640px) {
+            .prose { overflow-x: hidden; }
+            .prose table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* ── Tables outside prose (blog listing previews, etc.) ── */
+        table[style*="--vl-cell-border"] {
+            border-collapse: collapse;
+            width: auto;
+            max-width: 100%;
+            margin: 1em 0;
+        }
+        table[style*="--vl-cell-border"] th,
+        table[style*="--vl-cell-border"] td {
+            border: var(--vl-cell-border);
+            padding: var(--vl-table-cell-padding, 8px);
+        }
+        table[style*="--vl-cell-border"] p { margin: 0; }
+        table[style*="--vl-cell-border"] th { background: #1e293b; font-weight: 600; }
+
+        /* ── Buttons ── */
+        .btn-primary { background-color: var(--theme-primary); color: #fff; }
+        .btn-primary:hover { background-color: var(--theme-primary-hover); }
+        .btn-primary:focus { outline: none; box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px rgba(14,165,233,.6); }
+        .btn-secondary { background-color: var(--theme-secondary); color: #cbd5e1; border: 1px solid #475569; }
+        .btn-secondary:hover { background-color: var(--theme-secondary-hover); }
+        select.btn-secondary option { background-color: var(--theme-surface); color: var(--theme-text); }
+
+        /* ── Admin Edit Bar ── */
+        .vl-admin-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+            background: var(--admin-bar-bg); color: var(--admin-bar-text);
+            display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+            font-size: 13px; box-shadow: 0 -2px 8px rgba(0,0,0,.3);
+        }
+        .vl-admin-bar-title { font-weight: 600; }
+        .vl-admin-bar-link {
+            background: var(--admin-bar-btn-bg); color: var(--admin-bar-text);
+            border-radius: 6px; padding: 4px 14px; text-decoration: none; font-weight: 500;
+        }
+        .vl-admin-bar-hint { color: var(--admin-bar-muted); font-size: 11px; }
+        .vl-admin-bar-close {
+            margin-left: auto; background: none; border: none;
+            color: var(--admin-bar-muted); cursor: pointer; font-size: 16px;
+        }
+
+        /* ── Cart badge ── */
+        .cart-badge { background-color: var(--theme-primary); color: #fff; }
+    </style>
+    {% include 'partials/_language_switcher_js.twig' %}
+    {{ theme_hook('head') }}
+    {% block head %}{% endblock %}
+
+    {% if settings.custom_css %}
+    <style>{{ settings.custom_css|raw }}</style>
+    {% endif %}
+
+    {% if settings.custom_header_scripts %}
+    {{ settings.custom_header_scripts|raw }}
+    {% endif %}
+</head>
+<body class="min-h-screen antialiased" style="background-color: var(--theme-bg); color: var(--theme-text);">
+
+    {# ── Advertisement: Header ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'header' and advertisement_code %}
+    <div class="vl-ad-header mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex justify-center">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {% set showShopAccountLinks = shop_enabled == true %}
+    {% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+
+    {# ── Advertisement: Above Content ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'above_content' and advertisement_code %}
+    <div class="vl-ad-above-content mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 flex justify-center">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# ── Header ─────────────────────────────────────────── #}
+    <header style="background-color: var(--theme-nav-bg);" class="border-b border-gray-800 shadow-lg" x-data="{ mobileOpen: false }">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <a href="{{ url('/') }}" class="site-title flex items-center gap-2 text-xl font-bold">
+                    {% if site_logo %}<img src="{{ site_logo }}" alt="{{ site_name }}" class="h-8 w-auto">{% endif %}
+                    {{ site_name }}
+                </a>
+
+                <nav class="hidden space-x-6 md:flex items-center">
+                    {% block nav %}
+                    {% import _self as nav %}
+                    {% if menu_primary is defined and menu_primary|length > 0 %}
+                        {{ nav.nav_desktop(menu_primary, null, 0) }}
+                    {% else %}
+                    <a href="{{ url('/') }}" class="text-sm font-medium text-gray-300 hover:text-indigo-400">{{ __('Home') }}</a>
+                    {% endif %}
+                    {% endblock %}
+                </nav>
+
+                <div class="hidden md:flex items-center space-x-4">
+                    {% if multi_language_content == '1' %}
+                    {# Language Selector #}
+                    {% set langs = content_languages|split(',')|filter(v => v != '') %}
+                    {% if langs|length > 1 %}
+                    <div class="relative">
+                        <select onchange="setLanguage(this.value)"
+                                aria-label="{{ __('Language') }}"
+                                class="h-9 rounded-lg border-gray-600 bg-gray-800 py-0 pl-3 pr-8 text-sm font-semibold uppercase text-gray-200 shadow-xs focus:border-indigo-400 focus:ring-indigo-400">
+                            {% for code in langs %}
+                            <option value="{{ code }}" {{ current_locale() == code ? 'selected' : '' }}>{{ code|upper }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if user is defined %}
+                    <div class="relative" x-data="{ userMenu: false }" @click.away="userMenu = false">
+                        <button @click="userMenu = !userMenu"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-indigo-400">
+                            <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            <span>{{ user.name|default(user.email)|default('Account') }}</span>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="userMenu" x-cloak
+                             class="absolute right-0 top-full z-50 mt-1 w-48 rounded-md bg-gray-800 py-1 shadow-lg ring-1 ring-gray-600">
+                            <a href="{{ url(routing_account_prefix) }}" class="block px-4 py-2 text-sm font-medium text-gray-100 hover:bg-gray-700">{{ __('My Account') }}</a>
+                            <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">{{ __('Profile') }}</a>
+                            {% if showShopAccountLinks %}
+                            <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">{{ __('Order History') }}</a>
+                            {% if showSubscriptionAccountLink %}
+                            <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">{{ __('Subscription') }}</a>
+                            {% endif %}
+                            {% endif %}
+                            {% if user_role is defined and user_role in ['admin', 'super_admin'] %}
+                            <a href="{{ url('/admin') }}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">{{ __('Site Admin') }}</a>
+                            {% endif %}
+                            <div class="border-t border-gray-700"></div>
+                            <form method="POST" action="{{ url('/logout') }}" class="block">
+                                {{ csrf_field() }}
+                                <button type="submit" class="block w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 text-left">{{ __('Logout') }}</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center gap-2">
+                        <a href="{{ url('/login', {}, {redirect: current_path}) }}" class="text-sm font-medium text-gray-300 hover:text-indigo-400">{{ __('Login') }}</a>
+                        {% if (registration_enabled|default(true)) == true %}
+                        <a href="{{ url('/register', {}, {redirect: current_path}) }}" class="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-400">{{ __('Register') }}</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if showShopAccountLinks %}
+                    <div class="relative" x-data="{
+                        open: false,
+                        items: [],
+                        total: 0,
+                        count: {{ cart_count|default(0) }},
+                        lastCount: -1,
+                        loading: false,
+                        fetchCart() {
+                            if (this.count === this.lastCount) return;
+                            this.loading = true;
+                            fetch('{{ url('shop.cart.json') }}')
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.items = data.items;
+                                    this.total = data.total;
+                                    this.count = data.count;
+                                    this.lastCount = data.count;
+                                    this.loading = false;
+                                });
+                        },
+                        removeItem(key) {
+                            if (!confirm('{{ __('Remove this item from your cart?') }}')) return;
+                            fetch('{{ url('shop.cart.remove') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: 'cart_key=' + encodeURIComponent(key) + '&_csrf_token={{ csrf_token() }}'
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                this.items = data.items;
+                                this.total = data.total;
+                                this.count = data.count;
+                                this.lastCount = data.count;
+                            });
+                        }
+                    }" @click.away="open = false">
+                        <button @click="open = !open; if(open) fetchCart()" class="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-800 hover:text-sky-400" title="{{ __('Cart') }}">
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.52 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                            </svg>
+                            <span x-show="count > 0" x-text="count" class="cart-badge absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold"></span>
+                        </button>
+
+                        <div x-show="open" x-cloak
+                             class="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl bg-gray-800 p-4 shadow-xl ring-1 ring-gray-600">
+                            <div x-show="loading" class="flex justify-center py-4">
+                                <svg class="h-6 w-6 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+
+                            <div x-show="!loading && items.length === 0" class="py-6 text-center text-gray-400">
+                                {{ __('Your cart is empty.') }}
+                            </div>
+
+                            <div x-show="!loading && items.length > 0">
+                                <div class="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    <template x-for="item in items" :key="item.cart_key">
+                                        <div class="flex items-center gap-3 py-3 border-b last:border-0 border-gray-700">
+                                            <a :href="'{{ url(routing_shop_prefix ~ '/') }}' + item.slug" class="flex items-center gap-3 flex-1 min-w-0">
+                                                <template x-if="item.image && (item.image.thumbnail || item.image.url)">
+                                                    <img :src="item.image.thumbnail || item.image.url"
+                                                         class="h-12 w-12 rounded-lg object-cover bg-gray-700">
+                                                </template>
+                                                <template x-if="!item.image || (!item.image.thumbnail && !item.image.url)">
+                                                    <div class="h-12 w-12 shrink-0 rounded-lg bg-gray-700 flex items-center justify-center text-gray-500">
+                                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                        </svg>
+                                                    </div>
+                                                </template>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="text-sm font-medium text-gray-200 truncate" x-text="item.name"></div>
+                                                    <div class="text-xs text-gray-400">
+                                                        <span x-text="item.qty"></span> x {{ currency_symbol }}<span x-text="item.price.toFixed(2)"></span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <button @click="removeItem(item.cart_key)" class="text-gray-400 hover:text-red-400 p-1">
+                                                &times;
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-gray-700">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <span class="text-sm font-medium text-gray-300">{{ __('Total') }}</span>
+                                        <span class="text-lg font-bold text-gray-100">{{ currency_symbol }}<span x-text="total.toFixed(2)"></span></span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <a href="{{ url('shop.cart') }}" class="block w-full rounded-lg border border-gray-600 px-3 py-2 text-center text-sm font-medium text-gray-300 hover:bg-gray-700">
+                                            {{ __('Go to Cart') }}
+                                        </a>
+                                        <a href="{{ url('checkout') }}" class="block w-full rounded-lg btn-primary px-3 py-2 text-center text-sm font-medium">
+                                            {{ __('Checkout') }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-2 md:hidden">
+                    {% if showShopAccountLinks %}
+                    <a href="{{ url('shop.cart') }}" class="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-800 hover:text-sky-400" title="{{ __('Cart') }}">
+                        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0023.52 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                        {% if cart_count is defined and cart_count > 0 %}
+                        <span class="cart-badge absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold">{{ cart_count }}</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    <button type="button"
+                            @click="mobileOpen = !mobileOpen"
+                            class="rounded-sm p-2 text-gray-400 hover:bg-gray-700"
+                            :aria-expanded="mobileOpen ? 'true' : 'false'"
+                            aria-controls="site-mobile-nav"
+                            :aria-label="mobileOpen ? '{{ __('Close menu')|e('js') }}' : '{{ __('Open menu')|e('js') }}'">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {# Mobile menu #}
+        <div id="site-mobile-nav" x-show="mobileOpen" x-cloak @click.away="mobileOpen = false"
+             class="border-t border-gray-800 md:hidden">
+            <div class="space-y-1 px-4 py-3">
+                {% import _self as nav %}
+                {% if menu_primary is defined and menu_primary|length > 0 %}
+                    {{ nav.nav_mobile(menu_primary, null, 0) }}
+                {% else %}
+                <a href="{{ url('/') }}" class="block rounded-sm px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700">{{ __('Home') }}</a>
+                {% endif %}
+                {% if user is defined %}
+                <a href="{{ url(routing_account_prefix) }}" class="block rounded-sm px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700">{{ __('My Account') }}</a>
+                <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="block rounded-sm px-3 py-2 text-base text-gray-400 hover:bg-gray-700">{{ __('Profile') }}</a>
+                {% if showShopAccountLinks %}
+                <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="block rounded-sm px-3 py-2 text-base text-gray-400 hover:bg-gray-700">{{ __('Order History') }}</a>
+                {% if showSubscriptionAccountLink %}
+                <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="block rounded-sm px-3 py-2 text-base text-gray-400 hover:bg-gray-700">{{ __('Subscription') }}</a>
+                {% endif %}
+                {% endif %}
+                {% if user_role is defined and user_role in ['admin', 'super_admin'] %}
+                <a href="{{ url('/admin') }}" class="block rounded-sm px-3 py-2 text-base text-gray-400 hover:bg-gray-700">{{ __('Site Admin') }}</a>
+                {% endif %}
+                <form method="POST" action="{{ url('/logout') }}">
+                    {{ csrf_field() }}
+                    <button type="submit" class="block w-full text-left rounded-sm px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700">{{ __('Logout') }}</button>
+                </form>
+                {% else %}
+                <a href="{{ url('/login', {}, {redirect: current_path}) }}" class="block rounded-sm px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700">{{ __('Login') }}</a>
+                {% if (registration_enabled|default(true)) == true %}
+                <a href="{{ url('/register', {}, {redirect: current_path}) }}" class="block rounded-sm px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700">{{ __('Register') }}</a>
+                {% endif %}
+                {% endif %}
+                {% if multi_language_content == '1' %}
+                {% set langs = content_languages|split(',')|filter(v => v != '') %}
+                {% if langs|length > 1 %}
+                <div class="border-t mt-2 pt-2 flex gap-2 px-3">
+                    {% for code in langs %}
+                    <button onclick="setLanguage('{{ code }}')" class="text-xs font-medium text-gray-400 uppercase {{ current_locale() == code ? 'text-white font-bold' : '' }}">
+                        {{ code|upper }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    {# ── Flash messages ─────────────────────────────────── #}
+    {% if flash is defined %}
+        {% for type, messages in flash %}
+            {% for message in messages %}
+            <div class="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8" x-data="{ show: true }" x-show="show">
+                <div class="flex items-center justify-between rounded-lg p-4
+                    {{ type == 'success' ? 'bg-green-900 text-green-200' : '' }}
+                    {{ type == 'error' ? 'bg-red-900 text-red-200' : '' }}
+                    {{ type == 'info' ? 'bg-blue-900 text-blue-200' : '' }}">
+                    <span>{{ message }}</span>
+                    <button @click="show = false" class="ml-4 text-current opacity-50 hover:opacity-100">&times;</button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+
+    {# ── Main content ───────────────────────────────────── #}
+    <main class="py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    {# ── Advertisement: Below Content ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'below_content' and advertisement_code %}
+    <div class="vl-ad-below-content mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-8 flex justify-center">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+{# ── Cookie Warning ─────────────────────────────────── #}
+{% if cookie_warning_enabled == '1' %}
+<div x-data="{
+        show: !localStorage.getItem('cookie_consent_accepted'),
+        accept() {
+            localStorage.setItem('cookie_consent_accepted', 'true');
+            this.show = false;
+        }
+     }"
+     x-show="show"
+     x-cloak
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0 transform translate-y-4"
+     x-transition:enter-end="opacity-100 transform translate-y-0"
+     class="fixed bottom-4 left-4 right-4 z-9999 md:left-auto md:max-w-md">
+    <div class="rounded-xl bg-gray-800 p-4 shadow-2xl ring-1 ring-indigo-400/30">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-gray-200">
+                {{ cookie_warning_text|default(__("We use essential cookies to ensure you get the best experience on our website. Only necessary cookies are used.")) }}
+            </p>
+            <button @click="accept()"
+                    class="shrink-0 rounded-lg bg-indigo-400 px-4 py-2 text-sm font-bold text-gray-950 hover:bg-indigo-300 transition-colors">
+                {{ __('Got it!') }}
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+    {# ── Advertisement: Footer ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'footer' and advertisement_code %}
+    <div class="vl-ad-footer mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 flex justify-center border-t border-gray-800 bg-gray-900">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# ── Footer ─────────────────────────────────────────── #}
+    <footer class="border-t border-gray-800 bg-gray-900">
+        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <a href="{{ url('/') }}" class="flex items-center justify-center gap-2 mb-4">
+                {% if site_logo %}<img src="{{ site_logo }}" alt="{{ site_name }}" class="h-6 w-auto">{% endif %}
+                <span class="text-gray-300 text-sm font-semibold">{{ site_name }}</span>
+            </a>
+            {% if menu_footer is defined and menu_footer|length > 0 %}
+            <nav class="mb-4 flex flex-wrap justify-center gap-6">
+                {% for item in menu_footer %}
+                <a href="{{ item.url }}" target="{{ item.target }}"
+                   class="text-sm text-gray-500 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+            <p class="text-center text-sm text-gray-600">
+                &copy; {{ "now"|date("Y") }} {{ site_name }}. {{ __('All rights reserved.') }}
+            </p>
+        </div>
+    </footer>
+
+    {% if assets_use_cdn %}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+
+    {% if settings.custom_footer_scripts %}
+    {{ settings.custom_footer_scripts|raw }}
+    {% endif %}
+
+    {# ── Admin edit bar ─────────────────────────────────── #}
+    {% if user_role is defined and user_role in ['admin', 'super_admin'] and admin_edit_url is defined and admin_edit_url %}
+    <div id="vl-admin-bar" class="vl-admin-bar">
+        <span class="vl-admin-bar-title">&#9998; Admin</span>
+        <a href="{{ admin_edit_url }}" class="vl-admin-bar-link">Edit</a>
+        <span class="vl-admin-bar-hint">Ctrl+E to edit</span>
+        <button onclick="document.getElementById('vl-admin-bar').remove()" class="vl-admin-bar-close" title="Close">&times;</button>
+    </div>
+    <script>
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            var form = document.querySelector('form[data-autosave]');
+            if (form) { e.preventDefault(); form.submit(); }
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+            var editUrl = {{ admin_edit_url|json_encode()|raw }};
+            if (editUrl) { e.preventDefault(); window.location.href = editUrl; }
+        }
+    });
+    </script>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,443 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Tags') }}{% endblock %}
+
+{% block content %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyBtn = document.getElementById('copy-tag-original-btn');
+    copyBtn?.addEventListener('click', async function() {
+        const id = document.getElementById('edit-translation-of').value;
+        if (!id) return;
+        if (!confirm('{{ __('Overwrite current content with original?')|e('js') }}')) return;
+
+        const origHtml = this.innerHTML;
+        this.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+        this.disabled = true;
+
+        try {
+            const r = await fetch('{{ url('/admin/tags/')|e('js') }}' + id + '/json');
+            const data = await r.json();
+            form.querySelector('input[name="name"]').value = data.name;
+            form.querySelector('input[name="name"]').dispatchEvent(new Event('input'));
+
+            this.innerHTML = '✓';
+        } catch (e) {
+            this.innerHTML = '✗';
+            alert('Failed to copy content.');
+        } finally {
+            setTimeout(() => { this.innerHTML = origHtml; this.disabled = false; }, 1500);
+        }
+    });
+});
+</script>
+{% set allCts = allContentTypes|default([]) %}
+{% set ctNames = {} %}
+{% for ct in allCts %}
+    {% set slugStr = ct.slug ~ '' %}
+    {% set ctNames = ctNames|merge({(slugStr): ct.name}) %}
+{% endfor %}
+{% set selectableTypes = [] %}
+{% if blog_enabled|default(true) %}
+    {% set selectableTypes = selectableTypes|merge([{value: 'post', label: __('Posts')}]) %}
+{% endif %}
+{% for ct in contentTypes|default([]) %}
+    {% set selectableTypes = selectableTypes|merge([{value: ct.slug.value, label: ct.name}]) %}
+{% endfor %}
+{% set selectableValues = selectableTypes|column('value') %}
+{% set defaultCt = filters.content_type|default('') in selectableValues ? filters.content_type : (selectableTypes|first|default({value: 'post'})).value %}
+{% set originalsList = [] %}
+{% set pickerOptions = [] %}
+{% for o in potential_originals|default([]) %}
+    {% set originalsList = originalsList|merge([{id: o.id, name: o.name, language: o.language, langs: o.translatedLanguages}]) %}
+    {% set pickerOptions = pickerOptions|merge([{
+        value: o.id,
+        label: '[' ~ (o.language|default(''))|upper ~ '] ' ~ o.name,
+        language: o.language|default(''),
+        translatedLanguages: o.translatedLanguages
+    }]) %}
+{% endfor %}
+<div x-data="{
+    addOpen: false, addName: '', addSlug: '', addSlugManually: false,     addLanguage: '{{ current_locale()|e('js') }}',
+    addContentType: '{{ defaultCt }}',
+    addTranslationOf: '',
+    addTranslationOfName: '',
+    editOpen: false, editId: null, editName: '', editSlug: '', editSlugManually: false,
+    editContentType: 'post', editLanguage: '{{ current_locale()|e('js') }}', editTranslationOf: '',
+    allOriginals: {{ originalsList|json_encode|e('html_attr') }},
+    translationsMap: {{ translations_map|json_encode|e('html_attr') }},
+
+    openAdd() {
+        this.addName = ''; this.addSlug = ''; this.addSlugManually = false;
+        this.addContentType = '{{ defaultCt }}';
+        this.addTranslationOf = '';
+        this.addTranslationOfName = '';
+        this.addOpen = true;
+        this.syncTranslationPicker('add');
+        this.$nextTick(() => this.$refs.addNameInput?.focus());
+    },
+    editTranslations: [],
+    openEdit(id, name, slug, contentType, language, translationOf) {
+        this.editId = id; this.editName = name; this.editSlug = slug;
+        this.editSlugManually = slug !== '';
+        this.editContentType = contentType || 'post';
+        this.editLanguage = language || '{{ current_locale()|e('js') }}';
+        this.editTranslationOf = translationOf || '';
+
+        const rootId = String(this.editTranslationOf || this.editId);
+        this.editTranslations = Array.isArray(this.translationsMap[rootId]) ? this.translationsMap[rootId] : [];
+        this.ensureTranslationSource(this.editTranslations, rootId);
+        this.refreshOriginalLanguages(this.editTranslations, rootId);
+
+        this.editOpen = true;
+        this.syncTranslationPicker('edit');
+        this.$nextTick(() => this.$refs.editNameInput?.focus());
+    },
+    // The Translation Of field is the shared entityPicker, built once per page.
+    // Modals reuse it, so its options and value are pushed in on every open.
+    pickerOf(refName) {
+        const wrapper = this.$refs[refName];
+        if (!wrapper) return null;
+        const host = wrapper.hasAttribute('x-data') ? wrapper : wrapper.querySelector('[x-data]');
+        if (!host) return null;
+        if (window.Alpine && typeof window.Alpine.$data === 'function') {
+            try { return window.Alpine.$data(host); } catch (e) { return null; }
+        }
+        return (host._x_dataStack && host._x_dataStack[0]) || null;
+    },
+    translationPickerOptions(excludeOwn) {
+        return this.allOriginals
+            .filter(o => !(excludeOwn && String(o.id) === String(this.editId)))
+            .map(o => ({
+                value: String(o.id),
+                label: '[' + String(o.language || '').toUpperCase() + '] ' + o.name,
+                language: o.language || '',
+                translatedLanguages: o.langs || [],
+            }));
+    },
+    syncTranslationPicker(which) {
+        const isEdit = which === 'edit';
+        const picker = this.pickerOf(isEdit ? 'editTranslationPicker' : 'addTranslationPicker');
+        if (!picker) return;
+        const value = isEdit ? this.editTranslationOf : this.addTranslationOf;
+        picker.targetLanguage = isEdit ? this.editLanguage : this.addLanguage;
+        picker.setOptions(this.translationPickerOptions(isEdit && !value));
+        picker.setValue(value || '');
+    },
+    setTranslationOf(which, value) {
+        if (which === 'edit') this.editTranslationOf = value ? String(value) : '';
+        else this.addTranslationOf = value ? String(value) : '';
+        this.syncTranslationPicker(which);
+    },
+    ensureTranslationSource(rows, rootId) {
+        if (!this.editTranslationOf || !Array.isArray(rows)) return;
+        if (this.allOriginals.some(o => String(o.id) === String(this.editTranslationOf))) return;
+        const source = rows.find(r => String(r.id) === String(this.editTranslationOf));
+        this.allOriginals.push({
+            id: this.editTranslationOf,
+            name: source ? source.name : ('#' + this.editTranslationOf),
+            language: source ? (source.language || '') : '',
+            langs: [],
+        });
+    },
+    // Keeps the Translation Of dropdown in sync with the freshly loaded
+    // translations: an original is marked (Translated) — and disabled — only
+    // for languages that really have a translation right now.
+    refreshOriginalLanguages(rows, rootId) {
+        if (!Array.isArray(rows) || !rootId) return;
+        const entry = this.allOriginals.find(o => String(o.id) === String(rootId));
+        if (!entry) return;
+        entry.langs = rows
+            .filter(r => String(r.id) !== String(rootId))
+            .map(r => String(r.language || ''))
+            .filter(Boolean);
+    },
+    syncTranslationOf(key, language) {
+        const isEdit = key === 'editTranslationOf';
+        const picker = this.pickerOf(isEdit ? 'editTranslationPicker' : 'addTranslationPicker');
+        if (picker) picker.targetLanguage = language || '';
+        if (!this[key]) return;
+        const match = this.allOriginals.find(o => String(o.id) === String(this[key]));
+        if (match && match.language === language) this.setTranslationOf(isEdit ? 'edit' : 'add', '');
+    },
+    addAutoSlug() {
+        if (this.addSlugManually) return;
+        this.addSlug = this.addName.toLowerCase().replace(/[ıİ]/g,'i').replace(/[şŞ]/g,'s').replace(/[çÇ]/g,'c').replace(/[üÜ]/g,'u').replace(/[öÖ]/g,'o').replace(/[ğĞ]/g,'g').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    },
+    editAutoSlug() {
+        if (this.editSlugManually) return;
+        this.editSlug = this.editName.toLowerCase().replace(/[ıİ]/g,'i').replace(/[şŞ]/g,'s').replace(/[çÇ]/g,'c').replace(/[üÜ]/g,'u').replace(/[öÖ]/g,'o').replace(/[ğĞ]/g,'g').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    }
+}">
+<div x-data="dataTable({perPage: {{ per_page|default(50) }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+{% if flash_success %}<div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm">{{ flash_success }}</div>{% endif %}
+{% if flash_error %}<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>{% endif %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Tags') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('tag(s) total') }}</p>
+    </div>
+    <button type="button" @click="openAdd()"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Create') }} {{ __('Tag') }}
+    </button>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <select onchange="window.location.href=this.value"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="{{ url('/admin/tags?content_type=all') }}" {{ (filters.content_type|default('all')) == 'all' ? 'selected' }}>{{ __('All') }}</option>
+        {% if blog_enabled|default(true) %}
+        <option value="{{ url('/admin/tags?content_type=post') }}" {{ filters.content_type|default('') == 'post' ? 'selected' }}>{{ __('Posts') }}</option>
+        {% endif %}
+        {% for ct in contentTypes|default([]) %}
+        <option value="{{ url('/admin/tags?content_type=' ~ ct.slug.value) }}" {{ filters.content_type|default('') == ct.slug.value ? 'selected' }}>{{ ct.name }}</option>
+        {% endfor %}
+    </select>
+    {{ table.search(__('Search') ~ '…') }}
+    {% if multi_language_content %}
+    <select onchange="var u=new window.URL(window.location.href);u.searchParams.set('language',this.value);window.location.href=u.toString()"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="">{{ __('All Languages') }}</option>
+        {% for code, name in supported_locales %}
+            <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th(__('Name'), 'name') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language') }}{% endif %}
+                {{ table.th(__('Slug'), 'slug') }}
+                {{ table.th(__('Usage'), 'usage_count') }}
+                {{ table.th(__('Available in'), 'content_type') }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for item in tags %}
+            {% set tag = item.tag %}
+            <tr data-row-id="{{ item.tag.id }}" data-sort="{{ {name: tag.name, language: tag.language, slug: tag.slug, usage_count: item.usageCount, content_type: ctNames[tag.contentType]|default(tag.contentType)}|json_encode|e('html_attr') }}">
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <button type="button" @click="openEdit({{ tag.id }}, '{{ tag.name|e('js') }}', '{{ tag.slug|e('js') }}', '{{ tag.contentType|e('js') }}', '{{ tag.language|e('js') }}', '{{ tag.translationOf|e('js') }}')" class="text-gray-900 dark:text-gray-100 hover:underline text-left">{{ tag.name }}</button>
+                </td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <span class="rounded-sm bg-gray-100 px-1.5 py-0.5 uppercase">{{ tag.language }}</span>
+                </td>
+                {% endif %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ tag.slug }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <a href="{{ url('/admin/posts?content_type=' ~ tag.contentType ~ '&tag_id=' ~ tag.id) }}"
+                       title="{{ __('See what uses this tag') }}"
+                       class="text-gray-700 hover:text-gray-900 dark:text-gray-100 hover:underline">{{ item.usageCount }}</a>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ ctNames[tag.contentType]|default(tag.contentType) }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                    <div class="inline-flex items-center gap-2">
+                        <button type="button" @click="openEdit({{ tag.id }}, '{{ tag.name|e('js') }}', '{{ tag.slug|e('js') }}', '{{ tag.contentType|e('js') }}', '{{ tag.language|e('js') }}', '{{ tag.translationOf|e('js') }}')"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
+                        <form method="post" action="{{ url('/admin/tags/' ~ tag.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No tags yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+</div>
+
+{# Create Modal #}
+<div x-show="addOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="addOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Create') }} {{ __('Tag') }}</h3>
+            <button type="button" @click="addOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="post" action="{{ url('/admin/tags') }}" class="flex min-h-0 flex-1 flex-col">
+            {{ csrf_field() }}
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {% if selectableTypes|length > 1 %}
+            <div>
+                <label for="add-content-type" class="block text-sm font-medium text-gray-700">{{ __('Content Type') }}</label>
+                <select id="add-content-type" name="content_type" x-model="addContentType"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
+                    {% for t in selectableTypes %}
+                    <option value="{{ t.value }}" {{ t.value == defaultCt ? 'selected' }}>{{ t.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="content_type" value="{{ defaultCt }}">
+            {% endif %}
+            {% if multi_language_content %}
+            <div class="flex items-end gap-3">
+                <div class="shrink-0">
+                    <label for="add-language" class="block text-sm font-medium text-gray-700">{{ __('Language') }}</label>
+                    <select id="add-language" name="language" x-model="addLanguage" x-effect="syncTranslationOf('addTranslationOf', addLanguage)" class="mt-1 inline-block w-auto max-w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        {% for code, name in supported_locales %}
+                            <option value="{{ code }}">{{ locale_name(code) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <label class="block text-sm font-medium text-gray-700">{{ __('Translation Of') }}</label>
+                    <div x-ref="addTranslationPicker" @vl-record-picked="addTranslationOf = $event.detail.value">
+                        {% include 'admin/components/entity-select.twig' with {
+                            mode: 'static',
+                            name: 'translation_of',
+                            hidden_id: 'add-translation-of',
+                            options: pickerOptions,
+                            placeholder: '— ' ~ __('None (Original)') ~ ' —',
+                            empty_label: '— ' ~ __('None (Original)') ~ ' —',
+                            show_empty_row: true,
+                            empty_hint: __('No results'),
+                            target_selector: '#add-language',
+                            wrapper_class: 'mt-1 w-full',
+                            x_ref: 'addTranslationPicker'
+                        } %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <div>
+                <label for="add-name" class="block text-sm font-medium text-gray-700">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="add-name" name="name" required x-ref="addNameInput" x-model="addName" @input="addAutoSlug()"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="add-slug" class="block text-sm font-medium text-gray-700">{{ __('Slug') }}</label>
+                <input type="text" id="add-slug" name="slug" x-model="addSlug" @input="addSlugManually = true"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="{{ __('Auto-generated from name') }}">
+            </div>
+            </div>
+            <div class="shrink-0 flex items-center gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="addOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">{{ __('Create') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Edit Modal #}
+<div x-show="editOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="editOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit') }} {{ __('Tag') }}</h3>
+            <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="post" :action="'{{ url('/admin/tags')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col" id="editTagForm">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" value="PUT">
+            <input type="hidden" name="content_type" x-model="editContentType">
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {% if multi_language_content %}
+            <div class="rounded-lg border dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-3 space-y-3">
+                <div class="flex items-end gap-3">
+                    <div class="shrink-0">
+                        <label class="block text-xs font-medium text-gray-500">{{ __('Language') }}</label>
+                        <select id="edit-language" name="language" x-model="editLanguage" x-effect="syncTranslationOf('editTranslationOf', editLanguage)" class="mt-1 inline-block w-auto max-w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
+                            {% for code, name in supported_locales %}
+                                <option value="{{ code }}">{{ locale_name(code) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <label class="block text-xs font-medium text-gray-500">{{ __('Translation Of') }}</label>
+                        <div x-ref="editTranslationPicker" @vl-record-picked="editTranslationOf = $event.detail.value">
+                            {% include 'admin/components/entity-select.twig' with {
+                                mode: 'static',
+                                name: 'translation_of',
+                                hidden_id: 'edit-translation-of',
+                                options: pickerOptions,
+                                placeholder: '— ' ~ __('None (Original)') ~ ' —',
+                                empty_label: '— ' ~ __('None (Original)') ~ ' —',
+                                show_empty_row: true,
+                                empty_hint: __('No results'),
+                                target_selector: '#edit-language',
+                                wrapper_class: 'mt-1 w-full',
+                                x_ref: 'editTranslationPicker'
+                            } %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Translations') }}</h4>
+                    <div class="space-y-1.5">
+                        {% for code, name in supported_locales %}
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-4 text-[9px] font-medium text-gray-400">{{ code|upper }}</span>
+                                <span class="text-gray-600 dark:text-gray-400" x-text="'{{ locale_name(code)|e('js') }}'"></span>
+                            </span>
+                            <template x-if="editTranslations.find(t => t.language === '{{ code }}')">
+                                <span class="flex gap-2">
+                                    <template x-if="editTranslations.find(t => t.language === '{{ code }}').id === editId">
+                                        <span class="font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 rounded-sm">{{ __('Current') }}</span>
+                                    </template>
+                                    <template x-if="editTranslations.find(t => t.language === '{{ code }}').id !== editId">
+                                        <button type="button" @click="editOpen = false; const t = editTranslations.find(x => x.language === '{{ code }}'); openEdit(t.id, t.name, t.slug, t.contentType, t.language, t.translationOf)" class="text-blue-600 hover:underline">{{ __('Edit') }}</button>
+                                    </template>
+                                </span>
+                            </template>
+                            <template x-if="!editTranslations.find(t => t.language === '{{ code }}')">
+                                <button type="button" @click="editOpen = false; openAdd(); addContentType = editContentType; addLanguage = '{{ code }}'; addName = editName; setTranslationOf('add', editTranslationOf || editId);" class="text-gray-400 hover:text-gray-600">+ {{ __('Add') }}</button>
+                            </template>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <div>
+                <label for="edit-name" class="block text-sm font-medium text-gray-700">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <div class="flex gap-2">
+                    <input type="text" id="edit-name" name="name" required x-ref="editNameInput" x-model="editName" @input="editAutoSlug()"
+                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                    <button x-show="editTranslationOf" type="button" id="copy-tag-original-btn"
+                            class="mt-1 inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                            title="{{ __('Copy content from original') }}">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label for="edit-slug" class="block text-sm font-medium text-gray-700">{{ __('Slug') }}</label>
+                <input type="text" id="edit-slug" name="slug" x-model="editSlug" @input="editSlugManually = true"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="{{ __('Auto-generated from name') }}">
+            </div>
+            </div>
+            <div class="shrink-0 flex items-center gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="editOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">{{ __('Update') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
+{% endblock %}

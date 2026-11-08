@@ -1,0 +1,72 @@
+{# Content › Media #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="{{ content_tab_id|default('content-tab-media') }}" class="content-tab-panel {{ is_active ? '' : 'hidden' }}">
+<form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="PUT">
+    <input type="hidden" name="_group" value="content">
+    <input type="hidden" name="_subtab" value="media">
+
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Media') }}</p>
+    <div {{ vl.attrs('content', __('Convert images to WebP'), 'media_webp_enabled', 'media', __('Media'), 'webp image optimization') }}>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="hidden" name="media_webp_enabled" value="0">
+            <input type="checkbox" name="media_webp_enabled" value="1"
+                   {{ settings.media_webp_enabled|default('0') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Convert images to WebP') }}
+        </label>
+        <p class="mt-1 text-xs text-gray-400">{{ __('Automatically convert uploaded images to WebP format for better performance. Original files are preserved.') }}</p>
+    </div>
+    <div class="mt-3" {{ vl.attrs('content', __('Enable Lazy Loading'), 'media_lazy_loading_enabled', 'media', __('Media'), 'lazy load images performance') }}>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="hidden" name="media_lazy_loading_enabled" value="0">
+            <input type="checkbox" name="media_lazy_loading_enabled" value="1"
+                   {{ settings.media_lazy_loading_enabled|default('1') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Enable Lazy Loading') }}
+        </label>
+        <p class="mt-1 text-xs text-gray-400">{{ __('Add loading="lazy" attribute to images in posts and pages to improve page load speed.') }}</p>
+    </div>
+    <div class="mt-3" {{ vl.attrs('content', __('Create year/month folders for uploads'), 'media_use_year_month_folders', 'media', __('Media'), 'upload folder structure date') }}>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="hidden" name="media_use_year_month_folders" value="0">
+            <input type="checkbox" name="media_use_year_month_folders" value="1"
+                   {{ settings.media_use_year_month_folders|default('1') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Create year/month folders for uploads') }}
+        </label>
+        <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, uploads are stored in uploads/YYYY/MM/. When disabled, files are placed directly in uploads/.') }}</p>
+    </div>
+    <div class="mt-3" {{ vl.attrs('content', __('Use original file name after upload'), 'media_use_original_filename', 'media', __('Media'), 'filename upload rename') }}>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="hidden" name="media_use_original_filename" value="0">
+            <input type="checkbox" name="media_use_original_filename" value="1"
+                   {{ settings.media_use_original_filename|default('0') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Use original file name after upload') }}
+        </label>
+        <p class="mt-1 text-xs text-gray-400">{{ __('Upload files using their original name instead of a random name. Conflict resolution options (keep both, replace, skip) are shown in the upload modal.') }}</p>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-6">
+        <div {{ vl.attrs('content', __('Maximum file size (MB)'), 'media_max_file_size', 'media', __('Media'), 'upload limit size megabytes') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Maximum file size (MB)') }}</label>
+            <input type="number" name="media_max_file_size" value="{{ media_limits.file_size_mb }}" min="0" max="10240"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Set to 0 to use server settings') }} ({{ php_upload_max_mb }} MB).</p>
+        </div>
+        <div {{ vl.attrs('content', __('Maximum files per upload'), 'media_max_file_count', 'media', __('Media'), 'upload limit count batch') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Maximum files per upload') }}</label>
+            <input type="number" name="media_max_file_count" value="{{ media_limits.file_count }}" min="0" max="100"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Set to 0 to use server settings') }} ({{ php_max_uploads }}).</p>
+        </div>
+        <div {{ vl.attrs('content', __('Maximum batch size (MB)'), 'media_max_batch_size', 'media', __('Media'), 'upload limit batch total size megabytes') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Maximum batch size (MB)') }}</label>
+            <input type="number" name="media_max_batch_size" value="{{ media_limits.batch_size_mb }}" min="0" max="10240"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Total size of one upload batch. Set to 0 to follow the server post_max_size') }} ({{ media_limits.batch_default_mb }} MB).</p>
+        </div>
+    </div>
+</form>
+</div>

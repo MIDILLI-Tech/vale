@@ -1,0 +1,74 @@
+name: Dependency Scan
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks secret scan (incremental)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="origin/${{ github.base_ref }}..HEAD"
+          elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          else
+            RANGE="${{ github.sha }}~1..${{ github.sha }}"
+          fi
+          echo "Scanning range: $RANGE"
+          /tmp/gitleaks detect --source . --config .gitleaks.toml --no-banner --redact --verbose --log-opts="$RANGE"
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, sodium
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --no-scripts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Install npm dependencies if package.json exists
+        run: |
+          if [ -f package.json ]; then
+            npm install --ignore-scripts
+          else
+            echo "No package.json found; npm scan skipped."
+          fi
+
+      - name: Run dependency scan
+        run: php scripts/dependency-scan.php
+
+      - name: Check for outdated Composer dependencies
+        run: composer outdated --strict --direct --no-interaction
+        continue-on-error: true
+
+      - name: Check for outdated npm dependencies
+        run: |
+          if [ -f package.json ]; then
+            npm outdated
+          else
+            echo "No package.json found; npm outdated skipped."
+          fi
+        continue-on-error: true
+
+      - name: Run EOL dependency audit
+        run: composer run audit:eol

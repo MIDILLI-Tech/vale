@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number|default('') }}</title>
+    {% if assets_use_cdn %}
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    {% else %}
+    {% include 'partials/_build_assets.twig' with { include_js: false, load_alt_fonts: false, load_display_fonts: false } %}
+    {% endif %}
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #fff !important; }
+            .invoice-sheet { box-shadow: none !important; border-color: #d1d5db !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:text-gray-100">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <div class="no-print mb-6 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Invoice {{ invoice.invoice_number|default('') }}</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Issued: {{ invoice.issued_at|default('') }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.print()" class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm hover:bg-gray-50 dark:bg-gray-800/50">Print / Save PDF</button>
+                {% if pdf_available|default(false) %}
+                <a href="{{ url('/admin/orders/' ~ order.id ~ '/invoice/pdf') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm hover:bg-gray-50 dark:bg-gray-800/50">Download PDF</a>
+                {% endif %}
+                <a href="{{ url('/admin/orders/' ~ order.id) }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800">Back To Order</a>
+            </div>
+        </div>
+
+        <div class="invoice-sheet rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-6">
+            {% if is_latest is defined and not is_latest and latest_invoice is defined and latest_invoice %}
+            <div class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                {{ __('Note: this version was superseded by :number (issued :date).', {':number': latest_invoice.invoice_number|default(''), ':date': latest_invoice.issued_at|default('')}) }}
+            </div>
+            {% endif %}
+            {% if invoice.revision|default(1) > 1 %}
+            <div class="rounded-lg border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/30 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
+                {{ __('Revision R:rev — supersedes :prev.', {':rev': invoice.revision, ':prev': prev_number|default('')}) }}
+            </div>
+            {% endif %}
+            <div class="flex flex-col gap-1 border-b border-gray-200 pb-4 text-sm sm:items-end">
+                <p><span class="font-semibold text-gray-700">Invoice Number:</span> {{ invoice.invoice_number|default('') }}</p>
+                <p><span class="font-semibold text-gray-700">Invoice Date:</span> {{ invoice.issued_at|default('') ? (invoice.issued_at|date('Y-m-d')) : '' }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                <div>
+                    <h2 class="font-semibold text-gray-800 mb-2">From</h2>
+                    <p>{{ invoice.shop.company_name|default('') }}</p>
+                    <p>{{ invoice.shop.address_1|default('') }}</p>
+                    {% if invoice.shop.address_2 %}<p>{{ invoice.shop.address_2 }}</p>{% endif %}
+                    <p>{{ invoice.shop.city|default('') }} {{ invoice.shop.postcode|default('') }}</p>
+                    <p>{{ invoice.shop.state|default('') }} {{ invoice.shop.country|default('') }}</p>
+                    {% if invoice.shop.phone %}<p>Phone: {{ invoice.shop.phone }}</p>{% endif %}
+                    {% if invoice.shop.email %}<p>Email: {{ invoice.shop.email }}</p>{% endif %}
+                    {% if invoice.shop.vat_number %}<p>VAT: {{ invoice.shop.vat_number }}</p>{% endif %}
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800 mb-2">Bill To</h2>
+                    <p>{{ invoice.billing.first_name|default('') }} {{ invoice.billing.last_name|default('') }}</p>
+                    <p>{{ invoice.billing.address_1|default(invoice.billing.address|default('')) }}</p>
+                    {% if invoice.billing.address_2 %}<p>{{ invoice.billing.address_2 }}</p>{% endif %}
+                    <p>{{ invoice.billing.city|default('') }} {{ invoice.billing.postcode|default('') }}</p>
+                    <p>{{ invoice.billing.state|default('') }} {{ invoice.billing.country|default('') }}</p>
+                    <p>{{ invoice.billing.email|default('') }}</p>
+                    {% if invoice.billing.phone %}<p>{{ invoice.billing.phone }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="border-b">
+                            <th class="text-left py-2">Item</th>
+                            <th class="text-right py-2">Qty</th>
+                            <th class="text-right py-2">{{ __('Price') }}</th>
+                            <th class="text-right py-2">{{ __('Total') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice.items|default([]) %}
+                        {% set qty = item.quantity|default(1) %}
+                        {% set unit = item.price|default(0) %}
+                        <tr class="border-b border-gray-100">
+                            <td class="py-2">
+                                {{ item.name|default('Item') }}
+                                {% if item.variation_data|default({})|length > 0 %}
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {% for attr, val in item.variation_data %}{% if val %}{{ attr }}: {{ val }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="py-2 text-right">{{ qty }}</td>
+                            <td class="py-2 text-right">{{ unit|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+                            <td class="py-2 text-right">{{ (unit * qty)|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ml-auto w-full md:w-80 text-sm space-y-1">
+                <div class="flex justify-between"><span>Subtotal</span><span>{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                <div class="flex justify-between"><span>Shipping</span><span>{{ invoice.shipping|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                <div class="flex justify-between">
+                    <span>
+                        {{ __('Included VAT') }}
+                        {% if invoice.tax_regime|default('normal_vat') == 'normal_vat' %}
+                        ({{ invoice.tax_rate|default(0)|number_format(2, '.', ',') }}%)
+                        {% endif %}
+                    </span>
+                    <span>{{ invoice.tax|number_format(2, '.', ',') }} {{ invoice.currency }}</span>
+                </div>
+                {% if invoice.tax_regime|default('normal_vat') != 'normal_vat' and invoice.tax_zero_reason|default('') != '' %}
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.tax_zero_reason }}</div>
+                {% endif %}
+                {% if invoice.discount|default(0) > 0 %}
+                <div class="flex justify-between text-green-700"><span>Discount</span><span>-{{ invoice.discount|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                {% endif %}
+                <div class="flex justify-between font-semibold border-t pt-2"><span>{{ order.status in ['processing','completed','shipped'] ? 'Paid Total' : 'Total' }}</span><span>{{ invoice.total|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                {% if invoice.refunds|default([])|length > 0 %}
+                    {% for ref in invoice.refunds %}
+                    <div class="flex justify-between text-amber-700"><span>Refund {{ ref.refund_id ? '(' ~ ref.refund_id ~ ')' : '' }}</span><span>-{{ ref.amount|number_format(2, '.', ',') }} {{ ref.currency }}</span></div>
+                    {% endfor %}
+                    <div class="flex justify-between font-bold border-t pt-2"><span>Net Paid</span><span>{{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

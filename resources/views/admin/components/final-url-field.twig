@@ -1,0 +1,25 @@
+{# Shareable-URL field for scheduled/unlisted items.
+   Requires `status` in the surrounding Alpine.js scope.
+   Params:
+   - prefix (string, required): absolute base URL including trailing slash
+   - slug (string, default ''): initial path suffix
+   - parent_aware (bool, default false): prepend the picked parent path (pages)
+   - parent_prefix (string, default ''): page URL prefix stripped while resolving
+   - hint (string, default generic) #}
+<div x-show="status === 'scheduled' || status === 'unlisted'" x-cloak
+     class="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
+    <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Final URL') }}</p>
+    <div class="flex items-center gap-2">
+        <input type="text" readonly
+               data-live-slug-prefix="{{ prefix }}"
+               {% if parent_aware|default(false) %}data-live-parent-aware="1" data-base="{{ prefix }}" data-parent-prefix="{{ parent_prefix|default('') }}"{% endif %}
+               class="min-w-0 flex-1 rounded-lg border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+               value="{{ prefix }}{{ slug|default('') }}">
+        {% include 'admin/components/_copy_button.twig' with {
+            expr: 'this.previousElementSibling.value',
+            size: 'h-4 w-4',
+            class: 'shrink-0 rounded-lg bg-gray-900 px-2.5 py-2 text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600'
+        } %}
+    </div>
+    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">{{ hint|default(__('The address this item will be live at. Share it before it goes live.')) }}</p>
+</div>

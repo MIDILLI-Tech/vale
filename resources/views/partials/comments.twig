@@ -1,0 +1,401 @@
+{# 
+  Reusable comments partial.
+#}
+
+{% set global_on = global_comments_enabled ?? true %}
+{% set cpt_supports_comments = type is defined and type is not null ? ('comments' in type.supports|default([])) : true %}
+{% set effective_on = (entity_comment_status in ['enabled', 'open']) or (entity_comment_status == 'use_global' and global_on and cpt_supports_comments) %}
+{% set _vs = vote_status|default('use_global') %}
+{% set needs_rating = (entity_type == 'product' and (_vs == 'enabled' or (_vs == 'use_global' and (global_star_ratings_enabled ?? true)))) %}
+{% set total_count = comments_total|default(items|length) %}
+
+{% if effective_on %}
+<section class="mt-12 scroll-mt-16" id="comments" x-data="{ replyTo: null, replyName: '' }"
+         @vl-comment-reply.window="replyTo = $event.detail.id; replyName = $event.detail.name; document.getElementById('comment-form-box').scrollIntoView({behavior:'smooth'})"
+         {% if comment_page_map is defined %}
+         data-comment-page-map="{{ comment_page_map|json_encode|e('html_attr') }}"
+         data-comments-per-page="{{ comments_per_page|default(5) }}"
+         {% elseif all_comment_ids is defined %}
+         data-all-comment-ids="{{ all_comment_ids|json_encode|e('html_attr') }}"
+         data-comments-per-page="{{ comments_per_page|default(5) }}"
+         {% endif %}>
+    {% if entity_type == 'post' and comment_system|default('local') != 'local' %}
+        <div class="mb-10">
+            {% if comment_system == 'disqus' %}
+                <div id="disqus_thread"></div>
+                <script>
+                    var disqus_config = function () {
+                        this.page.url = '{{ current_url }}';
+                        this.page.identifier = 'post_{{ entity_id }}';
+                    };
+                    (function() {
+                        var d = document, s = d.createElement('script');
+                        s.src = 'https://{{ disqus_shortname }}{{ media_embeds.disqus.script_suffix|e('js') }}';
+                        s.setAttribute('data-timestamp', +new Date());
+                        (d.head || d.body).appendChild(s);
+                    })();
+                </script>
+            {% elseif comment_system == 'giscus' %}
+                <script src="https://giscus.app/client.js"
+                        data-repo="{{ giscus_repo }}"
+                        data-repo-id="{{ giscus_repo_id }}"
+                        data-category="{{ giscus_category }}"
+                        data-category-id="{{ giscus_category_id }}"
+                        data-mapping="{{ giscus_mapping|default('pathname') }}"
+                        data-strict="0"
+                        data-reactions-enabled="1"
+                        data-emit-metadata="0"
+                        data-input-position="bottom"
+                        data-theme="{{ giscus_theme|default('light') }}"
+                        data-lang="{{ current_locale }}"
+                        crossorigin="anonymous"
+                        async>
+                </script>
+            {% elseif comment_system == 'facebook' %}
+                {% set fb_locales = {'tr': 'tr_TR', 'de': 'de_DE', 'fr': 'fr_FR', 'es': 'es_ES'} %}
+                {% set fb_locale = fb_locales[current_locale]|default('en_US') %}
+                {% set fb_sdk_template = media_embeds.facebook_comments.sdk_url|default('') %}
+                {% if fb_sdk_template %}
+                    {% set fb_sdk_url = fb_sdk_template|replace({'{locale}': fb_locale, '{app_id}': facebook_app_id}) %}
+                    <div id="fb-root"></div>
+                    <script async defer crossorigin="anonymous" src="{{ fb_sdk_url }}"></script>
+                    <div class="fb-comments" data-href="{{ current_url }}" data-width="100%" data-numposts="5"></div>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% else %}
+    <div class="flex items-baseline justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-900">
+            {{ entity_type == 'product' ? __('Reviews') : __('Comments') }}
+            {% if total_count > 0 %}<span class="text-base font-normal text-gray-400">({{ total_count }})</span>{% endif %}
+        </h2>
+        {% if items|length > 0 %}
+        <p class="text-xs text-gray-500">{{ __('Showing :count items', {':count': items|length}) }}</p>
+        {% endif %}
+    </div>
+
+    {# Comment list #}
+    {% if items|length > 0 %}
+    <div class="space-y-8 mb-10">
+        {# Group comments by parentId using string keys #}
+        {% set top_level = [] %}
+        {% set children_map = {} %}
+        {% for c in items %}
+            {% if c.parentId %}
+                {% set _key = 'p' ~ c.parentId %}
+                {% set _existing = children_map[_key]|default([]) %}
+                {% set children_map = children_map|merge({ (_key): _existing|merge([c]) }) %}
+            {% else %}
+                {% set top_level = top_level|merge([c]) %}
+            {% endif %}
+        {% endfor %}
+
+        {% for c in top_level %}
+            {{ _self.render_comment(c, entity_type, user, comment_ratings, show_verified_badge, children_map, 0, allow_comment_replies|default('1'), comment_max_depth|default(2), '', 0) }}
+        {% endfor %}
+    </div>
+
+    {# Pagination #}
+    {% if comments_total_pages|default(1) > 1 %}
+    <div class="flex items-center justify-between text-sm mb-8">
+        <span class="text-gray-500">{{ total_count }} {{ __('total') }}</span>
+        <div class="flex gap-2">
+            {% if cpage > 1 %}
+            <a href="?cpage={{ cpage - 1 }}#comments"
+               class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50 transition-colors">
+                &larr; {{ __('Previous') }}
+            </a>
+            {% endif %}
+            <span class="px-3 py-1.5 text-gray-500">{{ cpage }} / {{ comments_total_pages }}</span>
+            {% if cpage < comments_total_pages %}
+            <a href="?cpage={{ cpage + 1 }}#comments"
+               class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50 transition-colors">
+                {{ __('Next') }} &rarr;
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="text-sm text-gray-400 mb-8">{{ entity_type == 'product' ? __('No reviews yet. Be the first!') : __('No comments yet. Be the first!') }}</p>
+    {% endif %}
+
+    {# Already reviewed (for products) #}
+    {% if entity_type == 'product' and user_comment %}
+        {% include 'partials/_user_review_box.twig' %}
+    {% endif %}
+
+    {% set login_required = (entity_type == 'product' ? (reviews_login_required == '1') : (comments_login_required == '1')) %}
+
+    {# Guest prompt #}
+    {% if (user is not defined or user is null) and not login_required %}
+        <div class="bg-blue-50 rounded-xl p-4 mt-4 mb-6 text-sm text-blue-700 border border-blue-100 flex items-center justify-between">
+            <span>{{ (entity_type == 'product' ? __('Log in to manage your reviews and enjoy a faster experience.') : __('Log in to manage your comments and enjoy a faster experience.')) }}</span>
+            <a href="{{ url('/login', {}, {redirect: current_path}) }}" class="font-bold underline hover:text-blue-800">{{ __('Login') }}</a>
+        </div>
+    {% endif %}
+
+    {# Comment/Reply form #}
+    {% set can_review = true %}
+    {% if entity_type == 'product' %}
+        {% if only_logged_in_can_review and (user is not defined or user is null) %}
+            {% set can_review = false %}
+        {% elseif only_verified_buyers_can_review and not user_has_purchased %}
+            {% set can_review = false %}
+        {% endif %}
+    {% endif %}
+    {% if (entity_type == 'post' or not user_comment) and can_review %}
+
+    {% if login_required and not user %}
+        <div class="bg-gray-50 rounded-xl p-8 border border-gray-100 text-center" id="comment-form-box">
+            <p class="text-gray-600 mb-4">{{ entity_type == 'product' ? __('Please login to write a review.') : __('Please login to post a comment.') }}</p>
+            <a href="{{ url('/login', {}, {redirect: current_path}) }}" class="inline-flex items-center justify-center rounded-lg btn-primary px-5 py-2.5 text-sm text-white font-semibold shadow-xs">
+                {{ __('Login') }}
+            </a>
+        </div>
+    {% elseif entity_type == 'product' and not can_review %}
+        <div class="bg-gray-50 rounded-xl p-8 border border-gray-100 text-center" id="comment-form-box">
+            {% if only_logged_in_can_review %}
+                <p class="text-gray-600 mb-4">{{ __('You must be logged in to write a review.') }}</p>
+                <a href="{{ url('/login', {}, {redirect: current_path}) }}" class="inline-flex items-center justify-center rounded-lg btn-primary px-5 py-2.5 text-sm text-white font-semibold shadow-xs">
+                    {{ __('Login') }}
+                </a>
+            {% elseif only_verified_buyers_can_review %}
+                <p class="text-gray-600 mb-4">{{ __('Only verified buyers can write reviews for this product.') }}</p>
+            {% endif %}
+        </div>
+    {% else %}
+    <div class="bg-gray-50 rounded-xl p-6 shadow-xs border border-gray-100" id="comment-form-box">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-gray-800" x-text="replyTo ? '{{ __('Reply to')|e('js') }} ' + replyName : '{{ (entity_type == 'product' ? __('Leave a Review') : __('Leave a Comment'))|e('js') }}'"></h3>
+            <button x-show="replyTo" @click="replyTo = null; replyName = ''" class="text-xs text-gray-500 hover:text-gray-700 underline" x-cloak>{{ __('Cancel reply') }}</button>
+        </div>
+        <form method="POST" action="{{ url('/comments') }}" class="space-y-4"
+              {% if needs_rating %}
+              x-data="{ rating: {{ user_vote ? user_vote.rating : 0 }}, hover: 0 }"
+              @submit.prevent="if(rating < 1){ alert('{{ __('Please select a star rating.')|e('js') }}'); return; } $el.submit()"
+              {% endif %}>
+            {{ csrf_field() }}
+            <input type="hidden" name="entity_type" value="{{ entity_type }}">
+            <input type="hidden" name="entity_id" value="{{ entity_id }}">
+            <input type="hidden" name="parent_id" :value="replyTo">
+
+            {% set _logged_in = user is defined and user is not null %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                    {% if _logged_in %}
+                        <div class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-100 p-2.5 text-gray-500 text-sm bg-gray-50">{{ user.name }}</div>
+                        <input type="hidden" name="author_name" value="{{ user.name }}">
+                    {% else %}
+                        <input type="text" name="author_name" required maxlength="100" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Email') }} <span class="text-red-500">*</span></label>
+                    {% if _logged_in %}
+                        <div class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-100 p-2.5 text-gray-500 text-sm bg-gray-50">{{ user.email }}</div>
+                        <input type="hidden" name="author_email" value="{{ user.email }}">
+                    {% else %}
+                        <input type="email" name="author_email" required maxlength="200" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if needs_rating %}
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Rating') }} <span class="text-red-500">*</span></label>
+                <div class="flex gap-1 mb-1">
+                    <template x-for="star in [1,2,3,4,5]" :key="star">
+                        <button type="button" @click="rating = star" @mouseover="hover = star" @mouseleave="hover = 0" class="focus:outline-hidden">
+                            <svg class="w-7 h-7 transition-colors" :class="(hover || rating) >= star ? 'text-yellow-400' : 'text-gray-200'" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        </button>
+                    </template>
+                </div>
+                <input type="hidden" name="rating" :value="rating">
+            </div>
+            {% endif %}
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Comment') }} <span class="text-red-500">*</span></label>
+                <textarea name="content" required rows="4" maxlength="2000" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm focus:ring-gray-500 focus:border-gray-500"></textarea>
+            </div>
+
+            {% if entity_type != 'product' %}
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="notify_replies" id="notify_replies" value="1" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                <label for="notify_replies" class="text-sm text-gray-600">{{ __('Notify me of replies via email') }}</label>
+            </div>
+            {% endif %}
+
+            {% if comment_captcha_type is defined and comment_captcha_type != 'none' %}
+                {% include 'partials/_captcha.twig' %}
+            {% endif %}
+
+            <button type="submit" class="rounded-lg btn-primary px-5 py-2.5 text-sm text-white font-semibold shadow-xs">
+                <span x-text="replyTo ? '{{ __('Post Reply')|e('js') }}' : ({{ entity_type == 'product' ? '\'Post Review\'' : '\'Post Comment\'' }})">{{ entity_type == 'product' ? __('Post Review') : __('Post Comment') }}</span>
+            </button>
+        </form>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+
+    {% if comment_page_map is defined or all_comment_ids is defined %}
+    <script>
+    (function() {
+        const hash = window.location.hash;
+        if (!hash || !hash.startsWith('#comment-')) return;
+        const commentId = parseInt(hash.replace('#comment-', ''), 10);
+        const el = document.getElementById('comment-' + commentId);
+        if (el) {
+            el.scrollIntoView({behavior: 'smooth', block: 'start'});
+            return;
+        }
+        const commentPageMap = document.getElementById('comments').dataset.commentPageMap;
+        if (!commentPageMap) return;
+        const pageMap = JSON.parse(commentPageMap);
+        const page = pageMap[commentId];
+        if (!page) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('cpage', page);
+        url.hash = hash;
+        window.location.href = url.toString();
+    })();
+    </script>
+    {% endif %}
+</section>
+{% endif %}
+
+{% macro render_comment(c, entity_type, user, comment_ratings, show_verified_badge, children_map, depth = 0, replies_enabled = '1', max_depth = 2, parent_author_name = '', parent_comment_id = 0) %}
+    {% set is_own = user is defined and user and (c.userId == user.id) %}
+    {% set _ratings = comment_ratings|default([]) %}
+    {% set c_rating = c.id in _ratings|keys ? _ratings[c.id] : 0 %}
+    {% set js_body = c.body|json_encode|raw %}
+    {% set js_notify = c.notifyReplies ? 'true' : 'false' %}
+
+    {% set indent_class = depth > 0 and depth < 3 ? 'ml-2 sm:ml-6 md:ml-10 mt-4 sm:mt-6 pl-2 sm:pl-0 border-l-2 border-gray-100 sm:border-l-0' : (depth > 0 ? 'mt-4 sm:mt-6' : '') %}
+    <div id="comment-{{ c.id }}" class="flex gap-2.5 sm:gap-4 {{ indent_class }}"
+         x-data="{ editing: false, deleting: false, body: {{ js_body }}, _orig: {{ js_body }}, rating: {{ c_rating }}, _orig_rating: {{ c_rating }}, notify: {{ js_notify }}, cancelEdit() { this.editing = false; this.body = this._orig; this.rating = this._orig_rating; this.notify = {{ js_notify }}; } }">
+        <div class="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-semibold text-xs shadow-xs">
+            {{ c.authorName|slice(0,1)|upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+            {% if depth > 0 %}
+            <a href="javascript:void(0)" @click="document.getElementById('comment-{{ parent_comment_id }}').scrollIntoView({behavior:'smooth'})" class="text-xs {{ depth >= 3 ? 'italic' : '' }} text-gray-400 hover:text-indigo-600 mb-1 inline-block">{{ __('Replying to') }} @{{ parent_author_name }} <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg></a>
+            {% endif %}
+            <div {% if is_own %}x-show="!editing"{% endif %}>
+                <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+                        <span class="font-semibold text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">{{ c.authorName }}</span>
+                        <div x-show="rating > 0" class="flex gap-0.5 shrink-0">
+                            <template x-for="i in [1,2,3,4,5]">
+                                <svg class="w-3 h-3" :class="i <= rating ? 'text-yellow-400' : 'text-gray-200'" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </template>
+                        </div>
+                        {% if entity_type == 'product' and c.verified and show_verified_badge %}
+                        <span class="text-xs text-green-700 font-medium whitespace-nowrap bg-green-50 px-1.5 py-0.5 rounded-sm shrink-0">✓ {{ __('Verified Purchase') }}</span>
+                        {% endif %}
+                        {% include 'partials/_vtime.twig' with {value: c.createdAt, style: 'medium', cls: 'text-xs text-gray-400 whitespace-nowrap shrink-0'} %}
+                        <button @click="
+                                const url = window.location.origin + window.location.pathname + '#comment-{{ c.id }}';
+                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                    navigator.clipboard.writeText(url);
+                                } else {
+                                    const ta = document.createElement('textarea');
+                                    ta.value = url;
+                                    ta.style.position = 'fixed';
+                                    ta.style.opacity = '0';
+                                    document.body.appendChild(ta);
+                                    ta.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(ta);
+                                }
+                                showCopied = true;
+                                setTimeout(() => showCopied = false, 1500)
+                            " class="relative text-gray-300 hover:text-indigo-600 transition-colors" title="Copy link" x-data="{ showCopied: false }">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <span x-show="showCopied" x-cloak class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded-sm shadow-lg whitespace-nowrap z-10">{{ __('Link copied!') }}</span>
+                            </button>
+                    </div>
+                    <div class="flex gap-2 shrink-0">
+                        {% if entity_type != 'product' and depth < max_depth and (replies_enabled == '1') %}
+                        <button @click="$dispatch('vl-comment-reply', { id: {{ c.id }}, name: '{{ c.authorName|e('js') }}' })" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                            {{ __('Reply') }}
+                        </button>
+                        {% endif %}
+                        {% if is_own %}
+                        <button @click="editing = true" class="text-xs text-gray-500 hover:text-gray-700 px-1 py-0.5 rounded-sm hover:bg-gray-100 transition-colors">{{ __('Edit') }}</button>
+                        <button @click="deleting = true" class="text-xs text-red-500 hover:text-red-700 px-1 py-0.5 rounded-sm hover:bg-red-50 transition-colors">{{ __('Delete') }}</button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-sm text-gray-700 whitespace-pre-line leading-relaxed" {% if is_own %}x-text="body"{% endif %}>{{ c.body|e }}</div>
+            </div>
+
+            {% if is_own %}
+            <div x-show="editing" x-cloak>
+                <form method="POST" action="{{ url('/comments/' ~ c.id ~ '/edit') }}" class="space-y-3">
+                    {{ csrf_field() }}
+
+                    {% if entity_type == 'product' %}
+                    <div x-data="{ hover: 0 }">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Rating') }}</label>
+                        <div class="flex gap-1 mb-1">
+                            <template x-for="star in [1,2,3,4,5]" :key="star">
+                                <button type="button" @click="rating = star" @mouseover="hover = star" @mouseleave="hover = 0" class="focus:outline-hidden">
+                                    <svg class="w-5 h-5 transition-colors" :class="(hover || rating) >= star ? 'text-yellow-400' : 'text-gray-200'" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                </button>
+                            </template>
+                        </div>
+                        <input type="hidden" name="rating" :value="rating">
+                    </div>
+                    {% endif %}
+
+                    <textarea name="content" required rows="3" x-model="body" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm focus:ring-gray-500 focus:border-gray-500"></textarea>
+
+                    {% if entity_type != 'product' %}
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" name="notify_replies" :id="'notify_' + {{ c.id }}" value="1" x-model="notify" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                        <label :for="'notify_' + {{ c.id }}" class="text-sm text-gray-600">{{ __('Notify me of replies via email') }}</label>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex gap-2">
+                        <button type="submit" class="rounded-lg btn-primary px-3 py-1.5 text-xs text-white font-medium shadow-xs">{{ __('Save') }}</button>
+                        <button type="button" @click="cancelEdit()" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors">{{ __('Cancel') }}</button>
+                    </div>
+                </form>
+            </div>
+            <div x-show="deleting" x-cloak class="mt-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                 <p class="text-xs text-red-700 mb-2">{{ __('Delete this comment?') }}</p>
+                 <div class="flex gap-2">
+                     <form method="POST" action="{{ url('/comments/' ~ c.id ~ '/delete') }}">
+                         {{ csrf_field() }}
+                         <button type="submit" class="bg-red-600 text-white px-3 py-1 text-xs rounded-lg hover:bg-red-700 transition-colors">{{ __('Yes, delete') }}</button>
+                     </form>
+                     <button @click="deleting = false" class="text-xs text-gray-500 underline">{{ __('Cancel') }}</button>
+                 </div>
+            </div>
+            {% endif %}
+
+            {# Thread replies nested under parent #}
+            {% set _ckey = 'p' ~ c.id %}
+            {% if children_map[_ckey] is defined %}
+                <div class="relative mt-2">
+                    <div class="absolute -left-9 top-0 bottom-4 w-px bg-gray-100 hidden md:block"></div>
+                    {% for child in children_map[_ckey] %}
+                        {{ _self.render_comment(child, entity_type, user, comment_ratings, show_verified_badge, children_map, depth + 1, replies_enabled, max_depth, c.authorName, c.id) }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}

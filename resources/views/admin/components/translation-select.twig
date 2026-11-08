@@ -1,0 +1,27 @@
+{# "Translation Of" picker — shared by posts, pages, forms and products. #}
+{% set _none_label = '— ' ~ __('None (Original)') ~ ' —' %}
+{% set _options = [{ value: '', label: _none_label }] %}
+{% set _label_field = label_field|default('title') %}
+{% for original in originals|default([]) %}
+    {% set _translated_langs = original.translatedLanguages is defined ? original.translatedLanguages : (original.getTranslatedLanguages is defined ? original.getTranslatedLanguages() : []) %}
+    {% set _opt_label = '[' ~ (original.language|default(''))|upper ~ '] ' ~ attribute(original, _label_field) %}
+    {% set _options = _options|merge([{
+        value: original.id,
+        label: _opt_label,
+        language: original.language|default(''),
+        status: original.status|default('published'),
+        translatedLanguages: _translated_langs
+    }]) %}
+{% endfor %}
+{% include 'admin/components/entity-select.twig' with {
+    mode: 'static',
+    name: 'translation_of',
+    options: _options,
+    initial_value: value|default(''),
+    placeholder: _none_label,
+    wrapper_class: wrapper_class|default('w-full mt-1'),
+    empty_label: __('No results.'),
+    empty_hint: __('No content found to translate into this language.'),
+    target_selector: target_selector|default('#language'),
+    target_language: target_language|default('')
+} %}

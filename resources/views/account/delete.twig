@@ -1,0 +1,67 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Manage Account') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% set showShopAccountLinks = (shop_enabled|default(true)) == true %}
+{% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+{% set active_tab = 'delete' %}
+{% set showDownload = settings.gdpr_download_enabled|default('0') == '1' %}
+{% set showDeletion = settings.gdpr_account_deletion_enabled|default('1') == '1' %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="account-text mb-8 text-3xl font-bold">{{ __('Manage Account') }}</h1>
+
+    {% include "account/_nav.twig" %}
+
+    {% if showDownload %}
+    <div class="account-card mb-8 rounded-lg border p-6 bg-white dark:bg-gray-900 shadow-xs">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold account-text">{{ __('Download Your Data') }}</h2>
+                <p class="mt-1 text-sm text-gray-500">{{ __('Request a copy of all your personal data stored on our platform.') }}</p>
+            </div>
+            <a href="{{ url(routing_account_prefix ~ '/download-data') }}"
+               class="account-secondary-button rounded-lg px-6 py-2 text-sm font-bold transition-colors hover:bg-[#334155] dark:hover:bg-gray-700">
+                {{ __('Download JSON') }}
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if showDeletion %}
+    <div class="account-danger-card rounded-lg border p-6">
+        <h2 class="account-danger-text text-lg font-semibold">{{ __('Warning') }}</h2>
+        <div class="mt-3 space-y-2 text-sm account-danger-text">
+            <p>{{ __('Deleting your account is permanent and cannot be undone.') }}</p>
+            <ul class="list-inside list-disc">
+                <li>{{ __('Your profile information will be anonymized.') }}</li>
+                <li>{{ __('Your comments will be anonymized.') }}</li>
+                <li>{{ __('Active subscriptions will be cancelled.') }}</li>
+                <li>{{ __('Newsletter subscriptions will be removed.') }}</li>
+                <li>{{ __('Your order history will be preserved (without personal data).') }}</li>
+            </ul>
+        </div>
+
+        <form method="POST" class="mt-6" onsubmit="return confirm('{{ __('This action cannot be undone. Are you absolutely sure?') }}')">
+            {{ csrf_field() }}
+            <div class="mb-4">
+                <label class="account-danger-text block text-sm font-medium">
+                    {{ __('Type') }} <strong>DELETE</strong> {{ __('to confirm') }}
+                </label>
+                <input type="text" name="confirm" autocomplete="off" required
+                       class="account-danger-input mt-1 block w-full rounded-lg border px-3 py-2 text-sm"
+                       placeholder="DELETE">
+            </div>
+            <div class="flex items-center justify-between">
+                <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="account-link text-sm">{{ __('Cancel') }}</a>
+                <button type="submit"
+                        class="account-danger-button rounded-lg px-6 py-2 text-sm font-bold transition-colors">
+                    {{ __('Delete My Account') }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

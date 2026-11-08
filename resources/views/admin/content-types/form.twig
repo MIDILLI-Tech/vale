@@ -1,0 +1,517 @@
+{% extends "admin/layout.twig" %}
+
+{% set panel_rail = true %}
+
+{% block title %}{{ is_edit ? __('Edit') : __('New') }} {{ __('Content Type') }}{% endblock %}
+
+{% block head %}
+<style>
+.drag-handle { cursor: move; }
+.drag-handle:hover { color: #111827; text-decoration: underline; }
+.dark .drag-handle:hover { color: #d1d5db; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set icon_options = [
+    { value: 'academic-cap', label: '🎓 Academy' },
+    { value: 'calendar', label: '📅 Calendar' },
+    { value: 'truck', label: '🚗 Car' },
+    { value: 'chart-bar', label: '📈 Chart' },
+    { value: 'clipboard', label: '📋 Clipboard' },
+    { value: 'code-bracket', label: '💻 Code' },
+    { value: 'document-text', label: '📄 Document' },
+    { value: 'globe', label: '🌐 Globe' },
+    { value: 'heart', label: '❤️ Heart' },
+    { value: 'home', label: '🏠 House' },
+    { value: 'newspaper', label: '📰 Newspaper' },
+    { value: 'map', label: '🗺 Map' },
+    { value: 'photo', label: '🖼 Photo' },
+    { value: 'document-report', label: '📊 Report' },
+    { value: 'beaker', label: '🧪 Science' },
+    { value: 'star', label: '⭐ Star' },
+    { value: 'tag', label: '🏷 Tag' },
+    { value: 'user-group', label: '👥 Users' },
+    { value: 'video-camera', label: '🎥 Video' },
+] %}
+{% set default_supports = ['author', 'categories', 'comments', 'editor', 'excerpt', 'read_count', 'revisions', 'rss', 'scheduled_swap', 'tags', 'thumbnail'] %}
+{% if settings.multi_language_content|default(false) %}
+    {% set default_supports = default_supports|merge(['i18n']) %}
+{% endif %}
+{% if settings.seo_enabled|default(true) %}
+    {% set default_supports = default_supports|merge(['seo']) %}
+{% endif %}
+{% set rss_default_lang = settings.default_locale|default('en') %}
+{# Feed URLs follow the locales the front end actually serves (Translator), not only
+   the stored content-language list — that list is empty until the Multi-Language tab is saved. #}
+{% set rss_lang_codes = supported_locales|default({})|keys %}
+<div x-data="typeBuilder()">
+
+<div class="mb-6 flex items-center gap-3 flex-wrap">
+    <a href="{{ url('/admin/content-types') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ __('Content Types') }}</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit Content Type') : __('New Content Type') }}</h1>
+    {% if is_edit %}<span x-show="!isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
+    <span x-show="isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% include 'admin/components/rail-toggle.twig' %}
+</div>
+
+<form method="POST" action="{{ url(is_edit ? '/admin/content-types/' ~ type.id : '/admin/content-types') }}"
+      data-panel-reorder-key="content_type"
+      class="space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+
+    <input type="hidden" name="field_schema_json" :value="JSON.stringify(fields)">
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-6" data-panel-container="left">
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-4" data-panel-id="general_card">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" x-model="name" required value="{{ type.name|default(old.name|default('')) }}" id="title"
+                           {% if not is_edit %}@input="autoSlug"{% endif %}
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Slug') }}</label>
+                    {% if is_edit and type.isSystem %}
+                    <input type="text" disabled value="{{ type.slug }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 cursor-not-allowed shadow-xs text-sm">
+                    <input type="hidden" name="slug" value="{{ type.slug }}">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Slug is fixed for system types.') }}</p>
+                    {% else %}
+                    <input type="text" name="slug" x-model="slug" id="slug"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                    <p class="mt-1 text-xs text-gray-400">{{ is_edit ? __('URL identifier (used in database queries).') : __('Leave empty to auto-generate from name.') }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('URL Prefix') }}</label>
+                    {% if is_edit and type and type.isSystem %}
+                    <input type="text" name="route_prefix" disabled
+                            value="{{ type.routePrefix|default('') }}"
+                            placeholder="{{ type.slug == 'post' ? '/blog' : '/' }}"
+                            class="w-full rounded-lg border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed shadow-xs">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('System content type. To change the URL, use the') }} <a href="{{ url('/admin/settings') }}?tab=seo&subtab=redirects" class="text-blue-500 hover:underline">{{ __('SEO & Redirects') }}</a> {{ __('settings.') }}</p>
+                    {% else %}
+                    <input type="text" name="route_prefix" x-model="urlPath"
+                            {% if is_edit and type and type.slug == 'post' %}
+                            placeholder="Default: /blog"
+                            {% elseif is_edit and type and type.slug == 'page' %}
+                            placeholder="Default: /"
+                            {% else %}
+                            placeholder="Optional, e.g. /d"
+                            {% endif %}
+                            value="{{ type.routePrefix|default('') }}"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                    <p class="mt-1 text-xs text-gray-400">{% if is_edit and type and type.slug == 'post' %}{{ __('Custom URL prefix. Leave empty to use the blog routing setting.') }}{% elseif is_edit and type and type.slug == 'page' %}{{ __('Custom URL prefix. Leave empty or use / to serve pages from the root.') }}{% else %}{{ __('Leave empty for /type-slug (e.g. /my-custom-slug/my-custom-item). Add a prefix for /prefix/:type-slug (e.g. /d/my-custom-slug/my-custom-item). Each type slug must be unique, but URL prefixes can be shared.') }}{% endif %}</p>
+                    <div class="mt-1 text-xs text-gray-500 space-y-0.5">
+                        <div>
+                            <span class="font-medium">{{ __('Preview:') }}</span>
+                            <span x-text="displayPath + '/{post-slug}'" class="font-mono"></span>
+                        </div>
+                        <div x-show="rssEnabled" x-cloak>
+                            <span class="font-medium">{{ __('RSS feed:') }}</span>
+                            <span x-text="displayPath + '/feed.xml'" class="font-mono"></span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Description') }}</label>
+                    <textarea name="description" rows="2" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs">{{ type.description|default(old.description|default('')) }}</textarea>
+                </div>
+            </div>
+
+            {% if not type.isSystem %}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs" data-panel-id="fields_card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Custom Fields') }}</h3>
+                    <button type="button" @click="addField()" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">+ {{ __('Add Field') }}</button>
+                </div>
+
+                <div class="flex flex-wrap gap-3" id="fields-sortable">
+                    <template x-for="(field, idx) in fields" :key="idx">
+                        <div class="rounded-lg border p-4 bg-gray-50 dark:bg-gray-800/50 field-block overflow-hidden"
+                             :class="{
+                                 'w-full': !field.width || field.width === '100',
+                                 'w-full md:w-[calc(50%-0.375rem)] min-w-[260px] flex-1': field.width === '50',
+                                 'w-full md:w-[calc(33.333%-0.5rem)] min-w-[240px] flex-1': field.width === '33',
+                                 'w-full md:w-[calc(25%-0.5625rem)] min-w-[220px] flex-1': field.width === '25'
+                             }"
+                             :data-idx="idx">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="cursor-move text-gray-400 dark:text-gray-300 drag-handle select-none text-lg leading-none" title="{{ __('Hold to drag') }}">⠿</div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click="moveFieldTop(idx)" title="{{ __('Move to top (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇈</button>
+                                    <button type="button" @click="moveFieldUp(idx)" title="{{ __('Move up (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↑</button>
+                                    <button type="button" @click="moveFieldDown(idx)" title="{{ __('Move down (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↓</button>
+                                    <button type="button" @click="moveFieldBottom(idx)" title="{{ __('Move to bottom (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇊</button>
+                                </div>
+                            </div>
+                            <div class="grid gap-3 items-start"
+                                 :class="{
+                                     'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4': !field.width || field.width === '100',
+                                     'grid-cols-1 sm:grid-cols-2': field.width === '50',
+                                     'grid-cols-1': field.width === '33' || field.width === '25'
+                                 }">
+                                <div :class="(field.width === '33' || field.width === '25') ? 'grid grid-cols-2 gap-2' : ''">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
+                                        <select x-model="field.type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                            <option value="text">Text</option>
+                                            <option value="number">Number</option>
+                                            <option value="textarea">Textarea</option>
+                                            <option value="select">Select</option>
+                                            <option value="checkbox">Checkbox</option>
+                                            <option value="date">Date</option>
+                                            <option value="image">Image</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Width') }}</label>
+                                        <select x-model="field.width" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                            <option value="100">100% (Full Width)</option>
+                                            <option value="50">50% (2 per row)</option>
+                                            <option value="33">33% (3 per row)</option>
+                                            <option value="25">25% (4 per row)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="min-w-0">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Label') }}</label>
+                                    <input type="text" x-model="field.label" @input="autoName(field)" placeholder="e.g. Price" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                </div>
+                                <div class="min-w-0">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Name (key)') }} <span class="text-red-500">*</span></label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" x-model="field.name" required placeholder="field_name" class="w-full min-w-0 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                        <button type="button" @click="removeField(idx)" class="text-red-400 hover:text-red-600 text-lg leading-none shrink-0 p-1" title="{{ __('Remove') }}">&times;</button>
+                                    </div>
+                                </div>
+                                <div x-show="field.type === 'select'" class="w-full col-span-full">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Options (one per line)') }}</label>
+                                    <textarea x-model="field._optionsText" @input="field.options = $el.value.split('\n').map(s => s.trim()).filter(s => s)" rows="2" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <p x-show="fields.length === 0" class="w-full text-sm text-gray-400 text-center py-4">{{ __('No custom fields yet.') }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="space-y-6" data-panel-container="right">
+          <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs" data-panel-id="supports_card">
+                {% if type.isSystem %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('URL') }}</label>
+                    <div class="rounded-lg border bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-700 font-mono">
+                        <span x-text="displayPath + '/{slug}'"></span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Final URL') }}</label>
+                    <div class="rounded-lg border bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs text-gray-700 font-mono break-all">
+                        <span class="text-gray-400">{{ site_url|default('http://localhost') }}</span><span x-text="displayPath + '/{post-slug}'"></span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Archive:') }} <span x-text="displayPath"></span> — {{ __('Items:') }} <span x-text="displayPath + '/{post-slug}'"></span></p>
+                </div>
+                {% endif %}
+
+                {% if is_edit and not type.isSystem %}
+                <template x-if="pathChanged">
+                    <div class="mb-4 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <div class="flex items-start gap-2">
+                            <div class="shrink-0 mt-0.5 text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                 <p class="text-xs text-blue-800 font-medium">{{ __('URL path changed') }}</p>
+                                <div class="mt-1" x-show="autoRedirect">
+                                    <label class="flex items-center gap-2 text-xs text-blue-700 cursor-pointer">
+                                        <input type="checkbox" name="create_redirects" value="1" checked class="rounded-sm border-blue-300 text-blue-600">
+                                        {{ __('Create 301 redirects') }}
+                                    </label>
+                                </div>
+                                <div class="mt-1 rounded-sm border border-amber-200 bg-amber-50 px-2 py-1 text-amber-800 text-[10px] dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200" x-show="!autoRedirect">
+                                    <strong>{{ __('Warning:') }}</strong> {{ __('SEO redirect setting is disabled. If you change this URL path, old links may stop working.') }}
+                                    <a href="{{ url('/admin/settings', {}, {tab: 'seo'}) }}" class="underline font-medium">{{ __('Open SEO settings') }}</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                {% endif %}
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Icon') }}</label>
+                    <select name="icon" x-model="selectedIcon"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                        {% for icon in icon_options %}
+                        <option value="{{ icon.value }}">{{ icon.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if not type.isSystem %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Supports') }}</label>
+                    <div class="space-y-2">
+                        {% for feature in ['author', 'categories', 'comments', 'editor', 'excerpt', 'read_count', 'revisions', 'rss', 'scheduled_swap', 'tags', 'thumbnail'] %}
+                        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="checkbox" name="supports[]" value="{{ feature }}"
+                                   {% if feature == 'rss' %}x-model="rssEnabled"{% endif %}
+                                   {% if feature != 'rss' %}{% if is_edit %}{% if feature in (type.supports|default([])) %}checked{% endif %}{% elseif feature in default_supports %}checked{% endif %}{% endif %}
+                                   class="rounded-sm border-gray-300 dark:border-gray-700">
+                            {{ feature == 'rss' ? __('RSS Feed') : (feature == 'read_count' ? __('Read Count') : (feature == 'scheduled_swap' ? __('Scheduled replacement') : feature|capitalize)) }}
+                        </label>
+                        {% endfor %}
+                        {% if settings.multi_language_content|default(false) %}
+                        <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="checkbox" name="supports[]" value="i18n" x-model="i18nEnabled"
+                                   class="rounded-sm border-gray-300 dark:border-gray-700">
+                            {{ __('Multi-language') }}
+                        </label>
+                        {% endif %}
+                        <div>
+                            <label class="flex items-center gap-2 text-sm {% if settings.seo_enabled|default(true) %}text-gray-600 dark:text-gray-300{% else %}text-gray-400 dark:text-gray-500 cursor-not-allowed{% endif %}">
+                                <input type="checkbox" name="supports[]" value="seo"
+                                       {% if settings.seo_enabled|default(true) %}
+                                           {% if is_edit %}{% if 'seo' in (type.supports|default([])) %}checked{% endif %}{% elseif 'seo' in default_supports %}checked{% endif %}
+                                       {% else %}disabled{% endif %}
+                                       class="rounded-sm border-gray-300 dark:border-gray-700">
+                                {{ __('SEO') }}
+                            </label>
+                            {% if not settings.seo_enabled|default(true) %}
+                            <p class="mt-1 ml-6 text-xs text-gray-400">{{ __('SEO is disabled in Settings.') }} <a href="{{ url('/admin/settings', {}, {tab: 'seo'}) }}" class="text-blue-500 hover:underline">{{ __('Enable SEO') }}</a></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+{% if 'rss' in (type.supports|default([])) and not type.isSystem %}
+                <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg" x-show="rssEnabled" x-cloak>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('RSS Feed URL') }}</p>
+                    <div x-show="showMultiLangFeeds" x-cloak class="space-y-1">
+                        <template x-for="code in feedLangCodes" :key="code">
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                                <a :href="feedUrl(code)"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   x-text="feedUrl(code)"
+                                   class="break-all text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"></a>
+                                <span class="shrink-0 text-gray-500 dark:text-gray-400"
+                                      x-text="'(' + (feedLangLabels[code] || code) + ')'"></span>
+                                {% include 'admin/components/_copy_button.twig' with {
+                                    expr: 'feedUrl(code)',
+                                    label: __('Copy'),
+                                    title: __('Copy URL'),
+                                    size: 'h-3 w-3',
+                                    class: 'inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:ring-gray-600 dark:hover:bg-gray-800'
+                                } %}
+                            </div>
+                        </template>
+                        <p class="mt-2 text-xs text-gray-400">{{ __('Each URL serves posts in that language.') }}</p>
+                    </div>
+                    <div x-show="!showMultiLangFeeds" x-cloak class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                        <a :href="feedUrl()"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           x-text="feedUrl()"
+                           class="break-all text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"></a>
+                        {% include 'admin/components/_copy_button.twig' with {
+                            expr: 'feedUrl()',
+                            label: __('Copy'),
+                            title: __('Copy URL'),
+                            size: 'h-3 w-3',
+                            class: 'inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:ring-gray-600 dark:hover:bg-gray-800'
+                        } %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    {{ is_edit ? __('Update') : __('Create') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+</div>
+
+<script>
+function typeBuilder() {
+    return {
+        fields: ({{ type and type.fieldSchema|length > 0 ? type.fieldSchema|json_encode|raw : '[]' }}).map(function(f) {
+            f._optionsText = (f.options || []).join('\n');
+            f.width = f.width || '100';
+            return f;
+        }),
+        _formDirty: false,
+        _initialFieldsJson: '[]',
+        name: '{{ type ? type.name|default('') : '' }}',
+        slug: '{{ type ? type.slug : '' }}',
+        originalSlug: '{{ type ? type.slug : '' }}',
+        urlPath: '{{ type.routePrefix|default('') }}',
+        originalUrlPath: '{{ type.routePrefix|default('') }}',
+        autoRedirect: {{ settings.auto_redirect_enabled|default('1') == '1' ? 'true' : 'false' }},
+        selectedIcon: '{{ type and type.icon in icon_options|column('value') ? type.icon : 'document-text' }}',
+        _lastAutoName: '',
+        isSystem: {{ type and type.isSystem ? 'true' : 'false' }},
+        systemSlug: '{{ type ? type.slug : '' }}',
+        blogFallback: '{{ routing_blog_prefix }}',
+        globalMultiLang: {{ settings.multi_language_content|default(false) ? 'true' : 'false' }},
+        i18nEnabled: {{ ('i18n' in (type.supports|default([])) or (not is_edit and 'i18n' in default_supports)) ? 'true' : 'false' }},
+        rssEnabled: {{ ('rss' in (type.supports|default([])) or (not is_edit and 'rss' in default_supports)) ? 'true' : 'false' }},
+        defaultFeedLang: '{{ rss_default_lang }}',
+        feedLangCodes: {{ rss_lang_codes|json_encode|raw }},
+        feedLangLabels: {
+            {% for code in rss_lang_codes %}
+            '{{ code }}': {{ locale_name(code)|json_encode|raw }}{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        },
+        feedLocaleRoots: {
+            {% for code in rss_lang_codes %}
+            '{{ code }}': {{ site_url('PLACEHOLDER', {}, {lang: code})|replace({'PLACEHOLDER': ''})|json_encode|raw }}{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        },
+        feedUrl(code) {
+            const lang = code || this.defaultFeedLang;
+            const root = (this.feedLocaleRoots[lang] || '').replace(/\/$/, '');
+            let path = (this.basePath || '').trim();
+            if (path === '/') {
+                path = '';
+            } else if (path && !path.startsWith('/')) {
+                path = '/' + path;
+            }
+            return root + path + '/feed.xml';
+        },
+        get showMultiLangFeeds() {
+            return this.globalMultiLang && this.feedLangCodes.length > 1 && this.i18nEnabled;
+        },
+        buildBasePath(namespace, slug) {
+            const ns = (namespace || '').trim().replace(/^\/+|\/+$/g, '');
+            const s = (slug || '').trim().replace(/^\/+|\/+$/g, '');
+            if (!s) {
+                return '';
+            }
+            return ns ? '/' + ns + '/' + s : '/' + s;
+        },
+        get _defaultBase() {
+            if (this.isSystem) {
+                if (this.systemSlug === 'post') return this.blogFallback;
+                if (this.systemSlug === 'page') return '';
+            }
+            return this.buildBasePath('', this.slug);
+        },
+        get basePath() {
+            return this.buildBasePath(this.urlPath, this.slug);
+        },
+        get displayPath() {
+            return this.basePath;
+        },
+        autoSlug() {
+            if (this._initialSlug === '' || this.slug === this._initialSlug) {
+                this.slug = this.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            }
+        },
+        get pathChanged() {
+            const oldPath = this.buildBasePath(this.originalUrlPath, this.originalSlug);
+            const newPath = this.buildBasePath(this.urlPath, this.slug);
+            return oldPath !== newPath;
+        },
+        addField() {
+            this.fields.push({ type: 'text', label: '', name: '', width: '100', options: [], _optionsText: '' });
+        },
+        removeField(idx) {
+            this.fields.splice(idx, 1);
+        },
+        moveFieldTop(idx) {
+            if (idx <= 0) return;
+            const item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.unshift(item);
+        },
+        moveFieldUp(idx) {
+            if (idx <= 0) return;
+            const item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.splice(idx - 1, 0, item);
+        },
+        moveFieldDown(idx) {
+            if (idx >= this.fields.length - 1) return;
+            const item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.splice(idx + 1, 0, item);
+        },
+        moveFieldBottom(idx) {
+            if (idx >= this.fields.length - 1) return;
+            const item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.push(item);
+        },
+        autoName(field) {
+            if (!field.name || field.name === this._lastAutoName) {
+                field.name = field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                this._lastAutoName = field.name;
+            }
+        },
+        get isDirty() {
+            return this._formDirty || JSON.stringify(this.fields) !== this._initialFieldsJson;
+        },
+        init() {
+            this._initialSlug = this.slug || '';
+            this.autoSlug();
+            this._initialFieldsJson = JSON.stringify(this.fields);
+            this.$el.addEventListener('input', () => { this._formDirty = true; });
+            this.$el.addEventListener('change', () => { this._formDirty = true; });
+            this.$el.addEventListener('submit', (e) => {
+                for (let i = 0; i < this.fields.length; i++) {
+                    const f = this.fields[i];
+                    if (!f.name || !f.name.trim()) {
+                        e.preventDefault();
+                        alert('{{ __('Each custom field must have a key (Name). Field #:num is missing a key.')|e('js') }}'.replace(':num', (i + 1).toString()));
+                        return false;
+                    }
+                }
+                this._initialFieldsJson = JSON.stringify(this.fields);
+                this._formDirty = false;
+            });
+            window.addEventListener('beforeunload', (e) => {
+                if (this.isDirty) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            this.$nextTick(() => {
+                const el = document.getElementById('fields-sortable');
+                if (el) {
+                    Sortable.create(el, {
+                        handle: '.drag-handle',
+                        animation: 150,
+                        onEnd: (evt) => {
+                            const oldIndex = evt.oldIndex;
+                            const newIndex = evt.newIndex;
+                            if (oldIndex === newIndex) return;
+                            // Undo Sortable's DOM move so Alpine stays the source of truth
+                            const siblings = Array.from(evt.from.children).filter(
+                                (child) => child !== evt.item && child.classList.contains('field-block')
+                            );
+                            evt.from.insertBefore(evt.item, siblings[oldIndex] || null);
+                            // Reorder the Alpine array; x-for re-renders in the new order
+                            const item = this.fields.splice(oldIndex, 1)[0];
+                            this.fields.splice(newIndex, 0, item);
+                        }
+                    });
+                }
+            });
+        }
+    };
+}
+</script>
+{% endblock %}

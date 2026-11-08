@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    ignore:
+      # Symfony 8+ and PHPUnit 13+ require PHP >= 8.4.1 while the development
+      # baseline (local + CI) is PHP 8.3. Drop these rules when the baseline moves.
+      - dependency-name: "symfony/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "phpunit/phpunit"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10

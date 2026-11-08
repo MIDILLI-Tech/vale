@@ -1,0 +1,650 @@
+{% extends "admin/layout.twig" %}
+
+{% set panel_rail = true %}
+
+{% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ __('Page') : __('Create') ~ ' ' ~ __('Page') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center gap-3 flex-wrap">
+    <a href="{{ url('/admin/pages') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ __('Pages') }}</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit') ~ ' ' ~ __('Page') : __('Create') ~ ' ' ~ __('Page') }}</h1>
+    {% if is_edit %}<span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
+    <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% include 'admin/components/rail-toggle.twig' %}
+</div>
+
+{% if errors is defined and errors|length > 0 %}
+<div class="mb-6" x-data="{ show: true }" x-show="show">
+    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200" role="alert">
+        <div class="flex items-center justify-between gap-4">
+            <p class="font-semibold">{{ __('Please fix the following errors:') }}</p>
+            <button @click="show = false" class="text-current opacity-50 hover:opacity-100">&times;</button>
+        </div>
+        <ul class="mt-1 list-disc pl-5">
+            {% for field, messages in errors %}
+            <li><strong>{{ field }}:</strong> {{ messages|join(', ') }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<form method="post"
+      action="{{ url(is_edit ? '/admin/pages/' ~ post.id : '/admin/pages') }}"
+      data-autosave
+      data-panel-reorder-key="page"
+      class="space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+    {% if is_edit and post %}<input type="hidden" name="id" value="{{ post.id }}">{% endif %}
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-6" data-panel-container="left">
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="title_card">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Page Title') }}</h3>
+                <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Title') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="title" name="title"
+                       value="{{ old.title|default(post ? post.title : '') }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       required>
+                {% if errors.title is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.title|join(', ') }}</p>{% endif %}
+            </div>
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="content_card">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Content') }}</h3>
+                <label for="body" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Content Body') }}</label>
+                <textarea id="body" name="body" rows="20" data-editor
+                          data-show-reading-time="{{ show_reading_time_on_posts|default('0') }}"
+                          data-reading-time-wpm="{{ reading_time_wpm|default(200) }}"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">{{ old.body|default(post ? post.body : '') }}</textarea>
+            </div>
+        </div>
+
+        {% set _db_status = post ? post.status : 'draft' %}
+        {% set _shown_status = _db_status == 'scheduled' ? 'draft' : _db_status %}
+        {% set _st = old.status|default(_shown_status) %}
+        {% set _has_schedule = post and (post.status == 'scheduled' or (post.publishedAt and post.publishedAt|date('U') > 'now'|date('U')) or post.expiresAt or post.swapPostId) %}
+        {% set _sched = old.set_schedule|default(_has_schedule ? '1' : '') %}
+        <div class="space-y-6" data-panel-container="right" x-data="{ status: '{{ _st }}', scheduling: {{ _sched ? 'true' : 'false' }} }">
+            {% if multi_language_content and 'i18n' in (type.supports|default([])) %}
+            {% set originalId = original_id|default(post ? (post.translationOf ?: post.id) : null) %}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="language_card">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Language') }}</h3>
+                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                        {{ current_locale }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <label for="language" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Content Language') }}</label>
+                    <select id="language" name="language" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        {% for code, name in supported_locales %}
+                        <option value="{{ code }}" {{ (old.language|default(post ? post.language : current_locale)) == code ? 'selected' }}>{{ locale_name(code) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="translation_of" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Translation Of') }}</label>
+                    <div class="flex gap-2">
+                        {% include 'admin/components/translation-select.twig' with {
+                            originals: potential_originals,
+                            label_field: 'title',
+                            value: old.translation_of|default(post ? post.translationOf : (original_id|default('')))
+                        } %}
+                        <button type="button" id="copy-original-btn"
+                                class="mt-1 inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                title="{{ __('Copy content from original') }}"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button>
+                    </div>
+                </div>
+
+                {% if translations is defined and supported_locales|length > 1 %}
+                <div class="border-t border-gray-200 pt-3 mt-3">
+                    <p class="text-xs font-medium text-gray-500 mb-2">{{ __('Translations') }}</p>
+                    <div class="space-y-1.5">
+                        {% for code, name in supported_locales %}
+                        {% set trans = translations|filter(t => t.language == code)|first %}
+                        <div class="flex items-center justify-between rounded-md bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-sm">
+                            <span class="flex items-center gap-2 min-w-0">
+                                <span class="text-xs font-medium uppercase text-gray-500 w-8 shrink-0">{{ code }}</span>
+                                <span class="{{ trans ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 italic' }} text-xs shrink-0">{{ locale_name(code) }}</span>
+                                {% if trans %}
+                                    <span class="text-xs text-gray-400 shrink-0">—</span>
+                                    <a href="{{ url('/admin/pages/' ~ trans.id ~ '/edit') }}" title="{{ trans.title|e('html') }}" class="text-gray-900 dark:text-gray-100 hover:underline text-xs truncate">{{ trans.title }}</a>
+                                {% endif %}
+                            </span>
+                            <span class="shrink-0">
+                                {% set form_lang = old.language|default(post ? post.language : current_locale) %}
+                                {% if trans %}
+                                    {% if trans.id == (post.id|default(0)) %}
+                                        <span class="text-xs font-medium text-green-600">{{ __('Current') }}</span>
+                                    {% else %}
+                                        <a href="{{ url('/admin/pages/' ~ trans.id ~ '/edit') }}" class="text-blue-600 hover:underline text-xs">{{ __('Edit') }}</a>
+                                    {% endif %}
+                                {% else %}
+                                    {% if not is_edit and code == form_lang %}
+                                        <span class="text-xs font-medium text-green-600">{{ __('Current') }}</span>
+                                    {% else %}
+                                        <a href="{{ url('/admin/pages/create?language=' ~ code ~ (originalId ? '&translation_of=' ~ originalId : '')) }}"
+                                           class="text-xs text-blue-600 hover:underline">+ {{ __('Add') }}</a>
+                                    {% endif %}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="publish_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Publish') }}</h3>
+
+                <div class="mb-3">
+                    <label for="status" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Status') }}</label>
+                    <select id="status" name="status" x-model="status" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        {% set _sa = user.role is defined and user.role == 'super_admin' %}
+                        {% set _can_publish = _sa or (user_permissions is defined and 'pages.publish' in user_permissions) %}
+                        {% for s in ['draft', 'published', 'unlisted', 'archived'] %}
+                        {% if s == 'draft' or _can_publish or (post and post.status == s) %}
+                        <option value="{{ s }}" {{ _st == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
+                        {% endif %}
+                        {% endfor %}
+                        {% if post and (old.status|default(post.status)) == 'expired' %}
+                        <option value="expired" selected>{{ __('Expired') }}</option>
+                        {% endif %}
+                    </select>
+                    <p x-show="status === 'unlisted'" x-cloak class="mt-1 text-xs text-purple-600 dark:text-purple-400">&#128274; {{ __('Accessible via direct URL but hidden from all listings.') }}</p>
+                    <label class="mt-2 flex cursor-pointer items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <input type="checkbox" name="set_schedule" value="1" x-model="scheduling" class="rounded-sm border-gray-300 dark:border-gray-700">
+                        {{ __('Set schedule') }}
+                    </label>
+                    <div x-show="scheduling" x-cloak class="mt-3 space-y-3">
+                        {% if cron_mode|default('none') == 'none' %}
+                        <p class="text-xs text-amber-600 dark:text-amber-400">&#9888; {{ __('Cron is disabled — scheduled publishing will not run automatically.') }} <a href="{{ url('/admin/settings', {}, {tab: 'maintenance', subtab: 'cron'}) }}" class="underline">{{ __('Enable it in Settings → Scheduled Tasks') }}</a></p>
+                        {% endif %}
+                        <div x-show="status !== 'published'">
+                            <label for="published_at" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 cursor-pointer">{{ __('Publish date & time') }}</label>
+                            <input type="datetime-local" name="published_at" id="published_at"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm cursor-pointer"
+                                   value="{{ old.published_at ?? (post and post.publishedAt ? post.publishedAt|date('Y-m-d\\TH:i') : '') }}">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Optional. A draft goes live here, or an unlisted item becomes public, at this time.') }}</p>
+                            {% if errors.published_at is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.published_at|join(', ') }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="expires_at" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Expiry date & time') }}</label>
+                            <input type="datetime-local" name="expires_at" id="expires_at"
+                                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                                   value="{{ old.expires_at ?? (post and post.expiresAt ? post.expiresAt|date('Y-m-d\\TH:i') : '') }}">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Optional. A published or unlisted page returns to expired at this time.') }}</p>
+                            {% if errors.expires_at is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.expires_at|join(', ') }}</p>{% endif %}
+                        </div>
+                        {% set _swap = old.swap_post_id|default(post ? post.swapPostId : '') %}
+                        <div x-data="{ doSwap: {{ _swap ? 'true' : 'false' }} }">
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <input type="checkbox" x-model="doSwap" class="rounded-sm border-gray-300 dark:border-gray-700">
+                                {{ __('Replace a live page on schedule') }}
+                            </label>
+                    <template x-if="doSwap">
+                        <div class="mt-2">
+                            <span class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('Replaces') }}</span>
+                            <div class="flex gap-2">
+                                <div class="grow min-w-0">
+                            {% include 'admin/components/page-async-select.twig' with {
+                                name: 'swap_post_id',
+                                initial_value: _swap,
+                                content_type: 'page',
+                                exclude_id: post ? post.id : '',
+                                placeholder: __('Search…'),
+                                empty_label: __('— None —')
+                            } %}
+                                </div>
+                                <button type="button" id="copy-swap-btn"
+                                        class="inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                        title="{{ __('Copy content from replaced page') }}"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('At go-live this page takes over the selected page’s URL.') }}</p>
+                            {% if errors.swap_post_id is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.swap_post_id|join(', ') }}</p>{% endif %}
+                        </div>
+                    </template>
+                </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="page_template" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Template') }}</label>
+                    {% set cur_tpl = old.page_template|default(post ? post.pageTemplate : 'standard') %}
+                    <select id="page_template" name="page_template" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <option value="standard" data-description="Standard layout with default header and footer" {{ cur_tpl == 'standard' ? 'selected' }}>Standard</option>
+                        {% for tpl_name, tpl_display in page_templates|default({}) %}
+                            {% set display = tpl_display.display %}
+                            {% set description = tpl_display.description %}
+                            <option value="{{ tpl_name }}" data-description="{{ description }}" {{ cur_tpl == tpl_name ? 'selected' }}>{{ display }}</option>
+                        {% endfor %}
+                        <option value="none" data-description="No header, footer or site styles — page body renders as-is." {{ cur_tpl == 'none' ? 'selected' }}>{{ __('None (blank canvas)') }}</option>
+                    </select>
+                    <p id="tpl-hint" class="mt-1 text-xs text-gray-400"{% if cur_tpl != 'none' %} style="display:none"{% endif %}>&#128247; No header, footer or site styles — page body renders as-is.</p>
+                    <script>
+                        (function(){
+                            var sel = document.getElementById('page_template');
+                            var hintEl = document.getElementById('tpl-hint');
+                            if (!sel || !hintEl) return;
+                            var builtinDescriptions = {
+                                'standard': 'Standard layout with default header and footer.',
+                                'none': 'No header, footer or site styles — page body renders as-is.'
+                            };
+                            function updateHint(){
+                                var val = sel.value;
+                                var opt = sel.options[sel.selectedIndex];
+                                var desc = builtinDescriptions[val] || (opt ? opt.getAttribute('data-description') : '') || '';
+                                if (desc) {
+                                    hintEl.textContent = '📷 ' + desc;
+                                    hintEl.style.display = '';
+                                } else {
+                                    hintEl.style.display = 'none';
+                                }
+                            }
+                            sel.addEventListener('change', updateHint);
+                            updateHint();
+                        })();
+                    </script>
+                </div>
+
+                <div class="mb-3 flex items-center gap-2">
+                    <input type="checkbox" id="hide_title" name="hide_title" value="1" {{ old.hide_title|default(post ? (post.hideTitle ? '1' : '') : '') ? 'checked' }} class="rounded-sm border-gray-300 dark:border-gray-700 text-sm">
+                    <label for="hide_title" class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Hide title') }}</label>
+                </div>
+
+                <div class="mt-4"></div>
+                <div class="mb-3">
+                    <label for="parent_id" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Parent Page') }}</label>
+                    {% set _none_label = '— ' ~ __('None') ~ ' —' %}
+                    {% set _parent_options = [{ value: '', label: _none_label, url: site_url ~ routing_page_prefix ~ '/' }] %}
+                    {% for pp in parent_pages %}
+                        {% if not (is_edit and pp.id == post.id) %}
+                            {% set _parent_options = _parent_options|merge([{
+                                value: pp.id,
+                                label: pp.title,
+                                url: site_url ~ routing_page_prefix ~ '/' ~ (parent_page_paths[pp.id]|default(pp.slug))
+                            }]) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% include 'admin/components/entity-select.twig' with {
+                        mode: 'static',
+                        name: 'parent_id',
+                        options: _parent_options,
+                        initial_value: old.parent_id|default(post ? post.parentId : ''),
+                        placeholder: _none_label,
+                        wrapper_class: 'w-full mt-1'
+                    } %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="sort_order" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Sort Order') }}</label>
+                    <input type="number" id="sort_order" name="sort_order"
+                           value="{{ old.sort_order|default(post ? post.sortOrder : 0) }}"
+                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+
+                {% include 'admin/components/final-url-field.twig' with {
+                    prefix: site_url ~ routing_page_prefix ~ '/',
+                    slug: page_path|default(post.slug|default('')),
+                    parent_aware: true,
+                    parent_prefix: routing_page_prefix,
+                    hint: __('The address this page will be live at. Share it before it goes live.')
+                } %}
+
+                <button type="submit"
+                        class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                        title="Shortcut: Ctrl/Cmd+S">
+                    {{ is_edit ? __('Update') : __('Create') }}
+                </button>
+                {% if _can_publish is defined and _can_publish and _st != 'published' %}
+                <button type="button" data-publish-action data-no-dirty
+                        title="{{ __('Set status to published and save') }}"
+                        class="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-blue-400 dark:border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                    &#9889; {{ __('Publish') }}
+                </button>
+                {% endif %}
+                <button type="button" id="vl-preview-btn" data-preview-action
+                   title="Shortcut: Ctrl/Cmd+Shift+P"
+                   class="mt-2 flex items-center justify-center gap-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
+                    &#128065; {{ __('Preview') }}
+                </button>
+                {% if is_edit and post and post.status in ['published', 'unlisted'] %}
+                <a href="{{ absolute_url(url((routing_page_prefix ? routing_page_prefix : '') ~ '/' ~ page_path|default(post.slug))) }}" target="_blank" data-show-active-version
+                   title="Shortcut: Ctrl/Cmd+Shift+S"
+                   class="mt-2 flex items-center justify-center gap-1 w-full rounded-lg border border-green-400 dark:border-green-600 px-4 py-2 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30">
+                    &#127760; {{ __('Show Active Version') }}
+                </a>
+                {% endif %}
+
+                {% if is_edit %}
+                {% include 'admin/components/revision-modal.twig' with { revision_url_prefix: '/admin/pages/' } %}
+                {% endif %}
+            </div>
+
+            {% if membership_tags is defined and membership_tags is not empty %}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="access_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Access') }}</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ __('Require a membership tag to view full content.') }}</p>
+                {% set selectedAccess = old.access_tags|default(post ? post.accessTags : []) %}
+                {% for tag in membership_tags %}
+                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 mb-1">
+                    <input type="checkbox" name="access_tags[]" value="{{ tag }}"
+                           {{ tag in selectedAccess ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900">
+                    {{ tag }}
+                </label>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="slug_card">
+                <div x-data="{ originalSlug: '{{ old.slug|default(post ? post.slug : '')|e('js') }}', currentSlug: '{{ old.slug|default(post ? post.slug : '')|e('js') }}', slugChanged: false, autoRedirect: {{ auto_redirect_enabled ? 'true' : 'false' }}, isEdit: {{ is_edit ? 'true' : 'false' }} }" x-init="$watch('currentSlug', v => slugChanged = v !== originalSlug)">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Slug') }}</h3>
+                    <input type="text" id="slug" name="slug"
+                           x-model="currentSlug"
+                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                           placeholder="{{ __('Auto-generated from title') }}">
+                    {% if errors.slug is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.slug|join(', ') }}</p>{% endif %}
+                    <div x-show="isEdit && slugChanged" class="mt-2 space-y-2">
+                        <div x-show="!autoRedirect"
+                             class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                            <span>⚠️</span>
+                            <span>{{ __('SEO redirect setting is disabled. If you change this slug, old links may stop working.') }} <a href="{{ url('/admin/settings', {}, {tab: 'seo'}) }}" class="underline font-medium">{{ __('Open SEO settings') }}</a></span>
+                        </div>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                            <input type="hidden" name="create_redirect" value="0">
+                            <input type="checkbox" name="create_redirect" value="1" checked
+                                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500">
+                            {{ __('Create a 301 redirect from the old URL to the new URL') }}
+                        </label>
+                    </div>
+                </div>
+                {% include 'admin/components/alias-chips.twig' with { alias_value: old.aliases|default(page_aliases|default([])|join(',')) } %}
+                <div class="mt-2 text-xs text-gray-400">{{ __('Used to create a human and SEO-friendly address to access this content later.') }}</div>
+            </div>
+
+            <div data-panel-id="seo_card">
+                {% include 'admin/components/seo-panel.twig' with { seo: seo|default(null), hasRss: false } %}
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+(function() {
+    const copyBtn = document.getElementById('copy-original-btn');
+    copyBtn?.addEventListener('click', async function() {
+        const transOf = document.querySelector('input[name="translation_of"]');
+        const id = transOf?.value;
+        if (!id) return;
+        if (!confirm('{{ __('Overwrite current content with original?')|e('js') }}')) return;
+
+        const origHtml = this.innerHTML;
+        this.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+        this.disabled = true;
+
+        try {
+            const r = await fetch('{{ url('/admin/pages/')|e('js') }}' + id + '/json');
+            const data = await r.json();
+            document.getElementById('title').value = data.title;
+            const ta = document.querySelector('textarea[data-editor]');
+            if (ta) {
+                if (!window.vlSetEditorContent || !window.vlSetEditorContent(ta.id, data.body)) {
+                    ta.value = data.body || '';
+                    if (window.vlSetEditorContentToggle) {
+                        window.vlSetEditorContentToggle(ta.id, data.body);
+                    }
+                }
+            } else {
+                const bodyField = document.getElementById('body');
+                if (bodyField) bodyField.value = data.body || '';
+            }
+            const excerptField = document.getElementById('excerpt');
+            if (excerptField) excerptField.value = data.excerpt;
+
+            this.innerHTML = '✓';
+        } catch (e) {
+            this.innerHTML = '✗';
+            alert('Failed to copy content.');
+        } finally {
+            setTimeout(() => { this.innerHTML = origHtml; this.disabled = false; }, 1500);
+        }
+    });
+})();
+
+// Copy content from the selected replacement target (same UX as copy-original).
+// Delegated: the button lives inside an x-if block and may render after load.
+document.addEventListener('click', async function(e) {
+    const btn = e.target?.closest?.('#copy-swap-btn');
+    if (!btn || btn.disabled) return;
+
+    const swapOf = document.querySelector('input[name="swap_post_id"]');
+    const id = swapOf?.value;
+    if (!id) return;
+
+    if (!confirm('{{ __('Overwrite current content with replaced page?')|e('js') }}')) return;
+
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+    btn.disabled = true;
+
+    try {
+        const r = await fetch('{{ url('/admin/pages/')|e('js') }}' + id + '/json');
+        const data = await r.json();
+
+        document.getElementById('title').value = data.title;
+
+        const ta = document.querySelector('textarea[data-editor]');
+        if (ta) {
+            if (!window.vlSetEditorContent || !window.vlSetEditorContent(ta.id, data.body)) {
+                ta.value = data.body || '';
+                if (window.vlSetEditorContentToggle) {
+                    window.vlSetEditorContentToggle(ta.id, data.body);
+                }
+            }
+        } else {
+            const bodyField = document.getElementById('body');
+            if (bodyField) bodyField.value = data.body || '';
+        }
+
+        const excerptField = document.getElementById('excerpt');
+        if (excerptField) excerptField.value = data.excerpt;
+
+        btn.innerHTML = '✓';
+    } catch (err) {
+        btn.innerHTML = '✗';
+        alert('Failed to copy content.');
+    } finally {
+        setTimeout(() => { btn.innerHTML = origHtml; btn.disabled = false; }, 1500);
+    }
+});
+
+document.getElementById('vl-preview-btn')?.addEventListener('click', function() {
+    const form = this.closest('form');
+    const origAction = form.action;
+    const origTarget = form.target;
+    const origMethod = form.querySelector('input[name="_METHOD"]');
+    const origMethodVal = origMethod ? origMethod.value : null;
+
+    form.action = '{{ url('/admin/pages/preview') }}';
+    form.target = '_blank';
+    if (origMethod) origMethod.value = 'POST';
+
+    form.querySelectorAll('textarea[data-editor]').forEach(ta => {
+        ta.dispatchEvent(new Event('input'));
+    });
+
+    form.submit();
+
+    form.action = origAction;
+    form.target = origTarget || '';
+    if (origMethod) origMethod.value = origMethodVal;
+});
+
+document.addEventListener('alpine:init', function() {
+    Alpine.data('revisionHistory', function (config) {
+        return {
+            show: false,
+            loading: false,
+            loaded: false,
+            revisions: [],
+            selected: null,
+            restoreConfirm: null,
+            deleteConfirm: null,
+            count: 0,
+            detailLoading: false,
+            detailError: false,
+            diffLoading: false,
+            diffError: false,
+            diffCache: {},
+            activeDiff: null,
+
+            open: function () {
+                this.show = true;
+                this.selected = null;
+                this.restoreConfirm = null;
+                this.deleteConfirm = null;
+                this.diffCache = {};
+                this.activeDiff = null;
+
+                if (this.loaded) return;
+
+                this.loading = true;
+                var self = this;
+                fetch(config.jsonUrl)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        self.revisions = data;
+                        self.count = data.length;
+                        self.loading = false;
+                        self.loaded = true;
+                    })
+                    .catch(function () {
+                        self.loading = false;
+                    });
+            },
+
+            close: function () {
+                this.show = false;
+                this.selected = null;
+                this.restoreConfirm = null;
+                this.deleteConfirm = null;
+                this.diffCache = {};
+                this.activeDiff = null;
+                this.detailLoading = false;
+                this.detailError = false;
+                this.diffLoading = false;
+                this.diffError = false;
+            },
+
+            select: function (rev) {
+                this.selected = rev;
+                this.detailLoading = true;
+                this.detailError = false;
+                this.diffCache = {};
+                this.activeDiff = null;
+
+                var self = this;
+                fetch(config.detailUrl.replace('__REV_ID__', rev.id))
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        self.selected.body = data.body;
+                        self.selected.bodyReadable = data.body_readable;
+                        self.detailLoading = false;
+                    })
+                    .catch(function () {
+                        self.detailError = true;
+                        self.detailLoading = false;
+                    });
+            },
+
+            showDiff: function (type) {
+                if (!this.selected) return;
+
+                if (this.diffCache[type]) {
+                    this.activeDiff = type;
+                    return;
+                }
+
+                this.diffLoading = true;
+                this.diffError = false;
+                this.activeDiff = null;
+
+                var self = this;
+                var url = config.diffUrl.replace('__REV_ID__', self.selected.id).replace('__TYPE__', type);
+                fetch(url)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        self.diffCache[type] = data.diff;
+                        self.activeDiff = type;
+                        self.diffLoading = false;
+                    })
+                    .catch(function () {
+                        self.diffError = true;
+                        self.diffLoading = false;
+                    });
+            },
+
+            confirmRestore: function (rev) {
+                this.restoreConfirm = rev;
+            },
+
+            restore: function (rev) {
+                this.restoreConfirm = rev;
+            },
+
+            doRestore: function () {
+                if (!this.restoreConfirm) return;
+                var rev = this.restoreConfirm;
+
+                var form = document.createElement('form');
+                form.method = 'POST';
+                var action = config.restoreUrl.replace('__REV_ID__', rev.id);
+                if (window.APP_BASE_PATH && window.APP_BASE_PATH !== '/' && action.startsWith('/') && !action.startsWith(window.APP_BASE_PATH + '/')) {
+                    action = window.APP_BASE_PATH + action;
+                }
+                form.action = action;
+                var csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_csrf_token';
+                csrf.value = config.csrfToken;
+                form.appendChild(csrf);
+                document.body.appendChild(form);
+                form.submit();
+            },
+
+            confirmDelete: function (rev) {
+                this.deleteConfirm = rev;
+            },
+
+            doDelete: function () {
+                if (!this.deleteConfirm) return;
+                var rev = this.deleteConfirm;
+                var self = this;
+
+                var form = document.createElement('form');
+                form.method = 'POST';
+                var action = config.deleteUrl.replace('__REV_ID__', rev.id);
+                if (window.APP_BASE_PATH && window.APP_BASE_PATH !== '/' && action.startsWith('/') && !action.startsWith(window.APP_BASE_PATH + '/')) {
+                    action = window.APP_BASE_PATH + action;
+                }
+                form.action = action;
+                var csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_csrf_token';
+                csrf.value = config.csrfToken;
+                form.appendChild(csrf);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        };
+    });
+});
+</script>
+<script>vlDirtyGuard();</script>
+{% endblock %}

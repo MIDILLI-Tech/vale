@@ -1,0 +1,326 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Membership Plans') }}{% endblock %}
+
+{% block content %}
+<div x-data="planModal()">
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Membership Plans') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ plans|length }} {{ __('plans') }}</p>
+    </div>
+    <button @click="openCreate()"
+            class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Create Plan') }}
+    </button>
+</div>
+
+{% if flash_success %}<div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm">{{ flash_success }}</div>{% endif %}
+{% if flash_error %}<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>{% endif %}
+
+{# Modal overlay #}
+<div x-show="modalOpen"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50"></div>
+    <div class="relative z-10 flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl">
+        <div class="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100" x-text="isEdit ? '{{ __('Edit Plan')|e('js') }}' : '{{ __('New Plan')|e('js') }}'"></h2>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <input type="hidden" name="is_active" form="plan_form" value="0">
+                    <input type="checkbox" id="plan_modal_active" name="is_active" form="plan_form" value="1"
+                           x-model="form.isActive"
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500">
+                    <label for="plan_modal_active" class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Active') }}</label>
+                </div>
+                <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+        </div>
+
+        <form id="plan_form" x-bind:action="formAction" method="post" @submit="validateTag" class="flex min-h-0 flex-1 flex-col">
+            <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" x-model="formMethod">
+
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="name" name="name" required x-model="form.name"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Price') }}</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">{{ currency_symbol }}</span>
+                        <input type="number" id="price" name="price" x-model="form.price" step="0.01" min="0"
+                               class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm pl-7">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Interval') }}</label>
+                    <select id="interval" name="interval" x-model="form.interval"
+                            class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                        <option value="one_time">{{ __('One Time') }}</option>
+                        <option value="daily">{{ __('Daily') }}</option>
+                        <option value="weekly">{{ __('Weekly') }}</option>
+                        <option value="monthly">{{ __('Monthly') }}</option>
+                        <option value="yearly">{{ __('Yearly') }}</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }}</label>
+                <textarea id="description" name="description" rows="2" x-model="form.description"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"></textarea>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Access Tag') }} <span class="text-red-500">*</span></label>
+                    <template x-if="modalOpen">
+                    <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: isEdit ? (form.tag || '') : '' })">
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="(item, i) in items" :key="i">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                    <span x-text="item"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="relative">
+                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                   placeholder="Type tag name..."
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                         :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300"
+                                         x-text="s"></div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="tag" :value="items.join(',')">
+                    </div>
+                    </template>
+                    <p x-show="tagError" x-cloak class="mt-1 text-xs text-red-600 dark:text-red-400">{{ __('Access tag is required.') }}</p>
+                    <p class="mt-1 text-xs text-gray-500">{{ __('Tag(s) assigned to user on subscribe. Press comma (,) or Enter to add.') }}</p>
+                </div>
+
+                <div>
+                    <label for="sort_order" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Sort Order') }}</label>
+                    <input type="number" id="sort_order" name="sort_order" x-model="form.sortOrder"
+                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="trial_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Trial Days') }}</label>
+                    <input type="number" id="trial_days" name="trial_days" min="0" x-model="form.trialDays"
+                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">{{ __('0 = no trial') }}</p>
+                </div>
+
+                <div>
+                    <label for="trial_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Trial Price') }}</label>
+                    <div class="relative mt-1">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">{{ currency_symbol }}</span>
+                        <input type="number" id="trial_price" name="trial_price" x-model="form.trialPrice" step="0.01" min="0"
+                               class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm pl-7">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">{{ __('0.00 = free trial') }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Trial Tag') }}</label>
+                    <template x-if="modalOpen">
+                    <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: isEdit ? (form.trialTag || '') : '' })">
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="(item, i) in items" :key="i">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                    <span x-text="item"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="relative">
+                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                   placeholder="Type tag name..."
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                         :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300"
+                                         x-text="s"></div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="trial_tag" :value="items.join(',')">
+                    </div>
+                    </template>
+                    <p class="mt-1 text-xs text-gray-500">{{ __('Tag used during trial period') }}</p>
+                </div>
+            </div>
+            </div>
+
+            <div class="vl-modal-actions">
+                <button type="button" @click="modalOpen = false"
+                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                    {{ __('Cancel') }}
+                </button>
+                <button type="submit"
+                        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    <span x-text="isEdit ? '{{ __('Update')|e('js') }}' : '{{ __('Create')|e('js') }}'"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Name') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Price') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Interval') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tag') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Status') }}</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for plan in plans %}
+            <tr>
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                    @click='openEdit({{ plan|json_encode|raw }})'>{{ plan.name }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ plan.price|price(current_currency) }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ plan.intervalLabel }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ plan.tag }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm">
+                    {% if plan.active %}
+                    <span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">{{ __('Active') }}</span>
+                    {% else %}
+                    <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ __('Inactive') }}</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                    <div class="inline-flex items-center gap-2">
+                        <button @click='openEdit({{ plan|json_encode|raw }})'
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
+                            {{ __('Edit') }}
+                        </button>
+                        <form method="post" action="{{ url('/admin/membership/plans/' ~ plan.id) }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No plans yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+<script>
+function planModal() {
+    return {
+        modalOpen: false,
+        isEdit: false,
+        tagError: false,
+        form: {
+            id: null,
+            name: '',
+            slug: '',
+            price: '0.00',
+            interval: 'monthly',
+            description: '',
+            tag: '',
+            sortOrder: 0,
+            trialDays: 0,
+            trialTag: '',
+            isActive: true,
+        },
+        get formMethod() {
+            return this.isEdit ? 'PUT' : 'POST';
+        },
+        get formAction() {
+            return this.isEdit
+                ? '{{ url("/admin/membership/plans")|e('js') }}' + '/' + this.form.id
+                : '{{ url("/admin/membership/plans")|e('js') }}';
+        },
+        resetForm() {
+            this.form = {
+                id: null,
+                name: '',
+                slug: '',
+                price: '0.00',
+                interval: 'monthly',
+                description: '',
+                tag: '',
+                sortOrder: 0,
+                trialDays: 0,
+                trialPrice: '0.00',
+                trialTag: '',
+                isActive: true,
+            };
+        },
+        openCreate() {
+            this.resetForm();
+            this.isEdit = false;
+            this.tagError = false;
+            this.modalOpen = true;
+        },
+        openEdit(plan) {
+            this.resetForm();
+            this.isEdit = true;
+            this.form = {
+                id: plan.id,
+                name: plan.name || '',
+                slug: plan.slug || '',
+                price: plan.price || '0.00',
+                interval: plan.interval || 'monthly',
+                description: plan.description || '',
+                tag: plan.tag || '',
+                sortOrder: plan.sortOrder || 0,
+                trialDays: plan.trialDays || 0,
+                trialPrice: plan.trialPrice || '0.00',
+                trialTag: plan.trialTag || '',
+                isActive: plan.active !== undefined ? plan.active : true,
+            };
+            this.tagError = false;
+            this.modalOpen = true;
+        },
+        validateTag(event) {
+            const hidden = event.target.querySelector('input[name="tag"]');
+            if (((hidden && hidden.value) || '').trim() === '') {
+                event.preventDefault();
+                this.tagError = true;
+                const visible = hidden && hidden.closest('div[x-data]')
+                    ? hidden.closest('div[x-data]').querySelector('input[type="text"]')
+                    : null;
+                if (visible) {
+                    visible.focus();
+                }
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

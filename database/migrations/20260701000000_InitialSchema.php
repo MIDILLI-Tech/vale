@@ -1,0 +1,967 @@
+<?php
+
+declare(strict_types=1);
+
+use Phinx\Db\Adapter\MysqlAdapter;
+use Phinx\Migration\AbstractMigration;
+
+final class InitialSchema extends AbstractMigration
+{
+    public function change(): void
+    {
+        $p = $this->getAdapter()->getOption('db_prefix') ?? 'vl_';
+
+        // ── Users ──────────────────────────────────────────
+        $this->table($p . 'users', ['id' => true, 'signed' => false])
+            ->addColumn('email', 'string', ['limit' => 255])
+            ->addColumn('sso_provider', 'string', ['limit' => 50, 'null' => true])
+            ->addColumn('sso_provider_id', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('password', 'string', ['limit' => 255])
+            ->addColumn('two_factor_secret', 'string', ['null' => true, 'limit' => 1024])
+            ->addColumn('two_factor_recovery_codes', 'text', ['null' => true])
+            ->addColumn('two_factor_enabled', 'boolean', ['default' => false])
+            ->addColumn('totp_last_slice', 'biginteger', ['null' => true, 'default' => null, 'signed' => false, 'comment' => 'Last consumed TOTP timeslice - replay protection'])
+            ->addColumn('session_version', 'integer', ['default' => 0, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('avatar', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('locale', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('payment_gateway', 'string', ['limit' => 20, 'null' => true])
+            ->addColumn('payment_gateway_id', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('billing_address', 'json', ['null' => true])
+            ->addColumn('shipping_address', 'json', ['null' => true])
+            ->addColumn('is_active', 'boolean', ['default' => true])
+            ->addColumn('email_verified_at', 'datetime', ['null' => true])
+            ->addColumn('verification_token', 'string', ['limit' => 64, 'null' => true])
+            ->addColumn('verification_token_expires_at', 'datetime', ['null' => true])
+            ->addColumn('last_login_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['email'], ['unique' => true, 'name' => 'idx_users_email'])
+            ->create();
+
+        // ── Roles ──────────────────────────────────────────
+        $this->table($p . 'roles', ['id' => true, 'signed' => false])
+            ->addColumn('slug', 'string', ['limit' => 100])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('description', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('is_system', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_roles_slug'])
+            ->create();
+
+        // ── Permissions ────────────────────────────────────
+        $this->table($p . 'permissions', ['id' => true, 'signed' => false])
+            ->addColumn('slug', 'string', ['limit' => 100])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('group_name', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_permissions_slug'])
+            ->create();
+
+        // ── User Roles pivot ───────────────────────────────
+        $this->table($p . 'user_roles', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['signed' => false])
+            ->addColumn('role_id', 'integer', ['signed' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['user_id', 'role_id'], ['unique' => true, 'name' => 'idx_user_roles_unique'])
+            ->addForeignKey('user_id', $p . 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('role_id', $p . 'roles', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Role Permissions pivot ─────────────────────────
+        $this->table($p . 'role_permissions', ['id' => true, 'signed' => false])
+            ->addColumn('role_id', 'integer', ['signed' => false])
+            ->addColumn('permission_id', 'integer', ['signed' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['role_id', 'permission_id'], ['unique' => true, 'name' => 'idx_role_permissions_unique'])
+            ->addForeignKey('role_id', $p . 'roles', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('permission_id', $p . 'permissions', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Settings ───────────────────────────────────────
+        $this->table($p . 'settings', ['id' => true, 'signed' => false])
+            ->addColumn('group_name', 'string', ['limit' => 100, 'default' => 'general'])
+            ->addColumn('key', 'string', ['limit' => 255])
+            ->addColumn('value', 'text', ['null' => true])
+            ->addColumn('type', 'string', ['limit' => 50, 'default' => 'string'])
+            ->addColumn('is_autoload', 'boolean', ['default' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['group_name', 'key'], ['unique' => true, 'name' => 'idx_settings_group_key'])
+            ->addIndex(['is_autoload'], ['name' => 'idx_settings_autoload'])
+            ->create();
+
+        // ── API Tokens ─────────────────────────────────────
+        $this->table($p . 'api_tokens', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('token', 'string', ['limit' => 64])
+            ->addColumn('abilities', 'text', ['null' => false, 'default' => ''])
+            ->addColumn('last_used_at', 'datetime', ['null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['token'], ['unique' => true, 'name' => 'idx_api_tokens_token'])
+            ->addForeignKey('user_id', $p . 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Password Resets ────────────────────────────────
+        $this->table($p . 'password_resets', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['signed' => false])
+            ->addColumn('token_hash', 'string', ['limit' => 64])
+            ->addColumn('expires_at', 'datetime')
+            ->addColumn('used_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['token_hash'], ['unique' => true, 'name' => 'idx_pr_token_hash'])
+            ->addIndex(['user_id'], ['name' => 'idx_pr_user_id'])
+            ->addForeignKey('user_id', $p . 'users', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Content Types ──────────────────────────────────
+        $this->table($p . 'content_types', ['id' => true, 'signed' => false])
+            ->addColumn('slug', 'string', ['limit' => 100])
+            ->addColumn('route_prefix', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('description', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('icon', 'string', ['limit' => 100, 'null' => true, 'default' => 'document-text'])
+            ->addColumn('supports', 'text', ['null' => true, 'comment' => 'JSON: title,editor,thumbnail,excerpt,comments,revisions'])
+            ->addColumn('field_schema', 'text', ['null' => true, 'comment' => 'JSON: custom field definitions'])
+            ->addColumn('is_system', 'boolean', ['default' => false])
+            ->addColumn('is_active', 'boolean', ['default' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_content_types_slug'])
+            ->create();
+
+        // ── Categories ─────────────────────────────────────
+        $this->table($p . 'categories', ['id' => true, 'signed' => false])
+            ->addColumn('content_type', 'string', ['limit' => 100, 'default' => 'post'])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 255])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['language'], ['name' => 'idx_categories_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_categories_translation_of'])
+            ->addIndex(['slug', 'content_type', 'language'], ['unique' => true, 'name' => 'idx_categories_slug_type'])
+            ->addIndex(['parent_id'], ['name' => 'idx_categories_parent'])
+            ->create();
+
+        // ── Tags ───────────────────────────────────────────
+        $this->table($p . 'tags', ['id' => true, 'signed' => false])
+            ->addColumn('content_type', 'string', ['limit' => 100, 'default' => 'post'])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 255])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['language'], ['name' => 'idx_tags_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_tags_translation_of'])
+            ->addIndex(['slug', 'content_type', 'language'], ['unique' => true, 'name' => 'idx_tags_slug_type'])
+            ->create();
+
+        // ── Posts ──────────────────────────────────────────
+        $this->table($p . 'posts', ['id' => true, 'signed' => false])
+            ->addColumn('content_type', 'string', ['limit' => 100, 'default' => 'post'])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('author_id', 'integer', ['signed' => false])
+            ->addColumn('title', 'string', ['limit' => 500])
+            ->addColumn('slug', 'string', ['limit' => 500])
+            ->addColumn('excerpt', 'text', ['null' => true])
+            ->addColumn('body', 'text', ['limit' => MysqlAdapter::TEXT_LONG, 'null' => true])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'draft'])
+            ->addColumn('featured_image_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('page_template', 'string', ['limit' => 50, 'default' => 'standard'])
+            ->addColumn('hide_title', 'boolean', ['default' => false])
+            ->addColumn('comment_status', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('meta_title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('meta_description', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('rss_exclude', 'boolean', ['default' => false])
+            ->addColumn('access_tags', 'text', ['null' => true])
+            ->addColumn('view_count', 'integer', ['default' => 0])
+            ->addColumn('published_at', 'datetime', ['null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('swap_post_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['language'], ['name' => 'idx_posts_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_posts_translation_of'])
+            ->addIndex(['slug', 'content_type', 'language'], ['unique' => true, 'name' => 'idx_posts_slug_type'])
+            ->addIndex(['author_id'], ['name' => 'idx_posts_author'])
+            ->addIndex(['expires_at'], ['name' => 'idx_posts_expires'])
+            ->addIndex(['swap_post_id'], ['name' => 'idx_posts_swap'])
+            ->addForeignKey('author_id', $p . 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Post Meta ──────────────────────────────────────
+        $this->table($p . 'post_meta', ['id' => true, 'signed' => false])
+            ->addColumn('post_id', 'integer', ['signed' => false])
+            ->addColumn('meta_key', 'string', ['limit' => 255])
+            ->addColumn('meta_value', 'text', ['null' => true])
+            ->addIndex(['post_id', 'meta_key'], ['name' => 'idx_post_meta_key'])
+            ->addForeignKey('post_id', $p . 'posts', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Post Categories ────────────────────────────────
+        $this->table($p . 'post_categories', ['id' => true, 'signed' => false])
+            ->addColumn('post_id', 'integer', ['signed' => false])
+            ->addColumn('category_id', 'integer', ['signed' => false])
+            ->addIndex(['post_id', 'category_id'], ['unique' => true, 'name' => 'idx_post_categories_unique'])
+            ->addForeignKey('post_id', $p . 'posts', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('category_id', $p . 'categories', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Post Tags ──────────────────────────────────────
+        $this->table($p . 'post_tags', ['id' => true, 'signed' => false])
+            ->addColumn('post_id', 'integer', ['signed' => false])
+            ->addColumn('tag_id', 'integer', ['signed' => false])
+            ->addIndex(['post_id', 'tag_id'], ['unique' => true, 'name' => 'idx_post_tags_unique'])
+            ->addForeignKey('post_id', $p . 'posts', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('tag_id', $p . 'tags', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Revisions ──────────────────────────────────────
+        $this->table($p . 'revisions', ['id' => true, 'signed' => false])
+            ->addColumn('post_id', 'integer', ['signed' => false])
+            ->addColumn('author_id', 'integer', ['signed' => false])
+            ->addColumn('title', 'string', ['limit' => 500])
+            ->addColumn('body', 'text', ['null' => true])
+            ->addColumn('excerpt', 'text', ['null' => true])
+            ->addColumn('revision_number', 'integer', ['default' => 1])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addForeignKey('post_id', $p . 'posts', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addForeignKey('author_id', $p . 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── Comments ───────────────────────────────────────
+        $this->table($p . 'comments', ['id' => true, 'signed' => false])
+            ->addColumn('entity_type', 'string', ['limit' => 20, 'default' => 'post'])
+            ->addColumn('entity_id', 'integer', ['signed' => false])
+            ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('author_name', 'string', ['limit' => 255])
+            ->addColumn('author_email', 'string', ['limit' => 255])
+            ->addColumn('author_url', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('author_ip', 'string', ['limit' => 45, 'null' => true])
+            ->addColumn('body', 'text')
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'pending'])
+            ->addColumn('notify_replies', 'boolean', ['default' => false])
+            ->addColumn('locale', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('verified', 'boolean', ['default' => false])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['entity_type', 'entity_id', 'status'], ['name' => 'idx_comments_entity_status'])
+            ->create();
+
+        // ── Media ──────────────────────────────────────────
+        $this->table($p . 'media', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['signed' => false])
+            ->addColumn('filename', 'string', ['limit' => 255])
+            ->addColumn('original_name', 'string', ['limit' => 500])
+            ->addColumn('mime_type', 'string', ['limit' => 100])
+            ->addColumn('size', 'integer', [])
+            ->addColumn('path', 'string', ['limit' => 500])
+            ->addColumn('disk', 'string', ['limit' => 50, 'default' => 'local'])
+            ->addColumn('alt_text', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('alt_text_i18n', 'text', ['null' => true])
+            ->addColumn('title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('description_i18n', 'text', ['null' => true])
+            ->addColumn('thumbnails', 'text', ['null' => true])
+            ->addColumn('content_hash', 'string', ['limit' => 64, 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addForeignKey('user_id', $p . 'users', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->addIndex(['path'], ['unique' => true, 'name' => 'idx_media_path_unique'])
+            ->addIndex(['content_hash'], ['name' => 'idx_media_content_hash'])
+            ->create();
+
+        // ── Menus ──────────────────────────────────────────
+        $this->table($p . 'menus', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 255])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('location', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['language'], ['name' => 'idx_menus_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_menus_translation_of'])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_menus_slug'])
+            ->create();
+
+        // ── Menu Items ─────────────────────────────────────
+        $this->table($p . 'menu_items', ['id' => true, 'signed' => false])
+            ->addColumn('menu_id', 'integer', ['signed' => false])
+            ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('type', 'string', ['limit' => 50])
+            ->addColumn('label', 'string', ['limit' => 255])
+            ->addColumn('url', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('target', 'string', ['limit' => 20, 'default' => '_self'])
+            ->addColumn('reference_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('css_class', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addForeignKey('menu_id', $p . 'menus', 'id', ['delete' => 'CASCADE', 'update' => 'CASCADE'])
+            ->create();
+
+        // ── SEO Meta ───────────────────────────────────────
+        $this->table($p . 'seo_meta', ['id' => true, 'signed' => false])
+            ->addColumn('entity_type', 'string', ['limit' => 50])
+            ->addColumn('entity_id', 'integer', ['signed' => false])
+            ->addColumn('meta_title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('meta_description', 'text', ['null' => true])
+            ->addColumn('og_title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('og_description', 'text', ['null' => true])
+            ->addColumn('og_image_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('twitter_card_type', 'string', ['limit' => 20, 'default' => 'summary'])
+            ->addColumn('canonical_url', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('robots', 'string', ['limit' => 50, 'default' => 'index,follow'])
+            ->addColumn('sitemap_exclude', 'boolean', ['default' => false])
+            ->addColumn('focus_keyword', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['entity_type', 'entity_id'], ['unique' => true, 'name' => 'idx_seo_entity'])
+            ->create();
+
+        // ── Redirects ──────────────────────────────────────
+        $this->table($p . 'redirects', ['id' => true, 'signed' => false])
+            ->addColumn('old_path', 'string', ['limit' => 500])
+            ->addColumn('new_path', 'string', ['limit' => 500])
+            ->addColumn('is_prefix', 'boolean', ['default' => false])
+            ->addColumn('is_manual', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['old_path'], ['unique' => true, 'name' => 'idx_redirects_old_path'])
+            ->addIndex(['new_path'], ['name' => 'idx_redirects_new_path'])
+            ->create();
+
+        // ── Shop: Product Categories ───────────────────────
+        $this->table($p . 'product_categories', ['id' => true, 'signed' => false])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('parent_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 255])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('image_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['language'], ['name' => 'idx_product_categories_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_product_categories_translation_of'])
+            ->addIndex(['slug', 'language'], ['unique' => true, 'name' => 'idx_prod_cats_slug'])
+            ->create();
+
+        // ── Shop: Products ─────────────────────────────────
+        $this->table($p . 'products', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 500])
+            ->addColumn('slug', 'string', ['limit' => 500])
+            ->addColumn('language', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('sku', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('gtin', 'string', ['limit' => 50, 'null' => true])
+            ->addColumn('mpn', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('brand', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('google_product_category', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('condition', 'string', ['limit' => 20, 'default' => 'new'])
+            ->addColumn('gender', 'string', ['limit' => 20, 'null' => true])
+            ->addColumn('age_group', 'string', ['limit' => 20, 'null' => true])
+            ->addColumn('color', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('size', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('material', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('pattern', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('custom_label_0', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('custom_label_1', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('custom_label_2', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('custom_label_3', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('custom_label_4', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('gmc_exclude', 'boolean', ['default' => false])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('short_description', 'text', ['null' => true])
+            ->addColumn('price', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('sale_price', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('sale_price_start', 'datetime', ['null' => true])
+            ->addColumn('sale_price_end', 'datetime', ['null' => true])
+            ->addColumn('stock_quantity', 'integer', ['default' => 0])
+            ->addColumn('stock_status', 'string', ['limit' => 20, 'default' => 'in_stock'])
+            ->addColumn('weight', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('dimensions', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('shipping_class', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('shipping_cost', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('shipping_country_overrides', 'text', ['null' => true])
+            ->addColumn('shipping_time_min', 'integer', ['null' => true, 'default' => null])
+            ->addColumn('shipping_time_max', 'integer', ['null' => true, 'default' => null])
+            ->addColumn('vat_mode', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('vat_rate', 'decimal', ['precision' => 5, 'scale' => 2, 'null' => true])
+            ->addColumn('vat_country_overrides', 'text', ['null' => true])
+            ->addColumn('refund_mode', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('length', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('width', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('height', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('featured_image_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'draft'])
+            ->addColumn('comment_status', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('vote_status', 'string', ['limit' => 20, 'default' => 'use_global'])
+            ->addColumn('type', 'string', ['limit' => 20, 'default' => 'simple'])
+            ->addColumn('download_source', 'string', ['limit' => 20, 'default' => 'none'])
+            ->addColumn('download_file_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('download_url', 'string', ['limit' => 2048, 'null' => true])
+            ->addColumn('download_url_proxy', 'boolean', ['default' => false])
+            ->addColumn('download_limit', 'integer', ['default' => 0])
+            ->addColumn('download_expiry_days', 'integer', ['default' => 0])
+            ->addColumn('meta_title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('meta_description', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('published_at', 'datetime', ['null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('total_sold', 'integer', ['default' => 0])
+            ->addColumn('view_count', 'integer', ['default' => 0])
+            ->addColumn('upsell_ids', 'text', ['null' => true])
+            ->addColumn('cross_sell_ids', 'text', ['null' => true])
+            ->addColumn('access_tags', 'text', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['language'], ['name' => 'idx_products_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_products_translation_of'])
+            ->addIndex(['slug', 'language'], ['unique' => true, 'name' => 'idx_products_slug'])
+            ->create();
+
+        // ── Shop: Product ↔ Category pivot ─────────────────
+        $this->table($p . 'product_to_categories', ['id' => true, 'signed' => false])
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('category_id', 'integer', ['signed' => false])
+            ->addForeignKey('product_id', $p . 'products', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('category_id', $p . 'product_categories', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Shop: Product Images ───────────────────────────
+        $this->table($p . 'product_images', ['id' => true, 'signed' => false])
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('media_id', 'integer', ['signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addIndex(['product_id', 'sort_order'], ['name' => 'idx_product_images_order'])
+            ->addForeignKey('product_id', $p . 'products', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Shop: Product Variations ───────────────────────
+        $this->table($p . 'product_variations', ['id' => true, 'signed' => false])
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('attributes', 'text', ['null' => true])
+            ->addColumn('sku', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('price', 'decimal', ['precision' => 10, 'scale' => 2])
+            ->addColumn('sale_price', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('sale_price_start', 'datetime', ['null' => true])
+            ->addColumn('sale_price_end', 'datetime', ['null' => true])
+            ->addColumn('stock_quantity', 'integer', ['default' => 0])
+            ->addColumn('stock_status', 'string', ['limit' => 20, 'default' => 'in_stock'])
+            ->addColumn('weight', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('length', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('width', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('height', 'decimal', ['precision' => 8, 'scale' => 2, 'null' => true])
+            ->addColumn('refund_mode', 'string', ['limit' => 20, 'default' => 'use_parent'])
+            ->addColumn('image_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('download_mode', 'string', ['limit' => 20, 'default' => 'use_parent'])
+            ->addColumn('download_file_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('download_url', 'string', ['limit' => 2048, 'null' => true])
+            ->addColumn('download_url_proxy', 'boolean', ['default' => false])
+            ->addColumn('download_limit', 'integer', ['default' => 0])
+            ->addColumn('download_expiry_days', 'integer', ['default' => 0])
+            ->addColumn('shipping_class', 'string', ['limit' => 20, 'default' => 'use_parent'])
+            ->addColumn('shipping_cost', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('shipping_country_overrides', 'text', ['null' => true])
+            ->addColumn('shipping_time_min', 'integer', ['null' => true, 'default' => null])
+            ->addColumn('shipping_time_max', 'integer', ['null' => true, 'default' => null])
+            ->addColumn('vat_mode', 'string', ['limit' => 20, 'default' => 'use_parent'])
+            ->addColumn('vat_rate', 'decimal', ['precision' => 5, 'scale' => 2, 'null' => true])
+            ->addForeignKey('product_id', $p . 'products', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Shop: Product Votes / Ratings ───────────────────
+        $this->table($p . 'product_votes', ['id' => true, 'signed' => false])
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('comment_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('session_id', 'string', ['limit' => 64])
+            ->addColumn('rating', 'integer')
+            ->addColumn('review', 'text', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['product_id', 'session_id'], ['unique' => true, 'name' => 'idx_votes_unique'])
+            ->addIndex(['comment_id'], ['unique' => true, 'name' => 'idx_votes_comment'])
+            ->addForeignKey('product_id', $p . 'products', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('comment_id', $p . 'comments', 'id', ['delete' => 'SET_NULL'])
+            ->create();
+
+        // ── Shop: Orders ───────────────────────────────────
+        $this->table($p . 'orders', ['id' => true, 'signed' => false])
+            ->addColumn('order_number', 'string', ['limit' => 50])
+            ->addColumn('order_type', 'string', ['limit' => 20, 'default' => 'shop'])
+            ->addColumn('subscription_id', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('plan_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'pending'])
+            ->addColumn('locale', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('currency', 'string', ['limit' => 3, 'default' => 'USD'])
+            ->addColumn('subtotal', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('tax', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('shipping', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('discount', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('total', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('coupon_code', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('billing', 'text', ['null' => true])
+            ->addColumn('shipping_address', 'text', ['null' => true])
+            ->addColumn('customer_note', 'text', ['null' => true])
+            ->addColumn('payment_method', 'string', ['limit' => 50, 'null' => true])
+            ->addColumn('transaction_id', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('payment_token', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('carrier', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('tracking_number', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('plan_name', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('paid_at', 'datetime', ['null' => true])
+            ->addColumn('inventory_processed', 'boolean', ['null' => true, 'default' => null, 'comment' => 'Stock already decremented for this order'])
+            ->addColumn('inventory_restored', 'boolean', ['null' => true, 'default' => null, 'comment' => 'Stock already restored (reversal done)'])
+            ->addColumn('coupon_returned', 'boolean', ['null' => true, 'default' => null, 'comment' => 'Coupon use already returned (return done) — null/0 = still held'])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['order_number'], ['unique' => true, 'name' => 'idx_orders_number'])
+            ->create();
+
+        // ── Shop: Order Items ──────────────────────────────
+        $this->table($p . 'order_items', ['id' => true, 'signed' => false])
+            ->addColumn('order_id', 'integer', ['signed' => false])
+            ->addColumn('product_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('variation_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 500])
+            ->addColumn('sku', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('quantity', 'integer', ['default' => 1])
+            ->addColumn('price', 'decimal', ['precision' => 10, 'scale' => 2])
+            ->addColumn('tax_rate', 'decimal', ['precision' => 5, 'scale' => 2, 'null' => true])
+            ->addColumn('tax_amount', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('subtotal', 'decimal', ['precision' => 10, 'scale' => 2])
+            ->addColumn('total', 'decimal', ['precision' => 10, 'scale' => 2])
+            ->addColumn('variation_data', 'text', ['null' => true])
+            ->addForeignKey('order_id', $p . 'orders', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Shop: Order Logs ───────────────────────────────
+        $this->table($p . 'order_logs', ['id' => true, 'signed' => false])
+            ->addColumn('order_id', 'integer', ['signed' => false])
+            ->addColumn('event', 'string', ['limit' => 80])
+            ->addColumn('type', 'string', ['limit' => 20, 'default' => 'system'])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('added_by', 'string', ['limit' => 120, 'null' => true])
+            ->addColumn('note', 'text', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['null' => true])
+            ->addIndex(['order_id'])
+            ->addForeignKey('order_id', $p . 'orders', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Shop: Coupons ──────────────────────────────────
+        $this->table($p . 'coupons', ['id' => true, 'signed' => false])
+            ->addColumn('code', 'string', ['limit' => 100])
+            ->addColumn('type', 'string', ['limit' => 20, 'default' => 'percent'])
+            ->addColumn('amount', 'decimal', ['precision' => 10, 'scale' => 2])
+            ->addColumn('free_shipping', 'boolean', ['default' => false])
+            ->addColumn('min_order', 'decimal', ['precision' => 10, 'scale' => 2, 'null' => true])
+            ->addColumn('max_uses', 'integer', ['null' => true])
+            ->addColumn('max_uses_per_email', 'integer', ['default' => 0, 'null' => true])
+            ->addColumn('uses_count', 'integer', ['default' => 0])
+            ->addColumn('allowed_product_ids', 'text', ['null' => true])
+            ->addColumn('blocked_product_ids', 'text', ['null' => true])
+            ->addColumn('allowed_variation_ids', 'text', ['null' => true])
+            ->addColumn('blocked_variation_ids', 'text', ['null' => true])
+            ->addColumn('allowed_category_ids', 'text', ['null' => true])
+            ->addColumn('blocked_category_ids', 'text', ['null' => true])
+            ->addColumn('exclude_sale_items', 'boolean', ['default' => false])
+            ->addColumn('allowed_emails', 'text', ['null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('starts_at', 'datetime', ['null' => true])
+            ->addColumn('enabled', 'boolean', ['default' => true])
+            ->addColumn('only_users', 'boolean', ['default' => false])
+            ->addColumn('target_type', 'string', ['limit' => 20, 'default' => 'product'])
+            ->addColumn('allowed_membership_ids', 'text', ['null' => true])
+            ->addColumn('blocked_membership_ids', 'text', ['null' => true])
+            ->addColumn('membership_duration', 'string', ['limit' => 20, 'default' => 'once'])
+            ->addColumn('apply_scope', 'string', ['limit' => 20, 'default' => 'all_eligible', 'null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['code'], ['unique' => true, 'name' => 'idx_coupons_code'])
+            ->create();
+
+        // ── Forms ──────────────────────────────────────────
+        $this->table($p . 'forms', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 255])
+            ->addColumn('language', 'string', ['limit' => 10, 'null' => true, 'default' => 'en'])
+            ->addColumn('translation_of', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('fields', 'text', ['null' => true])
+            ->addColumn('settings', 'text', ['null' => true])
+            ->addColumn('notify_email', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('submit_label', 'string', ['limit' => 100, 'default' => 'Submit'])
+            ->addColumn('success_message', 'text', ['null' => true])
+            ->addColumn('enabled', 'boolean', ['default' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_forms_slug'])
+            ->addIndex(['language'], ['name' => 'idx_forms_language'])
+            ->addIndex(['translation_of'], ['name' => 'idx_forms_translation_of'])
+            ->addForeignKey('translation_of', $p . 'forms', 'id', ['delete' => 'SET_NULL'])
+            ->create();
+
+        // ── Form Submissions ───────────────────────────────
+        $this->table($p . 'form_submissions', ['id' => true, 'signed' => false])
+            ->addColumn('form_id', 'integer', ['signed' => false])
+            ->addColumn('data', 'text', ['null' => true])
+            ->addColumn('submitter_email', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('ip_address', 'string', ['limit' => 45, 'null' => true])
+            ->addColumn('user_agent', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('is_read', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addForeignKey('form_id', $p . 'forms', 'id', ['delete' => 'CASCADE'])
+            ->addIndex(['form_id', 'submitter_email'], ['name' => 'idx_form_submissions_submitter_email'])
+            ->create();
+
+        // ── Newsletter Subscribers ─────────────────────────
+        $this->table($p . 'newsletter_subscribers', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('email', 'string', ['limit' => 255])
+            ->addColumn('name', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'pending'])
+            ->addColumn('tier', 'string', ['limit' => 50, 'default' => 'free'])
+            ->addColumn('token', 'string', ['limit' => 64])
+            ->addColumn('ip_address', 'string', ['limit' => 45, 'null' => true])
+            ->addColumn('source_form_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('subscribed_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('confirmed_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['null' => true])
+            ->addIndex(['email'], ['unique' => true, 'name' => 'idx_newsletter_email'])
+            ->addIndex(['status'], ['name' => 'idx_newsletter_status'])
+            ->addIndex(['token'], ['name' => 'idx_newsletter_token'])
+            ->addIndex(['user_id'], ['name' => 'idx_nlsub_user'])
+            ->create();
+
+        // ── Subscriber Tags ──────────────────────────────────
+        $this->table($p . 'newsletter_subscriber_tags', ['id' => true, 'signed' => false])
+            ->addColumn('subscriber_id', 'integer', ['signed' => false])
+            ->addColumn('tag', 'string', ['limit' => 100])
+            ->addIndex(['subscriber_id', 'tag'], ['unique' => true, 'name' => 'idx_nl_sub_tag_unique'])
+            ->addForeignKey('subscriber_id', $p . 'newsletter_subscribers', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Newsletter Campaigns ───────────────────────────
+        $this->table($p . 'newsletter_campaigns', ['id' => true, 'signed' => false])
+            ->addColumn('subject', 'string', ['limit' => 500])
+            ->addColumn('subject_b', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('body_html', 'text', ['limit' => MysqlAdapter::TEXT_LONG])
+            ->addColumn('body_html_b', 'text', ['null' => true])
+            ->addColumn('from_name', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('from_email', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'draft'])
+            ->addColumn('ab_test_enabled', 'boolean', ['default' => false])
+            ->addColumn('variation_b_weight', 'integer', ['default' => 50])
+            ->addColumn('tag_filter', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('source_form_filter', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('min_orders_filter', 'integer', ['null' => true])
+            ->addColumn('max_orders_filter', 'integer', ['null' => true])
+            ->addColumn('min_open_rate_filter', 'integer', ['null' => true])
+            ->addColumn('max_open_rate_filter', 'integer', ['null' => true])
+            ->addColumn('min_click_rate_filter', 'integer', ['null' => true])
+            ->addColumn('max_click_rate_filter', 'integer', ['null' => true])
+            ->addColumn('scheduled_at', 'datetime', ['null' => true])
+            ->addColumn('sent_at', 'datetime', ['null' => true])
+            ->addColumn('tracking_enabled', 'integer', ['default' => 3])
+            ->addColumn('opens_count', 'integer', ['default' => 0])
+            ->addColumn('opens_count_b', 'integer', ['default' => 0])
+            ->addColumn('clicks_count', 'integer', ['default' => 0])
+            ->addColumn('clicks_count_b', 'integer', ['default' => 0])
+            ->addColumn('processed_count', 'integer', ['default' => 0])
+            ->addColumn('total_count', 'integer', ['default' => 0])
+            ->addColumn('last_subscriber_id', 'integer', ['default' => 0])
+            ->addColumn('is_recurring', 'boolean', ['default' => false])
+            ->addColumn('recurring_interval', 'string', ['null' => true, 'limit' => 20])
+            ->addColumn('recurring_day', 'string', ['null' => true, 'limit' => 255])
+            ->addColumn('recurring_time', 'string', ['null' => true, 'limit' => 5])
+            ->addColumn('recurring_post_count', 'integer', ['null' => true])
+            ->addColumn('recurring_post_types', 'string', ['null' => true, 'limit' => 255])
+            ->addColumn('recurring_category_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('recurring_tag_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('recurring_category_ids', 'string', ['null' => true, 'limit' => 255])
+            ->addColumn('recurring_tag_ids', 'string', ['null' => true, 'limit' => 255])
+            ->addColumn('recurring_language', 'string', ['null' => true, 'limit' => 10])
+            ->addColumn('last_recurring_run_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['status'], ['name' => 'idx_campaigns_status'])
+            ->create();
+
+        // ── Campaign Recipients ──────────────────────────────
+        $this->table($p . 'newsletter_campaign_recipients', ['id' => true, 'signed' => false])
+            ->addColumn('campaign_id', 'integer', ['signed' => false])
+            ->addColumn('subscriber_id', 'integer', ['signed' => false])
+            ->addColumn('tracking_token', 'string', ['limit' => 64])
+            ->addColumn('variation', 'string', ['limit' => 1, 'default' => 'A'])
+            ->addColumn('sent_at', 'datetime', ['null' => true])
+            ->addColumn('opened_at', 'datetime', ['null' => true])
+            ->addColumn('clicks_count', 'integer', ['default' => 0])
+            ->addIndex(['campaign_id', 'subscriber_id'], ['unique' => true, 'name' => 'idx_recipients_unique'])
+            ->addIndex(['tracking_token'], ['name' => 'idx_recipients_token'])
+            ->addForeignKey('campaign_id', $p . 'newsletter_campaigns', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('subscriber_id', $p . 'newsletter_subscribers', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Automations ────────────────────────────────────
+        $this->table($p . 'automation_sequences', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('trigger_type', 'string', ['limit' => 50, 'default' => 'subscribe'])
+            ->addColumn('trigger_form_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('trigger_tag', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('trigger_tag_match', 'string', ['limit' => 10, 'default' => 'any'])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'active'])
+            ->addColumn('tracking_enabled', 'integer', ['default' => 3])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['status'], ['name' => 'idx_auto_seq_status'])
+            ->create();
+
+        $this->table($p . 'automation_steps', ['id' => true, 'signed' => false])
+            ->addColumn('sequence_id', 'integer', ['signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('delay_minutes', 'integer', ['default' => 0])
+            ->addColumn('ab_test_enabled', 'boolean', ['default' => false])
+            ->addColumn('variation_b_weight', 'integer', ['default' => 50])
+            ->addColumn('subject', 'string', ['limit' => 500])
+            ->addColumn('subject_b', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('body_html', 'text', ['limit' => MysqlAdapter::TEXT_LONG])
+            ->addColumn('body_html_b', 'text', ['null' => true])
+            ->addColumn('min_orders_filter', 'integer', ['null' => true])
+            ->addColumn('max_orders_filter', 'integer', ['null' => true])
+            ->addColumn('min_open_rate_filter', 'integer', ['null' => true])
+            ->addColumn('max_open_rate_filter', 'integer', ['null' => true])
+            ->addColumn('min_click_rate_filter', 'integer', ['null' => true])
+            ->addColumn('max_click_rate_filter', 'integer', ['null' => true])
+            ->addColumn('opens_count', 'integer', ['default' => 0])
+            ->addColumn('clicks_count', 'integer', ['default' => 0])
+            ->addColumn('opens_count_b', 'integer', ['default' => 0])
+            ->addColumn('clicks_count_b', 'integer', ['default' => 0])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addForeignKey('sequence_id', $p . 'automation_sequences', 'id', ['delete' => 'CASCADE', 'update' => 'NO_ACTION'])
+            ->addIndex(['sequence_id', 'sort_order'], ['name' => 'idx_auto_steps_seq_order'])
+            ->create();
+
+        $this->table($p . 'automation_enrollments', ['id' => true, 'signed' => false])
+            ->addColumn('sequence_id', 'integer', ['signed' => false])
+            ->addColumn('subscriber_id', 'integer', ['signed' => false])
+            ->addColumn('next_step', 'integer', ['default' => 0])
+            ->addColumn('last_variation', 'string', ['limit' => 1, 'null' => true])
+            ->addColumn('tracking_token', 'string', ['limit' => 64, 'null' => true])
+            ->addColumn('next_send_at', 'datetime', ['null' => true])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'active'])
+            ->addColumn('enrolled_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('completed_at', 'datetime', ['null' => true])
+            ->addForeignKey('sequence_id', $p . 'automation_sequences', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('subscriber_id', $p . 'newsletter_subscribers', 'id', ['delete' => 'CASCADE'])
+            ->addIndex(['tracking_token'], ['name' => 'idx_auto_enroll_token'])
+            ->addIndex(['sequence_id', 'subscriber_id'], ['unique' => true, 'name' => 'idx_auto_enroll_unique'])
+            ->addIndex(['status', 'next_send_at'], ['name' => 'idx_auto_enroll_due'])
+            ->create();
+
+        // ── Webhooks ───────────────────────────────────────
+        $this->table($p . 'webhooks', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('url', 'string', ['limit' => 500])
+            ->addColumn('method', 'string', ['limit' => 10, 'default' => 'POST'])
+            ->addColumn('secret', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('headers', 'text', ['null' => true])
+            ->addColumn('body_template', 'text', ['null' => true])
+            ->addColumn('events', 'text', ['comment' => 'JSON array of event names'])
+            ->addColumn('is_active', 'boolean', ['default' => true])
+            ->addColumn('last_delivery_at', 'datetime', ['null' => true])
+            ->addColumn('last_delivery_status', 'string', ['limit' => 10, 'null' => true])
+            ->addColumn('last_delivery_ms', 'integer', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['is_active'], ['name' => 'idx_webhooks_active'])
+            ->create();
+
+        // ── Order Download Grants ──────────────────────────
+        $this->table($p . 'order_downloads', ['id' => true, 'signed' => false])
+            ->addColumn('order_id', 'integer', ['signed' => false])
+            ->addColumn('order_item_index', 'integer')
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('variation_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('product_name', 'string', ['limit' => 500])
+            ->addColumn('token', 'string', ['limit' => 64])
+            ->addColumn('source_type', 'string', ['limit' => 20])
+            ->addColumn('source_file_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('source_url', 'string', ['limit' => 2048, 'null' => true])
+            ->addColumn('download_url_proxy', 'boolean', ['default' => false])
+            ->addColumn('download_limit', 'integer', ['default' => 0])
+            ->addColumn('download_count', 'integer', ['default' => 0])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('revoked', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['token'], ['unique' => true, 'name' => 'idx_order_downloads_token'])
+            ->addIndex(['order_id'], ['name' => 'idx_order_downloads_order'])
+            ->addForeignKey('order_id', $p . 'orders', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Digital Downloads Files ────────────────────────
+        $this->table($p . 'product_download_files', ['id' => true, 'signed' => false])
+            ->addColumn('product_id', 'integer', ['signed' => false])
+            ->addColumn('media_id', 'integer', ['signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['product_id', 'sort_order'], ['name' => 'idx_product_download_files_product_sort'])
+            ->addIndex(['product_id', 'media_id'], ['unique' => true, 'name' => 'uq_product_download_files_product_media'])
+            ->addForeignKey('product_id', $p . 'products', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('media_id', $p . 'media', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        $this->table($p . 'product_variation_download_files', ['id' => true, 'signed' => false])
+            ->addColumn('variation_id', 'integer', ['signed' => false])
+            ->addColumn('media_id', 'integer', ['signed' => false])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['variation_id', 'sort_order'], ['name' => 'idx_var_download_files_var_sort'])
+            ->addIndex(['variation_id', 'media_id'], ['unique' => true, 'name' => 'uq_var_download_files_var_media'])
+            ->addForeignKey('variation_id', $p . 'product_variations', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('media_id', $p . 'media', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Country Tax Rates ──────────────────────────────
+        $this->table($p . 'country_tax_rates', ['id' => true, 'signed' => false])
+            ->addColumn('country_code', 'string', ['limit' => 2])
+            ->addColumn('regime', 'string', ['limit' => 20, 'default' => 'normal_vat'])
+            ->addColumn('rate', 'decimal', ['precision' => 5, 'scale' => 2, 'null' => true])
+            ->addColumn('zero_reason', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('is_fallback', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['null' => false])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['country_code'], ['unique' => true, 'name' => 'uq_country_code'])
+            ->create();
+
+        // ── Pageviews ──────────────────────────────────────
+        $this->table($p . 'pageviews', ['id' => true, 'signed' => false])
+            ->addColumn('page_url', 'string', ['limit' => 500])
+            ->addColumn('page_title', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('utm_source', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('utm_medium', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('utm_campaign', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('utm_term', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('utm_content', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('page_path', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('referrer', 'string', ['limit' => 500, 'null' => true])
+            ->addColumn('referrer_domain', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('country', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('city', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('language', 'string', ['limit' => 10, 'null' => true])
+            ->addColumn('browser', 'string', ['limit' => 50, 'null' => true])
+            ->addColumn('device_type', 'string', ['limit' => 10, 'null' => true])
+            ->addColumn('visitor_id', 'string', ['limit' => 64])
+            ->addColumn('status_code', 'integer', ['default' => 200])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['created_at'], ['name' => 'idx_pv_created_at'])
+            ->addIndex(['visitor_id'], ['name' => 'idx_pv_visitor_id'])
+            ->addIndex(['page_url'], ['name' => 'idx_pv_page_url'])
+            ->addIndex(['referrer_domain'], ['name' => 'idx_pv_referrer_domain'])
+            ->addIndex(['status_code'], ['name' => 'idx_pv_status_code'])
+            ->addIndex(['utm_source'], ['name' => 'idx_pv_utm_source'])
+            ->addIndex(['utm_medium'], ['name' => 'idx_pv_utm_medium'])
+            ->addIndex(['utm_campaign'], ['name' => 'idx_pv_utm_campaign'])
+            ->addIndex(['page_path'], ['name' => 'idx_pv_page_path'])
+            ->create();
+
+        // ── Membership: Plans ──────────────────────────────
+        $this->table($p . 'membership_plans', ['id' => true, 'signed' => false])
+            ->addColumn('name', 'string', ['limit' => 255])
+            ->addColumn('slug', 'string', ['limit' => 100])
+            ->addColumn('description', 'text', ['null' => true])
+            ->addColumn('price', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('plan_interval', 'string', ['limit' => 20, 'default' => 'monthly'])
+            ->addColumn('gateway', 'string', ['limit' => 20, 'default' => 'stripe'])
+            ->addColumn('tag', 'string', ['limit' => 100])
+            ->addColumn('trial_days', 'integer', ['default' => 0])
+            ->addColumn('trial_tag', 'string', ['limit' => 100, 'null' => true])
+            ->addColumn('trial_price', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('sort_order', 'integer', ['default' => 0])
+            ->addColumn('is_active', 'boolean', ['default' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['slug'], ['unique' => true, 'name' => 'idx_mplan_slug'])
+            ->create();
+
+        // ── Membership: Subscriptions ──────────────────────
+        $this->table($p . 'user_subscriptions', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['signed' => false])
+            ->addColumn('plan_id', 'integer', ['signed' => false])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'active'])
+            ->addColumn('gateway', 'string', ['limit' => 20, 'null' => true])
+            ->addColumn('gateway_subscription_id', 'string', ['limit' => 255, 'null' => true])
+            ->addColumn('trial_ends_at', 'datetime', ['null' => true])
+            ->addColumn('expires_at', 'datetime', ['null' => true])
+            ->addColumn('cancelled_at', 'datetime', ['null' => true])
+            ->addColumn('cancel_at_period_end', 'boolean', ['default' => false])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true])
+            ->addIndex(['user_id'], ['name' => 'idx_usub_user'])
+            ->addIndex(['plan_id'], ['name' => 'idx_usub_plan'])
+            ->addIndex(['status'], ['name' => 'idx_usub_status'])
+            ->addForeignKey('user_id', $p . 'users', 'id', ['delete' => 'CASCADE'])
+            ->addForeignKey('plan_id', $p . 'membership_plans', 'id', ['delete' => 'CASCADE'])
+            ->create();
+
+        // ── Abandoned Carts ────────────────────────────────
+        $this->table($p . 'abandoned_carts', ['id' => true, 'signed' => false])
+            ->addColumn('user_id', 'integer', ['null' => true, 'signed' => false])
+            ->addColumn('email', 'string', ['limit' => 255, 'null' => false])
+            ->addColumn('locale', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('cart_data', 'text', ['null' => true])
+            ->addColumn('subtotal', 'decimal', ['precision' => 10, 'scale' => 2, 'default' => '0.00'])
+            ->addColumn('currency', 'string', ['limit' => 3, 'default' => ''])
+            ->addColumn('first_detected_at', 'datetime', ['null' => true])
+            ->addColumn('last_reminded_at', 'datetime', ['null' => true])
+            ->addColumn('reminder_count', 'integer', ['default' => 0])
+            ->addColumn('recovered_at', 'datetime', ['null' => true])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addIndex(['user_id'], ['name' => 'idx_abandoned_user'])
+            ->addIndex(['recovered_at'], ['name' => 'idx_abandoned_recovered'])
+            ->addIndex(['reminder_count', 'last_reminded_at'], ['name' => 'idx_abandoned_reminder'])
+            ->create();
+
+        // Fresh installations get the plugin management permission from the
+        // schema itself; existing databases get the same grant from the
+        // follow-up migration.
+        $this->grantPermission($p, 'system.plugins', 'Manage Plugins', 'system');
+    }
+
+    private function grantPermission(string $prefix, string $slug, string $name, string $groupName): void
+    {
+        $existing = $this->fetchRow(
+            "SELECT id FROM {$prefix}permissions WHERE slug = '" . $slug . "' LIMIT 1",
+        );
+
+        if (!$existing) {
+            $this->table($prefix . 'permissions')->insert([
+                'slug'       => $slug,
+                'name'       => $name,
+                'group_name' => $groupName,
+            ])->saveData();
+        }
+
+        $this->execute(
+            "INSERT INTO {$prefix}role_permissions (role_id, permission_id, created_at)
+             SELECT r.id, p.id, CURRENT_TIMESTAMP
+             FROM {$prefix}roles r
+             CROSS JOIN {$prefix}permissions p
+             WHERE r.slug IN ('super_admin', 'admin')
+               AND p.slug = '" . $slug . "'
+               AND NOT EXISTS (
+                   SELECT 1 FROM {$prefix}role_permissions rp
+                   WHERE rp.role_id = r.id AND rp.permission_id = p.id
+               )",
+        );
+    }
+}

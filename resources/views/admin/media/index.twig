@@ -1,0 +1,778 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Media') }}{% endblock %}
+
+{% block content %}
+{% set _sa = user.role is defined and user.role == 'super_admin' %}
+{% set _can_upload = _sa or (user_permissions is defined and 'media.upload' in user_permissions) %}
+{% set _can_delete = _sa or (user_permissions is defined and 'media.delete' in user_permissions) %}
+{% set allIds = media|map(m => m.id) %}
+{% set deleteConfirmMsg = is_unused_filter|default(false)
+    ? __('This file is not used in your site. Delete it?')
+    : __('Warning: This file may be used in your content. Deleting it may cause content not to display properly. Are you sure to delete it?') %}
+<div x-data="{ viewMode: 'grid', showUploadModal: false }"
+     x-init="viewMode = localStorage.getItem('media_view_mode') || 'grid';
+             $watch('viewMode', v => localStorage.setItem('media_view_mode', v));
+             $watch('showUploadModal', v => { document.body.style.overflow = v ? 'hidden' : ''; if(!v && window.resetUploadModal) window.resetUploadModal(); });
+             window.openUploadModal = () => { showUploadModal = true; };
+             if (new URLSearchParams(window.location.search).has('open_upload')) { showUploadModal = true; }">
+<div x-data="dataTable({perPage: {{ per_page|default(24) }}, search: '{{ (filters.search|default(''))|e('js') }}'{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-start justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Media') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('files total') }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+        {% if is_unused_filter|default(false) %}
+        <a href="{{ url('/admin/media') }}"
+           class="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+            {{ __('Show All') }}
+        </a>
+        {% else %}
+        <a href="{{ url('/admin/media') }}?unused=1"
+           class="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+            {{ __('Show Unused Only') }}
+        </a>
+        {% endif %}
+        {% if _can_upload %}
+        <button @click="showUploadModal = true"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            {{ __('Upload') }}
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+{# Filters + Sort #}
+<div class="mb-4 flex items-center gap-3 flex-wrap">
+    <form method="get" action="{{ url('/admin/media') }}" class="flex items-center gap-2">
+        {% if is_unused_filter|default(false) %}<input type="hidden" name="unused" value="1">{% endif %}
+        <select name="type" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">{{ __('All Types') }}</option>
+            <option value="image/" {{ filters.type|default('') == 'image/' ? 'selected' }}>{{ __('Images') }}</option>
+            <option value="application/pdf" {{ filters.type|default('') == 'application/pdf' ? 'selected' }}>PDF</option>
+            <option value="video/" {{ filters.type|default('') == 'video/' ? 'selected' }}>{{ __('Video') }}</option>
+        </select>
+        <button type="submit" class="rounded-lg border dark:border-gray-200 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">{{ __('Filter') }}</button>
+    </form>
+    {{ table.search(__('Search') ~ '…') }}
+
+    <div class="flex items-center rounded-lg border dark:border-gray-700 p-1 bg-white dark:bg-gray-800">
+        <button @click="viewMode = 'grid'" :class="viewMode === 'grid' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'" class="p-1.5 rounded-md">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        </button>
+        <button @click="viewMode = 'list'" :class="viewMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'" class="p-1.5 rounded-md">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+    </div>
+
+    <select x-model="sortBy" @change="page = 1; apply()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="">{{ __('Sort by') }}: {{ __('Newest') }}</option>
+        <option value="original_name">{{ __('Name') }}</option>
+        <option value="size">{{ __('Size') }}</option>
+        <option value="mime_type">{{ __('Type') }}</option>
+        <option value="created_at">{{ __('Date') }}</option>
+    </select>
+    <select x-model="sortDir" @change="page = 1; apply()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="desc">↓ Desc</option>
+        <option value="asc">↑ Asc</option>
+    </select>
+    <template x-if="viewMode === 'list'">{{ table.columnsToggle() }}</template>
+</div>
+
+{# Grid View #}
+    <div x-show="viewMode === 'grid'" class="mb-2">
+        <div class="flex items-center gap-2 px-1 py-2 text-sm text-gray-500">
+            <input type="checkbox" data-bulk-select-all
+                   @click="$store.bulk.selectVisible()"
+                   :checked="$store.bulk.selectAll || $store.bulk.selectAllVisible"
+                   class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
+            <span>{{ __('Select All') }}</span>
+            <span class="text-xs" x-text="'(' + visibleCount + ' files)'"></span>
+        </div>
+    </div>
+<div x-show="viewMode === 'grid'" x-ref="items" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    {% for item in media %}
+    <div x-data="{ showInfo: false }" data-row-id="{{ item.id }}" data-search="{{ item.searchableText|e('html_attr') }}" data-sort="{{ {original_name: item.originalName, size: item.size, mime_type: item.mimeType, created_at: item.createdAt is defined and item.createdAt ? item.createdAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}" class="group relative overflow-hidden rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+        <div class="cursor-pointer" @click="showInfo = !showInfo">
+            {% include 'admin/partials/_media_preview.twig' with { item: item, variant: 'grid' } %}
+        </div>
+        <div class="p-2 flex items-start gap-2">
+            <input type="checkbox" data-bulk-item value="{{ item.id }}"
+                   @click.stop="$store.bulk.toggle({{ item.id }})"
+                   :checked="$store.bulk.isSelected({{ item.id }})"
+                   class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
+            <div class="min-w-0 flex-1">
+                <p class="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{{ item.originalName }}</p>
+                <p class="text-xs text-gray-400">{{ (item.size / 1024)|round(1) }} KB</p>
+            </div>
+        </div>
+
+        {# Info overlay #}
+        <div x-show="showInfo" x-transition @click.away="showInfo = false"
+             class="absolute inset-0 bg-black/80 p-3 flex flex-col justify-between text-white text-xs z-10">
+            <div class="space-y-1 overflow-y-auto">
+                <p class="font-semibold truncate">{{ item.originalName }}</p>
+                <p>{{ item.mimeType }} &middot; {{ (item.size / 1024)|round(1) }} KB</p>
+                {% if item.altText %}
+                <p class="text-xs text-gray-300">Alt: {{ item.altText }}</p>
+                {% endif %}
+                {% if item.description %}
+                <p class="text-xs text-gray-300">Desc: {{ item.description }}</p>
+                {% endif %}
+                <div class="mt-2">
+                    <label class="block text-[10px] text-gray-300 mb-0.5">URL</label>
+                    <div class="flex items-center gap-1">
+                        <input type="text" readonly value="{{ site_url }}/uploads/{{ item.path }}"
+                               class="w-full bg-white dark:bg-gray-900/10 rounded-sm px-1.5 py-0.5 text-[11px] text-gray-900 dark:text-white border border-white/20"
+                               @click="$el.select()">
+                        {% include 'admin/components/_copy_button.twig' with {
+                            text: site_url ~ '/uploads/' ~ item.path,
+                            title: __('Copy Link'),
+                            size: 'h-3.5 w-3.5',
+                            class: 'shrink-0 rounded-sm bg-white dark:bg-gray-900/20 px-1.5 py-0.5 text-gray-700 dark:text-white hover:bg-white dark:bg-gray-900/30'
+                        } %}
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-2 pt-2 border-t border-white/20">
+                {% if _can_upload %}
+                <a href="{{ url('/admin/media/' ~ item.id ~ '/edit') }}"
+                   class="rounded-sm bg-gray-700 px-2 py-1 text-[11px] hover:bg-gray-900">{{ __('Edit') }}</a>
+                {% endif %}
+                {% if _can_delete %}
+                <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}"
+                      onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')" class="inline">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="_METHOD" value="DELETE">
+                    <button title="{{ __('Delete') }}" class="rounded-sm bg-red-500 dark:bg-red-700 px-2 py-1 text-[11px] hover:bg-red-600 dark:hover:bg-red-800">{{ __('Delete') }}</button>
+                </form>
+                {% endif %}
+                <button type="button" @click="showInfo = false"
+                        class="ml-auto rounded-sm bg-white dark:bg-gray-900/20 px-2 py-1 text-[11px] text-gray-900 dark:text-white hover:bg-white dark:bg-gray-900/30" title="{{ __('Cancel') }}">✕</button>
+            </div>
+        </div>
+
+        {% if _can_delete %}
+        <div class="absolute right-1 top-1 hidden group-hover:block" x-show="!showInfo">
+            <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}"
+                  onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')">
+                {{ csrf_field() }}
+                <input type="hidden" name="_METHOD" value="DELETE">
+                <button title="{{ __('Delete') }}" class="rounded-sm bg-red-600 dark:bg-red-700 px-2 py-0.5 text-xs text-white hover:bg-red-700 dark:hover:bg-red-800">×</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="col-span-full py-12 text-center text-sm text-gray-400">{{ __('No media files found.') }}</div>
+    {% endfor %}
+</div>
+
+{# List View #}
+<div x-show="viewMode === 'list'" class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th(__('File'), 'original_name') }}
+                {{ table.th(__('Type'), 'mime_type') }}
+                {{ table.th(__('Size'), 'size') }}
+                {{ table.th(__('Date'), 'created_at') }}
+                <th class="px-6 py-3"></th>
+            </tr>
+        </thead>
+        <tbody x-ref="listItems" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for item in media %}
+            <tr data-row-id="{{ item.id }}" data-search="{{ item.searchableText|e('html_attr') }}" data-sort="{{ {original_name: item.originalName, size: item.size, mime_type: item.mimeType, created_at: item.createdAt ? item.createdAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}" class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                {{ table.td_checkbox(item.id) }}
+                <td class="px-6 py-4 flex items-center gap-3">
+                    {% include 'admin/partials/_media_preview.twig' with { item: item, variant: 'list' } %}
+                    <div>
+                        <a href="{{ url('/admin/media/' ~ item.id ~ '/edit') }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ item.originalName }}</a>
+                        <p class="text-xs text-gray-400 truncate max-w-xs">{{ item.path }}</p>
+                        {% if item.altText %}
+                        <p class="text-xs text-gray-400 truncate">Alt: {{ item.altText }}</p>
+                        {% endif %}
+                        {% if item.description %}
+                        <p class="text-xs text-gray-400 truncate">Desc: {{ item.description }}</p>
+                        {% endif %}
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ item.mimeType }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ (item.size / 1024)|round(1) }} KB</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ item.createdAt ? item.createdAt.format('M j, Y') : '—' }}</td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex items-center justify-end gap-2">
+                        {% include 'admin/components/_copy_button.twig' with {
+                            text: site_url ~ '/uploads/' ~ item.path,
+                            title: __('Copy URL'),
+                            size: 'h-3.5 w-3.5',
+                            class: 'shrink-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'
+                        } %}
+                        {% if _can_delete %}
+                        <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}" onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button title="{{ __('Delete') }}" class="text-red-500 hover:text-red-700">✕</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination([12, 24, 48, 96]) }}
+{% include 'admin/partials/_bulk_bar.twig' with {
+    action: 'media',
+    deleteMsg: is_unused_filter|default(false)
+        ? __('Are you sure you want to delete the selected unused files?')
+        : __('These files may be used in your content. Deleting them may cause content not to display properly.') ~ ' ' ~ __('Continue deleting?'),
+} %}
+</div>
+
+{# ── Upload Modal ────────────────────────────────────────────────────── #}
+<div x-show="showUploadModal" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+     @keydown.escape.window="if(showUploadModal){showUploadModal=false;resetUploadModal()}">
+    <div class="w-full max-w-xl rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xl mx-4"
+         @click.outside="showUploadModal=false;resetUploadModal()">
+
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ __('Upload Media') }}</h2>
+            <button type="button" @click="showUploadModal=false;resetUploadModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+        </div>
+
+        <div id="upload-drop-zone"
+             data-max-count="{{ max_file_count }}"
+             data-max-batch="{{ max_batch_size|default(0) }}"
+             class="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 p-8 text-center transition hover:border-gray-500">
+            <svg class="mb-3 h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Drag and drop files or') }}
+                <label class="cursor-pointer font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700">
+                    {{ __('browse') }}
+                    <input type="file" name="files[]" id="upload-file-input" class="sr-only" multiple
+                           accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf,application/zip,application/x-zip-compressed,video/mp4,video/webm,audio/mpeg">
+                </label>
+            </p>
+            <p class="mt-2 text-xs text-gray-400">{{ __('Up to') }} {{ max_file_count }} {{ __('files, max') }} {{ max_file_size_mb }} MB {{ __('each') }}</p>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Batch limit') }}: {{ max_batch_size_mb|default('') }} MB</p>
+        </div>
+
+        <div id="upload-file-list" class="hidden mt-3 space-y-2 max-h-48 overflow-y-auto"></div>
+
+        <div id="upload-batch-warning"
+             class="hidden mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-900/30 dark:text-red-300"></div>
+
+        {% if use_original_filename %}
+        <div class="mt-3 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+            <span>{{ __('When a file with the same name exists') }}</span>
+            <select id="upload-conflict-mode"
+                    class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                <option value="suffix" {{ conflict_mode == 'suffix' ? 'selected' : '' }}>{{ __('Keep both (add -1, -2, ...)') }}</option>
+                <option value="replace" {{ conflict_mode == 'replace' ? 'selected' : '' }}>{{ __('Update file') }}</option>
+                <option value="skip" {{ conflict_mode == 'skip' ? 'selected' : '' }}>{{ __('Skip duplicate') }}</option>
+            </select>
+        </div>
+        {% else %}
+        <div class="mt-3 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+            <span>{{ __('When a file with the same content already exists') }}</span>
+            <select id="upload-conflict-mode"
+                    class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                <option value="replace" {{ conflict_mode == 'replace' ? 'selected' : '' }}>{{ __('Update file') }}</option>
+                <option value="skip" {{ conflict_mode == 'skip' ? 'selected' : '' }}>{{ __('Skip duplicate') }}</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <div id="upload-progress" class="hidden mt-3">
+            <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                <div id="upload-progress-bar" class="h-full w-0 rounded-full bg-gray-900 dark:bg-gray-100 transition-all duration-300"></div>
+            </div>
+            <p id="upload-progress-text" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
+        </div>
+
+        <div class="mt-4 flex justify-end gap-3">
+            <button type="button" @click="showUploadModal=false;resetUploadModal()"
+                    class="rounded-lg border px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300">
+                {{ __('Cancel') }}
+            </button>
+            <button type="button" id="upload-start-btn" disabled
+                    class="rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-white opacity-50 hover:bg-gray-800 dark:hover:bg-gray-600">
+                {{ __('Upload All') }}
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+(function () {
+    var zone = document.getElementById('upload-drop-zone'),
+        input = document.getElementById('upload-file-input'),
+        fileListEl = document.getElementById('upload-file-list'),
+        uploadBtn = document.getElementById('upload-start-btn'),
+        progressEl = document.getElementById('upload-progress'),
+        progressBar = document.getElementById('upload-progress-bar'),
+        progressText = document.getElementById('upload-progress-text'),
+        batchWarn = document.getElementById('upload-batch-warning');
+
+    // Total batch size allowed in one request (app cap vs PHP post_max_size)
+    var maxBatchSize = parseInt(zone.dataset.maxBatch || '0', 10);
+
+    function overBatchLimit() {
+        if (maxBatchSize <= 0) return false;
+        var total = 0;
+        activeFiles.concat(pendingFiles).forEach(function (f) { total += (f.size || 0); });
+        return total > maxBatchSize;
+    }
+
+    var pendingFiles = [];
+    var activeFiles = [];
+    var uploading = false;
+    var totalUploaded = 0;
+    var totalFailed = 0;
+    var totalSkipped = 0;
+    var totalOverwritten = 0;
+    // name|size -> failure reason for files still waiting to be retried
+    var failedFiles = {};
+
+    function fileKey(file) {
+        return file.name + '|' + (file.size || 0);
+    }
+
+    // ── Page-wide drag → auto-open modal ────────────────────────────────
+    var dragCounter = 0;
+    document.addEventListener('dragover', function (ev) {
+        ev.preventDefault();
+    });
+    document.addEventListener('dragenter', function (ev) {
+        ev.preventDefault();
+        dragCounter++;
+        if (dragCounter === 1 && window.openUploadModal) {
+            window.openUploadModal();
+        }
+    });
+    document.addEventListener('dragleave', function (ev) {
+        ev.preventDefault();
+        dragCounter--;
+    });
+    document.addEventListener('drop', function (ev) {
+        ev.preventDefault();
+        dragCounter = 0;
+        if (ev.dataTransfer && ev.dataTransfer.files.length > 0) {
+            addFiles(ev.dataTransfer.files);
+            if (window.openUploadModal) window.openUploadModal();
+        }
+    });
+
+    // ── Drag events on drop zone ────────────────────────────────────────
+    ['dragenter', 'dragover'].forEach(function (e) {
+        zone.addEventListener(e, function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            zone.classList.add('border-gray-500', 'bg-gray-50', 'dark:bg-gray-800/30');
+        });
+    });
+    ['dragleave', 'drop'].forEach(function (e) {
+        zone.addEventListener(e, function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            zone.classList.remove('border-gray-500', 'bg-gray-50', 'dark:bg-gray-800/30');
+        });
+    });
+    zone.addEventListener('drop', function (ev) {
+        addFiles(ev.dataTransfer.files);
+    });
+    input.addEventListener('change', function () {
+        addFiles(input.files);
+        input.value = '';
+    });
+
+    // ── Add files ───────────────────────────────────────────────────────
+    function addFiles(files) {
+        var maxCount = parseInt(zone.dataset.maxCount || '20', 10);
+        var allFiles = pendingFiles.concat(activeFiles);
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (allFiles.length >= maxCount) break;
+            var dup = allFiles.some(function (f) { return f.name === file.name && f.size === file.size; });
+            if (!dup) {
+                allFiles.push(file);
+                pendingFiles.push(file);
+            }
+        }
+        renderFileList();
+    }
+
+    // ── Render file cards ───────────────────────────────────────────────
+    function renderFileList() {
+        fileListEl.innerHTML = '';
+        var allFiles = activeFiles.concat(pendingFiles);
+
+        var overLimit = !uploading && overBatchLimit();
+        if (overLimit) {
+            var totalBytes = 0;
+            allFiles.forEach(function (f) { totalBytes += (f.size || 0); });
+            batchWarn.textContent = '{{ __("Total size") }} ' + formatSize(totalBytes)
+                + ' {{ __("exceeds the server batch limit") }} (' + formatSize(maxBatchSize) + ').';
+        }
+        batchWarn.classList.toggle('hidden', !overLimit);
+
+        if (allFiles.length === 0) {
+            fileListEl.classList.add('hidden');
+            uploadBtn.disabled = true;
+            uploadBtn.classList.add('opacity-50');
+            return;
+        }
+        fileListEl.classList.remove('hidden');
+        uploadBtn.disabled = overLimit;
+        if (overLimit) {
+            uploadBtn.classList.add('opacity-50');
+        } else {
+            uploadBtn.classList.remove('opacity-50');
+        }
+
+        allFiles.forEach(function (file, idx) {
+            var isActive = idx < activeFiles.length;
+            var card = document.createElement('div');
+            card.className = 'flex items-center gap-3 rounded-lg border bg-gray-50 dark:bg-gray-800/50 p-3 text-sm';
+            if (isActive) card.classList.add('opacity-60');
+
+            var icon = document.createElement('span');
+            icon.className = 'shrink-0 text-lg upload-file-icon';
+            icon.textContent = file.type.startsWith('image/') ? '\u{1F5BC}' : '\u{1F4C4}';
+
+            var info = document.createElement('div');
+            info.className = 'flex-1 min-w-0';
+            var name = document.createElement('p');
+            name.className = 'truncate font-medium text-gray-900 dark:text-gray-100';
+            name.textContent = file.name;
+            var size = document.createElement('p');
+            size.className = 'text-xs text-gray-500 dark:text-gray-400';
+            size.textContent = formatSize(file.size);
+            info.appendChild(name);
+            info.appendChild(size);
+
+            var status = document.createElement('span');
+            status.id = 'upload-file-status-' + idx;
+            status.className = 'shrink-0 text-sm';
+
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'shrink-0 rounded-sm px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20';
+            removeBtn.textContent = '\u2715';
+            removeBtn.addEventListener('click', function () {
+                var fileIdx = -1;
+                if (isActive) {
+                    fileIdx = activeFiles.findIndex(function (f) { return f.name === file.name && f.size === file.size; });
+                    if (fileIdx !== -1) activeFiles.splice(fileIdx, 1);
+                } else {
+                    fileIdx = pendingFiles.findIndex(function (f) { return f.name === file.name && f.size === file.size; });
+                    if (fileIdx !== -1) pendingFiles.splice(fileIdx, 1);
+                }
+                delete failedFiles[fileKey(file)];
+                renderFileList();
+            });
+
+            var failedReason = failedFiles[fileKey(file)];
+            if (failedReason) {
+                status.textContent = '\u2717';
+                status.title = failedReason;
+                status.className = 'shrink-0 text-sm text-red-600';
+                card.classList.remove('bg-gray-50', 'dark:bg-gray-800/50');
+                card.classList.add('border-red-200', 'bg-red-50', 'dark:border-red-900', 'dark:bg-red-900/20');
+                // Keep the reason visible under the filename — a tooltip-only
+                // answer hides the cause from anyone hovering-less.
+                var reason = document.createElement('p');
+                reason.className = 'truncate text-xs text-red-600 dark:text-red-400';
+                reason.textContent = failedReason;
+                info.appendChild(reason);
+            }
+
+            card.appendChild(icon);
+            card.appendChild(info);
+            card.appendChild(status);
+            card.appendChild(removeBtn);
+            fileListEl.appendChild(card);
+        });
+    }
+
+    // ── Upload batch ────────────────────────────────────────────────────
+    function startNextBatch() {
+        if (uploading) return;
+        if (overBatchLimit()) {
+            // Would certainly be rejected server-side — keep the files queued
+            // and surface the warning instead of sending.
+            renderFileList();
+            return;
+        }
+        if (pendingFiles.length === 0) {
+            uploading = false;
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '{{ __("Upload All") }}';
+            uploadBtn.classList.remove('opacity-50');
+            var parts = [];
+            if (totalUploaded > 0) parts.push(totalUploaded + ' {{ __("uploaded") }}');
+            if (totalOverwritten > 0) parts.push(totalOverwritten + ' {{ __("overwritten") }}');
+            if (totalSkipped > 0) parts.push(totalSkipped + ' {{ __("skipped") }}');
+            if (totalFailed > 0) parts.push(totalFailed + ' {{ __("failed") }}');
+            if (parts.length > 0) {
+                progressText.textContent = parts.join(', ');
+                uploadBtn.textContent = '{{ __("Done") }}';
+            } else {
+                progressText.textContent = '{{ __("Upload failed") }}';
+                uploadBtn.textContent = '{{ __("Retry") }}';
+                return;
+            }
+            // Wait briefly — if new files arrive, process them instead of reloading
+            setTimeout(function () {
+                if (pendingFiles.length > 0) {
+                    totalUploaded = 0;
+                    totalFailed = 0;
+                    startNextBatch();
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+            return;
+        }
+
+        activeFiles = pendingFiles.splice(0, pendingFiles.length);
+        uploading = true;
+        renderFileList();
+
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = '{{ __("Uploading...") }}';
+        uploadBtn.classList.add('opacity-50');
+        progressEl.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        progressText.textContent = activeFiles.length + ' {{ __("files") }}' + (pendingFiles.length > 0 ? ' (' + pendingFiles.length + ' {{ __("queued") }})' : '');
+
+        var formData = new FormData();
+        for (var i = 0; i < activeFiles.length; i++) {
+            formData.append('files[]', activeFiles[i]);
+        }
+        formData.append('_csrf_token', getCsrfToken());
+        var conflictSelect = document.getElementById('upload-conflict-mode');
+        if (conflictSelect) {
+            formData.append('conflict_mode', conflictSelect.value);
+        }
+
+        var xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', function (ev) {
+            if (ev.lengthComputable) {
+                var pct = Math.round((ev.loaded / ev.total) * 100);
+                progressBar.style.width = pct + '%';
+                progressText.textContent = pct + '% — ' + activeFiles.length + ' {{ __("files") }}' + (pendingFiles.length > 0 ? ' (' + pendingFiles.length + ' {{ __("queued") }})' : '');
+            }
+        });
+
+        xhr.addEventListener('load', function () {
+            progressBar.style.width = '100%';
+            progressText.textContent = '{{ __("Processing...") }}';
+
+            try {
+                var data = parseResponseOrThrow(xhr);
+                var fatalError = null;
+                var doneNames = {};
+                var errorNames = {};
+
+                (data.uploaded || []).forEach(function (item) {
+                    totalUploaded++;
+                    doneNames[item.name] = true;
+                });
+                (data.skipped || []).forEach(function (item) {
+                    totalSkipped++;
+                    doneNames[item.name] = true;
+                });
+                (data.overwritten || []).forEach(function (item) {
+                    totalOverwritten++;
+                    doneNames[item.name] = true;
+                });
+                (data.errors || []).forEach(function (err) {
+                    if (err.file === '*') {
+                        // Whole-batch failure (rate limit, batch size, disk space…):
+                        // the server did not process any file, so every file keeps
+                        // the same error and is queued for a retry.
+                        fatalError = err.error;
+                        return;
+                    }
+                    totalFailed++;
+                    errorNames[err.file] = err.error;
+                });
+
+                // Files the server accepted are final. Everything else — explicit
+                // per-file errors, whole-batch errors, or files the response did
+                // not mention at all — is put back into the queue so the list is
+                // never silently emptied and Retry can re-attempt it.
+                activeFiles.forEach(function (f) {
+                    var key = fileKey(f);
+                    if (fatalError) {
+                        failedFiles[key] = fatalError;
+                    } else if (doneNames[f.name]) {
+                        delete failedFiles[key];
+                        return;
+                    } else if (errorNames[f.name]) {
+                        failedFiles[key] = errorNames[f.name];
+                    } else {
+                        totalFailed++;
+                        failedFiles[key] = '{{ __("Upload failed") }}';
+                    }
+                    pendingFiles.push(f);
+                });
+
+                activeFiles = [];
+                renderFileList();
+
+                var parts = [];
+                if (totalUploaded > 0) parts.push(totalUploaded + ' {{ __("uploaded") }}');
+                if (totalOverwritten > 0) parts.push(totalOverwritten + ' {{ __("overwritten") }}');
+                if (totalSkipped > 0) parts.push(totalSkipped + ' {{ __("skipped") }}');
+                if (totalFailed > 0) parts.push(totalFailed + ' {{ __("failed") }}');
+
+                uploading = false;
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50');
+
+                if (pendingFiles.length > 0) {
+                    // Some files still failed — wait for the user to hit Retry.
+                    uploadBtn.textContent = '{{ __("Retry") }}';
+                    if (fatalError) {
+                        progressText.textContent = '{{ __("Error") }}: ' + fatalError;
+                    } else if (parts.length > 0) {
+                        var firstReason = Object.keys(errorNames).length > 0
+                            ? errorNames[Object.keys(errorNames)[0]]
+                            : null;
+                        progressText.textContent = parts.join(', ') + (firstReason ? ' — ' + firstReason : '');
+                    } else {
+                        progressText.textContent = '{{ __("Upload failed") }}';
+                    }
+                } else {
+                    // Everything is done: show the summary, then refresh so the
+                    // media grid picks up the new files.
+                    uploadBtn.textContent = '{{ __("Done") }}';
+                    progressText.textContent = parts.length > 0 ? parts.join(', ') : '{{ __("Upload failed") }}';
+                    var finishUp = function () {
+                        if (uploading) {
+                            // A new batch started before the reload — wait for it.
+                            setTimeout(finishUp, 500);
+                            return;
+                        }
+                        if (pendingFiles.length > 0) {
+                            totalUploaded = 0;
+                            totalFailed = 0;
+                            totalSkipped = 0;
+                            totalOverwritten = 0;
+                            startNextBatch();
+                        } else {
+                            window.location.reload();
+                        }
+                    };
+                    setTimeout(finishUp, 1500);
+                }
+            } catch (e) {
+                var reason = e && e.reason ? e.reason : '{{ __("Upload failed") }}';
+                activeFiles.forEach(function (f) { failedFiles[fileKey(f)] = reason; });
+                pendingFiles = activeFiles.concat(pendingFiles);
+                totalFailed += activeFiles.length;
+                activeFiles = [];
+                renderFileList();
+                uploading = false;
+                progressText.textContent = '{{ __("Error") }}: ' + reason;
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '{{ __("Retry") }}';
+                uploadBtn.classList.remove('opacity-50');
+            }
+        });
+
+        xhr.addEventListener('error', function () {
+            activeFiles.forEach(function (f) { failedFiles[fileKey(f)] = '{{ __("Network error") }}'; });
+            pendingFiles = activeFiles.concat(pendingFiles);
+            totalFailed += activeFiles.length;
+            activeFiles = [];
+            renderFileList();
+            uploading = false;
+            progressText.textContent = '{{ __("Network error") }}';
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '{{ __("Retry") }}';
+            uploadBtn.classList.remove('opacity-50');
+        });
+
+        xhr.open('POST', '{{ url("/admin/media/upload-json-multi") }}');
+        xhr.setRequestHeader('X-CSRF-Token', getCsrfToken());
+        xhr.send(formData);
+    }
+
+    // ── Upload button ───────────────────────────────────────────────────
+    uploadBtn.addEventListener('click', function () {
+        if (pendingFiles.length === 0 || uploading) return;
+        totalUploaded = 0;
+        totalFailed = 0;
+        totalSkipped = 0;
+        totalOverwritten = 0;
+        startNextBatch();
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    function getCsrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    /**
+     * Defensive JSON parsing: stray output printed before the payload
+     * (a leaked PHP notice/deprecation) breaks the raw parse — retry with
+     * the first { … last } window before giving up. If the body never was
+     * JSON, throw with `.reason` = HTTP status + body head so the actual
+     * cause is displayed instead of a silent generic failure.
+     */
+    function parseResponseOrThrow(xhr) {
+        var text = String(xhr.responseText || '');
+        try { return JSON.parse(text); } catch (e) { /* stray output before the JSON */ }
+        var start = text.indexOf('{');
+        var end   = text.lastIndexOf('}');
+        if (start !== -1 && end > start) {
+            try { return JSON.parse(text.slice(start, end + 1)); } catch (e) { /* body is not JSON at all */ }
+        }
+        var err = new Error('invalid-json');
+        err.reason = 'HTTP ' + xhr.status + ': ' + text.trim().slice(0, 200);
+        throw err;
+    }
+
+    // ── Expose reset for Alpine ─────────────────────────────────────────
+    window.resetUploadModal = function () {
+        pendingFiles = [];
+        activeFiles = [];
+        uploading = false;
+        totalUploaded = 0;
+        totalFailed = 0;
+        totalSkipped = 0;
+        totalOverwritten = 0;
+        failedFiles = {};
+        renderFileList();
+        progressEl.classList.add('hidden');
+        progressBar.style.width = '0%';
+        progressText.textContent = '';
+        uploadBtn.disabled = true;
+        uploadBtn.classList.add('opacity-50');
+        uploadBtn.textContent = '{{ __("Upload All") }}';
+        zone.classList.remove('border-gray-500', 'bg-gray-50', 'dark:bg-gray-800/30');
+    };
+})();
+</script>
+{% endblock %}

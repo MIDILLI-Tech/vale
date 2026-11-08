@@ -1,0 +1,177 @@
+{# ── Backups tab content ───────────────────────────────────────── #}
+
+{# ── Backups ──────────────────────────────────────────────────── #}
+<div class="rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs">
+    <div class="flex items-start justify-between mb-4 gap-4">
+        <div>
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 shrink-0">{{ __('Backups') }}</h2>
+            {% if not zip_supported %}
+            <p class="mt-1 text-xs text-red-600 dark:text-red-400">
+                {{ __('ZIP extension is not enabled. Backup downloads are unavailable.') }}
+            </p>
+            {% endif %}
+        </div>
+        <div class="text-right" x-data="{
+                busy: false,
+                result: null,
+                quick: true,
+                csrf: document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                async createBackup() {
+                    this.busy = true;
+                    this.result = null;
+                    try {
+                        const r = await fetch('{{ url('/admin/update/backup') }}', {
+                            method: 'POST',
+                            headers: {'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': this.csrf},
+                            body: 'quick=' + (this.quick ? '1' : '0'),
+                        });
+                        this.result = await r.json();
+                        if (this.result?.ok) {
+                            this.busy = false;
+                            // Real reload (keeps ?tab=backups): renders the new backup
+                            // and the server-side flash message.
+                            window.location.reload();
+                            return;
+                        }
+                    } catch (e) {
+                        this.result = {ok: false, error: e.message};
+                    }
+                    this.busy = false;
+                }
+            }"
+             @beforeunload.window="if (busy) { $event.preventDefault(); $event.returnValue = ''; }">
+             <div class="flex items-center justify-end gap-4">
+                <button type="button" @click="createBackup()"
+                        :disabled="busy"
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 dark:bg-gray-800/50 disabled:opacity-60 disabled:cursor-wait">
+                    <svg x-show="!busy" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    <svg x-show="busy" x-cloak class="h-4 w-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span x-text="busy ? '{{ __('Creating backup…') }}' : '{{ __('Create backup now') }}'"></span>
+                </button>
+                <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer" title="{{ __('External components (vendor, node_modules) will not be backed up. Uses less space, but after a major update these backups may not be recoverable.') }}">
+                    <input type="checkbox" x-model="quick" :disabled="busy"
+                           class="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    {{ __('Quick') }}
+                </label>
+            </div>
+            <div class="mt-2 max-w-lg text-right">
+                <span x-show="result !== null" class="text-xs"
+                      :class="result?.ok ? 'text-green-600' : 'text-red-600'"
+                      x-text="result?.ok ? '{{ __('Backup created.') }}' : ('{{ __('Error:') }} ' + (result?.error ?? ''))">
+                </span>
+                <span x-show="busy" class="text-xs text-gray-400">{{ __('A backup is in progress. Closing the page may interrupt it.') }}</span>
+            </div>
+            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500 max-w-lg text-right">{{ __('External components (vendor, node_modules) will not be backed up in quick mode. Uses less space, but after a major update these backups may not be recoverable.') }}</p>
+        </div>
+    </div>
+
+    {% if backups is defined and backups|length > 0 %}
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[820px] text-sm">
+            <thead>
+                <tr class="border-b text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <th class="pb-2 text-left font-medium">{{ __('Date') }}</th>
+                    <th class="pb-2 text-left font-medium">{{ __('Version') }}</th>
+                    <th class="pb-2 text-left font-medium">{{ __('Files') }}</th>
+                    <th class="pb-2 text-left font-medium">{{ __('DB Size') }}</th>
+                    <th class="pb-2 text-left font-medium">{{ __('Total') }}</th>
+                    <th class="pb-2"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for backup in backups %}
+                <tr>
+                    <td class="py-2.5 pr-4 text-gray-700 font-mono text-xs">{{ backup.date }}</td>
+                    <td class="py-2.5 pr-4 text-gray-700">v{{ backup.version }}</td>
+                    <td class="py-2.5 pr-4 text-gray-500 dark:text-gray-400">{{ backup.file_count|number_format }}</td>
+                    <td class="py-2.5 pr-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {{ (backup.db_size / 1024)|round(1) }} KB
+                        {% if backup.db_driver is defined and backup.db_driver != 'unknown' %}
+                        <span class="ml-1 text-xs text-gray-400 dark:text-gray-500">({{ backup.db_driver|upper }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2.5 pr-4 text-gray-500 dark:text-gray-400">{{ (backup.size_bytes / 1048576)|round(1) }} MB</td>
+                    <td class="py-2.5 pr-4 text-right whitespace-nowrap">
+                        {% set hasBoth = backup.has_files and backup.has_database %}
+                        {% set defaultType = hasBoth ? 'all' : (backup.has_files ? 'files' : 'database') %}
+                        <div class="flex items-center justify-end gap-1"
+                             x-data="{
+                                actionType: '{{ defaultType }}',
+                                typeLabel(type) {
+                                    return {
+                                        all: '{{ __('All (files + DB)')|escape('js') }}',
+                                        files: '{{ __('Files only')|escape('js') }}',
+                                        database: '{{ __('Database only')|escape('js') }}'
+                                    }[type] || type;
+                                },
+                                restoreMsg: '{{ __('{type} will be restored. Continue?')|escape('js') }}',
+                                deleteMsg: '{{ __('{type} will be deleted. Continue?')|escape('js') }}'
+                             }">
+                            <select x-model="actionType"
+                                    class="rounded-sm border-gray-300 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300 focus:ring-indigo-500">
+                                {% if backup.has_files and backup.has_database %}
+                                <option value="all">{{ __('All (files + DB)') }}</option>
+                                {% endif %}
+                                {% if backup.has_files %}
+                                <option value="files">{{ __('Files only') }}</option>
+                                {% endif %}
+                                {% if backup.has_database %}
+                                <option value="database">{{ __('Database only') }}</option>
+                                {% endif %}
+                            </select>
+                            <form method="POST" action="{{ url('/admin/update/rollback') }}"
+                                  class="inline-flex items-center"
+                                  x-data="{ busy: false }"
+                                   @submit.prevent="if(confirm(restoreMsg.replace('{type}', typeLabel(actionType)))) { busy = true; $el.submit(); }">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="backup_dir" value="{{ backup.dir|e }}">
+                                <input type="hidden" name="restore_type" :value="actionType">
+                                <button type="submit"
+                                        :disabled="busy"
+                                        class="inline-flex items-center gap-1 rounded-sm px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60 disabled:cursor-wait">
+                                    <svg x-show="!busy" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    <span x-text="busy ? '{{ __('Restoring…') }}' : '{{ __('Restore') }}'"></span>
+                                </button>
+                            </form>
+                            <a href="{{ url('/admin/update/backup/download', [], {backup_dir: backup.dir}) }}"
+                               {% if not zip_supported %}onclick="return false;"{% endif %}
+                               class="inline-flex items-center gap-1 rounded-sm px-3 py-1.5 text-xs font-medium {% if zip_supported %}text-blue-700 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20{% else %}text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700 cursor-not-allowed opacity-50{% endif %} dark:bg-gray-800/50">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                {{ __('Download') }}
+                            </a>
+                            <form method="POST" action="{{ url('/admin/update/backup/delete') }}"
+                                  class="inline-flex items-center"
+                                  x-data="{ busy: false }"
+                                   @submit.prevent="if(confirm(deleteMsg.replace('{type}', typeLabel(actionType)))) { busy = true; $el.submit(); }">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="backup_dir" value="{{ backup.dir|e }}">
+                                <input type="hidden" name="delete_type" :value="actionType">
+                                <button type="submit"
+                                        :disabled="busy"
+                                        class="inline-flex items-center gap-1 rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300 disabled:opacity-60 disabled:cursor-wait">
+                                    <svg x-show="!busy" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    <span x-text="busy ? '{{ __('Deleting…') }}' : '{{ __('Delete') }}'"></span>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center">{{ __('No backups found. You can create one manually. A backup is created before each update automatically.') }}</p>
+    {% endif %}
+</div>

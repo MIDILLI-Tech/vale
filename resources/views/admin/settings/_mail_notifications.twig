@@ -1,0 +1,111 @@
+    {# ══ Mail Notifications sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="mail-tab-notifications" class="mail-tab-panel">
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+            <form method="post" action="{{ url('/admin/mail') }}" class="space-y-5">
+                {{ csrf_field() }}
+                <input type="hidden" name="_METHOD" value="PUT">
+                <input type="hidden" name="_subtab" value="notifications">
+
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Email Notifications') }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Enable or disable email notifications per type. Locked checkboxes are required and cannot be disabled.') }}</p>
+
+                {% set notificationTypes = [
+                    { key: 'order-confirmation',       label: 'Order Confirmation',       customer: true,  admin: true,  mandatory_customer: true,  mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'payment-received',          label: 'Payment Received',          customer: true,  admin: true,  mandatory_customer: true,  mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'order-status-update',       label: 'Order Status Update',       customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'tracking-update',           label: 'Tracking Update',           customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'order-note',                label: 'Order Note',                customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'invoice',                   label: 'Invoice',                   customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'payment-link',              label: 'Payment Link',              customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'refund-request-customer',   label: 'Refund Request (Customer)', customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'refund-request-admin',      label: 'Refund Request (Admin)',    customer: false, admin: true,  mandatory_customer: false, mandatory_admin: true,  shop: true,  subs: false },
+                    { key: 'refund-request-reviewed',   label: 'Refund Reviewed',           customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'refund-request-auto-approved', label: 'Refund Auto-Approved',   customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                    { key: 'stock-warning-admin',       label: 'Low Stock Warning',         customer: false, admin: true,  mandatory_customer: false, mandatory_admin: true,  shop: true,  subs: false },
+                    { key: 'subscription-welcome',      label: 'Subscription Welcome',      customer: true,  admin: true,  mandatory_customer: true,  mandatory_admin: false, shop: false, subs: true  },
+                    { key: 'subscription-cancelled',    label: 'Subscription Cancelled',    customer: true,  admin: true,  mandatory_customer: true,  mandatory_admin: false, shop: false, subs: true  },
+                    { key: 'password-reset',            label: 'Password Reset',            customer: true,  admin: false, mandatory_customer: true,  mandatory_admin: false, shop: false, subs: false },
+                    { key: 'email-verify',              label: 'Email Verification',        customer: true,  admin: false, mandatory_customer: true,  mandatory_admin: false, shop: false, subs: false },
+                    { key: 'welcome',                    label: 'Welcome Email',             customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: false, subs: false, newsletter: false },
+                    { key: 'newsletter-confirmation',   label: 'Newsletter Confirmation',   customer: true,  admin: false, mandatory_customer: false, mandatory_admin: false, shop: false, subs: false, newsletter: true },
+                    { key: 'comment-notification-admin', label: 'New Comment',              customer: false, admin: true,  mandatory_customer: false, mandatory_admin: false, shop: false, subs: false },
+                    { key: 'review-notification-admin',  label: 'New Product Review',       customer: false, admin: true,  mandatory_customer: false, mandatory_admin: false, shop: true,  subs: false },
+                ] %}
+
+                {% set shopEnabled = settings.shop_enabled|default('1') == '1' %}
+                {% set subsEnabled = subscriptions_enabled == true %}
+                {% set newsletterEnabled = settings.newsletter_enabled|default('1') == '1' %}
+
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 max-w-3xl">
+                    <table class="w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-800/50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">{{ __('Email Type') }}</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">{{ __('Customer / User') }}</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">{{ __('Admin') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            {% for nt in notificationTypes %}
+                                {% set show = true %}
+                                {% if nt.shop and not shopEnabled %}
+                                    {% set show = false %}
+                                {% endif %}
+                                {% if nt.subs and not subsEnabled %}
+                                    {% set show = false %}
+                                {% endif %}
+                                {% if nt.newsletter and not newsletterEnabled %}
+                                    {% set show = false %}
+                                {% endif %}
+                                {% if show %}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50" {{ vl.attrs('mail', __(nt.label), 'mail_notification_' ~ nt.key, 'notifications', __('Email Notifications'), nt.key ~ ' email notification alert') }}>
+                                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">{{ __(nt.label) }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        {% if nt.customer %}
+                                            {% set ckey = 'mail_notification_' ~ nt.key ~ '_customer' %}
+                                            {% set cval = attribute(settings, ckey)|default('1') %}
+                                            <input type="hidden" name="{{ ckey }}" value="{{ nt.mandatory_customer ? '1' : '0' }}">
+                                            <input type="checkbox" name="{{ ckey }}" value="1"
+                                                   {{ cval == '1' ? 'checked' }}
+                                                   {{ nt.mandatory_customer ? 'disabled' }}
+                                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-900">
+                                        {% else %}
+                                            <span class="text-gray-300 dark:text-gray-500">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        {% if nt.admin %}
+                                            {% set akey = 'mail_notification_' ~ nt.key ~ '_admin' %}
+                                            {% set aval = attribute(settings, akey)|default('1') %}
+                                            <input type="hidden" name="{{ akey }}" value="{{ nt.mandatory_admin ? '1' : '0' }}">
+                                            <input type="checkbox" name="{{ akey }}" value="1"
+                                                   {{ aval == '1' ? 'checked' }}
+                                                   {{ nt.mandatory_admin ? 'disabled' }}
+                                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-900">
+                                        {% else %}
+                                            <span class="text-gray-300 dark:text-gray-600">&mdash;</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endfor %}
+
+                            {# ── Abandoned Cart (link-only row) ── #}
+                            {% if shopEnabled %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">{{ __('Abandoned Cart') }}</td>
+                                <td class="px-4 py-3 text-center text-xs text-gray-400 dark:text-gray-500 italic" colspan="2">
+                                    {{ __('Configured in') }}
+                                    <a href="{{ url('/admin/settings') }}?subtab=checkout#tab-ecommerce"
+                                       class="text-blue-600 dark:text-blue-400 underline hover:no-underline">{{ __('Checkout settings') }}</a>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </form>
+        </div>
+    </div>{# /mail-tab-notifications #}

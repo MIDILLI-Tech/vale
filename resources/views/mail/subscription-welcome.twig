@@ -1,0 +1,29 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Subscription Activated — :site', {':site': site_name}) }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Welcome to :plan!', {':plan': plan_name}) }}</h2>
+<p>{{ __('Hi :name,', {':name': name|default(__('there'))}) }}</p>
+<p>{{ __('Your :plan membership subscription has been activated.', {':plan': '<strong>' ~ plan_name ~ '</strong>'})|raw }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:24px 0;">
+  <tr>
+    <td style="padding:10px 14px; background:{{ email_bg }}; font-size:14px; color:{{ email_text_muted }};">{{ __('Plan') }}</td>
+    <td style="padding:10px 14px; font-size:14px; font-weight:600;">{{ plan_name }}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px; background:{{ email_bg }}; font-size:14px; color:{{ email_text_muted }};">{{ __('Amount') }}</td>
+    <td style="padding:10px 14px; font-size:14px; font-weight:600;">{{ currency_symbol }}{{ amount }}</td>
+  </tr>
+  {% if expires_at %}
+  <tr>
+    <td style="padding:10px 14px; background:{{ email_bg }}; font-size:14px; color:{{ email_text_muted }};">{{ __('Renewal Date') }}</td>
+    <td style="padding:10px 14px; font-size:14px; font-weight:600;">{{ expires_at }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<p style="color:{{ email_text_muted }}; font-size:13px;">{{ __('You can manage your subscription from your account dashboard.') }}</p>
+<a href="{{ membership_url }}" class="btn">{{ __('Manage Subscription') }}</a>
+{% endblock %}

@@ -1,0 +1,914 @@
+{% extends "admin/layout.twig" %}
+
+{% set panel_rail = true %}
+
+{% block title %}{{ is_edit ? __('Edit Form') : __('New Form') }}{% endblock %}
+
+{% block head %}
+<style>
+.field-row { @apply bg-white dark:bg-gray-900 border rounded-lg p-4 mb-2; }
+.drag-handle { cursor: move; }
+.drag-handle:hover { color: #111827; text-decoration: underline; }
+.dark .drag-handle:hover { color: #d1d5db; }
+.field-block { transition: opacity 0.15s; }
+.field-block.sortable-chosen { opacity: 0.6; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set cur_captcha_type = (form and form.settings.captcha_type is defined) ? form.settings.captcha_type : (form and form.settings.captcha is defined and form.settings.captcha ? 'math' : 'none') %}
+<div x-data="formBuilder()" @captcha-changed.window="captchaType = $event.detail">
+
+<div class="mb-6 flex items-center gap-3 flex-wrap">
+    <a href="{{ url('/admin/forms') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Forms</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit Form') : __('New Form') }}</h1>
+    {% if is_edit %}<span x-show="!isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
+    <span x-show="isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% include 'admin/components/rail-toggle.twig' %}
+</div>
+
+<form method="POST" action="{{ url(is_edit ? '/admin/forms/' ~ form.id : '/admin/forms') }}"
+      data-autosave
+      data-panel-reorder-key="form"
+      class="space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+
+    {# Hidden JSON input updated by Alpine #}
+    <input type="hidden" name="fields_json" :value="JSON.stringify(fields)">
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-6" data-panel-container="left">
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="name_card">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Form Information') }}</h3>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Form Name') }} <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" required value="{{ form.name|default('') }}"
+                           x-model="formName"
+                           @input="onNameInput($event.target.value)"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                </div>
+            </div>
+
+            {# Field builder #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="fields_builder_card">
+                <div class="mb-4">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Form Fields') }}</h3>
+                </div>
+
+                <div class="flex flex-wrap gap-3" id="fields-sortable">
+                    <template x-for="(field, idx) in fields" :key="idx">
+                        <div class="rounded-lg border p-4 bg-gray-50 dark:bg-gray-800/50 field-block overflow-hidden"
+                             :class="{
+                                 'w-full': !field.width || field.width === '100',
+                                 'w-full md:w-[calc(50%-0.375rem)] min-w-[260px] flex-1': field.width === '50',
+                                 'w-full md:w-[calc(33.333%-0.5rem)] min-w-[240px] flex-1': field.width === '33',
+                                 'w-full md:w-[calc(25%-0.5625rem)] min-w-[220px] flex-1': field.width === '25'
+                             }"
+                             :data-idx="idx">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="cursor-move text-gray-400 dark:text-gray-300 drag-handle select-none text-lg leading-none" title="{{ __('Hold to drag') }}">⠿</div>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click="moveFieldTop(idx)" title="{{ __('Move to top (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇈</button>
+                                    <button type="button" @click="moveFieldUp(idx)" title="{{ __('Move up (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↑</button>
+                                    <button type="button" @click="moveFieldDown(idx)" title="{{ __('Move down (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↓</button>
+                                    <button type="button" @click="moveFieldBottom(idx)" title="{{ __('Move to bottom (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇊</button>
+                                    <span class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></span>
+                                    <label x-show="field.type !== 'static_text' && field.type !== 'newsletter_subscribe'" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer mr-0.5" title="{{ __('Required') }}">
+                                        <input type="checkbox" x-model="field.required" class="rounded-sm border-gray-300 dark:border-gray-700"> Req.
+                                    </label>
+                                    <button type="button" @click="removeField(idx)" class="text-red-400 hover:text-red-600 text-lg leading-none p-1" title="{{ __('Remove') }}">&times;</button>
+                                </div>
+                            </div>
+                            <div class="grid gap-3 items-start"
+                                 :class="{
+                                     'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4': !field.width || field.width === '100',
+                                     'grid-cols-1 sm:grid-cols-2': field.width === '50',
+                                     'grid-cols-1': field.width === '33' || field.width === '25'
+                                 }">
+                                <div class="grid grid-cols-2 gap-4 sm:col-span-2 lg:col-span-2">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
+                                        <select x-model="field.type" @change="field.type === 'email' ? (field.name = 'email') : autoName(field)" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                            <option value="text">Text</option>
+                                            <option value="email">{{ __('Email') }}</option>
+                                            <option value="textarea">Textarea</option>
+                                            <option value="select">Select</option>
+                                            <option value="checkbox">Checkbox</option>
+                                            <option value="radio">Radio</option>
+                                            <option value="tel">Phone</option>
+                                            <option value="static_text">Static Text</option>
+                                            {% if newsletter_enabled %}<option value="newsletter_subscribe">Newsletter Subscribe</option>{% endif %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Width') }}</label>
+                                        <select x-model="field.width" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                            <option value="100">100% (Full Width)</option>
+                                            <option value="50">50% (2 per row)</option>
+                                            <option value="33">33% (3 per row)</option>
+                                            <option value="25">25% (4 per row)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div :class="field.type === 'static_text' ? 'sm:col-span-2' : ''" class="min-w-0">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Label</label>
+                                    <template x-if="field.type !== 'static_text'">
+                                        <input type="text" x-model="field.label" @input="field.type !== 'email' && autoName(field)" placeholder="Label" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                    </template>
+                                    <template x-if="field.type === 'static_text'">
+                                        <textarea x-model="field.label" rows="3" placeholder="Static information text"
+                                                  class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm leading-5"
+                                                  style="white-space: pre-wrap;"></textarea>
+                                    </template>
+                                    <template x-if="field.type === 'static_text'">
+                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">This field shows informational text in the form. Write your content in the Label area above; line breaks are supported.</p>
+                                    </template>
+                                    <template x-if="field.type === 'newsletter_subscribe'">
+                                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Shows as a single checkbox on the form. The label text appears next to the checkbox.</p>
+                                    </template>
+                                </div>
+                                <div x-show="field.type === 'newsletter_subscribe'" class="min-w-0" x-cloak>
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Auto Tag') }}</label>
+                                    <div x-data="tagInput({ allTags: {{ subscriber_tags|default([])|json_encode|e('html_attr') }}, initial: (field.tags || []).join(',') })" x-init="$watch('items', (v) => { field.tags = [...v] })">
+                                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                                            <template x-for="(item, i) in items" :key="i">
+                                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+                                                    <span x-text="item"></span>
+                                                    <button type="button" @click="remove(item)" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400">&times;</button>
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                                   placeholder="{{ __('Type tag name...') }}"
+                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 shadow-lg max-h-48 overflow-y-auto">
+                                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                                         :class="i === focusedIndex ? 'bg-gray-100 dark:bg-gray-800' : ''"
+                                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                         x-text="s"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="mt-1 text-xs text-gray-400">{{ __('Type a tag name and press Enter or comma to add. Existing tags are suggested. New tags are created automatically.') }}</p>
+                                    <p x-show="!hasEmailField" class="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">{{ __('This only works if the form has an Email field.') }} <button type="button" @click="addEmailField()" class="underline underline-offset-2 hover:no-underline">{{ __('Add Email field') }}</button></p>
+                                    <p x-show="hasEmailField && !emailFieldRequired" class="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">{{ __('Mark the Email field as required — visitors who leave it empty are not subscribed.') }}</p>
+                                </div>
+                                <div x-show="field.type !== 'static_text' && field.type !== 'newsletter_subscribe'" class="min-w-0">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name (key) <span class="text-red-500">*</span></label>
+                                    <input type="text" x-model="field.name" placeholder="field_name"
+                                           :required="field.type !== 'static_text' && field.type !== 'newsletter_subscribe'"
+                                           :readonly="field.type === 'email'"
+                                           :class="field.type === 'email'
+                                               ? 'rounded-lg border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 px-2 text-xs font-mono text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                                               : 'rounded-lg border-gray-300 dark:border-gray-700 text-sm'"
+                                           class="w-full min-w-0 shadow-xs focus:border-gray-600 focus:ring-gray-500">
+                                </div>
+                                <div x-show="['text', 'email', 'tel', 'number', 'url', 'textarea'].includes(field.type)" class="min-w-0">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Placeholder') }}</label>
+                                    <input type="text" x-model="field.placeholder"
+                                           placeholder="{{ __('Shown as hint') }}"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                </div>
+                                <div x-show="['select', 'checkbox', 'radio'].includes(field.type)" class="w-full col-span-full">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Options (one per line)</label>
+                                    <textarea x-model="field._optionsText" @input="syncOptionValues(field)" rows="3" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                                </div>
+                                <div x-show="['select', 'checkbox', 'radio'].includes(field.type)" class="w-full col-span-full">
+                                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Option Titles') }}</label>
+                                    <textarea x-model="field._titlesText" @input="syncOptionTitles(field)" rows="3" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="{{ __('Optional tooltip for each option, one per line') }}"></textarea>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{{ __('Optional tooltip text shown on hover, one per line, matched by position with the options above.') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <p x-show="fields.length === 0" class="w-full text-sm text-gray-400 text-center py-4">No fields yet. Click "+ Add Field" to start.</p>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button" @click="addField()" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">+ {{ __('Add Field') }}</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="space-y-6" data-panel-container="right">
+            {% if multi_language_content %}
+            {% set originalId = original_id|default(form ? (form.translationOf ?: form.id) : null) %}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="language_card">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Language') }}</h3>
+                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                        {{ current_locale }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <label for="language" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Content Language') }}</label>
+                    <select id="language" name="language" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        {% for code, name in supported_locales %}
+                        <option value="{{ code }}" {{ (old.language|default(form ? form.language : current_locale)) == code ? 'selected' }}>{{ locale_name(code) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="translation_of" class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Translation Of') }}</label>
+                    <div class="flex gap-2">
+                        {% include 'admin/components/translation-select.twig' with {
+                            originals: potential_originals,
+                            label_field: 'name',
+                            value: old.translation_of|default(form ? form.translationOf : (prefill_translation_of|default('')))
+                        } %}
+                        <button type="button" id="copy-original-btn"
+                                class="mt-1 inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                title="{{ __('Copy content from original') }}"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></button>
+                    </div>
+                </div>
+
+                {% if translations is defined and supported_locales|length > 1 %}
+                <div class="pt-3 mt-3">
+                    <p class="text-xs font-medium text-gray-500 mb-2">{{ __('Translations') }}</p>
+                    <div class="space-y-1.5">
+                        {% for code, name in supported_locales %}
+                        {% set trans = null %}
+                        {% for t in translations %}
+                            {% if t.language == code %}{% set trans = t %}{% endif %}
+                        {% endfor %}
+                        <div class="flex items-center justify-between rounded-md bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-sm">
+                            <span class="flex items-center gap-2 min-w-0">
+                                <span class="text-xs font-medium uppercase text-gray-500 w-8 shrink-0">{{ code }}</span>
+                                <span class="{{ trans ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 italic' }} text-xs shrink-0">{{ locale_name(code) }}</span>
+                                {% if trans %}
+                                    <span class="text-xs text-gray-400 shrink-0">—</span>
+                                    <a href="{{ url('/admin/forms/' ~ trans.id ~ '/edit') }}" title="{{ trans.name|e('html') }}" class="text-gray-900 dark:text-gray-100 hover:underline text-xs truncate">{{ trans.name }}</a>
+                                {% endif %}
+                            </span>
+                            <span class="shrink-0">
+                                {% set form_lang = old.language|default(form ? form.language : current_locale) %}
+                                {% if trans %}
+                                    {% if trans.id == (form.id|default(0)) %}
+                                        <span class="text-xs font-medium text-green-600">{{ __('Current') }}</span>
+                                    {% else %}
+                                        <a href="{{ url('/admin/forms/' ~ trans.id ~ '/edit') }}" class="text-blue-600 hover:underline text-xs">{{ __('Edit') }}</a>
+                                    {% endif %}
+                                {% else %}
+                                    {% if not is_edit and code == form_lang %}
+                                        <span class="text-xs font-medium text-green-600">{{ __('Current') }}</span>
+                                    {% else %}
+                                        <a href="{{ url('/admin/forms/create', [], {language: code, translation_of: originalId|default(form.id|default(''))}) }}"
+                                           class="text-xs text-blue-600 hover:underline">+ {{ __('Add') }}</a>
+                                    {% endif %}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="publish_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Publish') }}</h3>
+                <div class="mb-3">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <input type="checkbox" name="enabled" {{ form and form.enabled ? 'checked' }} class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Active') }}
+                    </label>
+                </div>
+                <button type="submit" title="Shortcut: Ctrl/Cmd+S"
+                        class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    {{ is_edit ? __('Update Form') : __('Create Form') }}
+                </button>
+            </div>
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="options_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Options') }}</h3>
+                <div class="mb-1">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <input type="hidden" name="allow_multiple" value="0">
+                        <input type="checkbox" name="allow_multiple" value="1" {{ form is null or (form.settings.allow_multiple ?? true) ? 'checked' }} class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Allow Multiple Submissions') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('When disabled, the same visitor (browser or email) can only submit this form once.') }}</p>
+                </div>
+                <div class="mb-1 pt-1">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <input type="checkbox" name="allow_external" {{ form and form.settings.allow_external ? 'checked' }}
+                               x-model="externalEnabled" class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Allow External Submissions') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Enable this to allow submissions from other websites via API.') }}</p>
+                </div>
+                <div class="mb-1" x-show="externalEnabled" x-cloak>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Allowed Domains (CORS)') }}</label>
+                    <textarea name="allowed_domains" rows="2" placeholder="example.com&#10;another-site.net"
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">{{ form and form.settings.allowed_domains ? form.settings.allowed_domains|join('\n') : '' }}</textarea>
+                    <p id="allowed-domains-warning" class="mt-1 text-xs text-amber-500 hidden">Please enter host only, without https:// (e.g. example.com)</p>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('One domain per line. Leave empty to allow all (not recommended).') }}</p>
+                    <script>
+                    (function(){
+                      const ta = document.querySelector('textarea[name="allowed_domains"]');
+                      const warn = document.getElementById('allowed-domains-warning');
+                      if (!ta || !warn) return;
+                      const check = () => warn.classList.toggle('hidden', !/https?:\/\//i.test(ta.value));
+                      ta.addEventListener('input', check);
+                      check();
+                    })();
+                    </script>
+                </div>
+                <div class="mb-3" x-show="externalEnabled" x-cloak>
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <input type="checkbox" name="honeypot_enabled" {{ form and form.settings.honeypot_enabled ? 'checked' }}
+                           @change="honeypotEnabled = $el.checked" class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Enable Honeypot') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Configure its name below.') }}</p>
+                </div>
+                <div class="mb-3" x-show="externalEnabled" x-cloak>
+                    <div @click="showEmbed = !showEmbed" class="flex cursor-pointer select-none items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <svg :class="showEmbed ? 'rotate-90' : ''" class="h-3 w-3 shrink-0 text-gray-400 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/></svg>
+                        {{ __('JS Embed Example (AJAX)') }}
+                    </div>
+                    <div x-show="showEmbed" x-cloak>
+                        <div class="mb-2 text-right">
+                            <button type="button" onclick="var t=document.createElement('textarea');t.style.position='fixed';t.style.opacity='0';t.value=document.querySelector('[x-data] pre').textContent;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);this.textContent='{{ __('Copied!')|e('js') }}';var s=this;setTimeout(function(){s.textContent='{{ __('Copy Code')|e('js') }}'},2000)"
+                                    class="rounded-sm bg-gray-800 px-2 py-1 text-xs text-white hover:bg-gray-700">
+                                {{ __('Copy Code') }}
+                            </button>
+                        </div>
+                        <pre class="block bg-white dark:bg-gray-900 border rounded-sm px-3 py-2 text-[10px] font-mono text-gray-800 overflow-x-auto whitespace-pre-wrap" x-text="embedCode"></pre>
+                        <p class="mt-2 text-xs text-gray-400">{{ __('Copy this to your other website. It submits via AJAX without page reload.') }}</p>
+                    </div>
+                </div>
+                <div class="mb-4 pt-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Captcha') }}</label>
+                    <p class="mt-1 mb-1 text-xs text-gray-400">{{ __('API keys are configured in the Settings -> Privacy & Security tab.') }}</p>
+                    {% set cur_captcha_type = (form and form.settings.captcha_type is defined) ? form.settings.captcha_type : (form and form.settings.captcha is defined and form.settings.captcha ? 'math' : 'none') %}
+                    <select name="captcha_type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                            x-data="{
+                                type: '{{ cur_captcha_type }}',
+                                config: {
+                                    hcaptcha: {{ login_captcha_config.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                                    recaptcha: {{ login_captcha_config.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                                    turnstile: {{ login_captcha_config.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                                }
+                            }"
+                            x-model="type"
+                            @change="$dispatch('captcha-changed', type)">
+                        <option value="none">{{ __('None') }}</option>
+                        <option value="honeypot">{{ __('Honeypot (hidden field)') }}</option>
+                        <option value="math">{{ __('Math question') }}</option>
+                        <option value="hcaptcha">hCaptcha</option>
+                        <option value="recaptcha">Google reCAPTCHA v3</option>
+                        <option value="turnstile">Cloudflare Turnstile</option>
+                    </select>
+                    <p id="captcha-type-hint" class="mt-1 text-xs text-gray-400" style="display:none"></p>
+                    <div x-data="{
+                        type: '{{ cur_captcha_type }}',
+                        config: {
+                            hcaptcha: {{ login_captcha_config.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                            recaptcha: {{ login_captcha_config.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                            turnstile: {{ login_captcha_config.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                        }
+                    }" @captcha-changed.window="type = $event.detail">
+                        <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
+                           class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
+                            ⚠ {{ __('This captcha is not configured in Privacy settings.') }}
+                        </p>
+                    </div>
+                    <div class="mt-3" x-show="captchaType === 'honeypot' || (externalEnabled && honeypotEnabled)" x-cloak>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Honeypot Field Name') }}</label>
+                        <input type="text" name="honeypot_field_name" value="{{ (form and form.settings.honeypot_field_name is defined and form.settings.honeypot_field_name) ? form.settings.honeypot_field_name : '_hp_name' }}"
+                               x-model="honeypotFieldName" placeholder="_hp_name"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Field name added to the form to trick bots. Pick something natural, e.g. website.') }}</p>
+                    </div>
+                <script>
+                (function(){
+                    var sel = document.querySelector('select[name="captcha_type"]');
+                    var hint = document.getElementById('captcha-type-hint');
+                    var msgs = {
+                        honeypot: '{{ __('Adds a hidden field to catch bots.')|e('js') }}',
+                        math: '{{ __('Generates a math question for users.')|e('js') }}',
+                        hcaptcha: '{{ __('Uses hCaptcha.')|e('js') }}',
+                        recaptcha: '{{ __('Uses reCAPTCHA v3.')|e('js') }}',
+                        turnstile: '{{ __('Uses Cloudflare Turnstile.')|e('js') }}'
+                    };
+                    function updateHint() {
+                        var v = sel.value;
+                        if (msgs[v]) { hint.textContent = msgs[v]; hint.style.display = ''; }
+                        else { hint.style.display = 'none'; }
+                    }
+                    sel.addEventListener('change', updateHint);
+                    updateHint();
+                })();
+                </script>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Notification Email') }}</label>
+                    <input type="email" name="notify_email" value="{{ form.notifyEmail|default('') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Submit Button Label') }}</label>
+                    <input type="text" name="submit_label" value="{{ form.submitLabel|default('Submit') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Success Message') }}</label>
+                    <textarea name="success_message" rows="2" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">{{ form.successMessage|default('') }}</textarea>
+                </div>
+            </div>
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="access_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Access') }}</h3>
+                <div class="mb-3">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <input type="checkbox" name="only_registered" {{ form and form.settings.only_registered ? 'checked' }} class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        {{ __('Only Registered Users') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-400">{{ __('Require visitors to be logged in to view and submit this form.') }}</p>
+                </div>
+
+                {% if membership_tags is defined and membership_tags is not empty %}
+                <div class="pt-3">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">{{ __('Required Membership Tags') }}</label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">{{ __('Require a membership tag to view and submit this form.') }}</p>
+                    {% set selectedAccess = form ? (form.settings.access_tags|default([])) : [] %}
+                    {% for tag in membership_tags %}
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 mb-1">
+                        <input type="checkbox" name="access_tags[]" value="{{ tag }}"
+                               {{ tag in selectedAccess ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900">
+                        {{ tag }}
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="slug_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Slug') }}</h3>
+                <input type="text" name="slug"
+                       x-model="formSlug"
+                       @input="onSlugInput($event.target.value)"
+                       placeholder="{{ __('Auto-generated from form name') }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div class="rounded-xl border bg-gray-50 dark:bg-gray-800/50 p-4 text-sm text-gray-500 dark:text-gray-400" data-panel-id="standalone_url_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{{ __('Standalone URL:') }}</h3>
+                <div class="flex items-center gap-2">
+                    <a :href="standaloneUrl" target="_blank" class="min-w-0 flex-1 break-all text-gray-900 dark:text-gray-100 hover:underline" x-text="standaloneUrl"></a>
+                    <button type="button"
+                            @click="navigator.clipboard.writeText(standaloneUrl); $el.textContent = '✓'; setTimeout(() => $el.textContent = '📋', 1500)"
+                            class="shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            title="{{ __('Copy URL') }}">📋</button>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">{{ __('Use this URL to test or accept submissions directly from the public.') }}</p>
+            </div>
+            <div class="rounded-xl border bg-gray-50 dark:bg-gray-800/50 p-4 text-sm text-gray-500 dark:text-gray-400" data-panel-id="embed_code_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{{ __('Embed in Page / Post:') }}</h3>
+                <div class="flex items-center gap-2">
+                    <code class="min-w-0 flex-1 block bg-white dark:bg-gray-900 border rounded-sm px-3 py-2 text-xs font-mono text-gray-800 dark:text-gray-200 select-all" x-text="shortcodeText"></code>
+                    <button type="button"
+                            @click="navigator.clipboard.writeText(shortcodeText); $el.textContent = '✓'; setTimeout(() => $el.textContent = '📋', 1500)"
+                            class="shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            title="{{ __('Copy shortcode') }}">📋</button>
+                </div>
+                <p class="mt-2 text-xs text-gray-400">{{ __('Paste this shortcode into the HTML editor of any page or post.') }}</p>
+            </div>
+        </div>
+    </div>
+</form>
+
+</div>
+
+<script>
+function normalizeFieldOptions(options) {
+    // Legacy forms store options as plain strings; newer ones as {value, title}.
+    return (options || []).map(function(o) {
+        if (typeof o === 'string') {
+            return { value: o, title: '' };
+        }
+        return {
+            value: (o && o.value != null) ? o.value : '',
+            title: (o && o.title != null) ? o.title : ''
+        };
+    });
+}
+
+function slugifyText(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+        .toString()
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9_-]+/g, '')
+        .replace(/--+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function formBuilder() {
+    var initialSlug = '{{ form ? form.slug : '' }}';
+    var baseUrl = '{{ site_url }}';
+
+    return {
+        formName: '{{ form ? form.name|e('js') : '' }}',
+        formSlug: initialSlug,
+        externalEnabled: {{ form and form.settings.allow_external ? 'true' : 'false' }},
+        captchaType: '{{ cur_captcha_type }}',
+        honeypotEnabled: {{ form and form.settings.honeypot_enabled ? 'true' : 'false' }},
+        honeypotFieldName: '{{ (form and form.settings.honeypot_field_name is defined and form.settings.honeypot_field_name) ? form.settings.honeypot_field_name : '_hp_name' }}',
+        showEmbed: false,
+        _formDirty: false,
+        _initialFieldsJson: '[]',
+        _slugManuallyEdited: !!initialSlug,
+        get currentEffectiveSlug() {
+            return this.formSlug || slugifyText(this.formName) || 'form-slug';
+        },
+        get actionUrl() {
+            return baseUrl + '/api/v1/form/' + this.currentEffectiveSlug;
+        },
+        get standaloneUrl() {
+            return baseUrl + '/form/' + this.currentEffectiveSlug;
+        },
+        get shortcodeText() {
+            return '[form slug="' + this.currentEffectiveSlug + '"]';
+        },
+        onNameInput(val) {
+            if (!this._slugManuallyEdited) {
+                this.formSlug = slugifyText(val);
+            }
+        },
+        onSlugInput(val) {
+            this._slugManuallyEdited = (val.trim() !== '');
+            if (!this._slugManuallyEdited) {
+                this.formSlug = slugifyText(this.formName);
+            }
+        },
+        fields: ({{ form and form.fields|length > 0 ? form.fields|json_encode|raw : '[]' }}).map(function(f) {
+            if (f.type === 'email') {
+                f.name = 'email';
+            }
+            f.options = normalizeFieldOptions(f.options);
+            f._optionsText = f.options.map(function(o) { return o.value; }).join('\n');
+            f._titlesText = f.options.map(function(o) { return o.title || ''; }).join('\n');
+            f.width = f.width || '100';
+            f.placeholder = f.placeholder || '';
+            if (f.type === 'newsletter_subscribe' && !Array.isArray(f.tags)) {
+                f.tags = [];
+            }
+            return f;
+        }),
+        addField() {
+            this.fields.push({ type: 'text', label: '', name: '', required: false, width: '100', options: [], _optionsText: '', _titlesText: '', placeholder: '' });
+        },
+        addEmailField() {
+            if (this.hasEmailField) {
+                return;
+            }
+            this.fields.unshift({ type: 'email', label: '{{ __('Email')|e('js') }}', name: 'email', required: true, width: '100', options: [], _optionsText: '', placeholder: '' });
+        },
+        syncOptionValues(field) {
+            // Rebuild options from the values textarea, keeping existing titles by position
+            var lines = (field._optionsText || '').split('\n');
+            var values = [];
+            for (var i = 0; i < lines.length; i++) {
+                var value = lines[i].trim();
+                if (value !== '') {
+                    values.push(value);
+                }
+            }
+            var existing = field.options || [];
+            field.options = values.map(function(value, i) {
+                return { value: value, title: (existing[i] && existing[i].title) || '' };
+            });
+            field._titlesText = field.options.map(function(o) { return o.title || ''; }).join('\n');
+        },
+        syncOptionTitles(field) {
+            // Apply the titles textarea onto the options array by position
+            var lines = (field._titlesText || '').split('\n');
+            var options = field.options || [];
+            for (var i = 0; i < options.length && i < lines.length; i++) {
+                options[i].title = lines[i].trim();
+            }
+        },
+        _optValue(o) {
+            return (o && typeof o === 'object') ? (o.value ?? '') : (o ?? '');
+        },
+        _optTitle(o) {
+            return (o && typeof o === 'object') ? (o.title ?? '') : '';
+        },
+        removeField(idx) {
+            this.fields.splice(idx, 1);
+        },
+        moveFieldTop(idx) {
+            var item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.unshift(item);
+        },
+        moveFieldUp(idx) {
+            if (idx <= 0) return;
+            var item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.splice(idx - 1, 0, item);
+        },
+        moveFieldDown(idx) {
+            if (idx >= this.fields.length - 1) return;
+            var item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.splice(idx + 1, 0, item);
+        },
+        moveFieldBottom(idx) {
+            var item = this.fields.splice(idx, 1)[0];
+            item.width = '100';
+            this.fields.push(item);
+        },
+        init() {
+            this._initialFieldsJson = JSON.stringify(this.fields);
+            this.$el.addEventListener('input', () => { this._formDirty = true; });
+            this.$el.addEventListener('change', () => { this._formDirty = true; });
+            this.$el.addEventListener('submit', (e) => {
+                for (let i = 0; i < this.fields.length; i++) {
+                    const f = this.fields[i];
+                    if (f.type !== 'static_text' && f.type !== 'newsletter_subscribe') {
+                        if (!f.name || !f.name.trim()) {
+                            e.preventDefault();
+                            alert('{{ __('Each field must have a key (Name). Field #:num is missing a key.')|e('js') }}'.replace(':num', (i + 1).toString()));
+                            return false;
+                        }
+                    }
+                }
+                this._initialFieldsJson = JSON.stringify(this.fields);
+                this._formDirty = false;
+            });
+            window.addEventListener('beforeunload', (e) => {
+                if (this.isDirty) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+            this.$nextTick(() => {
+                Sortable.create(document.getElementById('fields-sortable'), {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'opacity-40',
+                    onEnd: (evt) => {
+                        var oldIndex = evt.oldIndex;
+                        var newIndex = evt.newIndex;
+                        if (oldIndex === newIndex) return;
+                        // Undo Sortable's DOM move so Alpine stays the source of truth
+                        var siblings = Array.prototype.filter.call(
+                            evt.from.children,
+                            function(el) { return el !== evt.item && el.classList.contains('field-block'); }
+                        );
+                        evt.from.insertBefore(evt.item, siblings[oldIndex] || null);
+                        // Reorder the Alpine array; x-for re-renders in the new order
+                        var item = this.fields.splice(oldIndex, 1)[0];
+                        this.fields.splice(newIndex, 0, item);
+                    }
+                });
+            });
+        },
+        autoName(field) {
+            if (field.type === 'static_text') {
+                field.name = '';
+                field.required = false;
+                return;
+            }
+            if (field.type === 'newsletter_subscribe') {
+                field.required = false;
+                if (!field.name || field.name === this._lastAutoName) {
+                    field.name = field.label
+                        ? field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+                        : 'subscribe_to_newsletter';
+                    this._lastAutoName = field.name;
+                }
+                return;
+            }
+            if (!field.name || field.name === this._lastAutoName) {
+                field.name = field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                this._lastAutoName = field.name;
+            }
+        },
+        _lastAutoName: '',
+        get isDirty() {
+            return this._formDirty || JSON.stringify(this.fields) !== this._initialFieldsJson;
+        },
+        get hasEmailField() {
+            return this.fields.some(function (f) { return f && f.type === 'email'; });
+        },
+        get emailFieldRequired() {
+            return this.fields.some(function (f) { return f && f.type === 'email' && f.required; });
+        },
+        get embedCode() {
+            var slug = this.actionUrl.split('/').pop();
+            var htmlFields = '';
+            for (var i = 0; i < this.fields.length; i++) {
+                var f = this.fields[i];
+                if (f.type === 'static_text') continue;
+                var requiredAttr = f.required ? ' required' : '';
+                var placeholderAttr = f.placeholder ? ' placeholder="' + this._escape(f.placeholder) + '"' : '';
+                var w = f.width === '50' ? 'width:50%' : f.width === '33' ? 'width:33.333%' : f.width === '25' ? 'width:25%' : 'width:100%';
+                var boxStyle = 'style="' + w + ';box-sizing:border-box;padding:0 5px;margin-bottom:10px;display:inline-block;vertical-align:top;"';
+
+                if (f.type === 'textarea') {
+                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
+                    htmlFields += '      <textarea name="fields[' + f.name + ']"' + requiredAttr + placeholderAttr + ' style="width:100%"></textarea>\n';
+                    htmlFields += '    </div>\n';
+                } else if (f.type === 'select') {
+                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
+                    htmlFields += '      <select name="fields[' + f.name + ']"' + requiredAttr + ' style="width:100%">\n';
+                    htmlFields += '        <option value="">-- Select --</option>\n';
+                    for (var o = 0; o < (f.options || []).length; o++) {
+                        var optValue = this._optValue(f.options[o]);
+                        var optTitle = this._optTitle(f.options[o]);
+                        var optTitleAttr = optTitle ? ' title="' + this._escape(optTitle) + '"' : '';
+                        htmlFields += '        <option value="' + this._escape(optValue) + '"' + optTitleAttr + '>' + this._escape(optValue) + '</option>\n';
+                    }
+                    htmlFields += '      </select>\n';
+                    htmlFields += '    </div>\n';
+                } else if (f.type === 'checkbox') {
+                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '      <label><input type="checkbox" name="fields[' + f.name + ']" value="1"' + requiredAttr + '> ' + this._escape(f.label) + '</label>\n';
+                    htmlFields += '    </div>\n';
+                } else if (f.type === 'radio') {
+                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
+                    for (var o = 0; o < (f.options || []).length; o++) {
+                        var radioValue = this._optValue(f.options[o]);
+                        var radioTitle = this._optTitle(f.options[o]);
+                        var radioTitleAttr = radioTitle ? ' title="' + this._escape(radioTitle) + '"' : '';
+                        htmlFields += '      <label><input type="radio" name="fields[' + f.name + ']" value="' + this._escape(radioValue) + '"' + radioTitleAttr + requiredAttr + '> ' + this._escape(radioValue) + '</label><br>\n';
+                    }
+                    htmlFields += '    </div>\n';
+                } else {
+                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
+                    htmlFields += '      <input type="' + (f.type === 'email' ? 'email' : f.type === 'tel' ? 'tel' : 'text') + '" name="fields[' + (f.type === 'email' ? 'email' : f.name) + ']"' + requiredAttr + placeholderAttr + ' style="width:100%">\n';
+                    htmlFields += '    </div>\n';
+                }
+            }
+            return '<div id="vl-form-wrap">\n'
+                + '  <form id="vl-external-form" action="' + this.actionUrl + '" method="POST">\n'
+                + '    <div style="display:flex;flex-wrap:wrap;margin:0 -5px">\n'
+                + htmlFields
+                + '    </div>\n'
+                + (this.honeypotEnabled ? '    <div style="display:none"><input type="text" name="' + this.honeypotFieldName + '" autocomplete="off" tabindex="-1" aria-hidden="true"></div>\n' : '')
+                + '    <div style="padding:0 5px;margin-top:10px"><button type="submit">Submit</button></div>\n'
+                + '  </form>\n'
+                + '  <div id="vl-form-msg" style="display:none;margin-top:10px;padding:10px;border-radius:4px"></div>\n'
+                + '</div>\n'
+                + '\n'
+                + '<script>\n'
+                + 'document.getElementById(\'vl-external-form\').addEventListener(\'submit\', function(e) {\n'
+                + '  e.preventDefault();\n'
+                + '  const form = e.target;\n'
+                + '  const msgDiv = document.getElementById(\'vl-form-msg\');\n'
+                + '  const data = {};\n'
+                + '  const fd = new FormData(form);\n'
+                + '  for (const [k, v] of fd) {\n'
+                + '    if (k.startsWith(\'fields[\')) {\n'
+                + '      const key = k.slice(7, -1);\n'
+                + '      if (!data.fields) data.fields = {};\n'
+                + '      data.fields[key] = v;\n'
+                + '    } else {\n'
+                + '      data[k] = v;\n'
+                + '    }\n'
+                + '  }\n'
+                + '  fetch(form.action, {\n'
+                + '    method: \'POST\',\n'
+                + '    headers: { \'Content-Type\': \'application/json\', \'Accept\': \'application/json\' },\n'
+                + '    body: JSON.stringify(data)\n'
+                + '  })\n'
+                + '  .then(res => res.json())\n'
+                + '  .then(data => {\n'
+                + '    msgDiv.innerText = data.message;\n'
+                + '    msgDiv.style.display = \'block\';\n'
+                + '    msgDiv.style.backgroundColor = data.success ? \'#dcfce7\' : \'#fee2e2\';\n'
+                + '    if (data.success) form.reset();\n'
+                + '  })\n'
+                + '  .catch(err => {\n'
+                + '    msgDiv.innerText = \'Error submitting form.\';\n'
+                + '    msgDiv.style.display = \'block\';\n'
+                + '    msgDiv.style.backgroundColor = \'#fee2e2\';\n'
+                + '  });\n'
+                + '});\n'
+                + '<\/script>';
+        },
+        _escape(s) {
+            if (typeof s !== 'string') return '';
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    };
+}
+
+(function() {
+    const copyBtn = document.getElementById('copy-original-btn');
+
+    copyBtn?.addEventListener('click', async function() {
+        const transOf = document.querySelector('input[name="translation_of"]');
+        const id = transOf?.value;
+        if (!id) return;
+
+        if (!confirm('{{ __('Overwrite current content with original?')|e('js') }}')) return;
+
+        const origHtml = this.innerHTML;
+        this.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+        this.disabled = true;
+
+        try {
+            const r = await fetch('{{ url('/admin/forms/')|e('js') }}' + id + '/json');
+            const data = await r.json();
+
+            // 1. Form Name
+            const nameInput = document.querySelector('input[name="name"]');
+            if (nameInput) nameInput.value = data.name;
+
+            // 2. Form submit label and success message
+            const submitLabelInput = document.querySelector('input[name="submit_label"]');
+            if (submitLabelInput) submitLabelInput.value = data.submit_label || 'Submit';
+
+            const successMsgInput = document.querySelector('textarea[name="success_message"]');
+            if (successMsgInput) successMsgInput.value = data.success_message || '';
+
+            // 2b. Notification email
+            const notifyEmailInput = document.querySelector('input[name="notify_email"]');
+            if (notifyEmailInput) notifyEmailInput.value = data.notify_email || '';
+
+            // 2c. Enabled / Active state
+            const enabledInput = document.querySelector('input[name="enabled"]');
+            if (enabledInput && typeof data.enabled === 'boolean') enabledInput.checked = data.enabled;
+
+            // 2d. External submission & Access settings
+            const settings = (data.settings && typeof data.settings === 'object') ? data.settings : {};
+            const externalInput = document.querySelector('input[name="allow_external"]');
+            if (externalInput) externalInput.checked = !!settings.allow_external;
+            const domainsInput = document.querySelector('textarea[name="allowed_domains"]');
+            if (domainsInput) domainsInput.value = (settings.allowed_domains || []).join('\n');
+            const honeypotInput = document.querySelector('input[name="honeypot_enabled"]');
+            if (honeypotInput) honeypotInput.checked = !!settings.honeypot_enabled;
+            const honeypotNameInput = document.querySelector('input[name="honeypot_field_name"]');
+            if (honeypotNameInput) honeypotNameInput.value = settings.honeypot_field_name || '_hp_name';
+            const allowMultipleInput = document.querySelector('input[type="checkbox"][name="allow_multiple"]');
+            if (allowMultipleInput) allowMultipleInput.checked = settings.allow_multiple !== false;
+
+            const onlyRegInput = document.querySelector('input[name="only_registered"]');
+            if (onlyRegInput) onlyRegInput.checked = !!settings.only_registered;
+            const accessTags = settings.access_tags || [];
+            document.querySelectorAll('input[name="access_tags[]"]').forEach(cb => {
+                cb.checked = accessTags.includes(cb.value);
+            });
+
+            // 2e. Captcha type (triggers Alpine model + hint update)
+            const captchaSelect = document.querySelector('select[name="captcha_type"]');
+            if (captchaSelect && settings.captcha_type) {
+                captchaSelect.value = settings.captcha_type;
+                captchaSelect.dispatchEvent(new Event('change'));
+            }
+
+            // 3. Alpine.js fields array
+            const formEl = document.querySelector('[x-data="formBuilder()"]');
+            if (formEl && window.Alpine) {
+                const alpineData = window.Alpine.$data(formEl);
+                if (alpineData) {
+                    alpineData.fields = (data.fields || []).map(function(f) {
+                        if (f.type === 'email') {
+                            f.name = 'email';
+                        }
+                        f.options = normalizeFieldOptions(f.options);
+                        f._optionsText = f.options.map(function(o) { return o.value; }).join('\n');
+                        f._titlesText = f.options.map(function(o) { return o.title || ''; }).join('\n');
+                        f.width = f.width || '100';
+                        f.placeholder = f.placeholder || '';
+                        return f;
+                    });
+                    alpineData.externalEnabled = !!settings.allow_external;
+                    alpineData.honeypotEnabled = !!settings.honeypot_enabled;
+                    alpineData.honeypotFieldName = settings.honeypot_field_name || '_hp_name';
+                }
+                formEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            this.innerHTML = '✓';
+        } catch (e) {
+            this.innerHTML = '✗';
+            alert('Failed to copy content.');
+        } finally {
+            setTimeout(() => { this.innerHTML = origHtml; this.disabled = false; }, 1500);
+        }
+    });
+})();
+</script>
+{% endblock %}

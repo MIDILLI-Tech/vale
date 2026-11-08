@@ -1,0 +1,132 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ __('Plan') : __('Create') ~ ' ' ~ __('Plan') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center gap-3">
+    <a href="{{ url('/admin/membership/plans') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ __('Plans') }}</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit Plan') : __('New Plan') }}</h1>
+</div>
+
+<form method="post"
+      action="{{ url(is_edit ? '/admin/membership/plans/' ~ plan.id : '/admin/membership/plans') }}"
+      class="max-w-2xl space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Plan Details') }}</h2>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="name" name="name" required
+                       value="{{ plan ? plan.name : '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Price') }}</label>
+                <div class="relative mt-1">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">{{ currency_symbol }}</span>
+                    <input type="number" id="price" name="price" step="0.01" min="0"
+                           value="{{ plan ? plan.price : '0.00' }}"
+                           class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm pl-7">
+                </div>
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="interval" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Interval') }}</label>
+                <select id="interval" name="interval"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                    <option value="one_time" {{ plan and plan.interval == 'one_time' ? 'selected' : '' }}>{{ __('One Time') }}</option>
+                    <option value="daily" {{ plan and plan.interval == 'daily' ? 'selected' : '' }}>{{ __('Daily') }}</option>
+                    <option value="weekly" {{ plan and plan.interval == 'weekly' ? 'selected' : '' }}>{{ __('Weekly') }}</option>
+                    <option value="monthly" {{ plan and plan.interval == 'monthly' ? 'selected' : '' }}>{{ __('Monthly') }}</option>
+                    <option value="yearly" {{ plan and plan.interval == 'yearly' ? 'selected' : '' }}>{{ __('Yearly') }}</option>
+                </select>
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="gateway" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Gateway') }}</label>
+                <select id="gateway" name="gateway"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                    <option value="stripe" {{ plan and plan.gateway == 'stripe' ? 'selected' : '' }}>Stripe</option>
+                    <option value="paypal" {{ plan and plan.gateway == 'paypal' ? 'selected' : '' }}>PayPal</option>
+                </select>
+            </div>
+
+            <div class="col-span-2">
+                <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Description') }}</label>
+                <textarea id="description" name="description" rows="3"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">{{ plan ? plan.description : '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Tag & Trial') }}</h2>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 sm:col-span-1">
+                <label for="tag" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Access Tag') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="tag" name="tag" required
+                       value="{{ plan ? plan.tag : '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="e.g. bronze, silver, gold">
+                <p class="mt-1 text-xs text-gray-500">{{ __('Tag assigned to user on subscribe') }}</p>
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="sort_order" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Sort Order') }}</label>
+                <input type="number" id="sort_order" name="sort_order"
+                       value="{{ plan ? plan.sortOrder : '0' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="trial_days" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Trial Days') }}</label>
+                <input type="number" id="trial_days" name="trial_days" min="0"
+                       value="{{ plan ? plan.trialDays : '0' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                <p class="mt-1 text-xs text-gray-500">{{ __('0 = no trial') }}</p>
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="trial_price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Trial Price') }}</label>
+                <div class="relative mt-1">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm pointer-events-none">{{ currency_symbol }}</span>
+                    <input type="number" id="trial_price" name="trial_price" step="0.01" min="0"
+                           value="{{ plan ? plan.trialPrice : '0.00' }}"
+                           class="block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm pl-7">
+                </div>
+                <p class="mt-1 text-xs text-gray-500">{{ __('0.00 = free trial') }}</p>
+            </div>
+
+            <div class="col-span-2 sm:col-span-1">
+                <label for="trial_tag" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Trial Tag') }}</label>
+                <input type="text" id="trial_tag" name="trial_tag"
+                       value="{{ plan ? plan.trialTag : '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="{{ __('Optional') }}">
+                <p class="mt-1 text-xs text-gray-500">{{ __('Tag used during trial period') }}</p>
+            </div>
+
+            <div class="col-span-2 flex items-center gap-2">
+                <input type="checkbox" id="is_active" name="is_active" value="1"
+                       {{ (not plan) or plan.active ? 'checked' : '' }}
+                       class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                <label for="is_active" class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Active') }}</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button type="submit"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            {{ is_edit ? __('Update') : __('Create') }}
+        </button>
+        <a href="{{ url('/admin/membership/plans') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">{{ __('Cancel') }}</a>
+    </div>
+</form>
+{% endblock %}

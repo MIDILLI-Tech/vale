@@ -1,0 +1,72 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Shipping Update') }}{% endblock %}
+
+{% block head_extra %}
+{% if track_url and order.carrier and order.trackingNumber %}
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "ParcelDelivery",
+  "trackingNumber": {{ order.trackingNumber|json_encode|raw }},
+  "provider": { "@type": "Organization", "name": {{ order.carrier|replace({'_': ' '})|title|json_encode|raw }} },
+  "orderStatus": "http://schema.org/OrderShipped",
+  "potentialAction": {
+    "@type": "TrackShipmentAction",
+    "name": {{ __('Track Package')|json_encode|raw }},
+    "url": {{ track_url|json_encode|raw }}
+  }
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block body %}
+<h2>{{ __('Your Order Has Been Shipped') }}</h2>
+<p>{{ __('Good news! Your order :number has been shipped.', {':number': '<strong>#' ~ order.orderNumber ~ '</strong>'})|raw }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  {% if order.carrier %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Carrier') }}</td>
+    <td style="padding:8px 0; font-weight:600; text-transform:capitalize;">{{ order.carrier|replace({'_': ' '})|title }}</td>
+  </tr>
+  {% endif %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">
+      {% if order.carrier == 'other' %}{{ __('Tracking URL') }}{% else %}{{ __('Tracking Number') }}{% endif %}
+    </td>
+    <td style="padding:8px 0; font-weight:700; font-family:monospace;">
+      {% if order.carrier == 'other' and order.trackingNumber %}
+        <a href="{{ order.trackingNumber }}" style="color:{{ email_accent }};">{{ order.trackingNumber }}</a>
+      {% elseif track_url %}
+        <a href="{{ track_url }}" style="color:{{ email_accent }};">{{ order.trackingNumber }}</a>
+      {% else %}
+        {{ order.trackingNumber }}
+      {% endif %}
+    </td>
+  </tr>
+  {% if track_url %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Tracking URL') }}</td>
+    <td style="padding:8px 0;"><a href="{{ track_url }}" style="color:{{ email_accent }};">{{ __('Track your package') }}</a></td>
+  </tr>
+  {% endif %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+{% if track_url %}
+<p style="margin:24px 0;">
+  <a href="{{ track_url }}" class="btn">{{ __('Track Your Package') }}</a>
+</p>
+{% endif %}
+
+<p style="margin-top:24px;">{{ __('If you have any questions about your shipment, please reply to this email.') }}</p>
+{% endblock %}

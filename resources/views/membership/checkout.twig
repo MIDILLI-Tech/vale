@@ -1,0 +1,191 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Subscribe to') }} {{ plan.name }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Complete your membership checkout and subscribe securely.') }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg px-4 py-14" x-data="membershipCheckout()">
+    <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Subscribe to') }} {{ plan.name }}</h1>
+
+    {% if plan.description %}
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">{{ plan.description|raw }}</p>
+    {% endif %}
+
+    <div class="mb-8 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6">
+        <div class="flex items-baseline justify-between">
+            <span class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Price') }}</span>
+            <div>
+                <span x-show="!couponApplied" class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{{ (plan.price * fx_rate)|price(current_currency) }}</span>
+                <div x-show="couponApplied" x-cloak class="flex items-baseline gap-2">
+                    <span class="text-sm text-gray-400 dark:text-gray-500 line-through">{{ (plan.price * fx_rate)|price(current_currency) }}</span>
+                    <span class="text-3xl font-extrabold text-green-600 dark:text-green-400 font-bold" x-text="new Intl.NumberFormat(navigator.language || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}' }).format(finalPrice * {{ fx_rate }})"></span>
+                </div>
+            </div>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between text-sm text-gray-500 dark:text-gray-400">
+            <span>{{ __('Billing interval') }}</span>
+            <span>{{ plan.intervalLabel }}</span>
+        </div>
+        {% if plan.trialDays > 0 %}
+        {% set _trialPrice = plan.trialPrice|default('0.00') %}
+        <div class="mt-2 flex items-baseline justify-between text-sm text-green-600 dark:text-green-400">
+            <span>{{ __('Trial period') }}</span>
+            <span>{% if _trialPrice > 0 %}{{ plan.trialDays }} {{ __('days') }} — {{ (_trialPrice * fx_rate)|price(current_currency) }}{% else %}{{ __(':days days free', {':days': plan.trialDays}) }}{% endif %}</span>
+        </div>
+        {% endif %}
+
+    </div>
+
+    {% if available_currencies is defined and available_currencies|length > 1 %}
+    <div class="mb-6">
+        <form method="POST" action="{{ url('/set-currency') }}" class="flex items-center gap-2">
+            {{ csrf_field() }}
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Currency') }}</label>
+            <select name="currency" onchange="this.form.submit()"
+                    class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-gray-400">
+                {% for code, symbol in available_currencies %}
+                <option value="{{ code }}" {{ code == current_currency ? 'selected' }}>{{ code }} {{ symbol }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    {% endif %}
+
+    {# Coupon section #}
+    <div class="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Have a coupon code?') }}</label>
+        <div class="flex gap-2">
+            <input type="text" x-model="couponCode" :disabled="couponApplied"
+                   placeholder="{{ __('ENTER CODE') }}"
+                   style="text-transform: uppercase"
+                   class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm focus:border-gray-500 focus:ring-gray-400">
+            <button type="button" @click="applyCoupon()" :disabled="loading || (!couponCode && !couponApplied)"
+                    class="rounded-lg bg-gray-900 dark:bg-gray-100 px-4 py-2 text-sm font-semibold text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-white disabled:opacity-50 whitespace-nowrap">
+                <span x-show="!loading" x-text="couponApplied ? '{{ __('Remove')|e('js') }}' : '{{ __('Apply')|e('js') }}'"></span>
+                <span x-show="loading">...</span>
+            </button>
+        </div>
+        <p x-show="couponMessage" :class="couponError ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'" class="mt-2 text-xs font-medium" x-text="couponMessage"></p>
+    </div>
+
+    <form method="POST" action="{{ url('membership.subscribe') }}">
+        {{ csrf_field() }}
+        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+        <input type="hidden" name="coupon_code" :value="appliedCode">
+
+        {% if stripe_enabled or paypal_enabled %}
+        <div class="mb-6 space-y-3">
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Payment method') }}</p>
+
+            {% if stripe_enabled %}
+            <label class="flex cursor-pointer items-center rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-300 dark:hover:border-blue-500 has-checked:border-blue-500 has-checked:bg-blue-50 dark:has-checked:bg-blue-950/40">
+                <input type="radio" name="payment_method" value="stripe" class="h-4 w-4 text-blue-600 dark:text-blue-400"{{ stripe_enabled and not paypal_enabled ? ' checked' : '' }}>
+                <div class="ml-3">
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ stripe_label }}</span>
+                </div>
+            </label>
+            {% endif %}
+
+            {% if paypal_enabled %}
+            <label class="flex cursor-pointer items-center rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-300 dark:hover:border-blue-500 has-checked:border-blue-500 has-checked:bg-blue-50 dark:has-checked:bg-blue-950/40">
+                <input type="radio" name="payment_method" value="paypal" class="h-4 w-4 text-blue-600 dark:text-blue-400"{{ paypal_enabled and not stripe_enabled ? ' checked' : '' }}>
+                <div class="ml-3">
+                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ paypal_label }}</span>
+                </div>
+            </label>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="mb-6 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 p-4">
+            <p class="text-sm text-amber-700 dark:text-amber-300">⚠ {{ __('No payment method is configured. Contact the store administrator.') }}</p>
+        </div>
+        {% endif %}
+
+        {% if policy_links is defined and policy_links|length > 0 %}
+        {% set _policyLinks = [] %}
+        {% if policy_links.terms is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.terms ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-300">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
+        {% if policy_links.privacy is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.privacy ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-300">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
+        {% if policy_links.returns is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.returns ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-300">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+        <div class="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4 text-xs text-gray-500 dark:text-gray-400">
+            <label class="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" required class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                <span>{{ __('I have read and agree to the :links.', {':links': _policyLinks|join(', ')})|raw }}</span>
+            </label>
+        </div>
+        {% endif %}
+
+        {% set _hasGateway = stripe_enabled or paypal_enabled %}
+        <button type="submit"
+                class="mt-6 w-full rounded-lg btn-primary py-3 px-4 text-sm font-bold transition-colors"{% if not _hasGateway %} disabled style="opacity:0.5;cursor:not-allowed"{% endif %}>
+            {{ __('Subscribe') }}
+        </button>
+    </form>
+
+    <a href="{{ url('/membership') }}" class="mt-3 block text-center text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+        {{ __('Cancel and go back') }}
+    </a>
+</div>
+
+<script>
+function membershipCheckout() {
+    return {
+        planPrice: {{ plan.price }},
+        couponCode: '',
+        appliedCode: '',
+        discount: 0,
+        finalPrice: {{ plan.price }},
+        couponMessage: '',
+        couponError: false,
+        couponApplied: false,
+        loading: false,
+
+        async applyCoupon() {
+            if (this.couponApplied) {
+                this.couponCode = '';
+                this.appliedCode = '';
+                this.discount = 0;
+                this.finalPrice = this.planPrice;
+                this.couponMessage = '';
+                this.couponApplied = false;
+                this.couponError = false;
+                return;
+            }
+
+            this.loading = true;
+            this.couponMessage = '';
+            this.couponError = false;
+
+            try {
+                const response = await fetch('{{ url("membership.apply_coupon")|e('js') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        code: this.couponCode,
+                        plan_id: {{ plan.id }}
+                    })
+                });
+                const res = await response.json();
+                if (res.valid) {
+                    this.discount = parseFloat(res.discount);
+                    this.finalPrice = parseFloat(res.final_price);
+                    this.appliedCode = res.code;
+                    this.couponMessage = res.message;
+                    this.couponApplied = true;
+                } else {
+                    this.couponMessage = res.message;
+                    this.couponError = true;
+                }
+            } catch (e) {
+                this.couponMessage = 'Failed to apply coupon.';
+                this.couponError = true;
+            } finally {
+                this.loading = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1525 @@
+<script>
+window.VL_COUNTRY_CODES = {{ country_codes|default([])|json_encode|raw }};
+window.VL_COUNTRY_TAX_RATES_DATA = {
+    initial: {{ countryTaxRates|map(r => ({country_code: r.countryCode, regime: r.regime, rate: r.rate, zero_reason: r.zeroReason, fallback: r.isFallback, _id: r.id}))|default([])|json_encode|raw }},
+    codes: (function() {
+        var raw = '{{ settings.shipping_countries|default('')|e('js') }}';
+        var codes = raw ? raw.split(',').map(function(c) { return c.trim().toUpperCase(); }).filter(Boolean) : [];
+        if (codes.length === 0) return window.VL_COUNTRY_CODES || [];
+        return codes.filter(function(c) { return (window.VL_COUNTRY_CODES || []).indexOf(c) !== -1; });
+    })(),
+};
+
+window.VL_SHIPPING_RATES_DATA = (function() {
+    try {
+        var raw = '{{ settings.shipping_country_rates|default('{}')|e('js') }}';
+        var obj = JSON.parse(raw);
+        return Object.entries(obj).map(function(e) {
+            var val = e[1];
+            if (typeof val === 'object' && val !== null) {
+                return {
+                    code: String(e[0] || '').toUpperCase(),
+                    rate: String(val.rate ?? ''),
+                    shipping_time_min: val.shipping_time_min ?? '',
+                    shipping_time_max: val.shipping_time_max ?? ''
+                };
+            }
+            return {code:String(e[0] || '').toUpperCase(),rate:String(val ?? ''),shipping_time_min:'',shipping_time_max:''};
+        });
+    } catch(ex) {
+        return [];
+    }
+})();
+
+window.VL_SHIPPING_COUNTRY_OPTIONS = (function() {
+    var rawAllowed = '{{ settings.checkout_allowed_countries|default('')|e('js') }}';
+    var rawShipping = '{{ settings.shipping_countries|default('')|e('js') }}';
+    var rawBlocked = '{{ settings.checkout_blocked_countries|default('')|e('js') }}';
+    var allowed = rawAllowed ? rawAllowed.split(',').map(function(c) { return c.trim().toUpperCase(); }).filter(Boolean) : [];
+    var shipping = rawShipping ? rawShipping.split(',').map(function(c) { return c.trim().toUpperCase(); }).filter(Boolean) : [];
+    var blocked = rawBlocked ? rawBlocked.split(',').map(function(c) { return c.trim().toUpperCase(); }).filter(Boolean) : [];
+    var company = '{{ settings.shop_country|default('')|e('js') }}';
+    var all = window.VL_COUNTRY_CODES || [];
+
+    // Base: checkout_allowed if set, otherwise company country only.
+    var pool = allowed.length > 0 ? allowed : (company ? [company] : []);
+
+    // Intersect with shipping_countries if set (only show selected shipping countries).
+    if (shipping.length > 0) {
+        pool = pool.filter(function(c) { return shipping.indexOf(c) !== -1; });
+    }
+
+    // Remove blocked countries.
+    pool = pool.filter(function(c) { return blocked.indexOf(c) === -1; });
+
+    // Always include company country.
+    if (company && pool.indexOf(company) === -1) pool.unshift(company);
+
+    return pool.filter(function(c) { return (all.indexOf(c) !== -1); });
+})();
+
+window.VL_SHIPPING_COUNTRY_OPTIONS_EX_COMPANY = (function() {
+    var company = '{{ settings.shop_country|default('')|e('js') }}';
+    return (window.VL_SHIPPING_COUNTRY_OPTIONS || []).filter(function(c) { return c !== company; });
+})();
+
+window.VL_COUNTRY_CODES_EX_COMPANY = (function() {
+    var company = '{{ settings.shop_country|default('')|e('js') }}';
+    return (window.VL_COUNTRY_CODES || []).filter(function(c) { return c !== company; });
+})();
+
+function tokenMultiSelect(config) {
+    var opts = Array.isArray(config && config.options) ? config.options : [];
+    var initial = String((config && config.initial) || '');
+    var placeholder = String((config && config.placeholder) || 'Select...');
+    var kind = String((config && config.kind) || '');
+    var labelMap = (config && typeof config.labelMap === 'object' && config.labelMap !== null)
+        ? config.labelMap
+        : {};
+    var regionNames = (kind === 'country' && typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+        ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+        : null;
+    var currencyNames = (kind === 'currency' && typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+        ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'currency' })
+        : null;
+
+    var normalizedOpts = opts
+        .map(function (v) { return String(v || '').trim().toUpperCase(); })
+        .filter(function (v) { return v !== ''; });
+
+    return {
+        placeholder: placeholder,
+        selected: '',
+        items: initial.split(',')
+            .map(function (v) { return v.trim().toUpperCase(); })
+            .filter(function (v) { return v !== ''; })
+            .filter(function (v, i, arr) { return arr.indexOf(v) === i; }),
+        options: normalizedOpts,
+        kind: kind,
+        labelMap: labelMap,
+        regionNames: regionNames,
+        currencyNames: currencyNames,
+
+        displayLabel: function (code) {
+            var normalized = String(code || '').trim().toUpperCase();
+            if (normalized === '') {
+                return '';
+            }
+
+            if (this.kind === 'currency' && this.currencyNames) {
+                var currencyName = this.currencyNames.of(normalized);
+                if (currencyName) {
+                    var symbol = Object.prototype.hasOwnProperty.call(this.labelMap, normalized) ? this.labelMap[normalized] : '';
+                    return currencyName + ' (' + symbol + ' — ' + normalized + ')';
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(this.labelMap, normalized)) {
+                var fallback = this.labelMap[normalized];
+                return fallback + ' — ' + normalized;
+            }
+
+            if (this.kind === 'country' && this.regionNames) {
+                var countryName = this.regionNames.of(normalized);
+                if (countryName) {
+                    return countryName + ' (' + normalized + ')';
+                }
+            }
+
+            return normalized;
+        },
+
+        availableOptions: function () {
+            var self = this;
+            return self.options.filter(function (opt) { return self.items.indexOf(opt) === -1; });
+        },
+
+        addSelected: function () {
+            var code = String(this.selected || '').trim().toUpperCase();
+            if (code === '') {
+                return;
+            }
+            if (this.options.indexOf(code) === -1) {
+                return;
+            }
+            if (this.items.indexOf(code) !== -1) {
+                return;
+            }
+            this.items.push(code);
+            this.selected = '';
+        },
+
+        remove: function (code) {
+            this.items = this.items.filter(function (item) { return item !== code; });
+        },
+    };
+}
+
+function mailTemplates() {
+    return {
+        selected: '',
+        content: '',
+        defaultContent: '',
+        selectedLabel: '',
+        isCustom: false,
+        showSaved: false,
+        saveTimer: null,
+        loading: false,
+        isFullscreen: false,
+        jar: null,
+        useThemeColors: {{ (mailConfig.mail_use_theme_colors ?? '1') != '0' ? 'true' : 'false' }},
+        showSwatchesFor: '',
+
+        placeholders: {
+            'layout': { common: ['site_name', 'site_url'], template: ['title', 'body'] },
+            'welcome': { common: ['site_name', 'site_url'], template: ['name', 'login_url'] },
+            'password-reset': { common: ['site_name', 'site_url'], template: ['name', 'reset_url'] },
+            'order-confirmation': { common: ['site_name', 'site_url'], template: ['order', 'downloads', 'policy_links'] },
+            'order-status-update': { common: ['site_name', 'site_url'], template: ['order', 'old_status', 'new_status'] },
+            'order-note': { common: ['site_name', 'site_url'], template: ['order', 'subject', 'message'] },
+            'payment-received': { common: ['site_name', 'site_url'], template: ['order', 'is_admin', 'transaction_id', 'payment_method', 'downloads', 'policy_links'] },
+            'newsletter-confirmation': { common: ['site_name', 'site_url'], template: ['confirm_url'] },
+        },
+
+        get currentPlaceholders() {
+            if (!this.selected || !this.placeholders[this.selected]) return null;
+            return this.placeholders[this.selected];
+        },
+
+        initJar() {
+            if (!this.jar && window.initTwigEditor && this.$refs.editor) {
+                const wrapper = this.$refs.editor.parentElement;
+                if (!document.documentElement.classList.contains('dark')) {
+                    wrapper.classList.add('light-theme');
+                } else {
+                    wrapper.classList.remove('light-theme');
+                }
+                this.jar = window.initTwigEditor(this.$refs.editor);
+            }
+        },
+
+        loadTemplate(name) {
+            if (!name) {
+                this.content = '';
+                if (this.jar) this.jar.updateCode('');
+                this.$nextTick(() => this.resetDirtyBaseline());
+                return;
+            }
+            this.loading = true;
+            fetch('{{ url('/admin/mail/template') }}/' + name)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.ok) return;
+                    this.selected = data.name;
+                    this.selectedLabel = data.label;
+                    this.defaultContent = data.default;
+                    this.content = data.custom || data.default;
+                    this.isCustom = data.custom !== null;
+                    this.$nextTick(() => {
+                        this.initJar();
+                        if (this.jar) {
+                            this.jar.updateCode(this.content || '');
+                        }
+                        // Selecting a template is navigation, not an edit — re-snapshot
+                        // the form so the page is not flagged as having unsaved changes.
+                        this.resetDirtyBaseline();
+                    });
+                })
+                .finally(() => { this.loading = false; });
+        },
+
+        // Re-baselines the template save form after a programmatic value change
+        // (template_name/template_content). Runs twice because Alpine's x-model
+        // writes the hidden inputs on the next flush.
+        resetDirtyBaseline() {
+            const snap = () => {
+                const el = document.querySelector('#mail-tab-templates input[name="template_content"]');
+                const host = el ? el.closest('form') : null;
+                if (host && typeof host.vlEstablishBaseline === 'function') {
+                    host.vlEstablishBaseline();
+                }
+            };
+            snap();
+            setTimeout(snap, 80);
+        },
+
+        syncContent() {
+            if (this.jar) {
+                this.content = this.jar.toString();
+            }
+        },
+
+        toggleFullscreen() {
+            this.isFullscreen = !this.isFullscreen;
+        },
+
+        onKeyDown(e) {
+            if (this.isFullscreen && e.key === 'Escape') {
+                this.isFullscreen = false;
+                return;
+            }
+            if (this.selected && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                this.syncContent();
+                const form = this.$refs.editor ? this.$refs.editor.closest('form') : null;
+                if (form) form.requestSubmit();
+            }
+        },
+
+        insertPlaceholder(ph) {
+            if (!this.$refs.editor) return;
+            const text = '{{ '{{' }} ' + ph + ' {{ '}}' }}';
+            if (this.jar) {
+                if (typeof this.jar.insertAtCursor === 'function') {
+                    this.jar.insertAtCursor(text);
+                } else {
+                    this.content = (this.jar.toString() || '') + text;
+                    this.jar.updateCode(this.content);
+                }
+                this.syncContent();
+            }
+        },
+
+        phDisplay(ph) {
+            return '{{ '{{' }} ' + ph + ' {{ '}}' }}';
+        },
+
+        resetToDefault(name) {
+            if (!confirm('{{ __('Reset this template to its default content?') }}')) return;
+            fetch('{{ url('/admin/mail/template/reset') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: '_csrf_token={{ csrf_token() }}&template_name=' + name
+            }).then(() => {
+                this.loadTemplate(name);
+            });
+        },
+
+        previewOpen: false,
+        previewUrl: '',
+        previewName: '',
+        previewLoading: false,
+
+        openPreview() {
+            if (!this.selected) return;
+            this.previewUrl = '{{ url('/admin/mail/preview') }}/' + this.selected;
+            this.previewName = this.selected;
+            this.previewLoading = true;
+            this.previewOpen = true;
+        },
+
+        pickThemeColor(settingKey, value) {
+            const textInput = document.querySelector('[name="' + settingKey + '"]');
+            if (!textInput) return;
+            textInput.value = value;
+            const colorInput = textInput.nextElementSibling;
+            if (colorInput && colorInput.type === 'color') {
+                colorInput.value = value;
+                colorInput.blur();
+            }
+            this.showSwatchesFor = '';
+        },
+
+        openNativePicker(settingKey) {
+            // Palette and OS picker are anchored to the same swatch, so close the
+            // palette before handing over to the native color picker.
+            this.showSwatchesFor = '';
+            const textInput = document.querySelector('[name="' + settingKey + '"]');
+            const colorInput = textInput ? textInput.nextElementSibling : null;
+            if (!colorInput || colorInput.type !== 'color') return;
+            if (typeof colorInput.showPicker === 'function') {
+                try {
+                    colorInput.showPicker();
+                    return;
+                } catch (e) {
+                    // Not user-activated — fall through to click().
+                }
+            }
+            colorInput.click();
+        },
+
+        emailColorValue(settingKey) {
+            const el = document.querySelector('[name="' + settingKey + '"]');
+            return el ? el.value || '' : '';
+        },
+
+        resetEmailColor(settingKey, defaultValue) {
+            const textInput = document.querySelector('[name="' + settingKey + '"]');
+            if (!textInput) return;
+            this.applyEmailColor(textInput, defaultValue);
+        },
+
+        // Resets every custom email color back to its theme default. Applied in
+        // place so the change is visible; the dirty poll then enables the Save bar.
+        resetAllEmailColors() {
+            document.querySelectorAll('#mail-tab-templates input[data-color-default]').forEach((textInput) => {
+                this.applyEmailColor(textInput, textInput.dataset.colorDefault || '');
+            });
+        },
+
+        // Keeps the visible swatch and the hex text input in sync.
+        applyEmailColor(textInput, value) {
+            textInput.value = value;
+            const colorInput = textInput.nextElementSibling;
+            if (colorInput && colorInput.type === 'color') {
+                colorInput.value = value;
+                colorInput.blur();
+            }
+        }
+    };
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+    function activateSubTab(btnSelector, panelPrefix, name, attr) {
+        document.querySelectorAll(btnSelector).forEach(function(t){
+            t.classList.remove('border-blue-600','text-blue-600','dark:border-blue-400','dark:text-blue-400','border-gray-900','text-gray-900','dark:text-gray-100');
+            t.classList.add('border-transparent','text-gray-500','dark:text-gray-400');
+        });
+        document.querySelectorAll('[id^="' + panelPrefix + '"]').forEach(function(p){
+            p.classList.add('hidden');
+        });
+        var btn=document.querySelector(btnSelector + '[' + attr + '="' + name + '"]');
+        var panel=document.getElementById(panelPrefix + name);
+        if(btn){
+            btn.classList.add('border-blue-600','text-blue-600','dark:border-blue-400','dark:text-blue-400');
+            btn.classList.remove('border-transparent','text-gray-500','dark:text-gray-400','border-gray-900','text-gray-900','dark:text-gray-100');
+        }
+        if(panel){panel.classList.remove('hidden');}
+    }
+
+    // Active top-level tab; kept in sync whenever activateTab runs.
+    var currentTab = 'general';
+
+    // Media is always the first Content tab and the guaranteed fallback.
+    function firstVisibleContentTab() {
+        return 'media';
+    }
+
+    // Gated sub-tabs (blog/mlc/ads) are read from the feature store — the
+    // source of truth — so visibility is correct even before Alpine applies an
+    // x-show to the (possibly hidden #tab-content) buttons. Media is always shown.
+    function isContentSubTabVisible(name) {
+        if (name === 'media') return true;
+        var store = null;
+        try { store = Alpine.store('vlFeatures'); } catch (e) {}
+        if (store && name in store) return !!store[name];
+        // Last resort: fall back to DOM visibility.
+        var btn = document.querySelector('.content-tab-btn[data-subtab="' + name + '"]');
+        return btn && btn.offsetParent !== null;
+    }
+
+    function ensureVisibleContentTab() {
+        var visiblePanel = document.querySelector('#tab-content .content-tab-panel:not(.hidden)');
+        var current = visiblePanel ? visiblePanel.id.slice('content-tab-'.length) : null;
+        if (!current || !isContentSubTabVisible(current)) {
+            activateContentTab(firstVisibleContentTab());
+        }
+    }
+
+    function activateTab(tabName) {
+        if (tabName === 'cache') tabName = 'maintenance';
+        // Skip tabs whose button is hidden by a feature toggle.
+        var btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+        if (btn && btn.offsetParent === null) {
+            tabName = 'general';
+        }
+        currentTab = tabName;
+        activateSubTab('.tab-btn', 'tab-', tabName, 'data-tab');
+        if (tabName === 'content') {
+            ensureVisibleContentTab();
+        }
+    }
+
+    // Floating save bar element refs (restored from pre-refactor state).
+    var floatingBar = document.getElementById('floating-save-bar');
+    var floatingBtn = document.getElementById('floating-save-btn');
+    var floatingCategory = document.getElementById('floating-save-category');
+
+    function tabLabel(name) {
+        var btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+        return btn ? btn.textContent.trim() : name;
+    }
+
+    // The currently active sub-tab button for the open top-level tab group.
+    function activeSubTabButton() {
+        var selector = currentTab === 'general' ? '.general-tab-btn'
+            : currentTab === 'content' ? '.content-tab-btn'
+            : currentTab === 'ecommerce' ? '.ec-tab-btn'
+            : currentTab === 'mail' ? '.mail-tab-btn'
+            : currentTab === 'seo' ? '.seo-tab-btn'
+            : currentTab === 'privacy' ? '.privacy-tab-btn'
+            : currentTab === 'advanced' ? '.advanced-tab-btn'
+            : currentTab === 'maintenance' ? '.maintenance-tab-btn'
+            : null;
+        if (!selector) return null;
+        return document.querySelector(selector + '.border-blue-600, ' + selector + '.border-gray-900');
+    }
+
+    // The form in the visible (sub-)panel that actually saves settings.
+    // Only forms carrying a _group or _subtab hidden input count; panels like
+    // Payment/Import/API tokens/Webhooks only have action forms and no settings save.
+    function getSettingsForm() {
+        var panel = document.querySelector('.tab-panel:not(.hidden)');
+        if (!panel) return null;
+        var sub = panel.querySelector(
+            '.general-tab-panel:not(.hidden),' +
+            '.content-tab-panel:not(.hidden),' +
+            '.ec-tab-panel:not(.hidden),' +
+            '.mail-tab-panel:not(.hidden),' +
+            '.seo-tab-panel:not(.hidden),' +
+            '.privacy-tab-panel:not(.hidden),' +
+            '.advanced-tab-panel:not(.hidden),' +
+            '.maintenance-tab-panel:not(.hidden)'
+        );
+        var root = sub || panel;
+        var forms = root.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+            if (forms[i].querySelector('input[name="_group"], input[name="_subtab"]')) {
+                return forms[i];
+            }
+        }
+        return null;
+    }
+
+    // True when any real settings form has unsaved changes.
+    var anyDirty = false;
+    function syncAnyDirty() {
+        var dirty = false;
+        document.querySelectorAll('.tab-panel form').forEach(function(f) {
+            if (f.dataset.vlDirtyWired === '1' && f.dataset.vlDirty === '1') dirty = true;
+        });
+        anyDirty = dirty;
+        return dirty;
+    }
+    window.addEventListener('beforeunload', function (e) {
+        if (anyDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+            // Runs only if the user cancels the leave — if they really leave,
+            // the page is torn down and this timer never fires.
+            setTimeout(jumpToFirstDirtyTab, 0);
+        }
+    });
+
+    // Hash a string (FNV-1a, 32-bit) so dirty baselines never persist
+    // sensitive values (API keys, SMTP passwords, …) in DOM attributes,
+    // where they would leak into console output and page snapshots.
+    function hashString(str) {
+        var h = 0x811c9dc5;
+        for (var i = 0; i < str.length; i++) {
+            h ^= str.charCodeAt(i);
+            h = (h * 0x01000193) >>> 0;
+        }
+        return ('0000000' + h.toString(16)).slice(-8);
+    }
+
+    // Serialize a form to a canonical string so any change (including
+    // editor/checkbox/token fields that may not fire input events) is caught.
+    function serializeForm(form) {
+        var els = form.querySelectorAll('input, select, textarea');
+        var out = [];
+        for (var i = 0; i < els.length; i++) {
+            var el = els[i];
+            if (el.disabled) continue;
+            // Action UI embedded inside settings forms (e.g. captcha test
+            // widgets) is not a setting: provider scripts inject response
+            // fields asynchronously after the dirty baseline is taken, which
+            // would otherwise flag the form dirty on a clean page load.
+            if (el.closest && el.closest('[data-vl-noserialize]')) continue;
+            var name = el.name;
+            if (!name) continue;
+            if (el.type === 'radio') {
+                if (el.checked) out.push(name + '=' + encodeURIComponent(el.value));
+            } else if (el.type === 'checkbox') {
+                out.push(name + '=' + (el.checked ? '1' : '0'));
+            } else {
+                out.push(name + '=' + encodeURIComponent(el.value));
+            }
+        }
+        out.sort();
+        return out.join('&');
+    }
+
+    // Per-form dirty wiring: snapshot an initial baseline and compare on changes.
+    // Only real settings forms (_group/_subtab) are wired so action forms
+    // (payment toggles, imports, webhooks) never trigger a beforeunload warning.
+    var wiredForms = {};
+    function wireDirtyTracking() {
+        document.querySelectorAll('.tab-panel form').forEach(function(form) {
+            if (!form.querySelector('input[name="_group"], input[name="_subtab"]')) return;
+            var key = form.dataset.vlFormId || (form.dataset.vlFormId = String(Math.random().toString(36).slice(2)));
+            if (wiredForms[key]) return;
+            wiredForms[key] = true;
+            form.dataset.vlDirtyWired = '1';
+            form.dataset.vlDirty = '0';
+
+            var establishBaseline = function() {
+                form.dataset.vlBaseline = hashString(serializeForm(form));
+                form.dataset.vlDirty = '0';
+                syncAnyDirty();
+                updateFloatingSaveBar();
+            };
+            // Exposed so pages can re-snapshot after a programmatic (non-edit)
+            // value change, e.g. loading a different mail template into the editor.
+            form.vlEstablishBaseline = establishBaseline;
+
+            var checkDirty = function() {
+                if (!form.dataset.vlBaseline) return;
+                // Once submitted, stop re-evaluating — the page is navigating.
+                if (form.dataset.vlSubmitting === '1') return;
+                var changed = hashString(serializeForm(form)) !== form.dataset.vlBaseline;
+                if (changed && form.dataset.vlDirty !== '1') { form.dataset.vlDirty = '1'; syncAnyDirty(); updateFloatingSaveBar(); }
+                if (!changed && form.dataset.vlDirty !== '0') { form.dataset.vlDirty = '0'; syncAnyDirty(); updateFloatingSaveBar(); }
+            };
+
+            form.querySelectorAll('input, select, textarea').forEach(function(el) {
+                el.addEventListener('input', checkDirty);
+                el.addEventListener('change', checkDirty);
+            });
+            // Debounced polling catches editor/token changes that skip events.
+            setInterval(checkDirty, 500);
+
+            form.addEventListener('submit', function() {
+                // Mark as submitting so checkDirty / updateFloatingSaveBar never
+                // re-enable the button while the page navigates.
+                form.dataset.vlSubmitting = '1';
+                form.dataset.vlDirty = '0';
+                syncAnyDirty();
+                updateFloatingSaveBar();
+                // Keep the floating button inert while the page navigates.
+                if (floatingBtn) { floatingBtn.disabled = true; floatingBtn.classList.add('opacity-40', 'cursor-not-allowed'); floatingBtn.classList.remove('shadow-sm'); }
+            });
+            form.addEventListener('reset', function() { establishBaseline(); });
+
+            // Establish baseline after a short delay so editor mounts settle.
+            setTimeout(establishBaseline, 60);
+            setTimeout(establishBaseline, 500);
+        });
+    }
+
+    function updateFloatingSaveBar() {
+        // Category label always comes from the tab buttons, never from a form.
+        var label = tabLabel(currentTab);
+        var subBtn = activeSubTabButton();
+        if (subBtn) {
+            label = label + ' \u203a ' + subBtn.textContent.trim();
+        }
+        if (floatingCategory) floatingCategory.textContent = label;
+
+        var form = getSettingsForm();
+        // Action panels (Payment/Import/API tokens/Webhooks) have no settings
+        // form to save — hide the button, keep only the category label.
+        var canSave = !!form;
+        if (floatingBtn) {
+            floatingBtn.classList.toggle('hidden', !canSave);
+        }
+        // While a form is submitting the page is navigating — never re-enable.
+        var submitting = form && form.dataset.vlSubmitting === '1';
+        var dirty = form ? (form.dataset.vlDirty === '1') : false;
+        var enabled = canSave && dirty && !submitting;
+        if (floatingBtn) {
+            floatingBtn.disabled = !enabled;
+            floatingBtn.classList.toggle('opacity-40', !enabled);
+            floatingBtn.classList.toggle('cursor-not-allowed', !enabled);
+            floatingBtn.classList.toggle('shadow-sm', enabled);
+            floatingBtn.title = enabled
+                ? (floatingBtn.dataset.titleSave || floatingBtn.title)
+                : (floatingBtn.dataset.titleIdle || floatingBtn.title);
+        }
+    }
+
+    function refreshFloatingSaveBar() {
+        wireDirtyTracking();
+        updateFloatingSaveBar();
+    }
+
+    // Jumps to the tab (and sub-tab) holding the first unsaved settings form.
+    // Called from the beforeunload branch that only runs when the user cancels
+    // the leave warning, so they land back on their pending changes.
+    function jumpToFirstDirtyTab() {
+        var dirtyForm = document.querySelector('.tab-panel form[data-vl-dirty-wired="1"][data-vl-dirty="1"]');
+        if (!dirtyForm) return;
+        var panel = dirtyForm.closest('.tab-panel');
+        if (!panel) return;
+        if (panel.id.indexOf('tab-') === 0) activateTab(panel.id.slice(4));
+        var sub = dirtyForm.closest('.general-tab-panel, .ec-tab-panel, .mail-tab-panel, .seo-tab-panel, .privacy-tab-panel, .advanced-tab-panel, .maintenance-tab-panel');
+        if (sub) {
+            var subtab = '';
+            if (sub.id.indexOf('general-tab-') === 0) subtab = sub.id.slice(12);
+            else if (sub.id.indexOf('ec-tab-') === 0) subtab = sub.id.slice(7);
+            else if (sub.id.indexOf('mail-tab-') === 0) subtab = sub.id.slice(9);
+            else if (sub.id.indexOf('seo-tab-') === 0) subtab = sub.id.slice(8);
+            else if (sub.id.indexOf('privacy-tab-') === 0) subtab = sub.id.slice(12);
+            else if (sub.id.indexOf('advanced-tab-') === 0) subtab = sub.id.slice(13);
+            else if (sub.id.indexOf('maintenance-tab-') === 0) subtab = sub.id.slice(16);
+            if (subtab) {
+                if (sub.classList.contains('general-tab-panel')) activateGeneralTab(subtab);
+                else if (sub.classList.contains('ec-tab-panel')) activateEcTab(subtab);
+                else if (sub.classList.contains('mail-tab-panel')) activateMailTab(subtab);
+                else if (sub.classList.contains('seo-tab-panel')) activateSeoTab(subtab);
+                else if (sub.classList.contains('privacy-tab-panel')) activatePrivacyTab(subtab);
+                else if (sub.classList.contains('advanced-tab-panel')) activateAdvancedTab(subtab);
+                else if (sub.classList.contains('maintenance-tab-panel')) activateMaintenanceTab(subtab);
+            }
+        }
+        refreshFloatingSaveBar();
+        var focusable = dirtyForm.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])');
+        if (focusable) focusable.focus({ preventScroll: true });
+    }
+
+    if (floatingBar && floatingBtn) {
+        floatingBtn.addEventListener('click', function() {
+            var form = getSettingsForm();
+            if (form && form.dataset.vlDirty === '1') {
+                // Mark the form as submitting so checkDirty / updateFloatingSaveBar
+                // never re-enable the button while the page navigates.
+                form.dataset.vlSubmitting = '1';
+                // Immediately disable the button so it stays inert until the
+                // page finishes reloading (prevents double submits).
+                form.dataset.vlDirty = '0';
+                syncAnyDirty();
+                updateFloatingSaveBar();
+                floatingBtn.disabled = true;
+                floatingBtn.classList.add('opacity-40', 'cursor-not-allowed');
+                floatingBtn.classList.remove('shadow-sm');
+                // form.submit() (JS method) does NOT fire the 'submit' event,
+                // so the per-form submit listener below never runs — which would
+                // leave anyDirty true and trigger a spurious beforeunload warning
+                // as the page navigates. Reset the dirty flags here explicitly.
+                form.submit();
+            }
+        });
+        wireDirtyTracking();
+    }
+
+    // Ctrl+S / Cmd+S triggers the floating Save button (dirty-check aware).
+    document.addEventListener('keydown', function(e) {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        if (e.key.toLowerCase() !== 's' || e.shiftKey || e.altKey) return;
+        // The mail template editor owns Ctrl+S page-wide whenever a template is
+        // selected — skip so we never double-save its form.
+        var tmplName = document.querySelector('#mail-tab-templates form [name="template_name"]');
+        if (tmplName && tmplName.value !== '') return;
+        if (e.target && e.target.closest && e.target.closest('.codejar-editor')) return;
+        if (floatingBtn && !floatingBtn.disabled && !floatingBtn.classList.contains('hidden')) {
+            e.preventDefault();
+            floatingBtn.click();
+        }
+    });
+
+    updateFloatingSaveBar();
+    function activateEcTab(subtabName)  { activateSubTab('.ec-tab-btn',   'ec-tab-',   subtabName, 'data-subtab'); }
+    function activateGeneralTab(subtabName) { activateSubTab('.general-tab-btn', 'general-tab-', subtabName, 'data-subtab'); }
+    function activateAdvancedTab(subtabName) { activateSubTab('.advanced-tab-btn',  'advanced-tab-',  subtabName, 'data-subtab'); }
+    function activateMailTab(subtabName){ activateSubTab('.mail-tab-btn', 'mail-tab-', subtabName, 'data-subtab'); }
+    function activateSeoTab(subtabName)   { activateSubTab('.seo-tab-btn',   'seo-tab-',   subtabName, 'data-subtab'); }
+    function activatePrivacyTab(subtabName) { activateSubTab('.privacy-tab-btn', 'privacy-tab-', subtabName, 'data-subtab'); }
+    function activateMaintenanceTab(subtabName) { activateSubTab('.maintenance-tab-btn', 'maintenance-tab-', subtabName, 'data-subtab'); }
+    function activateContentTab(subtabName) {
+        if (!isContentSubTabVisible(subtabName)) {
+            subtabName = firstVisibleContentTab();
+        }
+        activateSubTab('.content-tab-btn', 'content-tab-', subtabName, 'data-subtab');
+    }
+
+    window.vlSettingsNav = {
+        activateTab: activateTab,
+        activateGeneralTab: activateGeneralTab,
+        activateContentTab: activateContentTab,
+        ensureVisibleContentTab: ensureVisibleContentTab,
+        firstVisibleContentTab: firstVisibleContentTab,
+        activateEcTab: activateEcTab,
+        activateAdvancedTab: activateAdvancedTab,
+        activateMailTab: activateMailTab,
+        activateSeoTab: activateSeoTab,
+        activatePrivacyTab: activatePrivacyTab,
+        activateMaintenanceTab: activateMaintenanceTab,
+    };
+
+    document.querySelectorAll('.tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){
+            activateTab(btn.dataset.tab);
+            if (btn.dataset.tab === 'content') {
+                ensureVisibleContentTab();
+            }
+            history.replaceState(null, '', '#tab-' + btn.dataset.tab);
+            refreshFloatingSaveBar();
+        });
+    });
+    document.querySelectorAll('.ec-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateEcTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.general-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateGeneralTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.content-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateContentTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.advanced-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateAdvancedTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    // Default first subtab for grouped tabs
+    activateGeneralTab('site');
+    activateEcTab('shop');
+    activateAdvancedTab('api-tokens');
+    activateMailTab('notifications');
+    document.querySelectorAll('.mail-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateMailTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.seo-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateSeoTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.privacy-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activatePrivacyTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    document.querySelectorAll('.maintenance-tab-btn').forEach(function(btn){
+        btn.addEventListener('click',function(){ activateMaintenanceTab(btn.dataset.subtab); refreshFloatingSaveBar(); });
+    });
+    // Default first SEO subtab
+    activateSeoTab('general');
+    // Default first Privacy subtab
+    activatePrivacyTab('ip-privacy');
+    // Default first Maintenance subtab
+    activateMaintenanceTab('updates');
+    activateContentTab(firstVisibleContentTab());
+    refreshFloatingSaveBar();
+
+    // Restore tab from hash first, then from query param
+    var hash = location.hash.replace('#', '');
+    if (hash && hash.indexOf('tab-') === 0) {
+        activateTab(hash.replace('tab-', ''));
+    } else {
+        var urlTab = new URLSearchParams(window.location.search).get('tab');
+        if (urlTab) { activateTab(urlTab); }
+    }
+
+    window.addEventListener('hashchange', function () {
+        var currentHash = location.hash.replace('#', '');
+        if (currentHash && currentHash.indexOf('tab-') === 0) {
+            activateTab(currentHash.replace('tab-', ''));
+            refreshFloatingSaveBar();
+        }
+    });
+
+    var urlSubtab = new URLSearchParams(window.location.search).get('subtab');
+    if (urlSubtab) {
+        if (document.querySelector('.general-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateGeneralTab(urlSubtab);
+        }
+        if (document.querySelector('.content-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateContentTab(urlSubtab);
+        }
+        if (document.querySelector('.ec-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateEcTab(urlSubtab);
+        }
+        if (document.querySelector('.advanced-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateAdvancedTab(urlSubtab);
+        }
+        if (document.querySelector('.mail-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateMailTab(urlSubtab);
+        }
+        if (document.querySelector('.seo-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateSeoTab(urlSubtab);
+        }
+        if (document.querySelector('.privacy-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activatePrivacyTab(urlSubtab);
+        }
+        if (document.querySelector('.maintenance-tab-btn[data-subtab="' + urlSubtab + '"]')) {
+            activateMaintenanceTab(urlSubtab);
+        }
+    }
+    ensureVisibleContentTab();
+    refreshFloatingSaveBar();
+
+    function refreshTaxFieldVisibility() {
+        var regimeSelect = document.getElementById('tax-regime-select');
+        var rateField = document.getElementById('tax-rate-field');
+        var displayField = document.getElementById('tax-display-field');
+        var checkoutDisplayField = document.getElementById('tax-display-checkout-field');
+        var zeroReasonField = document.getElementById('tax-zero-reason-field');
+        if (!regimeSelect) {
+            return;
+        }
+        var showVatFields = regimeSelect.value === 'normal_vat';
+        if (rateField) {
+            rateField.classList.toggle('hidden', !showVatFields);
+        }
+        if (displayField) {
+            displayField.classList.toggle('hidden', !showVatFields);
+        }
+        if (checkoutDisplayField) {
+            checkoutDisplayField.classList.toggle('hidden', !showVatFields);
+        }
+        if (zeroReasonField) {
+            zeroReasonField.classList.toggle('hidden', showVatFields);
+        }
+    }
+
+    var taxRegimeSelect = document.getElementById('tax-regime-select');
+    if (taxRegimeSelect) {
+        taxRegimeSelect.addEventListener('change', refreshTaxFieldVisibility);
+        refreshTaxFieldVisibility();
+    }
+
+    // Keep page at top after restoring tab from hash
+    window.scrollTo(0, 0);
+
+    // ── Lazy maintenance counters ─────────────────────────────────────
+    // The settings page opens without heavy counts; each "Count" button fetches
+    // only its own stat so a slow counter cannot hang the whole page.
+    (function initMaintenanceStats() {
+        var statsUrl = document.querySelector('[data-maintenance-stats-url]');
+        var endpoint = statsUrl ? statsUrl.getAttribute('data-maintenance-stats-url') : '';
+        if (!endpoint) { return; }
+
+        function fmtBytes(bytes) {
+            if (bytes === null || bytes === undefined) { return ''; }
+            var units = ['B', 'KB', 'MB', 'GB'];
+            var i = bytes === 0 ? 0 : Math.floor(Math.log(bytes) / Math.log(1024));
+            i = Math.min(i, units.length - 1);
+            return (Math.round(bytes / Math.pow(1024, i) * 100) / 100) + ' ' + units[i];
+        }
+
+        function applyStats(stats) {
+            function setText(key, value) {
+                document.querySelectorAll('[data-maintenance-stats="' + key + '"]').forEach(function (el) {
+                    var textEl = el.querySelector('[data-stat-text]') || el;
+                    textEl.textContent = value;
+                });
+            }
+            function setSub(key, value) {
+                document.querySelectorAll('[data-maintenance-stats="' + key + '"]').forEach(function (el) {
+                    var sub = el.querySelector('[data-stat-sub]');
+                    if (sub) { sub.textContent = value; }
+                });
+            }
+            if (stats.revision_count !== undefined && stats.revision_count !== null) {
+                var label = stats.revision_count + ' revisions';
+                setText('revision', label);
+                var prune = stats.revision_prunable > 0
+                    ? stats.revision_prunable + ' can be pruned (keep latest 10).'
+                    : '';
+                setSub('revision', prune);
+                setSub('revision-prunable', prune);
+            }
+            if (stats.spam_comment_count !== undefined && stats.spam_comment_count !== null) {
+                setText('spam', '(' + stats.spam_comment_count + ')');
+            }
+            if (stats.trash_comment_count !== undefined && stats.trash_comment_count !== null) {
+                setText('trash', '(' + stats.trash_comment_count + ')');
+            }
+            if (stats.orphaned_meta_count !== undefined && stats.orphaned_meta_count !== null) {
+                setText('orphaned-meta', '(' + stats.orphaned_meta_count + ')');
+            }
+            if (stats.orphaned_media_file_count !== undefined && stats.orphaned_media_file_count !== null) {
+                setText('orphaned-media-files', '(' + stats.orphaned_media_file_count + ')');
+            }
+            if (stats.orphaned_media_unused_count !== undefined && stats.orphaned_media_unused_count !== null) {
+                setText('orphaned-media-unused', '(' + stats.orphaned_media_unused_count + ')');
+            }
+            if (stats.page_cache_count !== undefined && stats.page_cache_count !== null) {
+                var total = (stats.page_cache_count || 0) + (stats.data_cache_count || 0) + (stats.views_cache_count || 0);
+                setText('cache', total + ' files');
+                var size = (stats.page_cache_size || 0) + (stats.data_cache_size || 0) + (stats.views_cache_size || 0);
+                setSub('cache', fmtBytes(size));
+            }
+            if (stats.redirect_count !== undefined && stats.redirect_count !== null) {
+                setText('redirects', '(' + stats.redirect_count + ')');
+            }
+        }
+
+        document.querySelectorAll('[data-count-btn]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-count-btn');
+                btn.disabled = true;
+                var original = btn.textContent;
+                btn.textContent = '…';
+                fetch(endpoint + '?only=' + encodeURIComponent(key), { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data && data.stats) { applyStats(data.stats); }
+                        // Hide the button that was just counted.
+                        if (btn.parentElement && btn.parentElement.hasAttribute('data-maintenance-stats')) {
+                            btn.remove();
+                        } else {
+                            btn.textContent = original;
+                            btn.disabled = false;
+                        }
+                    })
+                    .catch(function () {
+                        btn.textContent = original;
+                        btn.disabled = false;
+                    });
+            });
+        });
+    })();
+});
+
+function openGmcCategoryBrowser(targetInputId) {
+    var modal = document.getElementById('gmc-browse-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'gmc-browse-modal';
+        modal.innerHTML = '<div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40" onclick="if(event.target===this)closeGmcBrowser()">' +
+            '<div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[80vh] flex flex-col mx-4" onclick="event.stopPropagation()">' +
+            '<div class="flex items-center justify-between border-b px-5 py-3">' +
+            '<h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Browse Google Categories</h3>' +
+            '<button type="button" onclick="closeGmcBrowser()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg">&times;</button>' +
+            '</div>' +
+            '<div class="px-5 py-3 border-b">' +
+            '<input type="text" id="gmc-browse-search" placeholder="Search categories..." class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" oninput="gmcSearch(this.value)">' +
+            '</div>' +
+            '<div id="gmc-browse-list" class="flex-1 overflow-y-auto text-sm"><div class="p-4 text-center text-gray-400">Loading…</div></div>' +
+            '<div id="gmc-browse-pagination" class="border-t px-5 py-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"></div>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+    }
+    modal._targetId = targetInputId;
+    modal.classList.remove('hidden');
+    var search = document.getElementById('gmc-browse-search');
+    if (search) {
+        search.value = gmcCurrentQuery;
+    }
+    var cacheKey = gmcCacheKey(1);
+    if (gmcTaxonomyCache[cacheKey]) {
+        gmcRenderData(gmcTaxonomyCache[cacheKey]);
+    } else {
+        gmcLoadPage(1);
+    }
+}
+
+function closeGmcBrowser() {
+    var modal = document.getElementById('gmc-browse-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+var gmcCurrentPage = 1, gmcCurrentQuery = '', gmcTotalPages = 1, gmcTaxonomyCache = {};
+
+function gmcCacheKey(page) {
+    return 'page:' + page + '|query:' + gmcCurrentQuery;
+}
+
+function gmcRenderData(data) {
+    var list = document.getElementById('gmc-browse-list');
+    var pagination = document.getElementById('gmc-browse-pagination');
+    if (data.data.length === 0) {
+        list.innerHTML = '<div class="p-4 text-center text-gray-400">No categories found.</div>';
+    } else {
+        var html = '';
+        for (var i = 0; i < data.data.length; i++) {
+            var cat = data.data[i];
+            html += '<div class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded dark:text-gray-200" onclick="gmcSelect(\'' + cat.replace(/'/g, "\\'") + '\')">' + cat + '</div>';
+        }
+        list.innerHTML = html;
+    }
+    pagination.innerHTML = 'Page ' + data.meta.page + ' of ' + data.meta.total_pages + ' (' + data.meta.total + ' categories)';
+    if (data.meta.page < data.meta.total_pages) {
+        pagination.innerHTML += ' <button type="button" onclick="gmcLoadPage(' + (data.meta.page + 1) + ')" class="underline text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300">Next →</button>';
+    }
+    if (data.meta.page > 1) {
+        pagination.innerHTML = '<button type="button" onclick="gmcLoadPage(' + (data.meta.page - 1) + ')" class="underline text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300">← Previous</button> ' + pagination.innerHTML;
+    }
+}
+
+function gmcLoadPage(page) {
+    gmcCurrentPage = page;
+    var q = gmcCurrentQuery ? '&q=' + encodeURIComponent(gmcCurrentQuery) : '';
+    var list = document.getElementById('gmc-browse-list');
+    var pagination = document.getElementById('gmc-browse-pagination');
+    list.innerHTML = '<div class="p-4 text-center text-gray-400"><svg class="inline-block h-4 w-4 animate-spin mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>Loading…</div>';
+    var cacheKey = gmcCacheKey(page);
+    if (gmcTaxonomyCache[cacheKey]) {
+        gmcRenderData(gmcTaxonomyCache[cacheKey]);
+        return;
+    }
+    var url = '{{ url('/admin/gmc/taxonomy') }}?page=' + page + '&per_page=50' + q;
+    fetch(url).then(function(r){ return r.json(); }).then(function(data) {
+        gmcTotalPages = data.meta.total_pages;
+        if (data.data.length === 0) {
+            list.innerHTML = '<div class="p-4 text-center text-gray-400">No categories found.</div>';
+        } else {
+            var html = '';
+            for (var i = 0; i < data.data.length; i++) {
+                var cat = data.data[i];
+                html += '<div class="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer rounded dark:text-gray-200" onclick="gmcSelect(\'' + cat.replace(/'/g, "\\'") + '\')">' + cat + '</div>';
+            }
+            list.innerHTML = html;
+        }
+        pagination.innerHTML = 'Page ' + data.meta.page + ' of ' + data.meta.total_pages + ' (' + data.meta.total + ' categories)';
+        if (data.meta.page < data.meta.total_pages) {
+            pagination.innerHTML += ' <button type="button" onclick="gmcLoadPage(' + (data.meta.page + 1) + ')" class="underline text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300">Next →</button>';
+        }
+        if (data.meta.page > 1) {
+            pagination.innerHTML = '<button type="button" onclick="gmcLoadPage(' + (data.meta.page - 1) + ')" class="underline text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300">← Previous</button> ' + pagination.innerHTML;
+        }
+        gmcTaxonomyCache[cacheKey] = data;
+    }).catch(function(){
+        list.innerHTML = '<div class="p-4 text-center text-red-400">Error loading categories.</div>';
+    });
+}
+
+function gmcSearch(query) {
+    gmcCurrentQuery = query;
+    gmcLoadPage(1);
+}
+
+function gmcSelect(category) {
+    var modal = document.getElementById('gmc-browse-modal');
+    if (modal && modal._targetId) {
+        var target = document.getElementById(modal._targetId);
+        if (target) {
+            if (target.tagName === 'SELECT') {
+                var opt = document.createElement('option');
+                opt.value = category;
+                opt.text = category;
+                opt.selected = true;
+                target.appendChild(opt);
+            } else {
+                target.value = category;
+            }
+        }
+    }
+    closeGmcBrowser();
+}
+
+/* ── Site Logo picker (Alpine.js) ── */
+window.siteLogoPicker = (initialUrl) => {
+    const bp = window.APP_BASE_PATH || '';
+    return {
+        logoUrl: initialUrl || '',
+        showModal: false,
+        loading: false,
+        mediaPage: 1,
+        mediaTotalPages: 1,
+        mediaQuery: '',
+        searchTimer: null,
+        mediaItems: [],
+        imageId: 0,
+        async loadMediaPage(page = 1) {
+            this.loading = true;
+            try {
+                const data = await fetchImageMediaPage(bp, page, this.mediaQuery, 40);
+                this.mediaItems = data.items || [];
+                this.mediaPage = data.page || page;
+                this.mediaTotalPages = data.total_pages || 1;
+            } finally {
+                this.loading = false;
+            }
+        },
+        async prevMediaPage() {
+            if (this.mediaPage > 1) await this.loadMediaPage(this.mediaPage - 1);
+        },
+        async nextMediaPage() {
+            if (this.mediaPage < this.mediaTotalPages) await this.loadMediaPage(this.mediaPage + 1);
+        },
+        async openBrowser() {
+            this.showModal = true;
+            if (this.mediaItems.length === 0) await this.loadMediaPage(1);
+        },
+        async refreshMedia() {
+            clearMediaCache();
+            this.mediaItems = [];
+            await this.loadMediaPage(1);
+        },
+        onSearchInput() {
+            clearTimeout(this.searchTimer);
+            this.searchTimer = setTimeout(() => this.loadMediaPage(1), 300);
+        },
+        selectImage(item) {
+            this.logoUrl = item.thumbnail || item.url;
+            this.showModal = false;
+        },
+        // Drag-drop upload (assets/js/media-upload.js): reload the grid
+        // and auto-select the first uploaded image.
+        async handleDroppedFiles(result) {
+            await this.refreshMedia();
+            const first = (result && result.uploaded || [])[0];
+            if (first) this.selectImage(first);
+        },
+        removeLogo() {
+            this.logoUrl = '';
+        },
+    };
+};
+</script>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('vlFeatures', {
+        blog: {{ settings.blog_enabled|default('1') == '1' ? 'true' : 'false' }},
+        pages: {{ settings.pages_enabled|default('1') == '1' ? 'true' : 'false' }},
+        newsletter: {{ settings.newsletter_enabled|default('1') == '1' ? 'true' : 'false' }},
+        formBuilder: {{ settings.form_builder_enabled|default('1') == '1' ? 'true' : 'false' }},
+        cpt: {{ settings.custom_content_types_enabled|default('1') == '1' ? 'true' : 'false' }},
+        mlc: {{ settings.multi_language_content|default('0') == '1' ? 'true' : 'false' }},
+        ads: {{ settings.advertisement_enabled|default('0') == '1' ? 'true' : 'false' }},
+        shop: {{ settings.shop_enabled|default('1') == '1' ? 'true' : 'false' }},
+        subscriptions: {{ settings.subscriptions_enabled|default('1') == '1' ? 'true' : 'false' }},
+        registration: {{ settings.registration_enabled|default('1') == '1' ? 'true' : 'false' }},
+        seo: {{ settings.seo_enabled|default('1') == '1' ? 'true' : 'false' }},
+        analytics: {{ settings.analytics_enabled|default('1') == '1' ? 'true' : 'false' }},
+    });
+
+    // Re-sync content sub-tab after x-show toggles apply (Alpine init runs after DOMContentLoaded).
+    if (window.vlSettingsNav && window.vlSettingsNav.ensureVisibleContentTab) {
+        window.vlSettingsNav.ensureVisibleContentTab();
+    }
+
+    Alpine.data('settingsSearch', () => ({
+        query: '',
+        results: [],
+        open: false,
+        activeIndex: 0,
+        loading: false,
+        index: [],
+        debounceTimer: null,
+        tabLabels: {},
+
+        init() {
+            if (this._indexBuilt) {
+                return;
+            }
+            this._indexBuilt = true;
+            this.index = [];
+            var self = this;
+            var seenEls = new WeakSet();
+            document.querySelectorAll('#settings-tabs .tab-btn').forEach(function(btn) {
+                self.tabLabels[btn.dataset.tab] = btn.textContent.trim();
+            });
+            document.querySelectorAll('[data-vl-setting]').forEach(function(el, i) {
+                if (seenEls.has(el)) {
+                    return;
+                }
+                seenEls.add(el);
+                var tab = el.dataset.vlTab || '';
+                var subtab = el.dataset.vlSubtab || '';
+                var section = el.dataset.vlSection || '';
+                var label = el.dataset.vlLabel || '';
+                var key = el.dataset.vlKey || '';
+                var keywords = el.dataset.vlKeywords || '';
+                var uid = el.dataset.vlId || (tab + '|' + subtab + '|' + key + '|' + i);
+                var parts = [self.tabLabels[tab] || tab];
+                if (subtab) {
+                    parts.push(self.subtabLabel(tab, subtab));
+                }
+                if (section) {
+                    parts.push(section);
+                }
+                self.index.push({
+                    uid: uid,
+                    el: el,
+                    tab: tab,
+                    subtab: subtab,
+                    section: section,
+                    label: label,
+                    key: key,
+                    keywords: keywords,
+                    breadcrumb: parts.filter(Boolean).join(' \u203a '),
+                    searchText: (label + ' ' + section + ' ' + key + ' ' + keywords + ' ' + parts.join(' ')).toLowerCase(),
+                });
+            });
+        },
+
+        subtabLabel(tab, subtab) {
+            var selector = tab === 'general' ? '.general-tab-btn'
+                : tab === 'content' ? '.content-tab-btn'
+                : tab === 'ecommerce' ? '.ec-tab-btn'
+                : tab === 'mail' ? '.mail-tab-btn'
+                : tab === 'seo' ? '.seo-tab-btn'
+                : tab === 'privacy' ? '.privacy-tab-btn'
+                : tab === 'advanced' ? '.advanced-tab-btn'
+                : tab === 'maintenance' ? '.maintenance-tab-btn'
+                : null;
+            if (!selector) {
+                return subtab;
+            }
+            var btn = document.querySelector(selector + '[data-subtab="' + subtab + '"]');
+            return btn ? btn.textContent.trim() : subtab;
+        },
+
+        onInput() {
+            var self = this;
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = setTimeout(function() { self.search(); }, 120);
+        },
+
+        search() {
+            var q = this.query.trim().toLowerCase();
+            this.open = q.length > 0;
+            this.activeIndex = 0;
+            if (q === '') {
+                this.results = [];
+                return;
+            }
+            var tokens = q.split(/\s+/).filter(Boolean);
+            var seenEls = new WeakSet();
+            var seenLabels = new Set();
+            this.results = this.index.filter(function(item) {
+                if (seenEls.has(item.el)) {
+                    return false;
+                }
+                if (!tokens.every(function(t) { return item.searchText.indexOf(t) !== -1; })) {
+                    return false;
+                }
+                var labelKey = item.tab + '|' + item.subtab + '|' + item.label + '|' + item.breadcrumb;
+                if (seenLabels.has(labelKey)) {
+                    return false;
+                }
+                seenEls.add(item.el);
+                seenLabels.add(labelKey);
+                return true;
+            }).slice(0, 20).map(function(item, resultIdx) {
+                return {
+                    uid: item.uid + '|' + resultIdx,
+                    el: item.el,
+                    tab: item.tab,
+                    subtab: item.subtab,
+                    label: item.label,
+                    labelHtml: item.label,
+                    breadcrumb: item.breadcrumb,
+                    hiddenHint: item.el.offsetParent === null ? '{{ __('May be hidden until related option is enabled')|e('js') }}' : '',
+                };
+            });
+        },
+
+        goTo(item) {
+            var nav = window.vlSettingsNav;
+            if (!nav || !item.el) {
+                return;
+            }
+            nav.activateTab(item.tab);
+            if (item.subtab) {
+                if (item.tab === 'general') nav.activateGeneralTab(item.subtab);
+                else if (item.tab === 'content') nav.activateContentTab(item.subtab);
+                else if (item.tab === 'ecommerce') nav.activateEcTab(item.subtab);
+                else if (item.tab === 'mail') nav.activateMailTab(item.subtab);
+                else if (item.tab === 'seo') nav.activateSeoTab(item.subtab);
+                else if (item.tab === 'privacy') nav.activatePrivacyTab(item.subtab);
+                else if (item.tab === 'advanced') nav.activateAdvancedTab(item.subtab);
+                else if (item.tab === 'maintenance') nav.activateMaintenanceTab(item.subtab);
+            }
+            history.replaceState(null, '', '#tab-' + item.tab);
+            this.open = false;
+            this.query = '';
+            this.results = [];
+            var target = item.el;
+            setTimeout(function() {
+                var scrollBlock = target.matches('tr, thead, tbody, tfoot') ? 'nearest' : 'center';
+                target.scrollIntoView({ behavior: 'smooth', block: scrollBlock });
+                target.classList.add('vl-setting-flash');
+                setTimeout(function() { target.classList.remove('vl-setting-flash'); }, 2200);
+                var focusable = target.matches('tr')
+                    ? target.querySelector('input:not([type="hidden"]):not([disabled]), select, textarea, button:not([disabled])')
+                    : target.querySelector('input:not([type="hidden"]), select, textarea, button');
+                if (focusable) {
+                    focusable.focus({ preventScroll: true });
+                }
+            }, 80);
+        },
+
+        scrollActiveIntoView() {
+            var self = this;
+            this.$nextTick(function() {
+                var list = self.$refs.resultsList;
+                if (!list) {
+                    return;
+                }
+                var active = list.querySelector('[data-vl-search-option][aria-selected="true"]');
+                if (active) {
+                    active.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        },
+
+        onKeydown(e) {
+            if (!this.open || this.results.length === 0) {
+                return;
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1);
+                this.scrollActiveIntoView();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.activeIndex = Math.max(this.activeIndex - 1, 0);
+                this.scrollActiveIntoView();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this.results[this.activeIndex]) {
+                    this.goTo(this.results[this.activeIndex]);
+                }
+            } else if (e.key === 'Escape') {
+                this.open = false;
+            }
+        },
+
+        onGlobalKey(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                this.$refs.input.focus();
+                this.$refs.input.select();
+            }
+        },
+    }));
+
+    Alpine.data('countryTaxRates', (config) => ({
+        rows: [],
+        codes: config.codes || [],
+        regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+            ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+            : null,
+
+        init() {
+            this.rows = (config.initial || []).map(r => ({
+                _key: Math.random().toString(36).slice(2),
+                country_code: r.country_code || '',
+                regime: r.regime || 'normal_vat',
+                rate: r.rate != null ? String(r.rate) : '',
+                zero_reason: r.zero_reason || '',
+                fallback: r.fallback || false,
+            }));
+
+            // Ensure fallback row exists (defaults to use_global = inherit global)
+            if (!this.rows.some(r => r.fallback)) {
+                this.rows.push({
+                    _key: Math.random().toString(36).slice(2),
+                    country_code: '*',
+                    regime: 'use_global',
+                    rate: '',
+                    zero_reason: '',
+                    fallback: true,
+                });
+            }
+
+            // Sort: fallback first, then country rows (company country at top)
+            this.rows.sort(function(a, b) {
+                if (a.fallback && !b.fallback) return -1;
+                if (!a.fallback && b.fallback) return 1;
+                return 0;
+            });
+        },
+
+        labelFor(code) {
+            var normalized = String(code || '').trim().toUpperCase();
+            if (normalized === '') return '';
+            if (this.regionNames) {
+                var name = this.regionNames.of(normalized);
+                if (name) return normalized + ' - ' + name;
+            }
+            return normalized;
+        },
+
+        unusedCodes(idx) {
+            const current = this.rows[idx]?.country_code || '';
+            const pool = this.codes.slice();
+            if (current && pool.indexOf(current) === -1) pool.push(current);
+            return pool.filter(function(c) {
+                return c === current || !this.rows.some(function(r, i) {
+                    return i !== idx && r.country_code === c;
+                });
+            }, this);
+        },
+
+        addRow() {
+            this.rows.push({
+                _key: Math.random().toString(36).slice(2),
+                country_code: '',
+                regime: 'normal_vat',
+                rate: '',
+                zero_reason: '',
+                fallback: false,
+            });
+        },
+
+        removeRow(idx) {
+            if (this.rows[idx] && this.rows[idx].fallback) return;
+            this.rows.splice(idx, 1);
+        },
+
+        onRegimeChange(row) {
+            if (row.regime === 'no_tax') {
+                row.rate = '';
+            }
+        },
+    }));
+});
+
+document.addEventListener('alpine:init', () => {
+    Alpine.data('seoRobots', () => ({
+        blockAi: {{ settings.block_ai_crawlers|default('0') == '1' ? 'true' : 'false' }},
+        customTxt: '{{ settings.robots_txt|default('')|e('js') }}',
+        aiCrawlers: {{ ai_crawlers|default([])|json_encode|raw }},
+        siteUrl: '{{ site_url|e('js') }}',
+        get preview() {
+            var parts = [];
+            if (this.blockAi) {
+                for (var i = 0; i < this.aiCrawlers.length; i++) {
+                    parts.push('User-agent: ' + this.aiCrawlers[i] + '\nDisallow: /');
+                }
+                parts.push('');
+            }
+            if (this.customTxt.trim() !== '') {
+                parts.push(this.customTxt);
+            } else {
+                parts.push('User-agent: *\nAllow: /\n\nSitemap: ' + this.siteUrl + '/sitemap.xml');
+            }
+            return parts.join('\n\n');
+        }
+    }));
+    Alpine.data('customCarriers', () => ({
+        rows: [],
+        init() {
+            const raw = '{{ settings.custom_shipping_carriers|default('[]')|e('js') }}';
+            try {
+                const list = JSON.parse(raw);
+                this.rows = list.map(function(c) {
+                    return { _key: Math.random().toString(36).slice(2), name: c.name || '', url: c.url || '', _warn: !!(c.url && !c.url.includes('{tracking_number}')) };
+                });
+            } catch (e) {
+                this.rows = [];
+            }
+        },
+        addRow() {
+            const last = this.rows[this.rows.length - 1];
+            if (last && (last.name || '').trim() === '') {
+                last._warn = false;
+                return;
+            }
+            this.rows.push({ _key: Math.random().toString(36).slice(2), name: '', url: '', _warn: false });
+        },
+        removeRow(idx) {
+            this.rows.splice(idx, 1);
+        },
+        get json() {
+            const seen = {};
+            const unique = [];
+            this.rows.forEach(function(r) {
+                const n = (r.name || '').trim().toLowerCase();
+                if (n === '' || seen[n]) return;
+                seen[n] = true;
+                unique.push(r);
+            });
+            return JSON.stringify(unique.map(function(r) {
+                var slug = r.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                return { name: r.name.trim(), url: r.url.trim(), value: slug };
+            }));
+        }
+    }));
+    window.CUSTOM_CARRIER_RENAMES = {{ custom_carrier_renames|default({})|json_encode|raw }};
+    window.showCarrierNotifications = function() {
+        const renames = window.CUSTOM_CARRIER_RENAMES || {};
+        const keys = Object.keys(renames);
+        if (!keys.length) return;
+        const container = document.getElementById('carrier-notifications');
+        if (!container) return;
+        const list = keys.map(function(k) { return '<strong>' + k + '</strong> -> <code>' + renames[k] + '</code>'; }).join('<br>');
+        container.innerHTML = '<div class="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-700 p-3 text-xs text-amber-800 dark:text-amber-200"><strong>Info:</strong> Duplicate carrier names detected. The following slugs were auto-renamed to avoid conflicts:<br><br>' + list + '</div>';
+        container.style.display = 'block';
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showCarrierNotifications);
+    } else {
+        showCarrierNotifications();
+    }
+});
+</script>

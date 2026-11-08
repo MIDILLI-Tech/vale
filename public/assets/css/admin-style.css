@@ -1,0 +1,1564 @@
+/* ── Admin UI — CSS Variables & Component Classes ───────── */
+
+:root {
+  /* Surface & Backgrounds */
+  --vl-bg-app: #f3f4f6;
+  --vl-bg-surface: #ffffff;
+  --vl-bg-subtle: #f9fafb;
+  --vl-bg-muted: #f3f4f6;
+  --vl-overlay-bg: rgba(0, 0, 0, 0.5);
+
+  /* Primary Button / Accent */
+  --vl-btn-primary-bg: #1f2937;
+  --vl-btn-primary-bg-hover: #374151;
+  --vl-btn-primary-text: #ffffff;
+
+  /* Secondary Button */
+  --vl-btn-secondary-bg: #ffffff;
+  --vl-btn-secondary-bg-hover: #f3f4f6;
+  --vl-btn-secondary-text: #374151;
+  --vl-btn-secondary-border: #d1d5db;
+
+  /* Icon Button */
+  --vl-btn-icon-text: #6b7280;
+  --vl-btn-icon-text-hover: #374151;
+
+  /* Inputs & Form Controls */
+  --vl-input-bg: #ffffff;
+  --vl-input-text: #111827;
+  --vl-input-border: #d1d5db;
+  --vl-input-focus-border: #374151;
+  --vl-input-focus-ring: #374151;
+  --vl-input-placeholder: #9ca3af;
+
+  /* Text Colors */
+  --vl-text-main: #111827;
+  --vl-text-body: #374151;
+  --vl-text-muted: #6b7280;
+  --vl-text-dim: #9ca3af;
+
+  /* Borders & Dividers */
+  --vl-border-color: #e5e7eb;
+  --vl-border-color-strong: #d1d5db;
+
+  /* Media Card */
+  --vl-media-card-hover: #374151;
+  --vl-media-card-selected-bg: #eff6ff;
+  --vl-media-card-selected-border: #3b82f6;
+
+  /* Diff View */
+  --vl-diff-same-text: #4b5563;
+  --vl-diff-add-bg: #f0fdf4;
+  --vl-diff-add-text: #15803d;
+  --vl-diff-add-border: #bbf7d0;
+  --vl-diff-del-bg: #fef2f2;
+  --vl-diff-del-text: #b91c1c;
+  --vl-diff-del-border: #fecaca;
+  --vl-diff-word-add-bg: #bbf7d0;
+  --vl-diff-word-del-bg: #fecaca;
+
+  /* Callout Boxes */
+  --vl-callout-yellow-bg: #fefce8;
+  --vl-callout-yellow-border: #fef08a;
+  --vl-callout-yellow-text: #854d0e;
+
+  --vl-callout-blue-bg: #eff6ff;
+  --vl-callout-blue-border: #bfdbfe;
+  --vl-callout-blue-text: #1e40af;
+
+  --vl-callout-green-bg: #f0fdf4;
+  --vl-callout-green-border: #bbf7d0;
+  --vl-callout-green-text: #166534;
+
+  --vl-callout-red-bg: #fef2f2;
+  --vl-callout-red-border: #fecaca;
+  --vl-callout-red-text: #991b1b;
+
+  --vl-callout-indigo-bg: #eef2ff;
+  --vl-callout-indigo-border: #c7d2fe;
+  --vl-callout-indigo-text: #3730a3;
+
+  --vl-callout-orange-bg: #fff7ed;
+  --vl-callout-orange-border: #ffedd5;
+  --vl-callout-orange-text: #9a3412;
+}
+
+.dark {
+  /* Surface & Backgrounds */
+  --vl-bg-app: #030712;
+  --vl-bg-surface: #1f2937;
+  --vl-bg-subtle: #111827;
+  --vl-bg-muted: #374151;
+  --vl-overlay-bg: rgba(0, 0, 0, 0.7);
+
+  /* Primary Button / Accent */
+  --vl-btn-primary-bg: #374151;
+  --vl-btn-primary-bg-hover: #4b5563;
+  --vl-btn-primary-text: #f3f4f6;
+
+  /* Secondary Button */
+  --vl-btn-secondary-bg: #1f2937;
+  --vl-btn-secondary-bg-hover: #374151;
+  --vl-btn-secondary-text: #d1d5db;
+  --vl-btn-secondary-border: #4b5563;
+
+  /* Icon Button */
+  --vl-btn-icon-text: #9ca3af;
+  --vl-btn-icon-text-hover: #f3f4f6;
+
+  /* Inputs & Form Controls */
+  --vl-input-bg: #1f2937;
+  --vl-input-text: #f3f4f6;
+  --vl-input-border: #4b5563;
+  --vl-input-focus-border: #6b7280;
+  --vl-input-focus-ring: #6b7280;
+  --vl-input-placeholder: #9ca3af;
+
+  /* Text Colors */
+  --vl-text-main: #f3f4f6;
+  --vl-text-body: #d1d5db;
+  --vl-text-muted: #9ca3af;
+  --vl-text-dim: #6b7280;
+
+  /* Borders & Dividers */
+  --vl-border-color: #374151;
+  --vl-border-color-strong: #4b5563;
+
+  /* Media Card */
+  --vl-media-card-hover: #6b7280;
+  --vl-media-card-selected-bg: #1e293b;
+  --vl-media-card-selected-border: #3b82f6;
+
+  /* Diff View */
+  --vl-diff-same-text: #9ca3af;
+  --vl-diff-add-bg: rgba(16, 185, 129, 0.09);
+  --vl-diff-add-text: #86efac;
+  --vl-diff-add-border: rgba(16, 185, 129, 0.35);
+  --vl-diff-del-bg: rgba(239, 68, 68, 0.10);
+  --vl-diff-del-text: #fca5a5;
+  --vl-diff-del-border: rgba(239, 68, 68, 0.35);
+  --vl-diff-word-add-bg: rgba(16, 185, 129, 0.25);
+  --vl-diff-word-del-bg: rgba(239, 68, 68, 0.25);
+
+  /* Callout Boxes */
+  --vl-callout-yellow-bg: #451a03;
+  --vl-callout-yellow-border: #78350f;
+  --vl-callout-yellow-text: #fbbf24;
+
+  --vl-callout-blue-bg: #1e3a5f;
+  --vl-callout-blue-border: #1d4ed8;
+  --vl-callout-blue-text: #93c5fd;
+
+  --vl-callout-green-bg: #14532d;
+  --vl-callout-green-border: #15803d;
+  --vl-callout-green-text: #86efac;
+
+  --vl-callout-red-bg: #450a0a;
+  --vl-callout-red-border: #b91c1c;
+  --vl-callout-red-text: #fca5a5;
+
+  --vl-callout-indigo-bg: #1e1b4b;
+  --vl-callout-indigo-border: #3730a3;
+  --vl-callout-indigo-text: #a5b4fc;
+
+  --vl-callout-orange-bg: #431407;
+  --vl-callout-orange-border: #7c2d12;
+  --vl-callout-orange-text: #fdba74;
+}
+
+/* ── Overlay / modal ────────────────────────────────────── */
+.vl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vl-overlay-bg);
+}
+.vl-modal {
+  background: var(--vl-bg-surface);
+  color: var(--vl-text-main);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0,0,0,.25);
+  width: 90vw;
+  /* min-width: 0 keeps the 90vw cap authoritative — without it the flex
+     item falls back to its min-content width (header title + select +
+     search), which pushes the panel wider than a phone viewport and hides
+     the header icons / footer actions off-screen. */
+  min-width: 0;
+  max-width: min(800px, calc(100vw - 24px));
+  max-height: 80vh;
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.vl-modal-sm { max-width: 380px; }
+.vl-modal-md { max-width: 480px; }
+.vl-modal-lg { max-width: 640px; }
+.vl-modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--vl-border-color);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.vl-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  flex: none;
+  color: var(--vl-text-main);
+}
+.vl-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  /* Allow the body to shrink below its content height so the footer row
+     (Cancel / Insert / pager) stays pinned and reachable on short screens. */
+  min-height: 0;
+}
+.vl-modal-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--vl-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--vl-text-muted);
+}
+
+/* ── Static action bar for long modals (flex-column card layout) ─────────
+   Usage: last child of a modal <form> inside a card built as
+   "flex max-h-[..] flex-col overflow-hidden" — the form itself is
+   "flex min-h-0 flex-1 flex-col", the fields live in a
+   "min-h-0 flex-1 overflow-y-auto" wrapper and this bar sits at the
+   bottom, always visible, with no sticky or negative-margin tricks. */
+.vl-modal-actions {
+  flex-shrink: 0;
+  padding: 0.75rem 1.5rem;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.dark .vl-modal-actions {
+  background: #111827;
+  border-top-color: #374151;
+}
+
+/* ── Modals on phones ──────────────────────────────────────────────────
+   The header packs a title, a type select, a search field and two icon
+   buttons into one row; on a narrow screen that row must wrap instead of
+   widening the panel, and the footer actions must stay on screen. */
+@media (max-width: 640px) {
+  .vl-modal {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    /* dvh excludes the collapsing browser toolbars, so the footer row can't
+       end up underneath them on a phone. */
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .vl-modal-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .vl-modal-header .vl-search {
+    order: 10;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .vl-modal-body {
+    padding: 12px;
+  }
+  .vl-modal-footer {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+  .vl-media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+  }
+}
+
+/* ── Upload modal emoji icons ───────────────────────────── */
+.upload-file-icon {
+  filter: none;
+}
+.dark .upload-file-icon {
+  filter: brightness(0) invert(1);
+}
+
+/* ── Grid (media picker) ────────────────────────────────── */
+.vl-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.vl-media-card {
+  position: relative;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.vl-media-card.is-selected {
+  outline: 2px solid var(--vl-media-card-selected-border);
+  outline-offset: -2px;
+  border-color: var(--vl-media-card-selected-border);
+  background: var(--vl-media-card-selected-bg);
+}
+.vl-media-card-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 10;
+}
+.vl-media-card.is-selected .vl-media-card-check { display: flex; }
+.vl-media-card:hover { border-color: var(--vl-media-card-hover); }
+.vl-media-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+.vl-media-card-label {
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--vl-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Media preview tiles (library grid/list, edit page, editor picker) ──
+   Videos/audio render as a static facade: nothing downloads until the
+   play control is pressed (see admin/partials/_media_facade_js.twig and
+   editor media/browse.js). Non-image files render a type-colored icon
+   instead of the old 📄 emoji. */
+.vl-media-facade,
+.vl-media-file-tile {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vl-bg-muted);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.vl-media-facade--list,
+.vl-media-file-tile--list {
+  width: 2.5rem;
+  height: 2.5rem;
+  aspect-ratio: auto;
+  flex: none;
+  border-radius: 0.375rem;
+}
+/* Play badge is a centered circle, NOT a full-tile overlay — the rest of the
+   tile must keep its own action (card click = select/insert, info overlay). */
+.vl-media-facade-play {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vl-text-muted);
+  cursor: pointer;
+  transition: color .15s;
+}
+.vl-media-facade-play svg,
+.vl-media-facade-badge svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  transition: transform .15s;
+}
+.vl-media-facade-play:hover {
+  color: var(--vl-text-main);
+}
+.vl-media-facade-play:hover svg {
+  transform: scale(1.12);
+}
+.vl-media-facade-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vl-text-muted);
+}
+/* Small thumbnail strip badge (admin product gallery reorder strip) */
+.vl-media-thumb-badge {
+  width: 100%;
+  height: 100%;
+  background: var(--vl-bg-muted);
+}
+.vl-media-thumb-badge svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.vl-media-facade--list .vl-media-facade-badge svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.vl-media-facade-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+/* First-frame poster inserted by assets/js/media-facade.js when the tile
+   scrolls into view — paused, muted, preload="metadata" only. */
+.vl-media-facade-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+/* Once the player took over, the badge is redundant */
+.vl-media-facade.is-playing .vl-media-facade-play { display: none; }
+/* Audio players render as a control bar centered in the tile */
+audio.vl-media-facade-player {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+.vl-media-facade--list .vl-media-facade-player {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+.vl-media-file-tile svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.vl-media-file-tile--list svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+/* Inline file-type icon inside text (editor file-link dialog) */
+.vl-file-icon {
+  display: inline-block;
+  width: 1.05em;
+  height: 1.05em;
+  vertical-align: -0.15em;
+}
+/* Inside media picker cards the card itself clips the corners */
+.vl-media-card .vl-media-facade,
+.vl-media-card .vl-media-file-tile {
+  border-radius: 0;
+}
+.dark .vl-media-facade,
+.dark .vl-media-file-tile {
+  background: var(--vl-bg-subtle);
+}
+.dark .vl-media-facade-play,
+.dark .vl-media-facade-badge {
+  color: var(--vl-text-body);
+}
+.dark .vl-media-facade-play:hover {
+  color: var(--vl-text-main);
+}
+.dark .vl-media-thumb-badge {
+  background: var(--vl-bg-subtle);
+}
+
+/* ── Media picker drag-drop upload (assets/js/media-upload.js) ─────────
+   The helper appends .vl-drop-ui (overlay + progress + error strip) into
+   any element passed to vlMediaUpload.dropZone(). No position rule here:
+   the helper only adds an inline `position: relative` to zones that are
+   static, so a Tailwind position utility (`fixed` on modal roots) always
+   wins — unlayered CSS would silently override it. */
+.vl-drop-ui { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
+.vl-drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.08);
+  border: 2px dashed #3b82f6;
+  border-radius: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+}
+.vl-media-dropzone.is-over > .vl-drop-ui > .vl-drop-overlay { display: flex; }
+.vl-drop-progress-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--vl-bg-surface);
+  border-top: 1px solid var(--vl-border-color);
+  pointer-events: auto;
+}
+.vl-drop-progress-wrap.is-active { display: flex; }
+.vl-drop-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--vl-bg-muted);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.vl-drop-progress-fill {
+  height: 100%;
+  width: 0;
+  background: #3b82f6;
+  transition: width .15s ease-out;
+}
+.vl-drop-progress-label {
+  font-size: 11px;
+  color: var(--vl-text-muted);
+  white-space: nowrap;
+}
+.vl-drop-error {
+  display: none;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 44px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--vl-callout-red-bg);
+  border: 1px solid var(--vl-callout-red-border);
+  color: var(--vl-callout-red-text);
+  font-size: 12px;
+  pointer-events: auto;
+}
+.vl-drop-error.is-active { display: block; }
+/* Info tone (e.g. "N file(s) queued") — the same strip, but blue instead of
+   red: queuing is a progress state, not a failure. Dark values come from the
+   shared --vl-callout-blue-* tokens, so both themes stay consistent. */
+.vl-drop-error.is-info {
+  background: var(--vl-callout-blue-bg);
+  border-color: var(--vl-callout-blue-border);
+  color: var(--vl-callout-blue-text);
+}
+.dark .vl-drop-overlay {
+  background: rgba(59, 130, 246, 0.14);
+  color: #93c5fd;
+}
+.dark .vl-drop-progress-fill { background: #60a5fa; }
+
+/* ── Buttons ────────────────────────────────────────────── */
+.vl-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background .15s, opacity .15s;
+}
+.vl-btn-primary {
+  background: var(--vl-btn-primary-bg);
+  color: var(--vl-btn-primary-text);
+  border: none;
+}
+.vl-btn-primary:hover { background: var(--vl-btn-primary-bg-hover); }
+.dark .vl-btn-primary {
+  outline: 1px solid var(--vl-border-color-strong);
+  outline-offset: -1px;
+}
+
+.vl-btn-secondary {
+  background: var(--vl-btn-secondary-bg);
+  color: var(--vl-btn-secondary-text);
+  border: 1px solid var(--vl-btn-secondary-border);
+}
+.vl-btn-secondary:hover { background: var(--vl-btn-secondary-bg-hover); }
+
+.vl-btn-danger {
+  background: #dc2626;
+  color: #fff;
+  border: none;
+}
+.vl-btn-danger:hover { background: #b91c1c; }
+.dark .vl-btn-danger { background: #ef4444; color: #fff; }
+.dark .vl-btn-danger:hover { background: #dc2626; }
+
+.vl-btn-sm { padding: 5px 10px; font-size: 12px; }
+.vl-btn-xs { padding: 4px 8px; font-size: 11px; }
+
+.vl-btn-icon {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--vl-btn-icon-text);
+  padding: 0;
+  line-height: 1;
+}
+.vl-btn-icon:hover { color: var(--vl-btn-icon-text-hover); }
+
+/* ── Refresh icon (clockwise SVG via CSS mask) ───────────── */
+.vl-icon-refresh {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTMgMTJhOSA5IDAgMCAxIDktOSA5Ljc1IDkuNzUgMCAwIDEgNi43NCAyLjc0TDIxIDgiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjEgM3Y1aC01IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTIxIDEyYTkgOSAwIDAgMS05IDkgOS43NSA5Ljc1IDAgMCAxLTYuNzQtMi43NEwzIDE2IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTggMTZIM3Y1IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTMgMTJhOSA5IDAgMCAxIDktOSA5Ljc1IDkuNzUgMCAwIDEgNi43NCAyLjc0TDIxIDgiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjEgM3Y1aC01IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTIxIDEyYTkgOSAwIDAgMS05IDkgOS43NSA5Ljc1IDAgMCAxLTYuNzQtMi43NEwzIDE2IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTggMTZIM3Y1IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+") center/contain no-repeat;
+}
+
+.vl-icon-spin {
+  animation: lpSpin .8s linear infinite;
+  transform-origin: center;
+}
+
+/* ── Analytics "Load more" sentinel ─────────────────────────
+   Invisible 1px strip rendered after every analytics rows
+   container (admin/analytics/rows/more.twig). The dashboard JS
+   observes it and fetches the next batch when it scrolls into
+   view, so no button sits at the bottom of a card. `.is-loading`
+   is toggled while a request is in flight and reveals the
+   spinner + loading label. */
+.vl-analytics-more--sentinel {
+  display: block;
+  width: 100%;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.vl-analytics-more--sentinel.is-loading {
+  height: auto;
+  opacity: 1;
+  cursor: progress;
+}
+
+.vl-analytics-more-label {
+  display: none;
+}
+
+.vl-analytics-more--sentinel.is-loading .vl-analytics-more-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0;
+  font-size: 11px;
+  line-height: 1;
+  color: #6b7280;
+}
+
+.dark .vl-analytics-more--sentinel.is-loading .vl-analytics-more-label {
+  color: #9ca3af;
+}
+
+/* ── Analytics card loading overlay ─────────────────────────
+   Shown while a card's list body is re-fetched (sorting, facet
+   drill-down, first page). The spinner matches the load-more
+   indicator instead of the card simply fading out, and the
+   overlay swallows clicks so a second request cannot start on
+   top of the running one. */
+.vl-card-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background-color: rgb(255 255 255 / 55%);
+  cursor: progress;
+}
+
+.dark .vl-card-loading {
+  background-color: rgb(17 24 39 / 55%);
+}
+
+.vl-card-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 11px;
+  line-height: 1;
+  color: #6b7280;
+}
+
+.dark .vl-card-loading-label {
+  color: #9ca3af;
+}
+
+@keyframes lpSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Clipboard "Copied!" badge (floating, never reflows buttons) ── */
+.vl-copy-feedback {
+  position: fixed;
+  z-index: 60;
+  transform: translateX(-50%);
+  background-color: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 6px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+  animation: vlCopyPop 0.15s ease-out;
+}
+.vl-copy-feedback::before {
+  content: "\2713";
+  margin-right: 5px;
+  color: #34d399;
+  font-weight: 700;
+}
+.dark .vl-copy-feedback {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+.dark .vl-copy-feedback::before { color: #059669; }
+@keyframes vlCopyPop {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Form controls ──────────────────────────────────────── */
+.vl-input {
+  width: 100%;
+  background: var(--vl-input-bg);
+  color: var(--vl-input-text);
+  border: 1px solid var(--vl-input-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+.vl-input:focus {
+  border-color: var(--vl-input-focus-border);
+  box-shadow: inset 0 0 0 1px var(--vl-input-focus-ring);
+}
+.vl-select {
+  padding: 5px 10px;
+  padding-right: 28px;
+  background: var(--vl-input-bg);
+  color: var(--vl-input-text);
+  border: 1px solid var(--vl-input-border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  min-width: 110px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%236b7280%22 d=%22M6 8L1 3h10z%22/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+}
+.dark .vl-select {
+  background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%239ca3af%22 d=%22M6 8L1 3h10z%22/></svg>');
+}
+.vl-select option {
+  background-color: var(--vl-input-bg);
+  color: var(--vl-input-text);
+}
+.vl-select:focus {
+  border-color: var(--vl-input-focus-border);
+  box-shadow: inset 0 0 0 1px var(--vl-input-focus-ring);
+}
+.vl-input-group {
+  display: flex;
+  border: 1px solid var(--vl-input-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.vl-input-group .vl-input {
+  border: none;
+  border-radius: 0;
+  flex: 1;
+  width: 0;
+}
+.vl-input-group .vl-input:focus { box-shadow: none; }
+.vl-input-group .vl-select {
+  border: none;
+  border-left: 1px solid var(--vl-input-border);
+  border-radius: 0;
+  background-color: var(--vl-bg-subtle);
+}
+
+/* ── Checkboxes / radios ────────────────────────────────── */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  -o-appearance: none;
+  color: var(--vl-text-main);
+  accent-color: var(--vl-text-main);
+  border: 1px solid var(--vl-input-border);
+  border-radius: 4px;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+/* Labels wrapping a checkbox/radio are fully clickable — match the input cursor */
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  cursor: pointer;
+}
+label:has(> input[type="checkbox"]:disabled),
+label:has(> input[type="radio"]:disabled) {
+  cursor: not-allowed;
+}
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  color: var(--vl-text-main);
+  border-color: var(--vl-text-main);
+  background-color: var(--vl-text-main);
+}
+input[type="checkbox"]:focus,
+input[type="radio"]:focus,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--vl-input-border);
+}
+
+/* ── Labels / text ──────────────────────────────────────── */
+.vl-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vl-text-body);
+  margin-bottom: 4px;
+}
+
+/* ── Pagination ─────────────────────────────────────────── */
+.vl-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--vl-text-muted);
+}
+
+/* ── Loading / empty states ─────────────────────────────── */
+.vl-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--vl-text-dim);
+  padding: 20px 0;
+}
+
+/* ── Admin settings tab bars ─────────────────────────────── */
+/* Active-tab underline: var(--vl-border-color) (#374151) is invisible on the
+   dark app bg; utilities can't win because this file is unlayered and loads last */
+.dark .mb-6.border-b.border-gray-200,
+.dark .mb-4.border-b.border-gray-200,
+.dark .flex.gap-4.border-b.border-gray-200 {
+  border-bottom-color: var(--vl-border-color-strong);
+}
+.dark .tab-btn.border-gray-900,
+.dark .ec-tab-btn.border-gray-900,
+.dark .mail-tab-btn.border-gray-900,
+.dark .seo-tab-btn.border-gray-900,
+.dark .advanced-tab-btn.border-gray-900,
+.dark a.border-b-2.border-gray-900,
+.dark .vl-seo-panel-tabs button.border-gray-900 {
+  border-bottom-color: #556d94;
+}
+
+/* ── Search input ───────────────────────────────────────── */
+.vl-search {
+  flex: 1;
+  min-width: 120px;
+  padding: 5px 10px;
+  background: var(--vl-input-bg);
+  color: var(--vl-input-text);
+  border: 1px solid var(--vl-input-border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+.vl-search:focus {
+  border-color: var(--vl-input-focus-border);
+  box-shadow: inset 0 0 0 1px var(--vl-input-focus-ring);
+}
+
+/* ── Image size dialog ──────────────────────────────────── */
+.vl-size-dialog label { display: block; font-size: 12px; font-weight: 500; color: var(--vl-text-body); margin-bottom: 4px; }
+
+/* ── Diff view (revision history) ───────────────────────── */
+.vl-diff-line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 3px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+}
+.vl-diff-line + .vl-diff-line {
+  margin-top: 1px;
+}
+.vl-diff-marker {
+  display: inline-block;
+  width: 14px;
+  text-align: center;
+  user-select: none;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.vl-diff-same { color: var(--vl-diff-same-text); }
+.vl-diff-add {
+  background: var(--vl-diff-add-bg);
+  color: var(--vl-diff-add-text);
+  border-left-color: var(--vl-diff-add-border);
+}
+.vl-diff-del {
+  background: var(--vl-diff-del-bg);
+  color: var(--vl-diff-del-text);
+  border-left-color: var(--vl-diff-del-border);
+}
+.vl-w-add,
+.vl-w-del {
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 600;
+}
+.vl-w-add { background: var(--vl-diff-word-add-bg); }
+.vl-w-del {
+  background: var(--vl-diff-word-del-bg);
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.vl-diff-swatch-add,
+.vl-diff-swatch-del {
+  background: var(--vl-diff-add-bg);
+  border: 1px solid var(--vl-diff-add-border);
+}
+.vl-diff-swatch-del {
+  background: var(--vl-diff-del-bg);
+  border-color: var(--vl-diff-del-border);
+}
+
+/* ── Plugin ZIP picker ─────────────────────────────────── */
+.vl-plugin-file-input {
+  color: var(--vl-text-body);
+  color-scheme: light;
+  direction: rtl;
+  text-align: right;
+}
+.vl-plugin-file-input::file-selector-button {
+  margin-right: 0;
+  margin-left: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: var(--vl-bg-muted);
+  color: var(--vl-text-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.vl-plugin-file-input:hover::file-selector-button {
+  background: var(--vl-border-color);
+}
+.dark .vl-plugin-file-input {
+  color: var(--vl-text-main);
+  color-scheme: dark;
+}
+.dark .vl-plugin-file-input::file-selector-button {
+  background: var(--vl-bg-muted);
+  color: var(--vl-text-main);
+}
+.dark .vl-plugin-file-input:hover::file-selector-button {
+  background: var(--vl-border-color-strong);
+}
+
+/* ── Dark mode form overrides ──────────────────────────── */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]),
+.dark select,
+.dark textarea {
+  background-color: var(--vl-bg-surface) !important;
+  color: var(--vl-text-main) !important;
+  border-color: var(--vl-border-color-strong) !important;
+}
+
+.dark select option {
+  background-color: var(--vl-bg-surface);
+  color: var(--vl-text-main);
+}
+
+/* Checkbox / radio accent */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  accent-color: #3b82f6;
+}
+
+/* Toggle switch disabled track */
+.dark .bg-gray-300 {
+  background-color: var(--vl-border-color-strong) !important;
+}
+
+/* Yellow / amber callout boxes */
+.dark .bg-yellow-50,
+.dark .bg-amber-50 {
+  background-color: var(--vl-callout-yellow-bg) !important;
+  border-color: var(--vl-callout-yellow-border) !important;
+}
+.dark .text-amber-800,
+.dark .text-yellow-800,
+.dark .text-amber-700 {
+  color: var(--vl-callout-yellow-text) !important;
+}
+.dark .border-yellow-200,
+.dark .border-amber-200 {
+  border-color: var(--vl-callout-yellow-border) !important;
+}
+
+/* Blue info callout boxes */
+.dark .bg-blue-50 {
+  background-color: var(--vl-callout-blue-bg) !important;
+  border-color: var(--vl-callout-blue-border) !important;
+}
+.dark .text-blue-700,
+.dark .text-blue-800 {
+  color: var(--vl-callout-blue-text) !important;
+}
+.dark .border-blue-200 {
+  border-color: var(--vl-callout-blue-border) !important;
+}
+
+/* Green success callout boxes */
+.dark .bg-green-50 {
+  background-color: var(--vl-callout-green-bg) !important;
+  border-color: var(--vl-callout-green-border) !important;
+}
+.dark .text-green-700,
+.dark .text-green-800 {
+  color: var(--vl-callout-green-text) !important;
+}
+.dark .border-green-200 {
+  border-color: var(--vl-callout-green-border) !important;
+}
+
+/* Red error callout boxes */
+.dark .bg-red-50 {
+  background-color: var(--vl-callout-red-bg) !important;
+  border-color: var(--vl-callout-red-border) !important;
+}
+.dark .text-red-700,
+.dark .text-red-800 {
+  color: var(--vl-callout-red-text) !important;
+}
+.dark .border-red-200 {
+  border-color: var(--vl-callout-red-border) !important;
+}
+
+/* Indigo callout boxes */
+.dark .bg-indigo-50 {
+  background-color: var(--vl-callout-indigo-bg) !important;
+  border-color: var(--vl-callout-indigo-border) !important;
+}
+.dark .text-indigo-700 {
+  color: var(--vl-callout-indigo-text) !important;
+}
+
+/* Orange callout boxes */
+.dark .bg-orange-50 {
+  background-color: var(--vl-callout-orange-bg) !important;
+  border-color: var(--vl-callout-orange-border) !important;
+}
+.dark .text-orange-700 {
+  color: var(--vl-callout-orange-text) !important;
+}
+.dark .border-orange-100 {
+  border-color: var(--vl-callout-orange-border) !important;
+}
+
+/* Green status text */
+.dark .text-green-600 {
+  color: #86efac !important;
+}
+
+/* Gray card backgrounds in dark mode */
+.dark .bg-gray-50 {
+  background-color: var(--vl-bg-subtle) !important;
+}
+
+/* Table stripes */
+.dark .divide-gray-200 > * + * {
+  border-color: var(--vl-border-color) !important;
+}
+.dark thead.bg-gray-50 {
+  background-color: var(--vl-bg-surface) !important;
+}
+
+/* ── Adaptive SKU column (admin products table) ───────────
+   The full SKU stays in the DOM; the products table script adds
+   .vl-sku-capped only while the table overflows its wrapper, so the
+   column is capped just enough to keep the table inside the viewport
+   and expands again as soon as there is free space. */
+table.vl-sku-capped td.vl-sku-cell {
+  max-width: 8rem;
+}
+
+/* ── Dark mode label text ────────────────────────────── */
+.dark .text-gray-700 {
+  color: var(--vl-text-body) !important;
+}
+
+.dark .text-gray-900 {
+  color: var(--vl-text-main) !important;
+}
+
+/* ── Scrollbar (slim) ───────────────────────────────────── */
+nav::-webkit-scrollbar {
+    width: 6px;
+}
+nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+nav::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+nav::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* ── Kill indigo focus ring on all form elements ─────── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):focus,
+select:focus,
+textarea:focus {
+    --tw-ring-color: #6b7280 !important;
+    border-color: #6b7280 !important;
+}
+
+/* ── Restore pointer cursor on interactive elements ─── */
+@layer base {
+    button, a, [role="button"], label[for] {
+        cursor: pointer;
+    }
+}
+
+/* ── Primary button boundaries in dark mode ───────── */
+.dark button.bg-gray-900:not(.tab-btn):not(.ec-tab-btn) {
+  outline: 1px solid var(--vl-border-color-strong);
+  outline-offset: -1px;
+}
+
+/* ── Secondary buttons: kill disabled-looking ghost bg ─ */
+.dark button[class*="bg-gray-800/50"] {
+  background-color: var(--vl-bg-surface) !important;
+}
+
+/* ── Dashboard cards & quick-action cards ─────────── */
+.dark .rounded-xl.border.bg-white {
+  background-color: var(--vl-bg-surface) !important;
+  border-color: var(--vl-border-color) !important;
+}
+
+/* ── Dashboard system status (muted dark mode) ─────── */
+.dark .vl-dashboard-status {
+  background-color: var(--vl-bg-subtle) !important;
+  border-color: var(--vl-border-color) !important;
+}
+.dark .vl-dashboard-status .text-amber-800,
+.dark .vl-dashboard-status .text-amber-700,
+.dark .vl-dashboard-status .text-amber-900 {
+  color: var(--vl-text-body) !important;
+}
+.dark .vl-dashboard-status .text-gray-400 {
+  color: var(--vl-text-muted) !important;
+}
+.dark .vl-dashboard-status .text-gray-300 {
+  color: var(--vl-text-body) !important;
+}
+.dark .vl-dashboard-status .text-gray-200 {
+  color: var(--vl-text-main) !important;
+}
+.dark .vl-dashboard-status svg.text-amber-600 {
+  color: #b45309 !important;
+  opacity: 0.85;
+}
+
+/* ── Comment status badge, tag pills, etc. ────────── */
+.dark .bg-gray-100 {
+  background-color: var(--vl-border-color) !important;
+}
+
+/* Filter-type buttons: restore hover + visual distinction */
+.dark button.bg-gray-100 {
+  background-color: var(--vl-bg-surface) !important;
+  color: var(--vl-text-body) !important;
+  border: 1px solid var(--vl-border-color-strong);
+}
+.dark button.bg-gray-100:hover {
+  background-color: var(--vl-border-color) !important;
+}
+
+/* ── Text contrast ────────────────────────────────── */
+.dark .text-gray-600 {
+  color: var(--vl-text-body) !important;
+}
+.dark .text-gray-500 {
+  color: var(--vl-text-muted) !important;
+}
+.dark .text-gray-800 {
+  color: var(--vl-text-main) !important;
+}
+
+/* ── Send Test button (mail settings) ─────────────── */
+.dark button.bg-gray-100.border-gray-400 {
+  background-color: var(--vl-bg-surface) !important;
+  border-color: var(--vl-border-color-strong) !important;
+  color: var(--vl-text-main) !important;
+}
+.dark button.bg-gray-100.border-gray-400:hover {
+  background-color: var(--vl-border-color) !important;
+}
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  border-color: #6b7280 !important;
+}
+.dark input[type="checkbox"]:checked,
+.dark input[type="radio"]:checked {
+  border-color: var(--vl-text-muted) !important;
+  background-color: var(--vl-border-color) !important;
+}
+
+/* Coupon picker box (no vl-modal, dedicated class) */
+.vl-coupon-box {
+  background: var(--vl-bg-surface);
+  color: var(--vl-text-body);
+  border-radius: 12px;
+  padding: 24px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,.2);
+  font-family: inherit;
+}
+.dark .vl-coupon-box {
+  background: var(--vl-bg-surface);
+  color: var(--vl-text-body);
+}
+
+/* Form picker items */
+.vl-form-picker-item {
+  background: var(--vl-bg-surface);
+}
+.dark .vl-form-picker-item {
+  background: var(--vl-bg-surface);
+  border-color: var(--vl-border-color-strong) !important;
+  color: var(--vl-text-body);
+}
+.dark .vl-form-picker-item strong {
+  color: var(--vl-text-main);
+}
+.dark .vl-form-picker-item:hover {
+  background: var(--vl-border-color) !important;
+}
+
+/* ── Disabled / mandatory checkboxes (notification settings) ── */
+input[type="checkbox"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Settings search input ─────────────────────────────── */
+.vl-settings-search-input {
+  height: 2rem;
+  padding: 0.25rem 2.75rem 0.25rem 2rem !important;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .vl-settings-search-input {
+    padding-right: 3.75rem !important;
+  }
+}
+.vl-settings-search-input::-webkit-search-decoration,
+.vl-settings-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+.dark .vl-settings-search-input {
+  background-color: var(--vl-bg-surface) !important;
+  color: var(--vl-text-main) !important;
+  border-color: var(--vl-border-color-strong) !important;
+}
+
+/* ── Settings search: scroll target + flash highlight ── */
+[data-vl-setting]:not(tr) {
+  scroll-margin-top: 6rem;
+  border-radius: 0.5rem;
+  position: relative;
+  isolation: isolate;
+}
+[data-vl-setting].vl-async-select-open {
+  z-index: 50;
+}
+.vl-entity-select.vl-async-select-open,
+.vl-async-page-select.vl-async-select-open {
+  z-index: 50;
+}
+[x-data].vl-async-select-open {
+  position: relative;
+  z-index: 50;
+}
+tr[data-vl-setting] {
+  scroll-margin-top: 6rem;
+}
+.vl-setting-flash:not(tr) {
+  padding: 0.5rem 0.625rem;
+  animation: vl-setting-flash 2.2s ease-out;
+}
+.vl-setting-flash:not(tr)::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem -0.625rem;
+  border-radius: 0.625rem;
+  pointer-events: none;
+  z-index: -1;
+  animation: vl-setting-flash-ring 2.2s ease-out;
+}
+tr[data-vl-setting].vl-setting-flash > td {
+  animation: vl-setting-tr-flash 2.2s ease-out;
+}
+tr[data-vl-setting].vl-setting-flash > td:first-child {
+  animation: vl-setting-tr-flash-border 2.2s ease-out;
+}
+@keyframes vl-setting-tr-flash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  12% {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
+@keyframes vl-setting-tr-flash-border {
+  0%, 100% {
+    box-shadow: inset 3px 0 0 0 transparent;
+  }
+  12% {
+    box-shadow: inset 3px 0 0 0 rgba(59, 130, 246, 0.55);
+  }
+}
+.dark tr[data-vl-setting].vl-setting-flash > td {
+  animation-name: vl-setting-tr-flash-dark;
+}
+.dark tr[data-vl-setting].vl-setting-flash > td:first-child {
+  animation-name: vl-setting-tr-flash-border-dark;
+}
+@keyframes vl-setting-tr-flash-dark {
+  0%, 100% {
+    background-color: transparent;
+  }
+  12% {
+    background-color: rgba(59, 130, 246, 0.14);
+  }
+}
+@keyframes vl-setting-tr-flash-border-dark {
+  0%, 100% {
+    box-shadow: inset 3px 0 0 0 transparent;
+  }
+  12% {
+    box-shadow: inset 3px 0 0 0 rgba(96, 165, 250, 0.5);
+  }
+}
+@keyframes vl-setting-flash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  12% {
+    background-color: rgba(59, 130, 246, 0.06);
+  }
+}
+@keyframes vl-setting-flash-ring {
+  0%, 100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+  12% {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.45);
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+}
+.dark .vl-setting-flash:not(tr) {
+  animation-name: vl-setting-flash-dark;
+}
+.dark .vl-setting-flash:not(tr)::before {
+  animation-name: vl-setting-flash-ring-dark;
+}
+@keyframes vl-setting-flash-dark {
+  0%, 100% {
+    background-color: transparent;
+  }
+  12% {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
+@keyframes vl-setting-flash-ring-dark {
+  0%, 100% {
+    box-shadow: none;
+    background-color: transparent;
+  }
+  12% {
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+}
+
+/* ── CodeJar & Twig Syntax Highlighter (template editors) ── */
+.codejar-wrapper {
+  position: relative;
+  display: flex;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
+}
+.codejar-gutter {
+  padding: 1rem 0.5rem 1rem 0.75rem;
+  text-align: right;
+  user-select: none;
+  color: #64748b;
+  background-color: #0f172a;
+  border-right: 1px solid #334155;
+  /* Same font metrics as .codejar-editor so line numbers stay aligned
+     with code lines while scrolling (gutter scrolls via scrollTop sync). */
+  font-size: 0.875rem;
+  line-height: 1.6;
+  min-width: 3rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: hidden;
+}
+.codejar-editor {
+  flex: 1;
+  padding: 1rem;
+  outline: none;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: auto;
+  tab-size: 2;
+}
+.codejar-wrapper.light-theme {
+  background-color: #f8fafc;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+.codejar-wrapper.light-theme .codejar-gutter {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border-right-color: #e2e8f0;
+}
+
+/* Prism Twig Syntax Highlighting (dark default) */
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #64748b; font-style: italic; }
+.token.punctuation { color: #94a3b8; }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #f43f5e; }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #38bdf8; }
+.token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #f59e0b; }
+.token.atrule, .token.attr-value, .token.keyword { color: #c084fc; font-weight: 600; }
+.token.function, .token.class-name { color: #34d399; }
+.token.regex, .token.important, .token.variable { color: #fbbf24; }
+.token.delimiter, .token.tag .token.punctuation { color: #38bdf8; }
+
+/* Prism light-theme tokens (admin light mode adds .light-theme) */
+.codejar-wrapper.light-theme .token.comment, .codejar-wrapper.light-theme .token.prolog, .codejar-wrapper.light-theme .token.doctype, .codejar-wrapper.light-theme .token.cdata { color: #94a3b8; }
+.codejar-wrapper.light-theme .token.punctuation { color: #64748b; }
+.codejar-wrapper.light-theme .token.property, .codejar-wrapper.light-theme .token.tag, .codejar-wrapper.light-theme .token.boolean, .codejar-wrapper.light-theme .token.number, .codejar-wrapper.light-theme .token.constant, .codejar-wrapper.light-theme .token.symbol, .codejar-wrapper.light-theme .token.deleted { color: #e11d48; }
+.codejar-wrapper.light-theme .token.selector, .codejar-wrapper.light-theme .token.attr-name, .codejar-wrapper.light-theme .token.string, .codejar-wrapper.light-theme .token.char, .codejar-wrapper.light-theme .token.builtin, .codejar-wrapper.light-theme .token.inserted { color: #0284c7; }
+.codejar-wrapper.light-theme .token.operator, .codejar-wrapper.light-theme .token.entity, .codejar-wrapper.light-theme .token.url { color: #d97706; }
+.codejar-wrapper.light-theme .token.atrule, .codejar-wrapper.light-theme .token.attr-value, .codejar-wrapper.light-theme .token.keyword { color: #9333ea; }
+.codejar-wrapper.light-theme .token.function, .codejar-wrapper.light-theme .token.class-name { color: #059669; }
+.codejar-wrapper.light-theme .token.variable { color: #d97706; }
+
+/* Scrollbars inside the code editor */
+.codejar-wrapper ::-webkit-scrollbar { width: 8px; height: 8px; }
+.codejar-wrapper ::-webkit-scrollbar-track { background: transparent; }
+.codejar-wrapper ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+.codejar-wrapper.light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* ── Right-Rail Collapse + Sticky Action Bar ─────────────────── */
+
+/* The sticky action bar only renders content on pages that carry an
+   edit rail; JS marks those pages with .has-edit-rail (right-rail.js). */
+[data-rail-bar] {
+  display: none;
+}
+
+html.rail-collapsed.has-edit-rail [data-rail-bar] {
+  display: block;
+}
+
+/* Bulk-collapse every right-hand panel column and give the main column
+   the full grid width (outranks Tailwind's lg:col-span-2 on the left). */
+html.rail-collapsed.has-edit-rail [data-panel-container="right"] {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
+  html.rail-collapsed.has-edit-rail [data-panel-container="left"] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Left edit panels use p-6 (24px) while right panels use p-4 (16px), which leaves
+   the left headings sitting visibly lower. Pull only the top edge up slightly. */
+[data-panel-container="left"] > [data-panel-id].p-6 {
+  padding-top: 1rem;
+}

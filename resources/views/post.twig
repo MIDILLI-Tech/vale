@@ -1,0 +1,202 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ post.metaTitle|default(post.title) }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ post|meta_teaser(160) }}{% endblock %}
+{% block meta_robots %}{% if seo is defined and seo and seo.robots %}<meta name="robots" content="{{ seo.robots }}">{% endif %}{% endblock %}
+{% block canonical_url %}{{ site_url ~ routing_blog_prefix ~ '/' ~ post.slug }}{% endblock %}
+{% block og_title %}{% if seo is defined and seo %}{{ seo.effectiveOgTitle|default(post.metaTitle|default(post.title)) }}{% else %}{{ post.metaTitle|default(post.title) }}{% endif %}{% endblock %}
+{% block og_description %}{% if seo is defined and seo and seo.effectiveOgDescription %}{{ seo.effectiveOgDescription }}{% else %}{{ post|meta_teaser(160) }}{% endif %}{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block content %}
+{% set _ct = type is defined and type and type.slug != 'post' and type.slug != 'page' %}
+{% if is_preview %}
+<div class="sticky top-0 z-50 bg-amber-400 py-2 text-center text-sm font-semibold text-amber-900 shadow-sm">
+  &#9888; Preview Mode &mdash; this post is not yet published.
+  <a href="{{ url('/admin/posts/' ~ post.id ~ '/edit') }}" class="ml-3 underline hover:text-amber-700">Edit</a>
+</div>
+{% endif %}
+{% include 'partials/_fallback_notice.twig' with {entity_label: 'post'} %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+    <div class="lg:grid lg:grid-cols-3 lg:gap-10">
+        {# ── Main content ─────────────────────────────── #}
+        <div class="lg:col-span-2">
+            <article>
+                <header class="mb-8">
+                    <div class="mb-3">
+                        {% if type is defined and type and type.slug is not empty and type.slug != 'post' and type.slug != 'page' %}
+                        {% set archiveUrl = url(type.publicBasePath) %}
+                        <a href="{{ archiveUrl }}" class="text-sm font-medium text-gray-900 hover:text-gray-800">
+                            &larr; {{ type.name }}
+                        </a>
+                        {% elseif type is not defined or not type or type.slug == 'post' %}
+                        <a href="{{ url(routing_blog_prefix) }}" class="text-sm font-medium text-gray-900 hover:text-gray-800">
+                            &larr; {{ __('Blog') }}
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <h1 class="text-2xl sm:text-4xl font-bold tracking-tight text-gray-900 leading-tight break-words">
+                        {{ post.title }}
+                    </h1>
+
+                    {% if not _ct or 'excerpt' in type.supports %}
+                    {% if post.excerpt %}
+                    <p class="mt-4 text-xl text-gray-500 leading-relaxed">{{ post.excerpt }}</p>
+                    {% endif %}
+                    {% endif %}
+
+                    <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        {% if post.publishedAt %}
+                        {% include 'partials/_vtime.twig' with {value: post.publishedAt, style: 'long', withTime: show_timestamp_on_posts|default('0') == '1'} %}
+                        {% endif %}
+                        {% if show_modification_date_on_posts|default('0') == '1' and post.updatedAt and post.updatedAt != post.publishedAt %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span>{{ __('Updated') }}: {% include 'partials/_vtime.twig' with {value: post.updatedAt, style: 'long', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                        {% set author = authors[post.authorId]|default(null) %}
+                        {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span>{{ author.name }}</span>
+                        {% endif %}
+
+                        {% set showReadingTime = false %}
+                        {% if not _ct and show_reading_time_on_posts|default('0') == '1' %}
+                            {% set showReadingTime = true %}
+                        {% elseif _ct and 'read_time' in type.supports %}
+                            {% set showReadingTime = true %}
+                        {% endif %}
+
+                        {% if showReadingTime %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span>{{ post.body|read_time }}</span>
+                        {% endif %}
+
+                        {% set showReadCount = false %}
+                        {% if not _ct and show_read_count_on_posts|default('0') == '1' %}
+                            {% set showReadCount = true %}
+                        {% elseif _ct and 'read_count' in type.supports %}
+                            {% set showReadCount = true %}
+                        {% endif %}
+
+                        {% if showReadCount %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            {{ post.viewCount|default(0)|compact_count }} {{ __('views') }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </header>
+
+                {# ── Advertisement: Above Content ── #}
+                {% if advertisement_enabled == '1' and advertisement_placement == 'above_content' and advertisement_code %}
+                <div class="vl-ad-above-content mb-8 flex justify-center">
+                    {{ advertisement_code|raw }}
+                </div>
+                {% endif %}
+
+                {% if has_access is defined and not has_access %}
+                <div class="prose max-w-none">
+                    {% if preview_body is defined and preview_body %}
+                        {{ preview_body|shortcodes(post)|raw }}
+                    {% endif %}
+                </div>
+                <div class="mt-8 rounded-3xl border border-indigo-100 bg-indigo-50/60 p-8 text-center backdrop-blur-xs shadow-xs dark:border-blue-500/20 dark:bg-slate-800/60 dark:shadow-xl">
+                    <p class="text-xl font-bold text-slate-900 dark:text-white mb-2">{{ __('This content is for members only.') }}</p>
+                    {% if preview_body is defined and preview_body %}
+                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 mb-6">{{ __('Subscribe to get full access to this and all other member-only content.') }}</p>
+                    {% else %}
+                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-400 mb-6">{{ __('Subscribe to get full access.') }}</p>
+                    {% endif %}
+                    <a href="{{ url('/membership') }}" class="inline-block rounded-lg btn-primary px-3 py-2 text-sm font-medium text-white transition-colors">{{ __('View Membership Plans') }}</a>
+                </div>
+                {% else %}
+                <div class="prose max-w-none">
+                    {{ post.body|shortcodes(post)|raw }}
+                </div>
+
+                {% include 'partials/_content_pagination.twig' %}
+
+                {# ── Advertisement: Below Content ── #}
+                {% if advertisement_enabled == '1' and advertisement_placement == 'below_content' and advertisement_code %}
+                <div class="vl-ad-below-content mt-8 flex justify-center">
+                    {{ advertisement_code|raw }}
+                </div>
+                {% endif %}
+
+                {% endif %}
+
+                {# Custom fields (automatic, only for custom content types) #}
+                {% if type is defined and type and type.fieldSchema|length > 0 %}
+                    {% include 'partials/custom_fields.twig' with { type: type, post: post } %}
+                {% endif %}
+
+                {% set author = authors[post.authorId]|default(null) %}
+                {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
+                <div class="mt-12 rounded-xl bg-gray-50 ring-1 ring-gray-100 p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-lg font-bold text-indigo-700">
+                            {{ author.name|slice(0,1)|upper }}
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase tracking-widest text-indigo-500 font-semibold">{{ __('Author') }}</p>
+                            <p class="font-semibold text-gray-900 mt-0.5">{{ author.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </article>
+
+            {% if related_posts is defined and related_posts|length > 0 %}
+            {% set _postPrefix = type is defined and type and type.slug != 'post' and type.slug != 'page' ? type.publicBasePath : routing_blog_prefix %}
+            <div class="mt-12">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">{{ __('Read Also') }}</h3>
+                <div class="grid gap-4 sm:grid-cols-3">
+                    {% for rp in related_posts %}
+                    <a href="{{ url(_postPrefix ~ '/' ~ rp.slug) }}" class="rounded-xl border border-gray-100 bg-white p-4 shadow-xs hover:shadow-md hover:border-gray-200 transition-all block">
+                        {% if rp.thumbnail is defined and rp.thumbnail %}
+                        <img src="{{ rp.thumbnail.url }}" alt="{{ rp.title }}" class="w-full h-32 object-cover rounded-lg mb-3">
+                        {% endif %}
+                        <p class="text-sm font-semibold text-gray-800 leading-snug line-clamp-2">{{ rp.title }}</p>
+                        {% if rp.publishedAt %}
+                        <p class="mt-2 text-xs text-gray-400">{% include 'partials/_vtime.twig' with {value: rp.publishedAt} %}</p>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if has_access is not defined or has_access %}
+            {% include 'partials/comments.twig' with {
+                entity_type: type.slug|default('post'),
+                entity_id: post.id,
+                entity_comment_status: post.commentStatus,
+                items: comments|default([]),
+                type: type|default(null),
+                user_comment: user_comment|default(null),
+                comment_ratings: comment_ratings|default({}),
+                global_comments_enabled: global_comments_enabled,
+                allow_comment_editing: allow_comment_editing,
+                cpage: cpage|default(1),
+                comments_total_pages: comments_total_pages|default(1),
+                comments_total: comments_total|default(0)
+            } %}
+            {% endif %}
+        </div>
+
+        {# ── Sidebar ──────────────────────────────────── #}
+        <div class="mt-12 lg:mt-0 lg:self-start lg:sticky lg:top-24">
+            {% if type is defined and type and type.slug != 'post' and type.slug != 'page' %}
+                {% include 'partials/_custom_type_sidebar.twig' %}
+            {% else %}
+                {% include 'partials/_blog_sidebar.twig' %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

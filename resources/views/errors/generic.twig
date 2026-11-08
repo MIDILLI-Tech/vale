@@ -1,0 +1,35 @@
+﻿{% extends "layout.twig" %}
+
+{% block title %}{{ error_code|default(500) }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-lg px-4 py-24 text-center">
+    <p class="text-6xl font-bold text-gray-900">{{ error_code|default(500) }}</p>
+    <h1 class="mt-4 text-2xl font-bold text-gray-900">
+        {% if title|default('') %}
+            {{ title }}
+        {% elseif error_code == 403 %}
+            {{ __('Forbidden') }}
+        {% elseif error_code == 405 %}
+            {{ __('Method Not Allowed') }}
+        {% elseif error_code == 500 %}
+            {{ __('Server Error') }}
+        {% else %}
+            {{ __('Something went wrong') }}
+        {% endif %}
+    </h1>
+    <p class="mt-2 text-gray-600">
+        {% if message|default('') %}
+            {{ message }}
+        {% else %}
+            {{ __('Sorry, something went wrong. Please try again later.') }}
+        {% endif %}
+    </p>
+    {% if error_code in [500, 403] and error_id is defined and error_id is not empty %}
+    <p class="mt-4 text-xs text-gray-400 dark:text-gray-500">{{ __('Reference') }}: <code class="rounded bg-gray-100 px-1.5 py-0.5 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{{ error_id }}</code></p>
+    {% endif %}
+    <a href="{{ url('/') }}" class="mt-6 inline-block rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Go home') }}
+    </a>
+</div>
+{% endblock %}

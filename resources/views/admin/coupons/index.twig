@@ -1,0 +1,1041 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+{% block title %}Coupons{% endblock %}
+{% block content %}
+<div x-data="{
+    ...vlColumnMixins(),
+    ...vlProductPool({ withVariations: true }),
+
+    sortBy: '', sortDir: 'desc', perPage: 20, page: 1, search: '{{ (filters.search|default(''))|e('js') }}',
+    allRows: [], visibleCount: 0, serverSide: false, totalItems: 0, baseUrl: '',
+
+    addOpen: false, editOpen: false, editId: null,
+
+    couponsData: {{ coupons_json|json_encode }},
+
+    addTargetType: 'product', addAllowedMembershipIds: [], addBlockedMembershipIds: [], addMembershipDuration: 'once',
+    addCode: '', addPrefix: '', addType: 'percent', addAmount: '', addMinOrder: '', addMaxUses: '', addMaxUsesPerEmail: 0,
+    addStartsAt: '', addExpiresAt: '', addEnabled: true, addOnlyUsers: false, addFreeShipping: false,
+    addApplyScope: 'all_eligible',
+    addAllowedCategoryIds: [], addBlockedCategoryIds: [],
+    addAllowedEmails: '',
+
+    editTargetType: 'product', editAllowedMembershipIds: [], editBlockedMembershipIds: [], editMembershipDuration: 'once',
+    editCode: '', editPrefix: '', editType: 'percent', editAmount: '', editMinOrder: '', editMaxUses: '', editMaxUsesPerEmail: 0,
+    editStartsAt: '', editExpiresAt: '', editEnabled: true, editOnlyUsers: false, editFreeShipping: false,
+    editApplyScope: 'all_eligible',
+    editAllowedCategoryIds: [], editBlockedCategoryIds: [],
+    editAllowedEmails: '',
+
+    allowedProductIds: [], blockedProductIds: [],
+    allowedVariationIds: [], blockedVariationIds: [],
+    allowedSearch: '', blockedSearch: '',
+
+    allPlans: [], allPlansLoaded: false, allPlansLoading: false,
+    allowedPlanSearch: '', blockedPlanSearch: '',
+
+    init() {
+        this._initColumns();
+        this.allRows = Array.from(this.$refs.items.querySelectorAll('[data-sort]'));
+        this.allRows.forEach(r => { try { r._s = JSON.parse(r.dataset.sort); } catch(e) { r._s = {}; } });
+        this.apply();
+        vlAutoOpenModal('add', () => this.openAdd());
+    },
+    apply() {
+        let rows = [...this.allRows];
+        if (this.search.trim()) {
+            const q = this.search.trim().toLowerCase();
+            rows = rows.filter(r => r.textContent.toLowerCase().includes(q));
+        }
+        if (this.sortBy) {
+            const col = this.sortBy, dir = this.sortDir === 'asc' ? 1 : -1;
+            rows.sort((a, b) => {
+                let va = a._s[col] ?? '', vb = b._s[col] ?? '';
+                const na = Number(va), nb = Number(vb);
+                if (va !== '' && vb !== '' && !isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+                return String(va).localeCompare(String(vb), undefined, {numeric: true}) * dir;
+            });
+        }
+        this.visibleCount = rows.length;
+        const start = (this.page - 1) * this.perPage, end = start + this.perPage;
+        this.allRows.forEach(r => r.style.display = 'none');
+        this.$refs.items.querySelectorAll('[data-detail-for]').forEach(r => r.style.display = 'none');
+        rows.forEach((r, i) => {
+            if (i >= start && i < end) { r.style.display = ''; this.$refs.items.appendChild(r); }
+        });
+    },
+    sort(col) {
+        if (this.sortBy === col) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+        else { this.sortBy = col; this.sortDir = 'asc'; }
+        this.page = 1; this.apply();
+    },
+    setPage(n) {
+        if (n >= 1 && n <= this.totalPages) { this.page = n; this.apply(); }
+    },
+    get totalPages() {
+        return Math.max(1, Math.ceil(this.visibleCount / this.perPage));
+    },
+    get pageList() {
+        const t = this.totalPages;
+        if (t <= 7) return Array.from({length: t}, (_, i) => i + 1);
+        const p = this.page, r = [1];
+        if (p > 3) r.push('…');
+        for (let i = Math.max(2, p - 1); i <= Math.min(t - 1, p + 1); i++) r.push(i);
+        if (p < t - 2) r.push('…');
+        if (t > 1) r.push(t);
+        return r;
+    },
+
+    findCoupon(id) { return this.couponsData.find(c => c.id === id); },
+
+    openAdd() {
+        this.addTargetType = '{{ shop_enabled == '1' ? 'product' : 'membership' }}';
+        this.addAllowedMembershipIds = []; this.addBlockedMembershipIds = []; this.addMembershipDuration = 'once';
+        this.addCode = ''; this.addPrefix = ''; this.addType = 'percent'; this.addAmount = '';
+        this.addMinOrder = ''; this.addMaxUses = ''; this.addMaxUsesPerEmail = 0; this.addStartsAt = ''; this.addExpiresAt = '';
+        this.addEnabled = true; this.addOnlyUsers = false; this.addFreeShipping = false; this.addAllowedCategoryIds = []; this.addBlockedCategoryIds = [];
+        this.addApplyScope = 'all_eligible';
+        this.addAllowedEmails = '';
+        this.allowedProductIds = []; this.blockedProductIds = [];
+        this.allowedVariationIds = []; this.blockedVariationIds = [];
+        this.allowedSearch = ''; this.blockedSearch = '';
+        this.allProducts = []; this.allProductsTotal = 0;
+        this.addOpen = true;
+        this.$nextTick(() => this.$refs.addCodeInput?.focus());
+    },
+
+    openEdit(id) {
+        const c = this.findCoupon(id);
+        if (!c) return;
+        this.editId = id;
+        this.editTargetType = c.target_type ?? 'product';
+        this.editAllowedMembershipIds = (c.allowed_membership_ids || []).map(id => String(id));
+        this.editBlockedMembershipIds = (c.blocked_membership_ids || []).map(id => String(id));
+        this.editMembershipDuration = c.membership_duration ?? 'once';
+        this.editCode = c.code; this.editPrefix = ''; this.editType = c.type; this.editAmount = String(c.amount);
+        this.editMinOrder = c.min_order != null ? String(c.min_order) : '';
+        this.editMaxUses = c.max_uses != null ? String(c.max_uses) : '';
+        this.editMaxUsesPerEmail = c.max_uses_per_email ?? 0;
+        this.editStartsAt = c.starts_at ?? '';
+        this.editExpiresAt = c.expires_at ?? '';
+        this.editEnabled = c.enabled;
+        this.editOnlyUsers = c.only_users ?? false;
+        this.editFreeShipping = c.free_shipping ?? false;
+        this.editApplyScope = c.apply_scope ?? 'all_eligible';
+        this.editAllowedCategoryIds = (c.allowed_category_ids || []).map(id => String(id));
+        this.editBlockedCategoryIds = (c.blocked_category_ids || []).map(id => String(id));
+        this.allowedProductIds = (c.allowed_product_ids || []).map(id => Number(id));
+        this.blockedProductIds = (c.blocked_product_ids || []).map(id => Number(id));
+        this.allowedVariationIds = (c.allowed_variation_ids || []).map(id => Number(id));
+        this.blockedVariationIds = (c.blocked_variation_ids || []).map(id => Number(id));
+        this.editAllowedEmails = (c.allowed_emails || []).join(', ');
+        this.allowedSearch = ''; this.blockedSearch = '';
+        this.allProducts = []; this.allProductsTotal = 0;
+        this.editOpen = true;
+        this.$nextTick(() => {
+            this.$refs.editCodeInput?.focus();
+            this.loadAllProducts().then(() => this.loadMissingSelectedProducts());
+        });
+    },
+
+    generateCode(target) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        this[target] = Array.from({length: 8}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    },
+
+    async loadMissingSelectedProducts() {
+        while (this.allHasMore) {
+            const loadedIds = this.allProducts.map(p => p.id);
+            const missing = [...this.allowedProductIds, ...this.blockedProductIds]
+                .filter(id => !loadedIds.includes(id));
+            const loadedVariationIds = this.allProducts.flatMap(p => (p.variations || []).map(v => v.id));
+            const missingVariations = [...this.allowedVariationIds, ...this.blockedVariationIds]
+                .filter(id => !loadedVariationIds.includes(id));
+            if (missing.length === 0 && missingVariations.length === 0) break;
+            await this.loadAllProducts();
+        }
+    },
+
+    initProducts() {
+        if (this.allProducts.length === 0 && !this.allProductsLoading) this.loadAllProducts();
+    },
+
+    toggleProduct(list, id) {
+        if (list === 'allowed') {
+            const idx = this.allowedProductIds.indexOf(id);
+            if (idx >= 0) this.allowedProductIds = this.allowedProductIds.filter(i => i !== id);
+            else {
+                this.blockedProductIds = this.blockedProductIds.filter(i => i !== id);
+                this.allowedProductIds = [...this.allowedProductIds, id];
+            }
+        } else {
+            const idx = this.blockedProductIds.indexOf(id);
+            if (idx >= 0) this.blockedProductIds = this.blockedProductIds.filter(i => i !== id);
+            else {
+                this.allowedProductIds = this.allowedProductIds.filter(i => i !== id);
+                this.blockedProductIds = [...this.blockedProductIds, id];
+            }
+        }
+    },
+
+    toggleVariation(list, id) {
+        if (list === 'allowed') {
+            const idx = this.allowedVariationIds.indexOf(id);
+            if (idx >= 0) this.allowedVariationIds = this.allowedVariationIds.filter(i => i !== id);
+            else {
+                this.blockedVariationIds = this.blockedVariationIds.filter(i => i !== id);
+                this.allowedVariationIds = [...this.allowedVariationIds, id];
+            }
+        } else {
+            const idx = this.blockedVariationIds.indexOf(id);
+            if (idx >= 0) this.blockedVariationIds = this.blockedVariationIds.filter(i => i !== id);
+            else {
+                this.allowedVariationIds = this.allowedVariationIds.filter(i => i !== id);
+                this.blockedVariationIds = [...this.blockedVariationIds, id];
+            }
+        }
+    },
+
+    variationLabel(v) {
+        const attrs = v.attributes && typeof v.attributes === 'object' ? Object.values(v.attributes).filter(Boolean).join(' / ') : '';
+        if (attrs) return attrs;
+        return v.sku ? v.sku : '#' + v.id;
+    },
+    variationSub(v) {
+        if (v.sku) {
+            const attrs = v.attributes && typeof v.attributes === 'object' ? Object.values(v.attributes).filter(Boolean).join(' / ') : '';
+            if (attrs) return '(' + v.sku + ')';
+            return '';
+        }
+        return '';
+    },
+    productMatches(p, q) {
+        if (!q) return true;
+        if ((p.name || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q)) return true;
+        for (const v of (p.variations || [])) {
+            const label = this.variationLabel(v).toLowerCase();
+            if (label.includes(q) || (v.sku || '').toLowerCase().includes(q)) return true;
+        }
+        return false;
+    },
+
+    get filteredAllowedProducts() {
+        const q = this.allowedSearch.toLowerCase();
+        return this.allProducts.filter(p =>
+            !this.blockedProductIds.includes(p.id) &&
+            this.productMatches(p, q)
+        );
+    },
+    get filteredBlockedProducts() {
+        const q = this.blockedSearch.toLowerCase();
+        return this.allProducts.filter(p =>
+            !this.allowedProductIds.includes(p.id) &&
+            this.productMatches(p, q)
+        );
+    },
+    get selectedAllowedProducts() {
+        return this.allProducts.filter(p => this.allowedProductIds.includes(p.id));
+    },
+    get selectedBlockedProducts() {
+        return this.allProducts.filter(p => this.blockedProductIds.includes(p.id));
+    },
+    get selectedAllowedVariations() {
+        const out = [];
+        for (const p of this.allProducts) {
+            for (const v of (p.variations || [])) {
+                if (this.allowedVariationIds.includes(v.id)) out.push({parent: p, variation: v});
+            }
+        }
+        return out;
+    },
+    get selectedBlockedVariations() {
+        const out = [];
+        for (const p of this.allProducts) {
+            for (const v of (p.variations || [])) {
+                if (this.blockedVariationIds.includes(v.id)) out.push({parent: p, variation: v});
+            }
+        }
+        return out;
+    },
+
+    async loadAllPlans() {
+        // Guarded by a loaded flag, not list length: with an empty plan list
+        // the x-effect below would otherwise re-trigger the fetch forever.
+        if (this.allPlansLoading || this.allPlansLoaded) return;
+        this.allPlansLoading = true;
+        try {
+            const resp = await fetch(window.APP_BASE_PATH + '/admin/membership/plans/list-json');
+            this.allPlans = await resp.json();
+        } catch (e) {}
+        this.allPlansLoaded = true;
+        this.allPlansLoading = false;
+    },
+
+    togglePlan(list, id) {
+        if (list === 'allowed') {
+            const idx = this.addAllowedMembershipIds.indexOf(String(id));
+            if (idx >= 0) {
+                this.addAllowedMembershipIds = this.addAllowedMembershipIds.filter(i => i !== String(id));
+            } else {
+                this.addBlockedMembershipIds = this.addBlockedMembershipIds.filter(i => i !== String(id));
+                this.addAllowedMembershipIds = [...this.addAllowedMembershipIds, String(id)];
+            }
+        } else {
+            const idx = this.addBlockedMembershipIds.indexOf(String(id));
+            if (idx >= 0) {
+                this.addBlockedMembershipIds = this.addBlockedMembershipIds.filter(i => i !== String(id));
+            } else {
+                this.addAllowedMembershipIds = this.addAllowedMembershipIds.filter(i => i !== String(id));
+                this.addBlockedMembershipIds = [...this.addBlockedMembershipIds, String(id)];
+            }
+        }
+    },
+
+    togglePlanEdit(list, id) {
+        if (list === 'allowed') {
+            const idx = this.editAllowedMembershipIds.indexOf(String(id));
+            if (idx >= 0) {
+                this.editAllowedMembershipIds = this.editAllowedMembershipIds.filter(i => i !== String(id));
+            } else {
+                this.editBlockedMembershipIds = this.editBlockedMembershipIds.filter(i => i !== String(id));
+                this.editAllowedMembershipIds = [...this.editAllowedMembershipIds, String(id)];
+            }
+        } else {
+            const idx = this.editBlockedMembershipIds.indexOf(String(id));
+            if (idx >= 0) {
+                this.editBlockedMembershipIds = this.editBlockedMembershipIds.filter(i => i !== String(id));
+            } else {
+                this.editAllowedMembershipIds = this.editAllowedMembershipIds.filter(i => i !== String(id));
+                this.editBlockedMembershipIds = [...this.editBlockedMembershipIds, String(id)];
+            }
+        }
+    },
+
+    get filteredAllowedPlans() {
+        const q = this.allowedPlanSearch.toLowerCase();
+        return this.allPlans.filter(p =>
+            !this.addBlockedMembershipIds.includes(String(p.id)) &&
+            (!q || p.name.toLowerCase().includes(q))
+        );
+    },
+    get filteredBlockedPlans() {
+        const q = this.blockedPlanSearch.toLowerCase();
+        return this.allPlans.filter(p =>
+            !this.addAllowedMembershipIds.includes(String(p.id)) &&
+            (!q || p.name.toLowerCase().includes(q))
+        );
+    },
+    get selectedAllowedPlans() {
+        return this.allPlans.filter(p => this.addAllowedMembershipIds.includes(String(p.id)));
+    },
+    get selectedBlockedPlans() {
+        return this.allPlans.filter(p => this.addBlockedMembershipIds.includes(String(p.id)));
+    },
+
+    get filteredAllowedPlansEdit() {
+        const q = this.allowedPlanSearch.toLowerCase();
+        return this.allPlans.filter(p =>
+            !this.editBlockedMembershipIds.includes(String(p.id)) &&
+            (!q || p.name.toLowerCase().includes(q))
+        );
+    },
+    get filteredBlockedPlansEdit() {
+        const q = this.blockedPlanSearch.toLowerCase();
+        return this.allPlans.filter(p =>
+            !this.editAllowedMembershipIds.includes(String(p.id)) &&
+            (!q || p.name.toLowerCase().includes(q))
+        );
+    },
+    get selectedAllowedPlansEdit() {
+        return this.allPlans.filter(p => this.editAllowedMembershipIds.includes(String(p.id)));
+    },
+    get selectedBlockedPlansEdit() {
+        return this.allPlans.filter(p => this.editBlockedMembershipIds.includes(String(p.id)));
+    }
+}">
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ __('Coupons') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400"><span x-text="visibleCount"></span> coupon(s)</p>
+    </div>
+    <button type="button" @click="openAdd()" class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        {{ __('New Coupon') }}
+    </button>
+</div>
+
+{% if flash_success %}<div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm">{{ flash_success }}</div>{% endif %}
+{% if flash_error %}<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>{% endif %}
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search(__('Search code, type…')) }}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    {% set allIds = coupons|map(c => c.id) %}
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th(__('Code'), 'code') }}
+                {{ table.th(__('Type'), 'type') }}
+                {{ table.th(__('Discount'), 'amount') }}
+                {{ table.th(__('Min Order'), 'min_order') }}
+                {{ table.th(__('Uses'), 'uses_count') }}
+                {{ table.th(__('Expires'), 'expires_at') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Allowed'), 'allowed', 'left', {defaultHidden: true}) }}
+                {{ table.th(__('Blocked'), 'blocked', 'left', {defaultHidden: true}) }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for c in coupons %}
+            {% set status = c.enabled and c.isValid() ? 'active' : (not c.enabled ? 'disabled' : (c.startsAt and c.startsAt > date() ? 'scheduled' : 'expired')) %}
+            <tr class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-row-id="{{ c.id }}" data-sort="{{ {code: c.code, type: c.type, amount: c.amount, min_order: c.min_order ?? 0, uses_count: c.usesCount, expires_at: c.expires_at ? c.expires_at.format('Y-m-d') : '', status: status, allowed: c.allowedProductIds|length + c.allowedVariationIds|length + c.allowedCategoryIds|length, blocked: c.blockedProductIds|length + c.blockedVariationIds|length + c.blockedCategoryIds|length}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(c.id) }}
+                <td class="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100 dark:text-gray-100"><div class="flex items-center gap-1.5"><button type="button" @click="openEdit({{ c.id }})" class="text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:underline text-left font-medium">{{ c.code }}</button>{% include 'admin/components/_copy_button.twig' with { text: c.code, title: __('Click to copy') } %}</div></td>
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ c.type == 'percent' ? 'Percent (%)' : 'Fixed' }}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100">
+                    {% if c.type == 'percent' %}{{ c.amount }}%{% else %}{{ c.amount|price(current_currency) }}{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ c.minOrder ? c.minOrder|price(current_currency) : '—' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">
+                    <a href="{{ url('/admin/orders?coupon_code=' ~ c.code) }}" class="text-gray-900 dark:text-gray-100 dark:text-gray-300 hover:text-gray-900 dark:text-gray-100 dark:hover:text-white hover:underline">{{ c.usesCount }}</a>{% if c.maxUses %} / {{ c.maxUses }}{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ c.expiresAt ? c.expiresAt.format('Y-m-d') : '—' }}</td>
+                <td class="px-6 py-4">
+                    {% if status == 'active' %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">{{ __('Active') }}</span>
+                    {% elseif status == 'scheduled' %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400">{{ __('Scheduled') }}</span>
+                    {% elseif status == 'disabled' %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __('Disabled') }}</span>
+                    {% else %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">{{ __('Expired') }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% set ap = c.allowedProductIds|length %}{% set av = c.allowedVariationIds|length %}{% set ac = c.allowedCategoryIds|length %}
+                    {% if ap %}<span class="block">{{ __(':count product(s)', {':count': ap}) }}</span>{% endif %}
+                    {% if av %}<span class="block">{{ __(':count variation(s)', {':count': av}) }}</span>{% endif %}
+                    {% if ac %}<span class="block">{{ __(':count category(s)', {':count': ac}) }}</span>{% endif %}
+                    {% if not (ap or av or ac) %}<span class="text-gray-300 dark:text-gray-600">—</span>{% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% set bp = c.blockedProductIds|length %}{% set bv = c.blockedVariationIds|length %}{% set bc = c.blockedCategoryIds|length %}
+                    {% if bp %}<span class="block">{{ __(':count product(s)', {':count': bp}) }}</span>{% endif %}
+                    {% if bv %}<span class="block">{{ __(':count variation(s)', {':count': bv}) }}</span>{% endif %}
+                    {% if bc %}<span class="block">{{ __(':count category(s)', {':count': bc}) }}</span>{% endif %}
+                    {% if not (bp or bv or bc) %}<span class="text-gray-300 dark:text-gray-600">—</span>{% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <button type="button" @click="openEdit({{ c.id }})"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
+                        <form method="POST" action="{{ url('/admin/coupons/' ~ c.id ~ '/delete') }}"
+                              onsubmit="return confirm('{{ __('Delete this coupon?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="11" class="px-6 py-12 text-center text-gray-400">{{ __('No coupons yet.') }} <button type="button" @click="openAdd()" class="text-gray-900 dark:text-gray-100 hover:underline">{{ __('Create one') }}</button>.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'coupons', deleteFormaction: url('/admin/bulk/coupons/delete'), extraActions: [
+    {label: __('Enable'), action: 'enable', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Disable'), action: 'disable', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+]} %}
+
+{# ── Create Modal ── #}
+<template x-if="addOpen">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+         @keydown.escape.window="addOpen = false">
+        <div class="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl" @click.stop>
+            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">New Coupon</h3>
+                <button type="button" @click="addOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+            <form method="POST" action="{{ url('/admin/coupons') }}" class="flex min-h-0 flex-1 flex-col">
+                <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+                {{ csrf_field() }}
+                {% if shop_enabled == '1' and membership_enabled %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Coupon Target</label>
+                    <div class="flex gap-6 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+                        <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
+                            <input type="radio" name="target_type" value="product" x-model="addTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
+                            <span>Products (Shop)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
+                            <input type="radio" name="target_type" value="membership" x-model="addTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
+                            <span>Membership Plans (Subscriptions)</span>
+                        </label>
+                    </div>
+                </div>
+                {% else %}
+                <input type="hidden" name="target_type" :value="addTargetType">
+                {% endif %}
+                <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prefix</label>
+                            <input type="text" x-model="addPrefix" name="prefix"
+                                   style="text-transform:uppercase"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
+                                   placeholder="ABC" maxlength="20">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code <span class="text-red-500">*</span></label>
+                            <div class="flex gap-2">
+                                <input type="text" x-ref="addCodeInput" x-model="addCode" name="code" required
+                                       style="text-transform:uppercase"
+                                       class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
+                                       placeholder="SUMMER20">
+                                <button type="button" @click="generateCode('addCode')"
+                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ Generate</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
+                        <select x-model="addType" name="type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            <option value="percent">Percent (%)</option>
+                            <option value="fixed_cart">Fixed amount</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Value <span class="text-red-500">*</span></label>
+                        <input type="number" x-model="addAmount" name="amount" required min="0" step="0.01"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10">
+                    </div>
+                </div>
+
+                <div x-show="addTargetType === 'product'">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Applies To</label>
+                    <select x-model="addApplyScope" name="apply_scope" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                        <option value="all_eligible">All eligible products</option>
+                        <option value="cheapest">Cheapest eligible product only (1 unit)</option>
+                        <option value="most_expensive">Most expensive eligible product only (1 unit)</option>
+                    </select>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">When products or categories are restricted above, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit's price.</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Order</label>
+                        <input type="number" x-model="addMinOrder" name="min_order" min="0" step="0.01"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = no minimum">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Total Uses</label>
+                        <input type="number" x-model="addMaxUses" name="max_uses" min="1" step="1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = unlimited">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Uses Per Person</label>
+                        <input type="number" x-model="addMaxUsesPerEmail" name="max_uses_per_email" min="0" step="1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="0 = unlimited">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Guests are matched by the billing email they enter at checkout.') }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                        <input type="datetime-local" x-model="addStartsAt" name="starts_at"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiry Date</label>
+                        <input type="datetime-local" x-model="addExpiresAt" name="expires_at"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="enabled" value="">
+                        <input type="checkbox" x-model="addEnabled" name="enabled" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+                    </label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        If a start date is set, coupon will be enabled automatically from that date.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="free_shipping" value="">
+                        <input type="checkbox" x-model="addFreeShipping" name="free_shipping" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-green-600">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Free Shipping</span>
+                    </label>
+                </div>
+
+                <div x-show="addTargetType === 'product'">
+                    {% if categories is not empty %}
+                    <div class="border-t pt-4 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Restrictions</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Allowed Categories <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                                <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                                    {% for cat in categories %}
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" value="{{ cat.id }}" x-model="addAllowedCategoryIds"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                        {{ cat.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Blocked Categories</label>
+                                <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                                    {% for cat in categories %}
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" value="{{ cat.id }}" x-model="addBlockedCategoryIds"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
+                                        {{ cat.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="allowed_category_ids" :value="addAllowedCategoryIds.join(',')">
+                        <input type="hidden" name="blocked_category_ids" :value="addBlockedCategoryIds.join(',')">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {% include 'admin/components/coupon-product-list.twig' with {
+                                list: 'allowed',
+                                label: __('Allowed Products')
+                            } %}
+                            {% include 'admin/components/coupon-product-list.twig' with {
+                                list: 'blocked',
+                                label: __('Blocked Products')
+                            } %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if membership_enabled %}
+                <div x-show="addTargetType === 'membership'" class="border-t pt-4 space-y-4" x-cloak
+                     x-effect="if (addTargetType === 'membership') loadAllPlans()">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Membership Restrictions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                            <input type="text" x-model="allowedPlanSearch"
+                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                            <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
+                                <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
+                                <template x-for="p in filteredAllowedPlans" :key="p.id">
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" :value="p.id"
+                                               :checked="addAllowedMembershipIds.includes(String(p.id))"
+                                               @change="togglePlan('allowed', p.id)"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                        <span x-text="p.name"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                    </label>
+                                </template>
+                                <p x-show="!allPlansLoading && allPlans.length === 0 && !allowedPlanSearch"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
+                                <p x-show="!allPlansLoading && allPlans.length > 0 && filteredAllowedPlans.length === 0"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                            </div>
+                            <input type="hidden" name="allowed_membership_ids" :value="addAllowedMembershipIds.join(',')">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addAllowedMembershipIds.length + ' plan(s) selected'"></p>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedAllowedPlans.length > 0">
+                                <template x-for="p in selectedAllowedPlans" :key="p.id">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        <span x-text="p.name"></span>
+                                        <button type="button" @click="togglePlan('allowed', p.id)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 leading-none">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Blocked Plans</label>
+                            <input type="text" x-model="blockedPlanSearch"
+                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                            <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
+                                <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
+                                <template x-for="p in filteredBlockedPlans" :key="p.id">
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" :value="p.id"
+                                               :checked="addBlockedMembershipIds.includes(String(p.id))"
+                                               @change="togglePlan('blocked', p.id)"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
+                                        <span x-text="p.name"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                    </label>
+                                </template>
+                                <p x-show="!allPlansLoading && allPlans.length === 0 && !blockedPlanSearch"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
+                                <p x-show="!allPlansLoading && allPlans.length > 0 && filteredBlockedPlans.length === 0"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                            </div>
+                            <input type="hidden" name="blocked_membership_ids" :value="addBlockedMembershipIds.join(',')">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addBlockedMembershipIds.length + ' plan(s) selected'"></p>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedBlockedPlans.length > 0">
+                                <template x-for="p in selectedBlockedPlans" :key="p.id">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
+                                        <span x-text="p.name"></span>
+                                        <button type="button" @click="togglePlan('blocked', p.id)" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 leading-none">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Membership Discount Duration</label>
+                        <select name="membership_duration" x-model="addMembershipDuration" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <option value="once">Once (First cycle only)</option>
+                            <option value="forever">Forever (Recurring discount)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div x-show="addTargetType === 'product'">
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="only_users" value="0">
+                        <input type="checkbox" x-model="addOnlyUsers" name="only_users" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Only Registered Users</span>
+                    </label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        When enabled, only logged-in users can use this coupon.
+                    </p>
+                </div>
+
+                <div class="border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Emails <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = anyone)</span></label>
+                    <textarea x-model="addAllowedEmails" name="allowed_emails" rows="3"
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
+                              placeholder="alice@example.com, bob@example.com"></textarea>
+                </div>
+                </div>
+                <div class="vl-modal-actions">
+                    <button type="button" @click="addOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Cancel') }}</button>
+                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">Create Coupon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</template>
+
+{# ── Edit Modal ── #}
+<template x-if="editOpen">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+         @keydown.escape.window="editOpen = false">
+        <div class="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl" @click.stop>
+            <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Coupon</h3>
+                <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+            <form method="POST" :action="'{{ url('/admin/coupons')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col">
+                <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+                {{ csrf_field() }}
+                <input type="hidden" name="_METHOD" value="PUT">
+                {% if shop_enabled == '1' and membership_enabled %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Coupon Target</label>
+                    <div class="flex gap-6 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+                        <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
+                            <input type="radio" name="target_type" value="product" x-model="editTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
+                            <span>Products (Shop)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
+                            <input type="radio" name="target_type" value="membership" x-model="editTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
+                            <span>Membership Plans (Subscriptions)</span>
+                        </label>
+                    </div>
+                </div>
+                {% else %}
+                <input type="hidden" name="target_type" :value="editTargetType">
+                {% endif %}
+                <div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prefix</label>
+                            <input type="text" x-model="editPrefix" name="prefix"
+                                   style="text-transform:uppercase"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
+                                   placeholder="ABC" maxlength="20">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code <span class="text-red-500">*</span></label>
+                            <div class="flex gap-2">
+                                <input type="text" x-ref="editCodeInput" x-model="editCode" name="code" required
+                                       style="text-transform:uppercase"
+                                       class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
+                                       placeholder="SUMMER20">
+                                <button type="button" @click="generateCode('editCode')"
+                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ Generate</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
+                        <select x-model="editType" name="type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            <option value="percent">Percent (%)</option>
+                            <option value="fixed_cart">Fixed amount</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Value <span class="text-red-500">*</span></label>
+                        <input type="number" x-model="editAmount" name="amount" required min="0" step="0.01"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10">
+                    </div>
+                </div>
+
+                <div x-show="editTargetType === 'product'">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Applies To</label>
+                    <select x-model="editApplyScope" name="apply_scope" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                        <option value="all_eligible">All eligible products</option>
+                        <option value="cheapest">Cheapest eligible product only (1 unit)</option>
+                        <option value="most_expensive">Most expensive eligible product only (1 unit)</option>
+                    </select>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">When products or categories are restricted below, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit's price.</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Order</label>
+                        <input type="number" x-model="editMinOrder" name="min_order" min="0" step="0.01"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = no minimum">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Total Uses</label>
+                        <input type="number" x-model="editMaxUses" name="max_uses" min="1" step="1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = unlimited">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Uses Per Email</label>
+                        <input type="number" x-model="editMaxUsesPerEmail" name="max_uses_per_email" min="0" step="1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="0 = unlimited">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Guests are matched by the billing email they enter at checkout.') }}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                        <input type="datetime-local" x-model="editStartsAt" name="starts_at"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiry Date</label>
+                        <input type="datetime-local" x-model="editExpiresAt" name="expires_at"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="enabled" value="">
+                        <input type="checkbox" x-model="editEnabled" name="enabled" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+                    </label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        If a start date is set, coupon will be enabled automatically from that date.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="free_shipping" value="">
+                        <input type="checkbox" x-model="editFreeShipping" name="free_shipping" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-green-600">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Free Shipping</span>
+                    </label>
+                </div>
+
+                <div x-show="editTargetType === 'product'">
+                    {% if categories is not empty %}
+                    <div class="border-t pt-4 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Restrictions</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Allowed Categories <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                                <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                                    {% for cat in categories %}
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" value="{{ cat.id }}" x-model="editAllowedCategoryIds"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                        {{ cat.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Blocked Categories</label>
+                                <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
+                                    {% for cat in categories %}
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" value="{{ cat.id }}" x-model="editBlockedCategoryIds"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
+                                        {{ cat.name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="allowed_category_ids" :value="editAllowedCategoryIds.join(',')">
+                        <input type="hidden" name="blocked_category_ids" :value="editBlockedCategoryIds.join(',')">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {% include 'admin/components/coupon-product-list.twig' with {
+                                list: 'allowed',
+                                label: __('Allowed Products')
+                            } %}
+                            {% include 'admin/components/coupon-product-list.twig' with {
+                                list: 'blocked',
+                                label: __('Blocked Products')
+                            } %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if membership_enabled %}
+                <div x-show="editTargetType === 'membership'" class="border-t pt-4 space-y-4" x-cloak
+                     x-effect="if (editTargetType === 'membership') loadAllPlans()">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Membership Restrictions</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                            <input type="text" x-model="allowedPlanSearch"
+                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                            <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
+                                <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
+                                <template x-for="p in filteredAllowedPlansEdit" :key="p.id">
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" :value="p.id"
+                                               :checked="editAllowedMembershipIds.includes(String(p.id))"
+                                               @change="togglePlanEdit('allowed', p.id)"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                        <span x-text="p.name"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                    </label>
+                                </template>
+                                <p x-show="!allPlansLoading && allPlans.length === 0 && !allowedPlanSearch"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
+                                <p x-show="!allPlansLoading && allPlans.length > 0 && filteredAllowedPlansEdit.length === 0"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                            </div>
+                            <input type="hidden" name="allowed_membership_ids" :value="editAllowedMembershipIds.join(',')">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editAllowedMembershipIds.length + ' plan(s) selected'"></p>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedAllowedPlansEdit.length > 0">
+                                <template x-for="p in selectedAllowedPlansEdit" :key="p.id">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        <span x-text="p.name"></span>
+                                        <button type="button" @click="togglePlanEdit('allowed', p.id)" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 leading-none">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Blocked Plans</label>
+                            <input type="text" x-model="blockedPlanSearch"
+                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                            <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
+                                <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
+                                <template x-for="p in filteredBlockedPlansEdit" :key="p.id">
+                                    <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                        <input type="checkbox" :value="p.id"
+                                               :checked="editBlockedMembershipIds.includes(String(p.id))"
+                                               @change="togglePlanEdit('blocked', p.id)"
+                                               class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
+                                        <span x-text="p.name"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                    </label>
+                                </template>
+                                <p x-show="!allPlansLoading && allPlans.length === 0 && !blockedPlanSearch"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
+                                <p x-show="!allPlansLoading && allPlans.length > 0 && filteredBlockedPlansEdit.length === 0"
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                            </div>
+                            <input type="hidden" name="blocked_membership_ids" :value="editBlockedMembershipIds.join(',')">
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editBlockedMembershipIds.length + ' plan(s) selected'"></p>
+                            <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedBlockedPlansEdit.length > 0">
+                                <template x-for="p in selectedBlockedPlansEdit" :key="p.id">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
+                                        <span x-text="p.name"></span>
+                                        <button type="button" @click="togglePlanEdit('blocked', p.id)" class="text-red-400 hover:text-red-600 dark:hover:text-red-300 leading-none">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Membership Discount Duration</label>
+                        <select name="membership_duration" x-model="editMembershipDuration" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <option value="once">Once (First cycle only)</option>
+                            <option value="forever">Forever (Recurring discount)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div x-show="editTargetType === 'product'">
+                    <label class="flex items-center gap-3">
+                        <input type="hidden" name="only_users" value="0">
+                        <input type="checkbox" x-model="editOnlyUsers" name="only_users" value="1"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Only Registered Users</span>
+                    </label>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        When enabled, only logged-in users can use this coupon.
+                    </p>
+                </div>
+
+                <div class="border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Emails <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = anyone)</span></label>
+                    <textarea x-model="editAllowedEmails" name="allowed_emails" rows="3"
+                              class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
+                              placeholder="alice@example.com, bob@example.com"></textarea>
+                </div>
+                </div>
+                <div class="vl-modal-actions">
+                    <button type="button" @click="editOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Cancel') }}</button>
+                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">Update Coupon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</template>
+</div>
+{% endblock %}
+{% block scripts %}{% endblock %}

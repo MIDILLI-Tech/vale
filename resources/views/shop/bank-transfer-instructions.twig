@@ -1,0 +1,108 @@
+{% extends "layout.twig" %}
+
+{% block meta_description %}{{ __('Complete your payment by bank transfer.') }}{% endblock %}
+
+{% block title %}{{ __('Bank Transfer Instructions') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 py-16 text-center">
+
+    <div class="mb-6 flex items-center justify-center">
+        <div class="rounded-full bg-blue-100 p-4">
+            <svg class="h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+        </div>
+    </div>
+    <h1 class="mb-3 text-3xl font-bold text-gray-900">{{ __('Complete Your Payment by Bank Transfer') }}</h1>
+    <p class="mb-8 text-gray-600">{{ __('To finish your order #:number, please transfer the total amount below to our bank account.', {':number': order.orderNumber}) }}</p>
+
+    {% if just_claimed %}
+    <div class="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm dark:bg-green-900/30 dark:border-green-800 dark:text-green-300">
+        {{ __('Thank you! We have been notified and will confirm your transfer as soon as possible.') }}
+    </div>
+    {% elseif already_claimed %}
+    <div class="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4 text-blue-700 text-sm dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+        {{ __('You have already notified us of your transfer. We will confirm it as soon as possible.') }}
+    </div>
+    {% endif %}
+
+    {% if not banktransfer_iban %}
+    <div class="mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4 text-amber-800 text-sm dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-200">
+        {{ __('Online payment is currently unavailable and bank transfer details are not configured yet. Please contact us to complete your purchase.') }}
+    </div>
+    {% endif %}
+
+    {% if banktransfer_iban %}
+    <div class="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-6 text-left shadow-xs dark:border-yellow-800 dark:bg-yellow-900/30">
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-amber-700 dark:text-yellow-300">{{ __('Bank Transfer Details') }}</h2>
+        <div class="space-y-2 text-sm">
+            {% if banktransfer_bank %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Bank') }}:</span><span class="font-medium text-gray-800 dark:text-gray-100">{{ banktransfer_bank }}</span></div>
+            {% endif %}
+            {% if banktransfer_holder %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Account Holder') }}:</span><span class="font-medium text-gray-800 dark:text-gray-100">{{ banktransfer_holder }}</span></div>
+            {% endif %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('IBAN / Account Number') }}:</span><span class="font-mono font-bold text-gray-900 dark:text-white">{{ banktransfer_iban }}</span></div>
+            {% if banktransfer_swift %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('SWIFT') }}:</span><span class="font-mono font-medium text-gray-800 dark:text-gray-100">{{ banktransfer_swift }}</span></div>
+            {% endif %}
+            {% if banktransfer_routing %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Routing (ABA)') }}:</span><span class="font-mono font-medium text-gray-800 dark:text-gray-100">{{ banktransfer_routing }}</span></div>
+            {% endif %}
+            {% if banktransfer_branch %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Branch') }}:</span><span class="font-medium text-gray-800 dark:text-gray-100">{{ banktransfer_branch }}</span></div>
+            {% endif %}
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Amount') }}:</span><span class="font-bold text-gray-900 dark:text-white">{{ order.total|price(order.currency) }}</span></div>
+            <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Reference / Description') }}:</span><span class="font-mono font-medium text-gray-800 dark:text-gray-100">#{{ order.orderNumber }}</span></div>
+            {% if banktransfer_desc %}
+            <div class="pt-2 border-t border-amber-200 text-gray-600 dark:border-yellow-800 dark:text-gray-300">{{ banktransfer_desc }}</div>
+            {% endif %}
+            <div class="pt-2 border-t border-amber-200 text-xs text-gray-500 dark:border-yellow-800 dark:text-gray-400">
+                {% set due_date = order.createdAt|date('U') + (banktransfer_max_days * 86400) %}
+                {{ __('Please complete your transfer within :days days. Your order will be cancelled if payment is not received by :date.', {':days': banktransfer_max_days, ':date': due_date|date('M j, Y')}) }}
+            </div>
+        </div>
+    </div>
+
+    {% set can_claim = order.status in ['pending', 'on-hold'] %}
+    <div class="mb-8 rounded-xl border bg-white p-6 text-left shadow-xs dark:border-gray-700 dark:bg-gray-900">
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">{{ __('Order Details') }}</h2>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <span class="text-gray-500">{{ __('Order number') }}</span>
+            <span class="font-mono font-medium">#{{ order.orderNumber }}</span>
+
+            <span class="text-gray-500">{{ __('Total') }}</span>
+            <span class="font-bold">{{ order.total|price(order.currency) }}</span>
+
+            {% if order.billing.email %}
+            <span class="text-gray-500">{{ __('Email') }}</span>
+            <span>{{ order.billing.email }}</span>
+            {% endif %}
+        </div>
+
+        {% if can_claim and not just_claimed and not already_claimed %}
+        <form method="POST" action="{{ url('/pay/' ~ order.paymentToken ~ '/claim') }}" class="mt-5 border-t pt-4">
+            {{ csrf_field() }}
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ __('Already sent the transfer? Let us know so we can verify it faster.') }}</p>
+            <button type="submit"
+                    class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white">
+                {{ __("I've Sent the Transfer") }}
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <a href="{{ url(routing_shop_prefix) }}"
+           class="rounded-lg btn-primary px-6 py-3 text-sm font-medium">
+            {{ __('Continue Shopping') }}
+        </a>
+        <a href="{{ url('/') }}"
+           class="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+            {{ __('Go to Homepage') }}
+        </a>
+    </div>
+</div>
+{% endblock %}

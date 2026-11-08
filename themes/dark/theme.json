@@ -1,0 +1,73 @@
+{
+    "name": "Dark",
+    "version": "1.0.0",
+    "description": "Dark theme for Vale — demonstrates how to build a child theme.",
+    "author": "Vale",
+    "license": "MIT",
+    "parent": "default",
+    "menus": {
+        "primary": "Primary Navigation",
+        "footer": "Footer Links",
+        "sidebar": "Sidebar Menu"
+    },
+    "colors": {
+        "header": "gray-800",
+        "gradient": true,
+        "gradient_from": "gray-900",
+        "gradient_to": "gray-700"
+    },
+    "tables": {
+        "border": "#475569",
+        "header_background": "#1e293b"
+    },
+    "color_variables": {
+        "--theme-primary": {
+            "label": "Primary Color",
+            "default": "#818cf8"
+        },
+        "--theme-primary-hover": {
+            "label": "Primary Hover",
+            "default": "#6366f1"
+        },
+        "--theme-secondary": {
+            "label": "Secondary Color",
+            "default": "#374151"
+        },
+        "--theme-secondary-hover": {
+            "label": "Secondary Hover",
+            "default": "#1f2937"
+        },
+        "--theme-bg": {
+            "label": "Background Color",
+            "default": "#030712"
+        },
+        "--theme-surface": {
+            "label": "Card / Container Background",
+            "default": "#1e293b"
+        },
+        "--theme-text": {
+            "label": "Text Color",
+            "default": "#f9fafb"
+        },
+        "--theme-text-muted": {
+            "label": "Muted Text Color",
+            "default": "#94a3b8"
+        },
+        "--theme-nav-bg": {
+            "label": "Navigation Bar Background",
+            "default": "#111827"
+        },
+        "--theme-hero-bg": {
+            "label": "Hero Gradient / Background",
+            "default": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)"
+        },
+        "--theme-accent": {
+            "label": "Accent / Highlight Color",
+            "default": "#38bdf8"
+        },
+        "--theme-border": {
+            "label": "Border / Divider Color",
+            "default": "#334155"
+        }
+    }
+}

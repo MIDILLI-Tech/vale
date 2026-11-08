@@ -1,0 +1,91 @@
+services:
+  # Vale with Apache (PHP mod_php) - Development / Mutable
+  vale-apache:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: apache
+        FLAVOR: mutable
+    container_name: vale-apache
+    ports:
+      - "${APP_PORT_APACHE:-8080}:80"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor        # Prevents host bind-mount from shadowing pre-installed vendor/
+    environment:
+      - APP_ENV=dev
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # Vale with Nginx + PHP-FPM (All-in-one) - Development / Mutable
+  vale-nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: nginx
+        FLAVOR: mutable
+    container_name: vale-nginx
+    ports:
+      - "${APP_PORT_NGINX:-8081}:80"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor        # Prevents host bind-mount from shadowing pre-installed vendor/
+    environment:
+      - APP_ENV=dev
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # MySQL Database (Optional — enable with --profile db, --profile mysql, or --profile db-mysql)
+  db-mysql:
+    profiles: [db, mysql, db-mysql]
+    image: mysql:8.4
+    container_name: vale-db-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-vale}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USER:-vale_user}
+      MYSQL_PASSWORD: ${DB_PASS:-vale_pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - vale-db-mysql-data:/var/lib/mysql
+    networks:
+      - vale-network
+
+  # PostgreSQL Database (Optional — enable with --profile postgresql, --profile postgres, or --profile db-postgres)
+  db-postgres:
+    profiles: [postgres, postgresql, db-postgres, db-postgresql]
+    image: postgres:18-alpine
+    container_name: vale-db-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vale}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - vale-db-postgres-data:/var/lib/postgresql/data
+    networks:
+      - vale-network
+
+networks:
+  vale-network:
+    driver: bridge
+
+volumes:
+  vale-db-mysql-data:
+  vale-db-postgres-data:

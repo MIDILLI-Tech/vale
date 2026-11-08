@@ -1,0 +1,185 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Menus') }}{% endblock %}
+
+{% block content %}
+<div x-data="{
+    open: false,
+    isEdit: false,
+    editId: null,
+    loading: false,
+    menuName: '',
+    menuLocation: '',
+
+    menuLanguage: '{{ current_locale() }}',
+    menuTranslationOf: '',
+    allMenus: JSON.parse('{{ all_menus_json|json_encode|e('html_attr') }}'),
+    // Menu details already fetched this page view — reopening a menu skips the
+    // request (and the loading flash). A save reloads the page, clearing it.
+    menuCache: {},
+
+    get menuRootId() {
+        return this.menuTranslationOf || this.editId || null;
+    },
+    get menuTranslations() {
+        const root = this.menuRootId;
+        if (!root) return [];
+        return this.allMenus.filter(m => String(m.id) === String(root) || String(m.translationOf) === String(root));
+    },
+    addTranslation(code) {
+        const rootId = this.menuRootId;
+        this.openAdd();
+        this.menuLanguage = code;
+        this.menuTranslationOf = rootId || '';
+    },
+
+    closeModal() {
+        if (window._menuFormDirty && !window.confirm('{{ __('You have unsaved changes. Close anyway?')|e('js') }}')) {
+            return;
+        }
+        window._menuFormDirty = false;
+        this.open = false;
+    },
+
+    openAdd() {
+        window._menuFormDirty = false;
+        this.isEdit = false;
+        this.editId = null;
+        this.menuName = '';
+        this.menuLocation = '';
+        this.menuLanguage = '{{ current_locale() }}';
+        this.menuTranslationOf = '';
+        if (window.initLocationDropdown) window.initLocationDropdown('');
+        document.getElementById('items-container').innerHTML = '';
+        if (typeof buildPreview === 'function') buildPreview();
+        this.open = true;
+    },
+
+    openEdit(id) {
+        window._menuFormDirty = false;
+        this.isEdit = true;
+        this.editId = id;
+        this.menuName = '';
+        this.menuLocation = '';
+        this.menuLanguage = '{{ current_locale() }}';
+        this.menuTranslationOf = '';
+        this.open = true;
+        document.getElementById('items-container').innerHTML = '';
+        if (typeof buildPreview === 'function') buildPreview();
+
+        const cached = this.menuCache[String(id)];
+        if (cached) {
+            this.loading = false;
+            this.applyMenuDetail(cached);
+            return;
+        }
+
+        this.loading = true;
+        fetch((window.APP_BASE_PATH || '') + '/admin/menus/' + id + '/json')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                this.menuCache[String(id)] = data;
+                if (String(this.editId) !== String(id)) return;
+                this.applyMenuDetail(data);
+            }.bind(this))
+            .catch(function(err) {
+                if (String(this.editId) !== String(id)) return;
+                alert('Failed to load menu details.');
+                this.open = false;
+            }.bind(this));
+    },
+
+    applyMenuDetail(data) {
+        this.menuName = data.menu.name;
+        this.menuLocation = data.menu.location || '';
+        this.menuLanguage = data.menu.language || 'en';
+        this.menuTranslationOf = data.menu.translationOf || '';
+        if (window.initLocationDropdown) window.initLocationDropdown(this.menuLocation);
+        if (data.items && data.items.length > 0) {
+            data.items.forEach(function(item) {
+                addMenuItem(item);
+            });
+            if (typeof resolveParentIds === 'function') resolveParentIds();
+        }
+        this.loading = false;
+    }
+}">
+
+{% if flash_success %}<div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm">{{ flash_success }}</div>{% endif %}
+{% if flash_error %}<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>{% endif %}
+
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Menus') }}</h1>
+    <button type="button" @click="openAdd()"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Add Menu') }}
+    </button>
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Name') }}</th>
+                {% if multi_language_content %}
+                <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Lang') }}</th>
+                {% endif %}
+                <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Location') }}</th>
+                <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ __('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for menu in menus %}
+            <tr>
+                <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                    <button type="button" @click="openEdit({{ menu.id }})" class="text-gray-900 dark:text-gray-100 hover:underline text-left font-medium">{{ menu.name }}</button>
+                </td>
+                {% if multi_language_content %}
+                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 uppercase ring-1 ring-inset ring-gray-500/10 dark:bg-gray-800 dark:text-gray-300">{{ menu.language }}</span>
+                </td>
+                {% endif %}
+                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+                    {% if menu.location %}
+                        {% if defined_menus[menu.location] is defined %}
+                            <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                {{ defined_menus[menu.location] }}
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-700/10" title="{{ __('This location is missing in the current theme.') }}">
+                                {{ menu.location }} ({{ __('missing') }})
+                            </span>
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <button type="button" @click="openEdit({{ menu.id }})"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
+                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '/clone') }}">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:bg-gray-800/50 dark:text-gray-400">Clone</button>
+                        </form>
+                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="{{ multi_language_content ? 4 : 3 }}" class="px-4 py-8 text-center text-gray-400">{{ __('No menus yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'admin/menus/form_modal.twig' %}
+</div>
+{% endblock %}

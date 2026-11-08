@@ -1,0 +1,60 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Upload Theme') }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-xl">
+    <div class="mb-6 flex items-center gap-4">
+        <a href="{{ url('/admin/themes') }}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+        </a>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Upload Theme') }}</h1>
+    </div>
+
+    <form method="post" action="{{ url('/admin/themes/upload') }}" enctype="multipart/form-data"
+          class="space-y-6 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+
+        <div class="space-y-4">
+            <div>
+                <label for="theme_zip" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {{ __('Theme ZIP File') }}
+                </label>
+                <input type="file" name="theme_zip" id="theme_zip" accept=".zip" required
+                       class="block w-full text-sm text-gray-500 dark:text-gray-400
+                              file:mr-4 file:py-2 file:px-4
+                              file:rounded-lg file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-gray-100 file:text-gray-700
+                              file:cursor-pointer
+                              hover:file:bg-gray-200
+                              dark:file:bg-gray-800 dark:file:text-gray-200
+                              cursor-pointer">
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Upload a .zip file containing the theme. It must include a theme.json and a templates/ directory.') }}
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="checkbox" name="overwrite" id="overwrite" value="1"
+                       class="h-4 w-4 rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500 dark:border-gray-700 dark:bg-gray-800">
+                <label for="overwrite" class="text-sm text-gray-700 dark:text-gray-300">
+                    {{ __('Overwrite if theme already exists') }}
+                </label>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t dark:border-gray-800">
+            <a href="{{ url('/admin/themes') }}" class="rounded-lg border px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+                {{ __('Cancel') }}
+            </a>
+            <button type="submit"
+                    class="rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600">
+                {{ __('Upload and Install') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

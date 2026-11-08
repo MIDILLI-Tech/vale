@@ -1,0 +1,1 @@
+{% if value %}<time{% if cls|default('') %} class="{{ cls }}"{% endif %} datetime="{{ value|iso_date }}"{% if show_visitor_timezone|default('1') == '1' %} data-vtz data-vtz-style="{{ style|default('long') }}"{% if withTime|default(false) %} data-vtz-time{% endif %}{% endif %}>{{ value|local_date(style|default('long'), withTime|default(false)) }}</time>{% endif %}

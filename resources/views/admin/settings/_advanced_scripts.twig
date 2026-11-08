@@ -1,0 +1,57 @@
+{# Custom Scripts sub-panel #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="advanced-tab-custom-scripts" class="advanced-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="custom_scripts">
+        <input type="hidden" name="_subtab" value="custom-scripts">
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+            <div class="border-b border-gray-200 dark:border-gray-700 px-5 py-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Inject code into your theme without modifying theme files') }}</h3>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Warning: Only paste code from sources you trust. The code you add here runs on your website and is executed for all visitors. Malicious or incorrect code can break your site, expose sensitive data, or create security vulnerabilities.') }}
+                </p>
+            </div>
+            <div class="p-5 space-y-6">
+                {# Header Scripts #}
+                <div {{ vl.attrs('advanced', __('Header Scripts'), 'custom_header_scripts', 'custom-scripts', __('Custom Scripts'), 'head analytics pixel tracking') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ __('Header Scripts') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ __('Inserted before the </head> tag (e.g., Google Analytics, Meta Pixel)') }}
+                    </p>
+                    <textarea name="custom_header_scripts" rows="6"
+                              class="mt-2 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 font-mono text-sm shadow-xs focus:border-gray-500 focus:ring-gray-500">{{ settings.custom_header_scripts|default('') }}</textarea>
+                </div>
+
+                {# Footer Scripts #}
+                <div {{ vl.attrs('advanced', __('Footer Scripts'), 'custom_footer_scripts', 'custom-scripts', __('Custom Scripts'), 'footer chat tracking scripts') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ __('Footer Scripts') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ __('Inserted before the </body> tag (e.g., live chat, tracking pixels)') }}
+                    </p>
+                    <textarea name="custom_footer_scripts" rows="6"
+                              class="mt-2 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 font-mono text-sm shadow-xs focus:border-gray-500 focus:ring-gray-500">{{ settings.custom_footer_scripts|default('') }}</textarea>
+                </div>
+
+                {# Custom CSS #}
+                <div {{ vl.attrs('advanced', __('Custom CSS'), 'custom_css', 'custom-scripts', __('Custom Scripts'), 'styles css theme override') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ __('Custom CSS') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {{ __('Global styles applied site-wide on top of the active theme') }}
+                    </p>
+                    <textarea name="custom_css" rows="6"
+                              class="mt-2 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 font-mono text-sm shadow-xs focus:border-gray-500 focus:ring-gray-500">{{ settings.custom_css|default('') }}</textarea>
+                </div>
+            </div>
+            </div>
+        </div>
+    </form>
+</div>

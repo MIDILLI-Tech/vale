@@ -1,0 +1,55 @@
+{# Privacy › GDPR & Data Portability #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="privacy-tab-gdpr" class="privacy-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="privacy">
+        <input type="hidden" name="_subtab" value="gdpr">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('GDPR & Data Portability') }}</p>
+        <div {{ vl.attrs('privacy', __('Enable users to download their own data'), 'gdpr_download_enabled', 'gdpr', __('GDPR & Data Portability'), 'gdpr export download data') }}>
+            <div class="flex items-center gap-2">
+                <input type="hidden" name="gdpr_download_enabled" value="0">
+                <input type="checkbox" name="gdpr_download_enabled" id="gdpr_download_enabled" value="1" {{ settings.gdpr_download_enabled|default('0') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-900">
+                <label for="gdpr_download_enabled" class="text-sm font-medium text-gray-700">{{ __('Enable users to download their own data') }}</label>
+            </div>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, users will see a "Download Data" option in their account settings.') }}</p>
+        </div>
+
+        <div {{ vl.attrs('privacy', __('Enable users to delete their own accounts'), 'gdpr_account_deletion_enabled', 'gdpr', __('GDPR & Data Portability'), 'gdpr delete account erasure') }}>
+            <div class="flex items-center gap-2">
+                <input type="hidden" name="gdpr_account_deletion_enabled" value="0">
+                <input type="checkbox" name="gdpr_account_deletion_enabled" id="gdpr_account_deletion_enabled" value="1" {{ settings.gdpr_account_deletion_enabled|default('1') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-900">
+                <label for="gdpr_account_deletion_enabled" class="text-sm font-medium text-gray-700">{{ __('Enable users to delete their own accounts') }}</label>
+            </div>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, users will see a "Delete My Account" option in their account settings. The account and personal data will be anonymized.') }}</p>
+        </div>
+
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p class="text-sm text-blue-800">
+                {{ __('Pageview log retention is configured in') }}
+                <a href="#tab-analytics" class="underline font-medium text-blue-800 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-200">{{ __('Analytics → Data Retention') }}</a>.
+            </p>
+        </div>
+
+    </form>
+
+    <div class="mt-8 space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Administrative Data Export') }}</p>
+        <p class="text-xs text-gray-400">{{ __('Export all known data associated with an email address (orders, newsletter, profile).') }}</p>
+
+        <form action="{{ url('/admin/settings/export-data') }}" method="POST" class="flex gap-2">
+            {{ csrf_field() }}
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 self-center shrink-0">{{ __('Email') }} <span class="text-red-500">*</span></span>
+            <input type="email" name="email" required placeholder="user@example.com"
+                   class="w-full max-w-md rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <button type="submit" class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                {{ __('Export JSON') }}
+            </button>
+        </form>
+    </div>
+
+</div>

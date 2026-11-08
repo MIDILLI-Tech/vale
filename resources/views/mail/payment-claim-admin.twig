@@ -1,0 +1,32 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Payment Claim') }}{{ seo_title_separator }}{{ __('Order #:number', {':number': order.orderNumber}) }}{% endblock %}
+
+{% block body %}
+<h2 style="margin:0 0 16px; font-size:20px; color:{{ email_text }};">{{ __('Customer Claims Bank Transfer Sent') }}</h2>
+
+<p style="margin:0 0 12px; font-size:14px; color:{{ email_text }};">
+    {{ __('The customer marked order #:number as "transfer sent". Verify the payment in your bank account and update the order status.', {':number': order.orderNumber}) }}
+</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+  {% if order.billing.email %}
+  <tr>
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Email') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.email }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<p style="margin-top:24px; font-size:13px; color:{{ email_text_muted }};">
+    {{ __('This notification is informational — the order status has not been changed.') }}
+</p>
+{% endblock %}

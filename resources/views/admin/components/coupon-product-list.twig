@@ -1,0 +1,84 @@
+{# Coupon product restrictions (allowed / blocked) — shared by the add and edit modals. #}
+{% set _is_allowed = list|default('allowed') == 'allowed' %}
+{% set _search = list ~ 'Search' %}
+{% set _filtered = 'filtered' ~ (list|capitalize) ~ 'Products' %}
+{% set _product_ids = list ~ 'ProductIds' %}
+{% set _variation_ids = list ~ 'VariationIds' %}
+{% set _selected_products = 'selected' ~ (list|capitalize) ~ 'Products' %}
+{% set _selected_variations = 'selected' ~ (list|capitalize) ~ 'Variations' %}
+{% set _check_tone = _is_allowed ? 'text-gray-900 dark:text-gray-100' : 'text-red-500' %}
+{% set _chip = _is_allowed
+    ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400' %}
+{% set _chip_btn = _is_allowed
+    ? 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+    : 'text-red-400 hover:text-red-600 dark:hover:text-red-300' %}
+{% set _variation_chip = _is_allowed
+    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400' %}
+{% set _variation_btn = _is_allowed
+    ? 'text-blue-400 hover:text-blue-600 dark:hover:text-blue-300'
+    : 'text-red-400 hover:text-red-600 dark:hover:text-red-300' %}
+<div>
+    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ label }}</label>
+    <input type="text" x-model="{{ _search }}" @input="initProducts()"
+           placeholder="{{ __('Search products…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+    <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
+        <p x-show="allProductsLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
+        <template x-for="p in {{ _filtered }}" :key="p.id">
+            <div class="rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                    <input type="checkbox" :value="p.id"
+                       :checked="{{ _product_ids }}.includes(p.id)"
+                       @change="toggleProduct('{{ list }}', p.id)"
+                       class="rounded-sm border-gray-300 dark:border-gray-700 {{ _check_tone }}">
+                    <span x-text="p.name"></span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.sku ? '('+p.sku+')' : ''"></span>
+                    <span class="ml-auto shrink-0 whitespace-nowrap rounded bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ __('Parent') }}</span>
+                </label>
+                <template x-if="p.variations && p.variations.length">
+                    <div class="ml-6 mt-1 space-y-1 border-l border-gray-200 dark:border-gray-700 pl-2">
+                        <template x-for="v in p.variations" :key="v.id">
+                            <label class="flex items-center gap-2 text-sm dark:text-gray-100">
+                                <input type="checkbox" :value="v.id"
+                                   :checked="{{ _variation_ids }}.includes(v.id)"
+                                   @change="toggleVariation('{{ list }}', v.id)"
+                                   class="rounded-sm border-gray-300 dark:border-gray-700 {{ _check_tone }}">
+                                <span x-text="variationLabel(v)"></span>
+                                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="variationSub(v)"></span>
+                                <span class="ml-auto shrink-0 whitespace-nowrap rounded bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">{{ __('Variation') }}</span>
+                            </label>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </template>
+        <p x-show="!allProductsLoading && allProducts.length === 0 && !{{ _search }}"
+           class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('Search to list products') }}</p>
+        <p x-show="!allProductsLoading && allProducts.length > 0 && {{ _filtered }}.length === 0"
+           class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No products found') }}</p>
+    </div>
+    <button x-show="allHasMore" @click="loadAllProducts()" type="button"
+            class="mt-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
+            x-text="tjs('Show more (:count remaining)', {':count': allProductsTotal - allProducts.length})"></button>
+    <input type="hidden" name="{{ list }}_product_ids" :value="{{ _product_ids }}.join(',')">
+    <input type="hidden" name="{{ list }}_variation_ids" :value="{{ _variation_ids }}.join(',')">
+    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="tjs(':count product(s) selected', {':count': {{ _product_ids }}.length})"></p>
+    <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500" x-show="{{ _variation_ids }}.length > 0" x-text="{{ _variation_ids }}.length + ' variation(s) selected'"></p>
+    <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="{{ _selected_products }}.length > 0">
+        <template x-for="p in {{ _selected_products }}" :key="p.id">
+            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {{ _chip }}">
+                <span x-text="p.name.length > 20 ? p.name.substring(0, 20) + '…' : p.name"></span>
+                <button type="button" @click="toggleProduct('{{ list }}', p.id)" class="{{ _chip_btn }} leading-none">&times;</button>
+            </span>
+        </template>
+    </div>
+    <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="{{ _selected_variations }}.length > 0">
+        <template x-for="row in {{ _selected_variations }}" :key="'v' + row.variation.id">
+            <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {{ _variation_chip }}">
+                <span x-text="(row.parent.name.length > 12 ? row.parent.name.substring(0, 12) + '…' : row.parent.name) + ' / ' + variationLabel(row.variation)"></span>
+                <button type="button" @click="toggleVariation('{{ list }}', row.variation.id)" class="{{ _variation_btn }} leading-none">&times;</button>
+            </span>
+        </template>
+    </div>
+</div>

@@ -1,0 +1,127 @@
+﻿{% extends "layout.twig" %}
+
+{% block title %}{% if archive_type is defined %}{{ archive_entity.name }}{{ seo_title_separator }}{% endif %}{{ __('Blog') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{% if archive_type is defined and archive_entity.description is defined and archive_entity.description %}{{ archive_entity.description }}{% else %}{{ __('Latest articles and updates.') }}{% endif %}{% endblock %}
+{% block meta_robots %}{% if archive_type is defined and seo_noindex_archives == '1' %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
+
+{% block content %}
+{% include 'partials/_fallback_notice.twig' with {entity_label: 'post'} %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+    <div class="lg:grid lg:grid-cols-3 lg:gap-10">
+        {# ── Main content ─────────────────────────────── #}
+        <div class="lg:col-span-2">
+            <header class="mb-10">
+                {% if archive_type is defined and archive_entity is defined %}
+                <h1 class="text-3xl font-bold text-gray-900">
+                    {% if archive_type == 'category' %}{{ __('Category') }}: {{ archive_entity.name }}
+                    {% elseif archive_type == 'tag' %}{{ __('Tag') }}: {{ archive_entity.name }}
+                    {% elseif archive_type == 'custom' %}{{ archive_entity.name }}
+                    {% endif %}
+                </h1>
+                {% if archive_entity.description is defined and archive_entity.description %}
+                <p class="mt-2 text-gray-600">{{ archive_entity.description }}</p>
+                {% endif %}
+                {% elseif search is defined and search %}
+                <h1 class="text-3xl font-bold text-gray-900">{{ __('Search results for') }}: "{{ search }}"</h1>
+                {% else %}
+                <h1 class="text-3xl font-bold text-gray-900">{{ __('Blog') }}</h1>
+                {% endif %}
+            </header>
+
+            {% if posts|length == 0 %}
+            <p class="text-gray-500">{{ __('No posts yet.') }}</p>
+            {% else %}
+            <div class="space-y-10">
+                {% for post in posts %}
+                {% set _ct = type is defined and type and type.slug != 'post' and type.slug != 'page' %}
+                <article class="border-b pb-10 last:border-0">
+                    {% if post.contentType != 'post' and post.contentType != 'page' %}
+                    <a href="{{ url('cpt.show.' ~ post.contentType, {slug: post.slug}) }}" class="group">
+                    {% else %}
+                    <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug ~ '') }}" class="group">
+                    {% endif %}
+                        <h2 class="text-2xl font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">
+                            {{ post.title }}
+                        </h2>
+                    </a>
+
+                    {% if not _ct or 'thumbnail' in type.supports %}
+                    {% set thumb = post.getThumbnail() %}
+                    {% if thumb %}
+                    <div class="mt-3">
+                        <img src="{{ thumb.thumbnail }}" alt="{{ post.title }}" class="rounded-lg border border-gray-200 max-h-48 w-auto object-cover">
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                        {% if post.publishedAt %}
+                        {% include 'partials/_vtime.twig' with {value: post.publishedAt, style: 'long', withTime: show_timestamp_on_posts|default('0') == '1'} %}
+                        {% endif %}
+                        {% if show_modification_date_on_posts|default('0') == '1' and post.updatedAt and post.updatedAt != post.publishedAt %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span>{{ __('Updated') }}: {% include 'partials/_vtime.twig' with {value: post.updatedAt, style: 'long', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                        {% set author = authors[post.authorId]|default(null) %}
+                        {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
+                        <span class="text-gray-300">&middot;</span>
+                        <span>{{ author.name }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% set teaser = post|post_teaser %}
+                    {% if not _ct or 'excerpt' in type.supports %}
+                    {% include 'partials/_post_card_summary.twig' with {teaser: teaser, post: post} %}
+                    {% endif %}
+
+                    {% if post.contentType != 'post' and post.contentType != 'page' %}
+                    <a href="{{ url('cpt.show.' ~ post.contentType, {slug: post.slug}) }}"
+                       class="mt-4 inline-flex items-center text-sm font-medium text-gray-900 hover:text-gray-800">
+                    {% else %}
+                    <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug ~ '') }}"
+                       class="mt-4 inline-flex items-center text-sm font-medium text-gray-900 hover:text-gray-800">
+                    {% endif %}
+                         {{ teaser.label ?? __('Read more') }} &rarr;
+                    </a>
+                </article>
+                {% endfor %}
+            </div>
+
+            {# Pagination #}
+            {% if total_pages > 1 %}
+            {% if archive_type == 'custom' %}
+            {% set base_url = url('cpt.archive.' ~ archive_entity.slug) %}
+            {% else %}
+            {% set base_url = archive_type is defined ? url(archive_type ~ '.archive', {slug: archive_entity.slug}) : url(routing_blog_prefix) %}
+            {% endif %}
+            {% set qs = search is defined and search ? '&search=' ~ search|url_encode : '' %}
+            <nav class="mt-12 flex items-center justify-between">
+                <div>
+                    {% if page > 1 %}
+                    <a href="{{ base_url }}?page={{ page - 1 }}{{ qs }}"
+                       class="rounded-lg border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        &larr; {{ __('Previous') }}
+                    </a>
+                    {% endif %}
+                </div>
+                <span class="text-sm text-gray-500">{{ page }} / {{ total_pages }}</span>
+                <div>
+                    {% if page < total_pages %}
+                    <a href="{{ base_url }}?page={{ page + 1 }}{{ qs }}"
+                       class="rounded-lg border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ __('Next') }} &rarr;
+                    </a>
+                    {% endif %}
+                </div>
+            </nav>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        {# ── Sidebar ──────────────────────────────────── #}
+        <div class="mt-12 lg:mt-0">
+            {% include archive_type == 'custom' ? 'partials/_custom_type_sidebar.twig' : 'partials/_blog_sidebar.twig' %}
+        </div>
+    </div>
+</div>
+{% endblock %}

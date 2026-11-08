@@ -1,0 +1,25 @@
+{% set ff = font_family|default('inter') %}
+{% set preload_map = {
+    'roboto': 'roboto-latin-400-normal.woff2',
+    'open-sans': 'open-sans-latin-400-normal.woff2',
+    'montserrat': 'montserrat-latin-400-normal.woff2',
+} %}
+{% set _skip_preload = preload_font is defined and preload_font is same as(false) %}
+{% if not _skip_preload %}
+{% set preload_font = preload_map[ff]|default('inter-latin-400-normal.woff2') %}
+<link rel="preload" href="{{ base_path }}/assets/build/files/{{ preload_font }}" as="font" type="font/woff2" crossorigin>
+{% endif %}
+{% set load_alt = load_alt_fonts|default(ff in ['roboto', 'open-sans', 'montserrat']) %}
+{% set load_display = load_display_fonts|default(active_theme|default('') == 'vivid' or ff == 'playfair-display') %}
+<link rel="stylesheet" href="{{ asset('assets/build/fonts.css') }}">
+{% if load_alt %}
+<link rel="stylesheet" href="{{ asset('assets/build/fonts-alt.css') }}">
+{% endif %}
+{% if load_display %}
+<link rel="stylesheet" href="{{ asset('assets/build/fonts-display.css') }}">
+{% endif %}
+<link rel="stylesheet" href="{{ asset('assets/build/app.css') }}">
+{% if include_js|default(true) %}
+<script defer src="{{ asset('assets/build/app-vendor.js') }}"></script>
+<script defer src="{{ asset('assets/build/app.js') }}"></script>
+{% endif %}

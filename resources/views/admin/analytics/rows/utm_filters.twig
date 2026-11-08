@@ -1,0 +1,26 @@
+{#
+    Active UTM facet chips.
+
+    Rendered next to the card title in the header (not inside the panel body),
+    so a drill-down reads as part of the card name instead of pushing the panels
+    down. The utm-panel response replaces this markup on every facet change, so
+    the chips always mirror the applied filters.
+#}
+{% import 'admin/analytics/rows/utm_labels.twig' as labels %}
+
+{% if utm_filters is not empty %}
+<div class="flex min-w-0 flex-wrap items-center gap-1.5">
+    <span class="text-[11px] uppercase tracking-wider text-gray-400">{{ __('Filtered by') }}</span>
+    {% for key, value in utm_filters %}
+    <span class="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[11px]">
+        <span class="shrink-0 text-gray-500 dark:text-gray-400">{{ labels.title(key) }}:</span>
+        <span class="truncate font-mono">{{ value == '' ? __('(not set)') : value }}</span>
+        <button type="button" data-vl-utm-clear="{{ key }}"
+                class="shrink-0 cursor-pointer hover:text-blue-900 dark:hover:text-blue-100"
+                aria-label="{{ __('Remove filter')|e('html_attr') }}">✕</button>
+    </span>
+    {% endfor %}
+    <button type="button" data-vl-utm-clear="all"
+            class="ml-1 shrink-0 text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">{{ __('Clear all') }}</button>
+</div>
+{% endif %}

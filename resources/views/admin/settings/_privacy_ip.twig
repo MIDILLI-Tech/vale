@@ -1,0 +1,23 @@
+{# Privacy › IP Privacy #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="privacy-tab-ip-privacy" class="privacy-tab-panel">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="privacy">
+        <input type="hidden" name="_subtab" value="ip-privacy">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('IP Address Privacy') }}</p>
+
+        <div {{ vl.attrs('privacy', __('IP Collection Mode'), 'ip_privacy_mode', 'ip-privacy', __('IP Address Privacy'), 'ip address anonymize mask gdpr') }}>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('IP Collection Mode') }}</label>
+            <select name="ip_privacy_mode" class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                <option value="remove" {{ settings.ip_privacy_mode|default('mask') == 'remove' ? 'selected' }}>{{ __("Don't collect IP addresses") }}</option>
+                <option value="mask" {{ settings.ip_privacy_mode|default('mask') == 'mask' ? 'selected' }}>{{ __('Mask last octet (e.g. 192.168.1.***)') }}</option>
+                <option value="full" {{ settings.ip_privacy_mode|default('mask') == 'full' ? 'selected' }}>{{ __('Store full IP address') }}</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Controls how IP addresses are stored in comments, form submissions, and pageview analytics.') }}</p>
+        </div>
+
+    </form>
+</div>

@@ -1,0 +1,96 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Settings') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Settings') }}</h1>
+    <div class="flex justify-end sm:shrink-0">
+        {{ include('admin/settings/_search.twig') }}
+    </div>
+</div>
+
+{# Tabs #}
+<div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+<nav class="-mb-px flex items-center gap-4 overflow-x-auto" id="settings-tabs" x-data="{
+        isActiveTab(name) {
+            var btn = document.querySelector('.tab-btn[data-tab=' + name + ']');
+            return btn && btn.classList.contains('border-gray-900');
+        },
+        discussionVisible() {
+            return $store.vlFeatures.blog || $store.vlFeatures.cpt;
+        },
+        init() {
+            var self = this;
+            // Fallback: if Discussion is active and both blog+cpt get turned off, go to General.
+            this.$watch('$store.vlFeatures.blog', function() {
+                if (self.isActiveTab('discussion') && !$store.vlFeatures.blog && !$store.vlFeatures.cpt) {
+                    window.vlSettingsNav.activateTab('general');
+                }
+            });
+            this.$watch('$store.vlFeatures.cpt', function() {
+                if (self.isActiveTab('discussion') && !$store.vlFeatures.blog && !$store.vlFeatures.cpt) {
+                    window.vlSettingsNav.activateTab('general');
+                }
+            });
+            this.$watch('$store.vlFeatures.shop', function(v) {
+                if (!v && self.isActiveTab('ecommerce')) window.vlSettingsNav.activateTab('general');
+            });
+            this.$watch('$store.vlFeatures.registration', function(v) {
+                if (!v && self.isActiveTab('registration')) window.vlSettingsNav.activateTab('general');
+            });
+            this.$watch('$store.vlFeatures.seo', function(v) {
+                if (!v && self.isActiveTab('seo')) window.vlSettingsNav.activateTab('general');
+            });
+            this.$watch('$store.vlFeatures.analytics', function(v) {
+                if (!v && self.isActiveTab('analytics')) window.vlSettingsNav.activateTab('general');
+            });
+        }
+    }">
+        <button type="button" data-tab="general" class="tab-btn border-b-2 border-gray-900 pb-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('General') }}</button>
+        <button type="button" data-tab="content" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Content') }}</button>
+        <button type="button" data-tab="discussion" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="discussionVisible()" x-cloak>{{ __('Discussion') }}</button>
+        <button type="button" data-tab="ecommerce" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.shop" x-cloak>{{ __('E-Commerce') }}</button>
+        <button type="button" data-tab="registration" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.registration" x-cloak>{{ __('Registration') }}</button>
+        <button type="button" data-tab="seo" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.seo" x-cloak>SEO</button>
+        <button type="button" data-tab="mail" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Mail') }}</button>
+        <button type="button" data-tab="privacy" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Privacy & Security') }}</button>
+        <button type="button" data-tab="analytics" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.analytics" x-cloak>{{ __('Analytics') }}</button>
+        <span class="self-center pb-2 text-gray-300 dark:text-gray-600 select-none">|</span>
+        <button type="button" data-tab="maintenance" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Maintenance') }}</button>
+        <button type="button" data-tab="advanced" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Advanced') }}</button>
+    </nav>
+</div>
+
+{# Bottom padding so the fixed floating save bar never covers the last card (inline style: no CSS rebuild needed) #}
+<div style="padding-bottom:6rem">
+{{ include('admin/settings/_general.twig') }}
+{{ include('admin/settings/_content.twig') }}
+{{ include('admin/settings/_seo.twig') }}
+{{ include('admin/settings/_discussion.twig') }}
+{{ include('admin/settings/_privacy.twig') }}
+{{ include('admin/settings/_analytics.twig') }}
+{{ include('admin/settings/_maintenance.twig') }}
+{{ include('admin/settings/_ecommerce.twig') }}
+{{ include('admin/settings/_mail.twig') }}
+{{ include('admin/settings/_registration.twig') }}
+{{ include('admin/settings/_advanced.twig') }}
+</div>{# /settings-panels #}
+
+{# Floating / sticky save bar — always visible bottom-right, shows active category #}
+<div id="floating-save-bar"
+     class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-gray-200 bg-white/95 p-1.5 pl-3 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+    <div id="floating-save-category" class="text-xs font-medium text-gray-500 dark:text-gray-400">General</div>
+    <button type="button" id="floating-save-btn" title="{{ __('Save (:shortcut)', {':shortcut': 'Ctrl+S / Cmd+S'}) }}"
+            data-title-save="{{ __('Save (:shortcut)', {':shortcut': 'Ctrl+S / Cmd+S'})|e('html_attr') }}"
+            data-title-idle="{{ __('No changed settings to save')|e('html_attr') }}"
+            class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors md:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-700 dark:md:hover:bg-gray-600">
+        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/>
+        </svg>
+        {{ __('Save') }}
+    </button>
+</div>
+
+{{ include('admin/settings/_scripts.twig') }}
+{% endblock %}

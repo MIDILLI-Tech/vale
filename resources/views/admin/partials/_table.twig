@@ -1,0 +1,177 @@
+{#
+ # Alpine.js-driven admin table macros: sortable headers, pagination, per-page selector.
+ # Supports two modes controlled by the dataTable component:
+ #   - Client-side (default): all rows loaded, Alpine handles sort/search/pagination.
+ #   - Server-side (serverSide: true): server delivers one page, Alpine navigates via URL.
+ #
+ # Requires: dataTable Alpine component (registered in layout.twig).
+ # The parent element must have x-data="dataTable({perPage: N, ...})".
+ # The container of sortable rows must have x-ref="items".
+ # Each sortable row must have a data-sort='{"col":"val",...}' attribute.
+ #
+ # Usage:
+ #   {% import "admin/partials/_table.twig" as table %}
+ #   {{ table.th('Title', 'title') }}
+ #   {{ table.th('Created', 'created_at', 'left', {defaultHidden: true}) }}
+ #   {{ table.search('Search…') }}
+ #   {{ table.pagination() }}
+ #   {{ table.columnsToggle() }}
+ #
+ # The columnsToggle panel is auto-derived from <thead>: sortable headers use
+ # their sort column as key, static headers use a label slug. The select-all
+ # checkbox column is never listed; the first data column and every
+ # text-right (Actions) column are listed but locked. Pass
+ # {defaultHidden: true} to start a column hidden — the panel lists it
+ # unchecked, and a saved user choice always wins over the default.
+ #}
+
+{# ── Checkbox column header (select all) ───────────────────── #}
+{% macro th_checkbox(allIds) %}
+    {% set ids = allIds|default([])|json_encode|raw %}
+    <th class="w-10 px-4 py-3 text-left">
+        <input type="checkbox" data-bulk-select-all @click="$store.bulk.selectVisible()"
+               :checked="$store.bulk.selectAll || $store.bulk.selectAllVisible"
+               class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
+    </th>
+{% endmacro %}
+
+{# ── Row checkbox ──────────────────────────────────────────── #}
+{% macro td_checkbox(id) %}
+    <td class="w-10 px-4 py-3 whitespace-nowrap">
+        <input type="checkbox" data-bulk-item value="{{ id }}"
+               @click="$store.bulk.toggle({{ id|json_encode|e('html_attr') }})"
+               :checked="$store.bulk.isSelected({{ id|json_encode|e('html_attr') }})"
+               class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
+    </td>
+{% endmacro %}
+
+{# ── Sortable table header (Alpine-driven) ─────────────────── #}
+{# Pass {defaultHidden: true} as 4th arg to start hidden (columnsToggle).
+   Pass {cellClass: 'px-2'} to override the horizontal padding (numeric
+   micro-columns) — the vertical padding stays py-3. #}
+{% macro th(label, column, align, opts) %}
+    <th{% if opts.defaultHidden|default(false) %} data-default-hidden="1"{% endif %} class="{{ opts.cellClass|default('px-6') }} py-3 text-{{ align|default('left') }} text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <button @click="sort('{{ column }}')" type="button"
+                class="group inline-flex items-center gap-1 hover:text-gray-900 dark:text-gray-100"
+                :class="sortBy === '{{ column }}' && 'text-gray-900 dark:text-gray-100 font-semibold'">
+            {{ label }}
+            <span x-show="sortBy === '{{ column }}' && sortDir === 'asc'" x-cloak class="text-gray-400">↑</span>
+            <span x-show="sortBy === '{{ column }}' && sortDir === 'desc'" x-cloak class="text-gray-400">↓</span>
+            <span x-show="sortBy !== '{{ column }}'" class="text-gray-300 opacity-0 group-hover:opacity-100">↕</span>
+        </button>
+    </th>
+{% endmacro %}
+
+{# ── Non-sortable table header ──────────────────────────────── #}
+{% macro th_static(label, align) %}
+    <th class="px-6 py-3 text-{{ align|default('left') }} text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ label }}</th>
+{% endmacro %}
+
+{# ── Search input (works in both client and server modes) ──── #}
+{# Server-side tables show a spinner + overlay while debouncing/navigating #}
+{# via dataTable.isNavigating (see layout.twig). #}
+{% macro search(placeholder) %}
+    <div class="relative w-full max-w-sm">
+        <input type="text" x-model="search" @input.debounce.300ms="page = 1; apply()"
+               placeholder="{{ placeholder|default('Search…') }}"
+               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500 pr-16 dark:bg-gray-800 dark:text-gray-200">
+        <span x-show="serverSide && isNavigating" x-cloak
+              class="pointer-events-none absolute inset-y-0 right-8 flex items-center">
+            <svg class="h-4 w-4 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+        </span>
+        <button type="button" x-show="search" @click="search = ''; page = 1; apply()"
+                x-cloak
+                class="absolute inset-y-0 right-0 flex items-center rounded-full bg-transparent px-3 text-sm text-gray-500 dark:text-gray-400 transition hover:bg-transparent">
+            &times;
+        </button>
+    </div>
+    <div x-show="serverSide && isNavigating" x-cloak
+         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 dark:bg-black/50"
+         aria-hidden="true">
+        <div class="flex items-center gap-2 rounded-lg bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 shadow-lg">
+            <svg class="h-4 w-4 animate-spin text-gray-500 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {{ __('Loading…') }}
+        </div>
+    </div>
+{% endmacro %}
+{# ── "Also search in content" toggle (tables with body/description search) ── #}
+{# Renders inside an x-data="dataTable(...)" scope with searchBody configured. #}
+{% macro contentSearch() %}
+    <label class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400"
+           title="{{ __('Also scans the full text — slower on large catalogs') }}">
+        <input type="checkbox" x-model="searchBody"
+               class="rounded-sm border-gray-300 dark:border-gray-600 accent-gray-900 dark:accent-gray-300">
+        {{ __('Also search in content') }}
+    </label>
+{% endmacro %}
+{# ── Show/hide columns dropdown (auto-derived from <thead>, localStorage) ── #}
+{# No configuration: the dataTable component reads the rendered headers, so the
+    panel works on every table. Renders nothing when all columns are locked. #}
+{% macro columnsToggle() %}
+<template x-if="columns.filter(c => c.panel && !c.locked).length > 0">
+    <div class="relative ml-auto" x-data="{ open: false }"
+         @click.outside="open = false" @keydown.escape.window="open = false">
+        <button type="button" @click="open = !open"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z"/></svg>
+            {{ __('Columns') }}
+            <span class="text-xs text-gray-400" x-text="columns.filter(c => c.panel && !c.locked).length - hiddenCols.length + '/' + columns.filter(c => c.panel && !c.locked).length"></span>
+        </button>
+        <div x-show="open" x-cloak
+             class="absolute right-0 z-40 mt-1 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-1 shadow-lg">
+            <template x-for="c in columns.filter(c => c.panel)" :key="c.key">
+                <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200"
+                       :class="c.locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50'">
+                    <input type="checkbox" :checked="!isColHidden(c.key)" :disabled="c.locked" @change="toggleCol(c.key)"
+                           class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-gray-500 disabled:opacity-50">
+                    <span x-text="c.label"></span>
+                </label>
+            </template>
+            <div class="mt-1 border-t border-gray-200 dark:border-gray-700 pt-1">
+                <button type="button" @click="resetCols()"
+                        class="block w-full px-3 py-1.5 text-left text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100">{{ __('Reset to default') }}</button>
+            </div>
+        </div>
+    </div>
+</template>
+{% endmacro %}
+{# ── Pagination + per-page selector bar (both modes) ───────── #}
+{% macro pagination(per_page_options) %}
+    <div x-show="!serverSide && visibleCount === 0 && allRows.length > 0" x-cloak
+        class="mt-4 rounded-xl border bg-white dark:bg-gray-900 px-6 py-8 text-center text-sm text-gray-400">
+        {{ __('No matching results.') }}
+    </div>
+    {% set opts = per_page_options|default([10, 20, 50, 100]) %}
+    <div class="mt-4 flex items-center justify-between" x-show="serverSide || allRows.length > 0" x-cloak>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500 dark:text-gray-400" x-text="visibleCount + ' total'"></span>
+            <span class="text-gray-300">|</span>
+            <label class="text-sm text-gray-500 dark:text-gray-400">Show</label>
+            <select x-model.number="perPage" @change="page = 1; apply()"
+                    class="min-w-20 rounded-sm border-gray-300 dark:border-gray-700 text-sm py-1 px-2 dark:bg-gray-800 dark:text-gray-200">
+                {% for opt in opts %}
+                <option value="{{ opt }}">{{ opt }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center gap-1" x-show="totalPages > 1">
+            <span class="text-sm text-gray-500 dark:text-gray-400 mr-2" x-text="'Page ' + page + '/' + totalPages"></span>
+            <button @click="setPage(page - 1)" :disabled="page <= 1"
+                    class="rounded-sm border px-2.5 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800/50 disabled:opacity-30">&laquo;</button>
+            <template x-for="(p, idx) in pageList" :key="idx">
+                <button @click="typeof p === 'number' && setPage(p)" x-text="p"
+                        class="rounded-sm px-2.5 py-1 text-sm"
+                        :class="p === page ? 'bg-gray-900 text-white' : (typeof p === 'number' ? 'bg-white dark:bg-gray-900 text-gray-700 hover:bg-gray-100' : 'text-gray-400 cursor-default')"
+                        :disabled="typeof p !== 'number'"></button>
+            </template>
+            <button @click="setPage(page + 1)" :disabled="page >= totalPages"
+                    class="rounded-sm border px-2.5 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800/50 disabled:opacity-30">&raquo;</button>
+        </div>
+    </div>
+{% endmacro %}

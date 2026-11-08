@@ -1,0 +1,212 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Order Confirmation') }}{% endblock %}
+
+{% block head_extra %}
+{% if order_status_url is defined and order_status_url %}
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "Order",
+  "merchant": { "@type": "Organization", "name": {{ site_name|default('Vale')|json_encode|raw }} },
+  "orderNumber": {{ ('#' ~ order.orderNumber)|json_encode|raw }},
+  "priceCurrency": {{ order.currency|json_encode|raw }},
+  "price": {{ order.total|round(2, 'floor')|json_encode|raw }},
+  "potentialAction": {
+    "@type": "ViewAction",
+    "name": {{ __('Track Order')|json_encode|raw }},
+    "url": {{ order_status_url|json_encode|raw }}
+  }
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block body %}
+<h2>{{ __('Order Confirmed!') }}</h2>
+<p>{{ __('Thank you for your order. Here are your order details:') }}</p>
+
+{% if banktransfer_iban is defined and banktransfer_iban %}
+<div style="margin:20px 0; padding:16px; background:#fef3c7; border:1px solid #fde68a; border-radius:8px;">
+  <h3 style="margin:0 0 10px; font-size:15px; color:#92400e;">{{ __('Bank Transfer Details') }}</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:14px;">
+    {% if banktransfer_bank %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Bank') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_bank }}</td></tr>
+    {% endif %}
+    {% if banktransfer_holder %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Account Holder') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_holder }}</td></tr>
+    {% endif %}
+    {% if banktransfer_iban %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('IBAN / Account Number') }}</td><td style="padding:4px 0; font-weight:700; font-family:monospace; color:{{ email_text }};">{{ banktransfer_iban }}</td></tr>
+    {% endif %}
+    {% if banktransfer_swift %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('SWIFT') }}</td><td style="padding:4px 0; font-weight:600; font-family:monospace; color:{{ email_text }};">{{ banktransfer_swift }}</td></tr>
+    {% endif %}
+    {% if banktransfer_routing %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Routing (ABA)') }}</td><td style="padding:4px 0; font-weight:600; font-family:monospace; color:{{ email_text }};">{{ banktransfer_routing }}</td></tr>
+    {% endif %}
+    {% if banktransfer_branch %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Branch') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_branch }}</td></tr>
+    {% endif %}
+  </table>
+  {% if banktransfer_desc %}
+  <p style="margin:8px 0 0; font-size:13px; color:{{ email_text_muted }};">{{ banktransfer_desc }}</p>
+  {% endif %}
+  <p style="margin:8px 0 0; font-size:12px; color:#92400e;">
+    {% set due_date = order.createdAt|date('U') + (banktransfer_max_days * 86400) %}
+    {{ __('Please complete your transfer within :days days. Your order will be cancelled if payment is not received by :date.', {':days': banktransfer_max_days, ':date': due_date|date('M j, Y')}) }}
+  </p>
+</div>
+{% endif %}
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Status') }}</td>
+    <td style="padding:8px 0; font-weight:600; color:#059669; text-transform:capitalize;">{{ order.status ? __(order.status) : '—' }}</td>
+  </tr>
+  {% if refund_request is defined and refund_request.status in ['refund_requested', 'refund_rejected', 'cancelled'] %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Refund Request') }}</td>
+    <td style="padding:8px 0; font-weight:600; text-transform:capitalize;">{{ refund_request.status|replace({'_':' '}) }}</td>
+  </tr>
+  {% if refund_request.reason %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Reason') }}</td>
+    <td style="padding:8px 0;">{{ refund_request.reason }}</td>
+  </tr>
+  {% endif %}
+  {% endif %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+  {% if shipping_estimate is defined and shipping_estimate is not empty and (shipping_estimate.min is not null or shipping_estimate.max is not null) %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Estimated Delivery') }}</td>
+    <td style="padding:8px 0; font-weight:600;">{{ __(':min–:max days', {':min': shipping_estimate.min, ':max': shipping_estimate.max}) }}</td>
+  </tr>
+  {% endif %}
+  {% if order.billing.email %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Email') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.email }}</td>
+  </tr>
+  {% endif %}
+  {% if order.billing.first_name %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Name') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.first_name }} {{ order.billing.last_name }}</td>
+  </tr>
+  {% endif %}
+  {% if order.billing.address %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Address') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.address }}, {{ order.billing.city }} {{ order.billing.postcode }}</td>
+  </tr>
+  {% endif %}
+  {% set sa = order.shippingAddress %}
+  {% if sa is not empty and sa.first_name|default('') != '' %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Shipping') }}</td>
+    <td style="padding:8px 0; font-size:13px;">
+      {{ sa.first_name }} {{ sa.last_name }}<br>
+      {% if sa.company|default('') %}{{ sa.company }}<br>{% endif %}
+      {{ sa.address|default('') }}{% if sa.address_2|default('') %}, {{ sa.address_2 }}{% endif %}<br>
+      {{ sa.city|default('') }}{% if sa.state|default('') %}, {{ sa.state }}{% endif %} {{ sa.postcode|default('') }}<br>
+      {{ sa.country|default('') }}
+    </td>
+  </tr>
+  {% endif %}
+</table>
+
+{% if order.items %}
+<h3 style="margin:24px 0 12px; font-size:16px; color:{{ email_text }};">{{ __('Items') }}</h3>
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:2px solid {{ email_border }};">
+      <th style="padding:8px 0; text-align:left; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Product') }}</th>
+      <th style="padding:8px 0; text-align:center; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Qty') }}</th>
+      <th style="padding:8px 0; text-align:right; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Price') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in order.items %}
+    <tr style="border-bottom:1px solid {{ email_border }};">
+      <td style="padding:8px 0; font-size:14px;">{{ item.name }}</td>
+      <td style="padding:8px 0; text-align:center; font-size:14px;">{{ item.quantity ?? item.qty }}</td>
+      <td style="padding:8px 0; text-align:right; font-size:14px;">{{ (item.price * (item.quantity ?? item.qty))|price(order.currency) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2" style="padding:12px 0; text-align:right; font-weight:700;">{{ __('Total') }}</td>
+      <td style="padding:12px 0; text-align:right; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+    </tr>
+  </tfoot>
+</table>
+{% endif %}
+
+{% if order.customerNote %}
+<p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text_muted }};">
+  <strong>{{ __('Note:') }}</strong> {{ order.customerNote }}
+</p>
+{% endif %}
+
+{% if downloads is defined and downloads|length > 0 %}
+<h3 style="margin:28px 0 12px; font-size:16px; color:{{ email_text }};">{{ __('Downloads') }}</h3>
+<p style="margin:0 0 10px; font-size:13px; color:{{ email_text_muted }};">{{ __('You have :count downloadable file(s) in this order.', {':count': downloads|length}) }}</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-bottom:24px;">
+  {% for dl in downloads %}
+  <tr>
+    <td style="padding:10px 0; border-bottom:1px solid {{ email_border }}; font-size:14px; color:{{ email_text }};">
+      <div style="font-weight:600;">{{ dl.product_name }}</div>
+      <div style="margin-top:3px; font-size:12px; color:{{ email_text_muted }};">
+        {% if dl.download_limit > 0 %}
+          {{ __('Remaining rights: :remaining / :limit', {':remaining': dl.download_limit - dl.download_count, ':limit': dl.download_limit}) }}
+        {% else %}
+          {{ __('Remaining rights: Unlimited') }}
+        {% endif %}
+        {% if dl.expires_at %}
+          &nbsp;•&nbsp; {{ __('Valid until: :date', {':date': dl.expires_at|date('d M Y, H:i')}) }}
+        {% else %}
+          &nbsp;•&nbsp; {{ __('No expiry date') }}
+        {% endif %}
+      </div>
+    </td>
+    <td style="padding:10px 0; border-bottom:1px solid {{ email_border }}; text-align:right;">
+      {% if not dl.revoked and (dl.download_limit == 0 or dl.download_count < dl.download_limit) %}
+      <a href="{{ site_url ~ '/downloads/' ~ dl.token }}" class="btn" style="display:inline-block; padding:6px 14px; font-size:13px;">{{ __('Download') }}</a>
+      {% else %}
+      <span style="color:{{ email_text_muted }}; font-size:13px;">{{ __('Unavailable') }}</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<p style="margin-top:24px;">{{ __('If you have any questions, please reply to this email.') }}</p>
+{% if order_status_url is defined and order_status_url %}
+<p style="margin-top:12px;">
+  <a href="{{ order_status_url }}" class="btn" style="display:inline-block; padding:10px 16px; font-size:14px;">{{ __('Track Order & Refund Status') }}</a>
+</p>
+{% endif %}
+{% if refunds_enabled|default('1') == '1' %}{% set _refundDays = refund_period_days|default(14) %}
+<p style="margin-top:8px; font-size:13px; color:{{ email_text_muted }};">{{ __('Cancellation/refund requests can be submitted within :days days from order date and are reviewed by our team.', {':days': _refundDays}) }}</p>
+{% endif %}
+
+{% if policy_links is defined and policy_links|length > 0 %}
+{% set _policyMailLinks = [] %}
+{% if policy_links.terms is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.terms ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
+{% if policy_links.privacy is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.privacy ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
+{% if policy_links.returns is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.returns ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+<div style="margin-top:24px; padding-top:16px; border-top:1px solid {{ email_border }}; font-size:12px; color:{{ email_text_muted }}; text-align:center;">
+    {{ _policyMailLinks|join('')|raw }}
+</div>
+{% endif %}
+{% endblock %}

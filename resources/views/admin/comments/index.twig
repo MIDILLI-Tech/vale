@@ -1,0 +1,188 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ filters.entity_type|default('') == 'product' ? __('Reviews') : __('Comments') }}{% endblock %}
+
+{% block content %}
+{% set allIds = comments|map(c => c.id) %}
+{% set is_reviews = filters.entity_type|default('') == 'product' %}
+<div x-data="{
+    editOpen: false, editId: null, editAuthorName: '', editAuthorEmail: '', editBody: '', editStatus: '',
+
+    openEdit(id, name, email, body, status) {
+        this.editId = id; this.editAuthorName = name; this.editAuthorEmail = email;
+        this.editBody = body; this.editStatus = status;
+        this.editOpen = true; this.$nextTick(() => this.$refs.editNameInput?.focus());
+    }
+}">
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_reviews ? __('Reviews') : __('Comments') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('total') }}</p>
+    </div>
+</div>
+
+{# Status tabs #}
+<div class="mb-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+    {% set tab_statuses = [['', 'All', counts.all], ['pending', 'Pending', counts.pending], ['approved', 'Approved', counts.approved], ['spam', 'Spam', counts.spam]] %}
+    {% for tab in tab_statuses %}
+    {% set tab_url = url('/admin/comments') ~ (filters.entity_type|default('') ? '?entity_type=' ~ filters.entity_type : '') %}
+    {% set tab_url = tab[0] ? tab_url ~ (filters.entity_type|default('') ? '&' : '?') ~ 'status=' ~ tab[0] : tab_url %}
+    <a href="{{ tab_url }}"
+       class="text-sm font-medium pb-2 -mb-2 border-b-2 {{ filters.status|default('') == tab[0] ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' }}">
+        {{ tab[1] }} <span class="ml-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs dark:text-gray-300">{{ tab[2] }}</span>
+    </a>
+    {% endfor %}
+</div>
+
+{# Entity type filter + search #}
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <form method="get" action="{{ url('/admin/comments') }}" class="flex items-center gap-2">
+        {% if filters.status is defined and filters.status %}<input type="hidden" name="status" value="{{ filters.status }}">{% endif %}
+        <select name="entity_type" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm" onchange="this.form.submit()">
+            <option value="">{{ __('All Types') }}</option>
+            {% for slug, name in entityTypeOptions %}
+                <option value="{{ slug }}" {{ filters.entity_type|default('') == slug ? 'selected' }}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">{{ __('Filter') }}</button>
+    </form>
+    {{ table.search(__('Search') ~ '…') }}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th('Author', 'author_name') }}
+                {{ table.th('On', 'entity_title') }}
+                {{ table.th('Status', 'status') }}
+                {{ table.th('Date', 'created_at') }}
+                {{ table.th_static('Actions', 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for c in comments %}
+            <tr data-row-id="{{ c.id }}" class="{{ c.status == 'pending' ? 'bg-yellow-50' : '' }}" data-sort="{{ {author_name: c.authorName, entity_title: entityTitles[c.entityType][c.entityId]|default(''), status: c.status, created_at: c.createdAt ? c.createdAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(c.id) }}
+                <td class="px-6 py-4">
+                    <button type="button" @click="openEdit({{ c.id }}, '{{ c.authorName|e('js') }}', '{{ c.authorEmail|e('js') }}', '{{ c.body|e('js') }}', '{{ c.status|e('js') }}')" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-gray-600 hover:underline text-left">{{ c.authorName }}</button>
+                    <p class="text-xs text-gray-400">{{ c.authorEmail }}</p>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% set entity_title = entityTitles[c.entityType][c.entityId]|default(null) %}
+                    {% if entity_title %}
+                        {% set edit_url = c.entityType == 'product' ? url('/admin/products/' ~ c.entityId ~ '/edit') : url('/admin/posts/' ~ c.entityId ~ '/edit') %}
+                        <a href="{{ edit_url }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ entity_title }}</a> <span class="text-xs text-gray-400">({{ c.entityType }})</span>
+                        {% if c.parentId and parentComments[c.parentId] is defined %}
+                            <span class="block text-xs text-indigo-600 dark:text-indigo-400">{{ __('Reply to') }}: {{ parentComments[c.parentId].authorName }}</span>
+                        {% endif %}
+                    {% else %}
+                        {{ c.entityType|capitalize }} #{{ c.entityId }}
+                        {% if c.parentId and parentComments[c.parentId] is defined %}
+                            <span class="block text-xs text-indigo-600 dark:text-indigo-400">{{ __('Reply to') }}: {{ parentComments[c.parentId].authorName }}</span>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% set status_colors = {pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', approved: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', spam: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', trash: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ status_colors[c.status]|default('bg-gray-100') }}">
+                        {{ c.status|capitalize }}
+                    </span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-xs text-gray-400">{{ c.createdAt|date('Y-m-d H:i') }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <button type="button" @click="openEdit({{ c.id }}, '{{ c.authorName|e('js') }}', '{{ c.authorEmail|e('js') }}', '{{ c.body|e('js') }}', '{{ c.status|e('js') }}')"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
+                        {% if c.status != 'approved' %}
+                        <form method="POST" action="{{ url('/admin/comments/' ~ c.id ~ '/moderate') }}">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="action" value="approve">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 ring-1 ring-green-300 hover:bg-green-50 dark:text-green-400 dark:ring-green-700 dark:hover:bg-green-900/30">{{ __('Approve') }}</button>
+                        </form>
+                        {% endif %}
+                        {% if c.status != 'spam' %}
+                        <form method="POST" action="{{ url('/admin/comments/' ~ c.id ~ '/moderate') }}">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="action" value="spam">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-orange-700 ring-1 ring-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:ring-orange-700 dark:hover:bg-orange-900/30">{{ __('Spam') }}</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url('/admin/comments/' ~ c.id ~ '') }}" onsubmit="return confirm('{{ __('Delete this comment?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">{{ is_reviews ? __('No reviews found.') : __('No comments found.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'comments', extraActions: [
+    {label: __('Approve'), action: 'approve', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Spam'), action: 'spam', class: 'bg-orange-600/10 text-orange-700 dark:text-orange-400 hover:bg-orange-600/20'},
+    {label: __('Unapprove'), action: 'unapprove', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},
+]} %}
+</div>
+
+{# Edit Modal #}
+<div x-show="editOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="editOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-lg p-6" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit Comment') }}</h3>
+            <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="post" x-bind:action="'{{ url('/admin/comments/COMMENT_ID') }}'.replace('COMMENT_ID', editId)" class="space-y-4">
+            {{ csrf_field() }}
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Author Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" name="author_name" required x-ref="editNameInput" x-model="editAuthorName"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Author Email') }} <span class="text-red-500">*</span></label>
+                <input type="email" name="author_email" required x-model="editAuthorEmail"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Comment') }} <span class="text-red-500">*</span></label>
+                <textarea name="body" required rows="4" x-model="editBody"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Status') }}</label>
+                <select name="status" x-model="editStatus"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                    <option value="pending">{{ __('Pending') }}</option>
+                    <option value="approved">{{ __('Approved') }}</option>
+                    <option value="spam">{{ __('Spam') }}</option>
+                    <option value="trash">{{ __('Trash') }}</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button type="button" @click="editOpen = false"
+                        class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                    {{ __('Cancel') }}
+                </button>
+                <button type="submit"
+                        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    {{ __('Save') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+{% endblock %}

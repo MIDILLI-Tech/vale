@@ -1,0 +1,108 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}Recipients{{ seo_title_separator }}{{ campaign.subject }}{% endblock %}
+
+{% block content %}
+<div x-data="dataTable({perPage: {{ per_page }}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (search|default(''))|e('js') }}', sort: '{{ (sort|default(''))|e('js') }}', dir: '{{ (dir|default('desc'))|e('js') }}'})">
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">&larr; Back to Campaigns</a>
+        <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ campaign.subject }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">
+            <span class="inline-flex items-center gap-1.5">
+                {% set sc = {draft: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400', sent: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400', sending: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400', scheduled: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400', queued: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400', processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400'} %}
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[campaign.status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ campaign.status|capitalize }}</span>
+                {% set t = campaign.trackingEnabled|default(3) %}
+                {% if t b-and 1 or t b-and 2 %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                    {% if t b-and 1 %}Open{% endif %}{% if t == 3 %}&amp;{% endif %}{% if t b-and 2 %}Click{% endif %}
+                </span>
+                {% else %}
+                <span class="inline-flex rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500 dark:text-gray-400">No tracking</span>
+                {% endif %}
+                <span x-text="visibleCount + ' recipients'"></span>
+            </span>
+        </p>
+    </div>
+</div>
+
+{% set opens_pct = campaign.opensCount > 0 and total > 0 ? min(((campaign.opensCount / total) * 100)|round(1), 100) : 0 %}
+{% set clicks_pct = campaign.clicksCount > 0 and total > 0 ? min(((campaign.clicksCount / total) * 100)|round(1), 100) : 0 %}
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search('Search by email or name…') }}
+    {{ table.columnsToggle() }}
+    {% if filter %}
+    <div class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+        {% if filter == 'opened' %}Opened only{% elseif filter == 'clicked' %}Clicked only{% endif %}
+        <a href="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/recipients') }}" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300">&times;</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mb-6 grid grid-cols-3 gap-4">
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Sent</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ total }}</p>
+    </div>
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Opened</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">
+            {% if campaign.opensCount %}
+            <a href="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/recipients?filter=opened') }}" class="hover:underline">{{ campaign.opensCount }}</a>
+            {% else %}
+            0
+            {% endif %}
+            <span class="text-sm font-normal text-gray-500 dark:text-gray-400 dark:text-gray-400">({{ opens_pct }}%)</span>
+        </p>
+    </div>
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Clicked</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">
+            {% if campaign.clicksCount %}
+            <a href="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/recipients?filter=clicked') }}" class="hover:underline">{{ campaign.clicksCount }}</a>
+            {% else %}
+            0
+            {% endif %}
+            <span class="text-sm font-normal text-gray-500 dark:text-gray-400 dark:text-gray-400">({{ clicks_pct }}%)</span>
+        </p>
+    </div>
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th('Email', 'email') }}
+                {{ table.th('Name', 'name') }}
+                {{ table.th_static('Status', 'left') }}
+                {{ table.th('Sent', 'sent_at') }}
+                {{ table.th('Opened', 'opened_at') }}
+                {{ table.th('Clicks', 'clicks_count') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for r in recipients %}
+            <tr class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {email: r.email, name: r.name|default(''), sent_at: r.sent_at ? r.sent_at|date('Y-m-d H:i:s') : '', opened_at: r.opened_at ? r.opened_at|date('Y-m-d H:i:s') : '', clicks_count: r.clicks_count}|json_encode|e('html_attr') }}">
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 dark:text-gray-100">
+                    <a href="{{ url('/admin/newsletter/subscribers') }}?search={{ r.email|url_encode }}" class="hover:underline">{{ r.email }}</a>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.name|default('—') }}</td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% set sc = {active: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400', pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400', unsubscribed: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[r.subscriber_status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ r.subscriber_status|capitalize }}</span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.sent_at ? r.sent_at|date('Y-m-d H:i') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.opened_at ? r.opened_at|date('Y-m-d H:i') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.clicks_count ?: '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">No recipients recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination([50, 100]) }}
+</div>
+{% endblock %}

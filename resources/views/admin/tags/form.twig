@@ -1,0 +1,88 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ __('Tag') : __('Create') ~ ' ' ~ __('Tag') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ is_edit ? __('Edit') ~ ' ' ~ __('Tag') : __('Create') ~ ' ' ~ __('Tag') }}</h1>
+</div>
+
+<form method="post"
+      action="{{ url(is_edit ? '/admin/tags/' ~ tag.id : '/admin/tags') }}"
+      class="max-w-xl space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+
+    <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Name') }} <span class="text-red-500">*</span></label>
+        <input type="text" id="name" name="name"
+               value="{{ old.name|default(tag ? tag.name : '') }}"
+               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:border-gray-700 bg-white dark:bg-gray-900 dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+               required>
+        {% if errors.name is defined %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ errors.name|join(', ') }}</p>{% endif %}
+    </div>
+
+    <div>
+        <label for="slug" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Slug') }}</label>
+        <input type="text" id="slug" name="slug"
+               value="{{ old.slug|default(tag ? tag.slug : '') }}"
+               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:border-gray-700 bg-white dark:bg-gray-900 dark:bg-gray-800 text-gray-900 dark:text-gray-100 dark:text-gray-100 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+               placeholder="{{ __('Auto-generated from name') }}">
+    </div>
+
+    <div class="flex items-center gap-3">
+        <button type="submit"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            {{ is_edit ? __('Update') : __('Create') }}
+        </button>
+        <a href="{{ url('/admin/tags') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">{{ __('Cancel') }}</a>
+    </div>
+</form>
+
+{% if is_edit and posts is not empty %}
+<div class="mt-10" x-data="dataTable({perPage: 10})">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-1">{{ __('Posts using this tag') }}</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 mb-4">{{ posts|length }} {{ __('total') }}</p>
+
+    <div class="mb-4">{{ table.search(__('Search') ~ '…') }}</div>
+
+    <div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800/50 dark:bg-gray-800/50">
+                <tr>
+                    {{ table.th(__('Title'), 'title') }}
+                    {{ table.th(__('Status'), 'status') }}
+                    {{ table.th(__('Date'), 'created_at') }}
+                    {{ table.th_static(__(''), 'right') }}
+                </tr>
+            </thead>
+            <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for p in posts %}
+                <tr class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {title: p.title, status: p.status, created_at: p.createdAt}|json_encode|e('html_attr') }}">
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100">
+                        <a href="{{ url('/admin/posts/' ~ p.id ~ '/edit') }}" class="hover:underline">{{ p.title }}</a>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4">
+                        {% set st = p.status %}
+                        {% set sc = {draft: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400', published: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400', scheduled: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400', unlisted: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400', archived: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400'} %}
+                        <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[st]|default('bg-gray-100 dark:bg-gray-800') }}">{{ st|capitalize }}</span>
+                    </td>
+                    <td class="whitespace-nowrap px-6 py-4 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{{ p.createdAt|date('Y-m-d H:i') }}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-right font-medium">
+                        <a href="{{ url('/admin/posts/' ~ p.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {{ table.pagination() }}
+</div>
+{% elseif is_edit %}
+<div class="mt-10 rounded-xl border bg-white dark:bg-gray-900 p-6 text-center text-sm text-gray-400">
+    {{ __('No posts use this tag yet.') }}
+</div>
+{% endif %}
+{% endblock %}

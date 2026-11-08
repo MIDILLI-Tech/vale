@@ -1,0 +1,28 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ subject }}{% endblock %}
+
+{% block body %}
+<h2 style="margin:0 0 16px; font-size:20px; color:{{ email_text }};">{{ subject }}</h2>
+
+<p style="margin:0 0 12px; font-size:14px; color:{{ email_text }};">
+    {{ __('Hi :name,', {':name': order.billing.first_name|default(__('there'))}) }}
+</p>
+
+<div style="background:{{ email_bg }}; border:1px solid {{ email_border }}; border-radius:8px; padding:16px 20px; margin:16px 0; font-size:14px; color:{{ email_text }}; line-height:1.7; white-space:pre-line;">{{ message }}</div>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+<p style="margin-top:24px; font-size:13px; color:{{ email_text_muted }};">
+    {{ __('If you have any questions about your order, please reply directly to this email.') }}
+</p>
+{% endblock %}

@@ -1,0 +1,181 @@
+{# Privacy › Captcha #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="privacy-tab-captcha" class="privacy-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="privacy">
+        <input type="hidden" name="_subtab" value="captcha">
+
+        {# Captcha API Keys #}
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Captcha API Keys') }}</p>
+            <p class="mb-3 text-xs text-gray-400">{{ __('Captcha type selection is configured per-section: Discussion tab for comments, E-Commerce → Product for reviews, Membership tab for login/register, and Form Editor for custom forms.') }}</p>
+
+            {# hCaptcha #}
+            <div {{ vl.attrs('privacy', 'hCaptcha', 'hcaptcha_site_key', 'captcha', __('Captcha API Keys'), 'hcaptcha captcha site key secret') }} x-data="{ open: false }" class="mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        <span>hCaptcha</span>
+                        {% if captchaConfig.hcaptcha_secret_key %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">✓ {{ __('Configured') }}</span>
+                        {% elseif settings.login_captcha_type == 'hcaptcha' or settings.register_captcha_type == 'hcaptcha' or settings.comment_captcha_type == 'hcaptcha' or settings.review_captcha_type == 'hcaptcha' %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">⚠ {{ __('Used but not configured') }}</span>
+                        {% endif %}
+                    </div>
+                    <svg x-show="open" class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><svg x-show="!open" x-cloak class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div x-show="open" class="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3" x-cloak>
+                    <p class="text-xs text-blue-700">
+                        {{ __('Get your keys at') }}
+                        {% if captcha_urls.hcaptcha.signup_url is defined %}
+                        <a href="{{ captcha_urls.hcaptcha.signup_url }}" target="_blank" rel="noopener" class="underline font-medium">{{ __('hCaptcha Dashboard') }}</a>
+                        {% else %}
+                        <strong>hCaptcha.com → Sites</strong>
+                        {% endif %}
+                    </p>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Site Key') }}</label>
+                        <input type="text" name="hcaptcha_site_key"
+                               value="{{ captchaConfig.hcaptcha_site_key }}"
+                               placeholder="10000000-ffff-ffff-ffff-000000000001"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                    </div>
+
+                    <div class="pt-2">
+                        {{ include('admin/components/_captcha_test_widget.twig', {
+                            type: 'hcaptcha',
+                            site_key: captchaConfig.hcaptcha_site_key,
+                            label: __('Test hCaptcha Rendering & Verification')
+                        }) }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Secret Key') }}</label>
+                        <input type="password" name="hcaptcha_secret_key"
+                               value="{{ captchaConfig.hcaptcha_secret_key }}"
+                               placeholder="0x0000000000000000000000000000000000000000"
+                               autocomplete="new-password"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                        {% if captchaConfig.hcaptcha_secret_key %}
+                        <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret saved. Leave unchanged to keep current value.') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# reCAPTCHA #}
+            <div {{ vl.attrs('privacy', 'Google reCAPTCHA v3', 'recaptcha_site_key', 'captcha', __('Captcha API Keys'), 'recaptcha captcha google v3') }} x-data="{ open: false }" class="mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 text-orange-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        <span>Google reCAPTCHA v3</span>
+                        {% if captchaConfig.recaptcha_secret_key %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">✓ {{ __('Configured') }}</span>
+                        {% elseif settings.login_captcha_type == 'recaptcha' or settings.register_captcha_type == 'recaptcha' or settings.comment_captcha_type == 'recaptcha' or settings.review_captcha_type == 'recaptcha' %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">⚠ {{ __('Used but not configured') }}</span>
+                        {% endif %}
+                    </div>
+                    <svg x-show="open" class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><svg x-show="!open" x-cloak class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div x-show="open" class="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3" x-cloak>
+                    <p class="text-xs text-orange-700">
+                        {{ __('Get your keys at') }}
+                        {% if captcha_urls.recaptcha.signup_url is defined %}
+                        <a href="{{ captcha_urls.recaptcha.signup_url }}" target="_blank" rel="noopener" class="underline font-medium">{{ __('Google reCAPTCHA Admin') }}</a>
+                        {% else %}
+                        <strong>Google reCAPTCHA Admin</strong>
+                        {% endif %}
+                        → reCAPTCHA v3 Admin Console
+                    </p>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Site Key') }}</label>
+                        <input type="text" name="recaptcha_site_key"
+                               value="{{ captchaConfig.recaptcha_site_key }}"
+                               placeholder="6Lc..."
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                    </div>
+
+                    <div class="pt-2">
+                        {{ include('admin/components/_captcha_test_widget.twig', {
+                            type: 'recaptcha',
+                            site_key: captchaConfig.recaptcha_site_key,
+                            label: __('Test reCAPTCHA v3 Verification')
+                        }) }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Secret Key') }}</label>
+                        <input type="password" name="recaptcha_secret_key"
+                               value="{{ captchaConfig.recaptcha_secret_key }}"
+                               placeholder="6Lc..."
+                               autocomplete="new-password"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                        {% if captchaConfig.recaptcha_secret_key %}
+                        <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret saved. Leave unchanged to keep current value.') }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Score Threshold') }}</label>
+                        <input type="number" name="recaptcha_threshold" step="0.1" min="0" max="1"
+                               value="{{ settings.recaptcha_threshold|default('0.5') }}"
+                               class="w-24 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <p class="mt-1 text-[10px] text-gray-400">{{ __('Minimum score (0.0 to 1.0) required to pass. Default is 0.5. Higher is stricter.') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Turnstile #}
+            <div {{ vl.attrs('privacy', 'Cloudflare Turnstile', 'turnstile_site_key', 'captcha', __('Captcha API Keys'), 'turnstile cloudflare captcha') }} x-data="{ open: false }" class="mb-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="open = !open" class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        <span>Cloudflare Turnstile</span>
+                        {% if captchaConfig.turnstile_secret_key %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs text-green-700 dark:text-green-400">✓ {{ __('Configured') }}</span>
+                        {% elseif settings.login_captcha_type == 'turnstile' or settings.register_captcha_type == 'turnstile' or settings.comment_captcha_type == 'turnstile' or settings.review_captcha_type == 'turnstile' %}
+                            <span class="inline-flex items-center gap-0.5 rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs text-red-700 dark:text-red-400">⚠ {{ __('Used but not configured') }}</span>
+                        {% endif %}
+                    </div>
+                    <svg x-show="open" class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><svg x-show="!open" x-cloak class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <div x-show="open" class="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3" x-cloak>
+                    <p class="text-xs text-gray-700">
+                        {{ __('Get your keys at') }}
+                        {% if captcha_urls.turnstile.signup_url is defined %}
+                        <a href="{{ captcha_urls.turnstile.signup_url }}" target="_blank" rel="noopener" class="underline font-medium">{{ __('Cloudflare Dashboard → Turnstile') }}</a>
+                        {% else %}
+                        <strong>Cloudflare Dashboard → Turnstile</strong>
+                        {% endif %}
+                    </p>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Site Key') }}</label>
+                        <input type="text" name="turnstile_site_key"
+                               value="{{ captchaConfig.turnstile_site_key }}"
+                               placeholder="0x4AAAAAAA..."
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                    </div>
+
+                    <div class="pt-2">
+                        {{ include('admin/components/_captcha_test_widget.twig', {
+                            type: 'turnstile',
+                            site_key: captchaConfig.turnstile_site_key,
+                            label: __('Test Turnstile Rendering & Verification')
+                        }) }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">{{ __('Secret Key') }}</label>
+                        <input type="password" name="turnstile_secret_key"
+                               value="{{ captchaConfig.turnstile_secret_key }}"
+                               placeholder="0x4AAAAAAA..."
+                               autocomplete="new-password"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                        {% if captchaConfig.turnstile_secret_key %}
+                        <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret saved. Leave unchanged to keep current value.') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>

@@ -1,0 +1,72 @@
+{# Unified searchable record picker (entityPicker). See layout.twig. #}
+{% set _mode = mode|default('async') %}
+{% set _config = {
+    mode: _mode,
+    name: name|default(''),
+    valueField: value_field|default('id'),
+    endpoint: endpoint|default('/admin/posts/list-json'),
+    itemEndpoint: item_endpoint|default('/admin/posts/:id/json'),
+    params: params|default({}),
+    contentType: content_type|default('page'),
+    excludeId: exclude_id|default(''),
+    initialValue: initial_value|default(''),
+    initialLabel: initial_label|default(''),
+    placeholder: placeholder|default(__('Search…')),
+    emptyLabel: empty_label|default(''),
+    emptyHint: empty_hint|default(''),
+    showEmptyRow: show_empty_row|default(_mode == 'async'),
+    loadingLabel: loading_label|default(__('Loading…')),
+    preloadPerPage: preload_per_page|default(100),
+    options: options|default([]),
+    targetSelector: target_selector|default(''),
+    targetLanguage: target_language|default('')
+} %}
+<div x-data="entityPicker({{ _config|json_encode|e('html') }})"
+     class="vl-entity-select vl-async-page-select relative {{ wrapper_class|default('') }}"
+     :class="{ 'vl-async-select-open': open }"
+     @click.outside="closeDropdown()">
+    <input type="hidden" :name="name" :value="selectedValue"{% if hidden_id|default('') %} id="{{ hidden_id }}"{% endif %}>
+    <div class="relative">
+        <input type="text"
+               :value="query"
+               @focus="onFocus($event)"
+               @click="openDropdown()"
+               @input="onInput($event)"
+               @keydown.escape.prevent="closeDropdown()"
+               @keydown.arrow-down.prevent="open = true; openDropdown()"
+               :placeholder="placeholder"
+               autocomplete="off"
+               role="combobox"
+               :aria-expanded="open"
+               aria-autocomplete="list"
+               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 text-sm pl-3 pr-8 py-2 placeholder:text-gray-400 dark:placeholder:text-gray-500">
+        <button type="button"
+                x-show="selectedValue"
+                @click.prevent="clear()"
+                aria-label="{{ __('Clear')|e('html_attr') }}"
+                class="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
+    </div>
+    <div x-show="open"
+         x-cloak
+         class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg max-h-52 overflow-y-auto">
+        <div x-show="showEmptyRow"
+             @click="selectEmpty()"
+             class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 italic"
+             x-text="emptyLabel"></div>
+        <template x-for="opt in displayOptions" :key="opt.value">
+            <div @click="!opt.disabled && select(opt)"
+                 class="px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                 :class="{
+                    'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700': !opt.disabled,
+                    'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500': opt.disabled,
+                    'bg-gray-50 dark:bg-gray-700 font-medium': !opt.disabled && String(opt.value) === String(selectedValue)
+                 }"
+                 x-text="opt.label"></div>
+        </template>
+        <div x-show="loading" class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1.5">
+            <span class="vl-icon-refresh vl-icon-spin"></span><span x-text="loadingLabel"></span>
+        </div>
+        <div x-show="!loading && displayOptions.length === 0 && (filterTerm !== '' || options.length > 0)"
+             class="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 italic">{{ empty_hint|default(__('No results')) }}</div>
+    </div>
+</div>

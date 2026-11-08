@@ -1,0 +1,22 @@
+{% set entity_label = entity_label|default('content') %}
+
+{% if is_fallback_lang is defined and is_fallback_lang and not (_skip_sticky_fallback is defined and _skip_sticky_fallback) %}
+<div x-data="{ open: true }" x-show="open" x-cloak
+     class="sticky top-0 z-50 bg-blue-50 border-b border-blue-200 py-2.5 px-4 text-center text-sm text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300">
+    <span class="flex items-center justify-center gap-2">
+        <span class="flex-1">
+            {% if has_translation_in_current_locale %}
+                {{ __('This :label is also available in :language.', {':label': entity_label, ':language': locale_name(content_language)}) }}
+                <a href="javascript:void(0)" onclick="setLanguage('{{ content_language }}')" class="underline ml-2 font-medium hover:text-blue-900 dark:hover:text-blue-200">
+                    {{ __('View in :language', {':language': locale_name(content_language)}) }}
+                </a>
+            {% else %}
+                {{ __('This :label is only available in :language.', {':label': entity_label, ':language': locale_name(content_language)}) }}
+            {% endif %}
+        </span>
+        <button @click="open = false" class="ml-2 flex-shrink-0 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200" aria-label="{{ __('Close') }}">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </span>
+</div>
+{% endif %}

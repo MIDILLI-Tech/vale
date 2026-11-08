@@ -1,0 +1,107 @@
+<aside class="space-y-8">
+    {% if 'thumbnail' in type.supports %}
+        {% set thumb = post.getThumbnail() %}
+        {% if thumb %}
+        <div class="rounded-lg border bg-white p-5">
+            <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Featured Image') }}</p>
+            <img src="{{ thumb.thumbnail }}" alt="{{ post.title }}" class="rounded-lg w-full">
+        </div>
+        {% endif %}
+    {% endif %}
+
+    {% if 'author' in type.supports %}
+        {% set author = authors[post.authorId]|default(null) %}
+        {% if author %}
+        <div class="rounded-lg border bg-white p-5">
+            <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Author') }}</p>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                    {{ author.name|slice(0,1)|upper }}
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">{{ author.name }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    {% if 'excerpt' in type.supports and post.excerpt %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Excerpt') }}</p>
+        <p class="text-sm text-gray-600">{{ post.excerpt }}</p>
+    </div>
+    {% endif %}
+
+    {# ── Advertisement: Sidebar ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'sidebar' and advertisement_code %}
+    <div class="vl-ad-sidebar rounded-lg border bg-white p-5 flex justify-center">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# ── Search ─────────────────────────────────────── #}
+    {% set archive_url = url('cpt.archive.' ~ type.slug) %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Search') }}</p>
+        <form action="{{ archive_url }}" method="get" class="flex">
+            <input type="text" name="search" value="{{ search|default('') }}"
+                   placeholder="{{ __('Search…') }}"
+                   class="flex-1 rounded-l-md border-gray-300 text-sm focus:border-gray-600 focus:ring-gray-500">
+            <button type="submit"
+                    aria-label="{{ __('Search') }}"
+                    class="rounded-r-md btn-primary px-3 text-white">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    {% if sidebar_categories is defined and sidebar_categories|length > 0 and 'categories' in type.supports %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Categories') }}</p>
+        <ul class="space-y-2">
+            {% for cat in sidebar_categories %}
+            <li style="padding-left:{{ cat.depth|default(0) * 1 }}rem">
+                <a href="{{ url('cpt.category.' ~ type.slug, {slug: cat.slug}) }}" class="flex items-center justify-between text-sm text-gray-700 hover:text-gray-900">
+                    <span>{% if cat.depth|default(0) > 0 %}<span class="text-gray-400">└ </span>{% endif %}{{ cat.name }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if sidebar_tags is defined and sidebar_tags|length > 0 and 'tags' in type.supports %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Tags') }}</p>
+        <div class="flex flex-wrap gap-2">
+            {% for tag in sidebar_tags %}
+            <a href="{{ url('cpt.tag.' ~ type.slug, {slug: tag.slug}) }}"
+               class="inline-block rounded-full border px-3 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900">
+                {{ tag.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if sidebar_recent_posts is defined and sidebar_recent_posts|length > 0 %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Recent Posts') }}</p>
+        <ul class="space-y-2">
+            {% for rp in sidebar_recent_posts %}
+            <li>
+                <a href="{{ url('cpt.show.' ~ type.slug, {slug: rp.slug}) }}" class="group">
+                    <p class="text-sm font-medium text-gray-900">{{ rp.title }}</p>
+                    {% if rp.publishedAt %}
+                    <p class="text-xs text-gray-500">{% include 'partials/_vtime.twig' with {value: rp.publishedAt, style: 'medium'} %}</p>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</aside>

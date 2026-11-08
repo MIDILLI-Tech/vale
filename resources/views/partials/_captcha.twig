@@ -1,0 +1,38 @@
+<div class="flex flex-col py-2 max-w-full overflow-x-auto w-full bg-white dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800">
+    {% if comment_captcha_type == 'math' %}
+        <div class="w-full">
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ml-1">
+                {{ __('Spam protection') }}: <strong>{{ comment_captcha_question }}</strong> = ?
+                <span class="text-red-500 ml-1">*</span>
+            </label>
+            <input type="number" name="captcha_answer" required min="1" max="18"
+                   class="w-24 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm mx-auto ml-1">
+        </div>
+    {% elseif comment_captcha_type == 'hcaptcha' and comment_captcha_site_key %}
+        <div class="h-captcha max-w-full" data-sitekey="{{ comment_captcha_site_key }}"></div>
+        <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+    {% elseif comment_captcha_type == 'recaptcha' and comment_captcha_site_key %}
+        <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-comment-response">
+        <script src="{{ captcha_urls.recaptcha.script_url }}?render={{ comment_captcha_site_key }}"></script>
+        <script>
+            grecaptcha.ready(function() {
+                try {
+                    grecaptcha.execute('{{ comment_captcha_site_key }}', {action: 'comment'}).then(function(token) {
+                        document.getElementById('g-recaptcha-comment-response').value = token;
+                    }).catch(function(e) {
+                        console.warn('reCAPTCHA execute failed:', e);
+                    });
+                } catch (e) {
+                    console.warn('reCAPTCHA execute failed:', e);
+                }
+            });
+        </script>
+    {% elseif comment_captcha_type == 'turnstile' and comment_captcha_site_key %}
+        <div class="cf-turnstile max-w-full" data-sitekey="{{ comment_captcha_site_key }}" data-theme="auto" data-size="flexible"></div>
+        <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+    {% elseif comment_captcha_type == 'honeypot' %}
+        <div style="display:none"><input type="text" name="_hp_name" tabindex="-1" autocomplete="off"></div>
+    {% elseif comment_captcha_type != 'none' and not comment_captcha_site_key %}
+        <p class="text-xs text-red-500 italic">{{ __('Captcha not configured by administrator.') }}</p>
+    {% endif %}
+</div>

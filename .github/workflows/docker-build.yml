@@ -1,0 +1,67 @@
+name: Build Docker Images (no push)
+
+# Pull-request guard: proves all four Dockerfiles still build when anything
+# they depend on changes. Nothing is pushed and no registry secret is needed.
+
+on:
+  pull_request:
+    paths:
+      - 'docker/**'
+      - '.dockerignore'
+      - '.github/workflows/docker-*.yml'
+      - 'scripts/publish-docker.php'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'public/**'
+      - 'resources/**'
+      - 'routes/**'
+      - 'src/**'
+      - 'themes/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Flavors to build'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - immutable
+          - mutable
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build all four images
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, sodium, curl
+          coverage: none
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build every image (no push)
+        run: |
+          php scripts/publish-docker.php --flavor="${{ inputs.flavor || 'all' }}" --variants=apache,nginx

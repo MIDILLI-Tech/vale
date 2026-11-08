@@ -1,0 +1,60 @@
+{% if multi_page|default(false) and total_pages|default(1) > 1 %}
+<nav class="vl-content-pagination my-8 p-4 rounded-2xl bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 backdrop-blur-xs shadow-xs" aria-label="{{ __('Content pagination') }}">
+    {# Active Page Title Badge #}
+    {% if page_titles[current_page - 1] is defined and page_titles[current_page - 1] %}
+    <div class="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3 text-center sm:text-left">
+        {{ __('Page :current of :total', {':current': current_page, ':total': total_pages}) }} &mdash; {{ page_titles[current_page - 1] }}
+    </div>
+    {% endif %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        {# Prev Page Link #}
+        <div class="flex-1 min-w-[120px]">
+            {% if prev_page %}
+            <a href="{{ page_urls[prev_page] }}" class="btn-primary inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-colors group">
+                <span class="group-hover:-translate-x-0.5 transition-transform">&larr;</span>
+                <span class="truncate max-w-[180px]" title="{{ prev_page_title }}">{{ prev_page_title|default(__('Previous')) }}</span>
+            </a>
+            {% endif %}
+        </div>
+
+        {# Numeric Pagination Bar #}
+        <div class="flex items-center justify-center gap-2 flex-wrap">
+            {% if total_pages <= 7 %}
+                {% for p in 1..total_pages %}
+                    {% if p == current_page %}
+                    <span class="btn-primary inline-flex items-center justify-center min-w-[32px] h-8 px-2.5 rounded-lg text-xs font-bold shadow-xs" aria-current="page">
+                        {{ p }}
+                    </span>
+                    {% else %}
+                    <a href="{{ page_urls[p] }}" class="btn-secondary inline-flex items-center justify-center min-w-[32px] h-8 px-2.5 rounded-lg text-xs font-medium transition-colors" title="{{ page_titles[p-1]|default('Page ' ~ p) }}">
+                        {{ p }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+            <select onchange="if(this.value) window.location.href=this.value"
+                    class="block w-full sm:w-auto sm:min-w-[240px] h-9 px-3 rounded-lg text-xs font-medium cursor-pointer transition-colors border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-500"
+                    title="{{ __('Select page') }}" aria-label="{{ __('Select page') }}">
+                {% for j in 1..total_pages %}
+                {% set _t = page_titles[j-1]|default('Page ' ~ j) %}
+                <option value="{{ page_urls[j] }}" {{ j == current_page ? 'selected' }}>
+                    {{ j }}. {{ _t|length > 48 ? _t|slice(0, 48) ~ '…' : _t }}
+                </option>
+                {% endfor %}
+            </select>
+            {% endif %}
+        </div>
+
+        {# Next Page Link #}
+        <div class="flex-1 min-w-[120px] text-right max-sm:text-left">
+            {% if next_page %}
+            <a href="{{ page_urls[next_page] }}" class="btn-primary inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-colors group">
+                <span class="truncate max-w-[180px]" title="{{ next_page_title }}">{{ next_page_title|default(__('Next')) }}</span>
+                <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+{% endif %}

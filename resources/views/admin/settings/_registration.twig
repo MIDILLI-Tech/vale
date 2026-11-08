@@ -1,0 +1,302 @@
+{# Registration #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="tab-registration" class="tab-panel hidden" x-data="{
+    registrationEnabled: $store.vlFeatures.registration,
+    ssoRegEnabled: {{ settings.sso_registration_enabled|default('0') == '1' ? 'true' : 'false' }},
+    ssoLoginEnabled: {{ settings.sso_login_enabled|default('0') == '1' ? 'true' : 'false' }},
+    emailRegEnabled: {{ settings.email_registration_enabled|default('1') == '1' ? 'true' : 'false' }},
+    twoFactorEnabled: {{ settings.two_factor_enabled_global|default('0') == '1' ? 'true' : 'false' }},
+    ssoRegProviders: {
+        {% for key, info in sso_providers %}
+        '{{ key }}': {{ attribute(settings, 'sso_reg_provider_' ~ key)|default('0') == '1' ? 'true' : 'false' }}{{ loop.last ? '' : ',' }}
+        {% endfor %}
+    },
+    get noMethodSelected() {
+        return this.registrationEnabled && !this.emailRegEnabled && !this.ssoRegEnabled;
+    },
+    get noRegProviderSelected() {
+        return this.ssoRegEnabled && Object.values(this.ssoRegProviders).every(v => !v);
+    },
+    init() {
+        this.$watch('ssoRegEnabled', val => {
+            if (val) this.ssoLoginEnabled = true;
+        });
+    }
+}">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="registration">
+
+        {# ── Default Role ── #}
+        <div {{ vl.attrs('registration', __('Default role for new users'), 'registration_default_role', '', __('Registration'), 'role default subscriber') }} class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Default role for new users') }}</label>
+            <select name="registration_default_role" class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                {% for role in roles %}
+                    <option value="{{ role.slug }}" {{ (settings.registration_default_role|default('subscriber')) == role.slug ? 'selected' }}>
+                        {{ role.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# ⚠ Warning: no method selected #}
+        <div x-show="noMethodSelected" x-cloak
+             class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-center gap-2">
+            <span>⚠</span>
+            <span>{{ __('Registration is enabled but no method is selected. Select at least email registration or SSO registration.') }}</span>
+        </div>
+
+        <div :class="!registrationEnabled && 'opacity-50 pointer-events-none'" class="rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3 transition-all duration-300">
+            <p class="text-xs font-semibold text-gray-600">{{ __('Registration Methods') }}</p>
+            <label class="flex items-center gap-3" {{ vl.attrs('registration', __('Email registration'), 'email_registration_enabled', '', __('Registration Methods'), 'email password signup') }}>
+                <input type="hidden" name="email_registration_enabled" value="0">
+                <input type="checkbox" name="email_registration_enabled" value="1"
+                       {{ settings.email_registration_enabled|default('1') == '1' ? 'checked' }}
+                       x-model="emailRegEnabled"
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Email registration') }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{ __('Allow users to register with email and password.') }}</span>
+                </span>
+            </label>
+            <div x-show="emailRegEnabled" x-cloak class="ml-7 border-l-2 border-gray-200 pl-4 py-1 space-y-3">
+                <label class="flex items-center gap-3" {{ vl.attrs('registration', __('Send confirmation email'), 'registration_verify_email', '', __('Registration Methods'), 'verify email confirmation') }}>
+                    <input type="hidden" name="registration_verify_email" value="0">
+                    <input type="checkbox" name="registration_verify_email" value="1"
+                           {{ settings.registration_verify_email|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700">{{ __('Send confirmation email') }}</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">{{ __('When enabled, users must verify their email address before they can log in.') }}</span>
+                    </span>
+                </label>
+            </div>
+            <label class="flex items-center gap-3" {{ vl.attrs('registration', __('SSO registration'), 'sso_registration_enabled', '', __('Registration Methods'), 'social oauth signup') }}>
+                <input type="hidden" name="sso_registration_enabled" value="0">
+                <input type="checkbox" name="sso_registration_enabled" value="1"
+                       {{ settings.sso_registration_enabled|default('0') == '1' ? 'checked' }}
+                       x-model="ssoRegEnabled"
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('SSO registration') }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{ __('Allow users to register using their social accounts.') }}</span>
+                </span>
+            </label>
+
+            {# ⚠ Warning: SSO registration enabled but no provider selected #}
+            <div x-show="noRegProviderSelected" x-cloak
+                 class="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-center gap-2">
+                <span>⚠</span>
+                <span>{{ __('SSO registration is enabled but no provider is selected below. Select at least one provider.') }}</span>
+            </div>
+
+            {# ── SSO Registration Providers ── #}
+            <div x-show="ssoRegEnabled" x-cloak class="border-t pt-3 space-y-3">
+                <p class="text-xs font-semibold text-gray-600">{{ __('SSO Providers for Registration') }}</p>
+                <p class="text-xs text-gray-400">{{ __('Select which providers are available for SSO registration.') }}</p>
+                <div class="space-y-3">
+                    {% for key, info in sso_providers %}
+                    {% set has_client_id = attribute(settings, 'sso_' ~ key ~ '_client_id')|default('') != '' %}
+                    {% set has_secret = attribute(settings, 'sso_' ~ key ~ '_client_secret')|default('') != '' %}
+                    {% if key == 'steam' %}
+                        {% set is_configured = settings.steam_api_key|default('') != '' %}
+                    {% else %}
+                        {% set is_configured = has_client_id and has_secret %}
+                    {% endif %}
+                    <div x-data="{ open: false }" class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                        <div class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer" @click="open = !open">
+                            <label class="flex items-center gap-2 cursor-pointer" @click.stop>
+                                <input type="hidden" name="sso_reg_provider_{{ key }}" value="0">
+                                <input type="checkbox" name="sso_reg_provider_{{ key }}" value="1"
+                                       {{ attribute(settings, 'sso_reg_provider_' ~ key)|default('0') == '1' ? 'checked' }}
+                                       x-model="ssoRegProviders['{{ key }}']"
+                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ info.label }}</span>
+                                {% if is_configured %}
+                                    <span class="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                                        {{ __('Configured') }}
+                                    </span>
+                                {% endif %}
+                            </label>
+                            <button type="button" @click="open = !open" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                                <svg x-show="open" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><svg x-show="!open" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                        <div x-show="open" x-cloak
+                             class="border-t border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                            {% if key == 'steam' %}
+                            {# Steam uses OpenID — no OAuth client credentials needed, only optional Web API key #}
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Steam Web API Key</label>
+                                <input type="text" name="steam_api_key"
+                                       value="{{ settings.steam_api_key|default('') }}"
+                                       placeholder="Get key at https://steamcommunity.com/dev"
+                                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                <p class="mt-1 text-xs text-gray-400">{{ __('Optional — used to fetch player name and avatar. Without it, users will see "Steam User".') }}</p>
+                            </div>
+                            <div class="text-xs text-gray-400 font-mono">
+                                <span class="text-gray-500">{{ __('Callback URL') }}:</span> {{ site_url }}/auth/sso/callback/{{ key }}
+                            </div>
+                            {% else %}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Client ID</label>
+                                    <input type="text" name="sso_{{ key }}_client_id"
+                                           value="{{ attribute(settings, 'sso_' ~ key ~ '_client_id')|default('') }}"
+                                           placeholder="{{ info.label }} Client ID"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Client Secret</label>
+                                    <input type="password" name="sso_{{ key }}_client_secret"
+                                           value="{{ has_secret ? '••••••••' : '' }}"
+                                           autocomplete="new-password"
+                                           placeholder="{{ has_secret ? '••••••••' : info.label ~ ' Client Secret' }}"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-400 font-mono">
+                                <span class="text-gray-500">{{ __('Callback URL') }}:</span> {{ site_url }}/auth/sso/callback/{{ key }}
+                            </div>
+                            {% endif %}
+                            {% if info.signup_url is defined %}
+                            <div class="pt-1">
+                                <a href="{{ info.signup_url }}" target="_blank" rel="noopener"
+                                   class="text-xs text-gray-500 hover:text-gray-700 underline">
+                                    {{ __('Get :provider SSO credentials', {':provider': info.label}) }}
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# ── Login ── #}
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Login') }}</p>
+
+        <div {{ vl.attrs('registration', __('Enable SSO login'), 'sso_login_enabled', '', __('Login'), 'social oauth login') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="sso_login_enabled" value="0">
+                <input type="checkbox" name="sso_login_enabled" value="1"
+                       {{ settings.sso_login_enabled|default('0') == '1' ? 'checked' }}
+                       x-model="ssoLoginEnabled"
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Enable SSO login') }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{ __('Show social login buttons on the sign-in page. Uses the SSO providers selected for registration above.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        {# ── Captcha ── #}
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Captcha') }}</p>
+        <div class="space-y-4">
+            <div {{ vl.attrs('registration', __('Login Captcha'), 'login_captcha_type', '', __('Captcha'), 'recaptcha captcha hcaptcha turnstile login') }} x-data="{
+                type: '{{ settings.login_captcha_type|default('none') }}',
+                config: {
+                    hcaptcha: {{ captchaConfig.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    recaptcha: {{ captchaConfig.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    turnstile: {{ captchaConfig.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                }
+            }">
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Login Captcha') }}</label>
+                <select name="login_captcha_type" x-model="type"
+                        class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="none"      {{ settings.login_captcha_type|default('none') == 'none'       ? 'selected' }}>{{ __('None') }}</option>
+                    <option value="math"      {{ settings.login_captcha_type|default('none') == 'math'       ? 'selected' }}>{{ __('Math question (simple, no API key)') }}</option>
+                    <option value="hcaptcha"  {{ settings.login_captcha_type|default('none') == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
+                    <option value="recaptcha" {{ settings.login_captcha_type|default('none') == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
+                    <option value="turnstile" {{ settings.login_captcha_type|default('none') == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
+                    <option value="honeypot"  {{ settings.login_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                </select>
+                <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
+                   class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
+                    ⚠ {{ __('This captcha is not configured in Privacy settings.') }}
+                </p>
+            </div>
+            <div {{ vl.attrs('registration', __('Registration Captcha'), 'register_captcha_type', '', __('Captcha'), 'recaptcha captcha hcaptcha turnstile register') }} x-data="{
+                type: '{{ settings.register_captcha_type|default('none') }}',
+                config: {
+                    hcaptcha: {{ captchaConfig.hcaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    recaptcha: {{ captchaConfig.recaptcha_secret_key|default('') ? 'true' : 'false' }},
+                    turnstile: {{ captchaConfig.turnstile_secret_key|default('') ? 'true' : 'false' }}
+                }
+            }">
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Registration Captcha') }}</label>
+                <select name="register_captcha_type" x-model="type"
+                        class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="none"      {{ settings.register_captcha_type|default('none') == 'none'       ? 'selected' }}>{{ __('None') }}</option>
+                    <option value="math"      {{ settings.register_captcha_type|default('none') == 'math'       ? 'selected' }}>{{ __('Math question (simple, no API key)') }}</option>
+                    <option value="hcaptcha"  {{ settings.register_captcha_type|default('none') == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
+                    <option value="recaptcha" {{ settings.register_captcha_type|default('none') == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
+                    <option value="turnstile" {{ settings.register_captcha_type|default('none') == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
+                    <option value="honeypot"  {{ settings.register_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                </select>
+                <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
+                   class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
+                    ⚠ {{ __('This captcha is not configured in Privacy settings.') }}
+                </p>
+            </div>
+            <p class="text-xs text-gray-400">
+                {{ __('Captcha API keys are configured in') }}
+                <a href="{{ url('/admin/settings') }}?tab=privacy&subtab=captcha" class="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">{{ __('Privacy & Security settings') }}</a>.
+                {{ __('The same keys are reused for login and registration captcha.') }}
+            </p>
+        </div>
+
+        {# ── Two-Factor Authentication ── #}
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Two-Factor Authentication') }}</p>
+
+        <div {{ vl.attrs('registration', __('Enable 2FA for all users'), 'two_factor_enabled_global', '', __('Two-Factor Authentication'), '2fa totp two factor') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="two_factor_enabled_global" value="0">
+                <input type="checkbox" name="two_factor_enabled_global" value="1"
+                       {{ settings.two_factor_enabled_global|default('0') == '1' ? 'checked' }}
+                       x-model="twoFactorEnabled"
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Enable 2FA for all users') }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{ __('When enabled, users can activate TOTP-based two-factor authentication from their profile.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        <div x-show="twoFactorEnabled" {{ vl.attrs('registration', __('Force 2FA for all users'), 'two_factor_forced_global', '', __('Two-Factor Authentication'), 'mandatory 2fa forced') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3 mt-3">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="two_factor_forced_global" value="0">
+                <input type="checkbox" name="two_factor_forced_global" value="1"
+                       {{ settings.two_factor_forced_global|default('0') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Force 2FA for all users') }}</span>
+                    <span class="block text-xs text-red-600 dark:text-yellow-700 mt-0.5">{{ __('Users must complete 2FA setup on first login before accessing their accounts.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        {# ── Account ── #}
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Account') }}</p>
+
+        <div {{ vl.attrs('registration', __('Allow email change'), 'enable_email_change', '', __('Account'), 'profile email change') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-3">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="enable_email_change" value="0">
+                <input type="checkbox" name="enable_email_change" value="1"
+                       {{ settings.enable_email_change|default('1') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Allow email change') }}</span>
+                    <span class="block text-xs text-gray-500 mt-0.5">{{ __('When disabled, users cannot change their email address from their profile.') }}</span>
+                </span>
+            </label>
+        </div>
+
+    </form>
+</div>

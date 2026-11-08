@@ -1,0 +1,72 @@
+{% extends "admin/layout.twig" %}
+{% block title %}Edit Comment{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-center gap-3">
+    <a href="{{ url('/admin/comments') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Comments</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Edit Comment</h1>
+</div>
+
+{% if flash_error is defined and flash_error %}
+<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>
+{% endif %}
+
+<div class="max-w-lg">
+    <form method="POST" action="{{ url('/admin/comments/' ~ comment.id ~ '') }}" class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+        {{ csrf_field() }}
+
+        {% if entityTitle %}
+        <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 px-4 py-3 text-sm text-gray-600">
+            On: <strong>{{ entityTitle }}</strong>
+            <span class="ml-1 text-xs text-gray-400">({{ comment.entityType }})</span>
+        </div>
+        {% endif %}
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Author Name <span class="text-red-500">*</span></label>
+            <input type="text" name="author_name" required
+                   value="{{ comment.authorName|e }}"
+                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Author Email <span class="text-red-500">*</span></label>
+            <input type="email" name="author_email" required
+                   value="{{ comment.authorEmail|e }}"
+                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Comment <span class="text-red-500">*</span></label>
+            <textarea name="body" required rows="6"
+                      class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">{{ comment.body|e }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
+            <select name="status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                {% for s in ['pending', 'approved', 'spam', 'trash'] %}
+                <option value="{{ s }}" {{ comment.status == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input type="checkbox" name="notify_replies" id="notify_replies" value="1" {{ comment.notifyReplies ? 'checked' }}
+                   class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+            <label for="notify_replies" class="text-sm text-gray-600">Notify author of replies via email</label>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">
+                Save Changes
+            </button>
+            <a href="{{ url('/admin/comments') }}"
+               class="rounded-lg border border-gray-300 dark:border-gray-700 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

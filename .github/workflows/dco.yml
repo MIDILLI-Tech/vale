@@ -1,0 +1,76 @@
+name: DCO Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  dco-check:
+    runs-on: ubuntu-latest
+    name: Developer Certificate of Origin (DCO) Check
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Fetch all history so we can check commits
+
+      - name: Fetch Base Branch
+        run: |
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+
+      - name: Verify Commit Sign-Offs
+        run: |
+          echo "Starting Developer Certificate of Origin (DCO) Verification..."
+
+          # Get all commit hashes in the PR, excluding merges
+          COMMITS=$(git log --no-merges --format="%H" ${{ github.base_ref }}..HEAD)
+
+          FAILED=false
+
+          for COMMIT in $COMMITS; do
+            # Exclude merge commits explicitly (extra safety)
+            PARENT_COUNT=$(git log -1 --format="%P" $COMMIT | wc -w)
+            if [ "$PARENT_COUNT" -gt 1 ]; then
+              echo "Skipping merge commit $COMMIT."
+              continue
+            fi
+
+            # Get author name, email, and full commit message
+            AUTHOR=$(git log --format="%an <%ae>" -n 1 $COMMIT)
+            MSG=$(git log --format="%B" -n 1 $COMMIT)
+
+            # Skip automated commits from bots
+            if echo "$AUTHOR" | grep -q -i "\[bot\]"; then
+              echo "Skipping bot commit $COMMIT by $AUTHOR."
+              continue
+            fi
+
+            # Check if Signed-off-by line exists
+            if ! echo "$MSG" | grep -q "^Signed-off-by:"; then
+              echo "::error file=,line=,col=::Commit $COMMIT by $AUTHOR is missing a 'Signed-off-by:' line."
+              FAILED=true
+            else
+              echo "✓ Commit $COMMIT is signed off."
+            fi
+          done
+
+          if [ "$FAILED" = true ]; then
+            echo ""
+            echo "================================================================"
+            echo "🚨 DCO VERIFICATION FAILED!"
+            echo "Vale requires all contributions to be signed off (DCO)."
+            echo "Please read CONTRIBUTING.md for details."
+            echo ""
+            echo "How to fix this:"
+            echo "1. If it is only the most recent commit, run:"
+            echo "   git commit --amend --signoff"
+            echo "2. If there are multiple commits, run an interactive rebase:"
+            echo "   git rebase --interactive --signoff ${{ github.base_ref }}"
+            echo "3. Force-push the updated commits to your branch:"
+            echo "   git push --force-with-lease"
+            echo "================================================================"
+            exit 1
+          else
+            echo ""
+            echo "🎉 SUCCESS! All commits are successfully signed off under DCO."
+          fi

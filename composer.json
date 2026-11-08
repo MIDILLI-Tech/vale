@@ -1,0 +1,81 @@
+{
+    "name": "vale/vale",
+    "description": "Vale — Lightweight PHP CMS & E-Commerce Platform",
+    "type": "project",
+    "license": "AGPL-3.0-or-later",
+    "keywords": ["cms", "ecommerce", "php", "lightweight", "wordpress-alternative"],
+    "homepage": "https://github.com/MIDILLI-Tech/vale",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.3",
+        "chillerlan/php-qrcode": "^6.0",
+        "composer/semver": "^3.5",
+        "doctrine/dbal": "^4.2",
+        "dompdf/dompdf": "^3.0",
+        "enshrined/svg-sanitize": "^1.0",
+        "php-di/php-di": "^7.0",
+        "phpmailer/phpmailer": "^7.0",
+        "robmorgan/phinx": "~0.16",
+        "slim/psr7": "^1.7",
+        "slim/slim": "^4.15",
+        "slim/twig-view": "^3.4",
+        "spomky-labs/otphp": "^11.5",
+        "symfony/console": "^7.4",
+        "symfony/finder": "^7.4",
+        "symfony/process": "^7.4",
+        "twig/twig": "^3.27",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "require-dev": {
+        "filp/whoops": "^2.16",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpunit/phpunit": "^12.0",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ValeApp\\": "src/",
+            "ValeApp\\App\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ValeApp\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "@php vendor/bin/phpunit",
+        "test:unit": "@php vendor/bin/phpunit --testsuite Unit",
+        "test:integration": "@php vendor/bin/phpunit --testsuite Integration",
+        "test:feature": "@php vendor/bin/phpunit --testsuite Feature",
+        "test:deprecations": "@php vendor/bin/phpunit --display-deprecations --display-notices --fail-on-deprecation --fail-on-notice",
+        "audit:eol": "php scripts/audit-eol.php",
+        "lint": "php-cs-fixer fix --config=scripts/lint/.php-cs-fixer.dist.php --dry-run --diff",
+        "lint:changed": "php scripts/lint/lint-changed.php",
+        "lint:twig": "php scripts/lint/twig-lint.php",
+        "lint:js": "php scripts/lint/js-check.php",
+        "fix": "php-cs-fixer fix --config=scripts/lint/.php-cs-fixer.dist.php",
+        "cs": "php scripts/lint/cs.php",
+        "cs-fix": "php scripts/lint/cs-fix.php",
+        "migrate": "php vale migrate",
+        "seed": "php vale db:seed",
+        "translations": "php scripts/extract-translations.php",
+        "translations:prune": "php scripts/extract-translations.php --prune",
+        "translations:check": "php scripts/extract-translations.php --check",
+        "translations:sync": "php scripts/manage-translations.php sync",
+        "translations:create": "php scripts/manage-translations.php create",
+        "url:check": "php scripts/url-check.php",
+        "url:check:strict": "php scripts/url-check.php --strict",
+        "docker:plan": "php scripts/publish-docker.php --dry-run",
+        "docker:build": "php scripts/publish-docker.php",
+        "docker:test": "php scripts/publish-docker.php --smoke --only=immutable-apache",
+        "docker:publish": "php scripts/publish-docker.php --push",
+        "coverage": "phpunit --coverage-html storage/coverage --coverage-text",
+        "coverage:clover": "phpunit --coverage-clover storage/coverage/clover.xml"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

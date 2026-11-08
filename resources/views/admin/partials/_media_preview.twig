@@ -1,0 +1,133 @@
+{#
+  Media preview tile — shared by the admin media library (grid + list),
+  the media edit page and any other admin surface that renders Media rows.
+
+  Params:
+    item     — Media entity
+    variant  — 'grid'  square tile for the media library grid (videos/audio
+                         get a click-to-load facade player)
+               'list'  small thumbnail for the media library list view
+               'full'  large preview for the media edit page (native
+                         controls, first frame loads via preload="metadata")
+
+  Grid/audio facades get their poster (first frame) and click-to-load
+  player from the shared `assets/js/media-facade.js` — included once from
+  admin/layout.twig.
+#}
+{% set _mime = item.mimeType %}
+{% set _ext = item.originalName|lower|split('.')|last %}
+{% set _editUrl = url('/admin/media/' ~ item.id ~ '/edit') %}
+{% set _fileUrl = url('/uploads/' ~ item.path) %}
+{% set _isAudio = _mime starts with 'audio/' %}
+{% set _isVideo = item.isVideo %}
+{% set _docColor = _ext in ['zip', 'rar', '7z', 'gz', 'tar'] ? 'text-amber-500'
+    : (_ext in ['pdf'] ? 'text-red-500'
+    : (_ext in ['doc', 'docx', 'odt', 'rtf', 'txt', 'pages'] ? 'text-blue-500'
+    : (_ext in ['xls', 'xlsx', 'ods', 'csv'] ? 'text-green-500'
+    : (_ext in ['ppt', 'pptx', 'odp', 'key'] ? 'text-orange-500'
+    : (_ext in ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'aac'] ? 'text-violet-500'
+    : 'text-gray-400'))))) %}
+{% set _isArchive = _ext in ['zip', 'rar', '7z', 'gz', 'tar'] %}
+
+{% if item.isImage %}
+    {% if variant == 'list' %}
+        <img src="{{ url('/uploads/') }}{{ item.thumbnails.small|default(item.path) }}"
+             alt="{{ item.altText|default(item.originalName) }}"
+             class="h-10 w-10 rounded-sm object-cover">
+    {% else %}
+        <img src="{{ url('/uploads/') }}{{ item.thumbnails.medium|default(item.path) }}"
+             alt="{{ item.altText|default(item.originalName) }}"
+             class="aspect-square w-full object-cover">
+    {% endif %}
+
+{% elseif _isVideo or _isAudio %}
+    {% if variant == 'full' %}
+        {% if _isVideo %}
+            <video controls preload="metadata" class="w-full rounded-lg bg-black">
+                <source src="{{ _fileUrl }}" type="{{ _mime }}">
+            </video>
+        {% else %}
+            <audio controls preload="metadata" class="w-full">
+                <source src="{{ _fileUrl }}" type="{{ _mime }}">
+            </audio>
+        {% endif %}
+    {% elseif variant == 'list' %}
+        <a href="{{ _editUrl }}"
+           class="vl-media-facade vl-media-facade--list"
+           title="{{ __('Preview') }}">
+            <span class="vl-media-facade-badge" aria-hidden="true">
+                {% if _isVideo %}
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                {% else %}
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+                {% endif %}
+            </span>
+            <span class="sr-only">{{ __('Preview') }}</span>
+        </a>
+    {% else %}
+        <div class="vl-media-facade"
+             data-vl-media-facade
+             data-vl-media-src="{{ _fileUrl }}"
+             data-vl-media-mime="{{ _mime }}">
+            <button type="button"
+                    class="vl-media-facade-play"
+                    title="{{ __('Preview') }}"
+                    aria-label="{{ __('Preview') }}">
+                {% if _isVideo %}
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                {% else %}
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+                {% endif %}
+            </button>
+        </div>
+    {% endif %}
+
+{% else %}
+    {% if variant == 'list' %}
+        <div class="vl-media-file-tile vl-media-file-tile--list">
+            {% if _isArchive %}
+                <svg class="h-5 w-5 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8M1 3h22v5H1zM10 12h4"/>
+                </svg>
+            {% else %}
+                <svg class="h-5 w-5 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6"/>
+                </svg>
+            {% endif %}
+        </div>
+    {% elseif variant == 'full' %}
+        <div class="flex h-48 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            {% if _isArchive %}
+                <svg class="h-12 w-12 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8M1 3h22v5H1zM10 12h4"/>
+                </svg>
+            {% else %}
+                <svg class="h-12 w-12 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6"/>
+                </svg>
+            {% endif %}
+        </div>
+        <a href="{{ _fileUrl }}" target="_blank" rel="noopener"
+           class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            {{ __('Open file') }}
+        </a>
+    {% else %}
+        <div class="vl-media-file-tile">
+            {% if _isArchive %}
+                <svg class="h-7 w-7 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8M1 3h22v5H1zM10 12h4"/>
+                </svg>
+            {% else %}
+                <svg class="h-7 w-7 {{ _docColor }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6"/>
+                </svg>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endif %}

@@ -1,0 +1,101 @@
+<div id="seo-tab-general" class="seo-tab-panel">
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="seo">
+        <input type="hidden" name="_subtab" value="general">
+
+        <div :class="!seoEnabled && 'opacity-50 pointer-events-none grayscale select-none'" class="space-y-5 transition-all duration-300">
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Search Engines') }}</p>
+            <div x-data="seoRobots()" {{ vl.attrs('seo', __('Robots.txt'), 'robots_txt', 'general', __('Search Engines'), 'robots sitemap crawl') }}>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Robots.txt') }}</label>
+                <textarea name="robots_txt" rows="6"
+                          class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 font-mono text-sm"
+                          placeholder="User-agent: *&#10;Allow: /&#10;&#10;Sitemap: {{ site_url }}/sitemap.xml"
+                          @input="customTxt = $el.value">{{ settings.robots_txt|default('') }}</textarea>
+                <p class="mt-1 text-xs text-gray-400">{{ __('Leave empty to use the default. Sitemap URL is appended automatically.') }}</p>
+            </div>
+            <div {{ vl.attrs('seo', __('Block AI crawlers'), 'block_ai_crawlers', 'general', __('Search Engines'), 'gptbot chatgpt claude ai crawlers') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700 mt-3">
+                    <input type="hidden" name="block_ai_crawlers" value="0">
+                    <input type="checkbox" name="block_ai_crawlers" value="1"
+                           {{ settings.block_ai_crawlers|default('0') == '1' ? 'checked' }}
+                           @change="blockAi = $el.checked"
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Block AI crawlers') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Adds Disallow rules for GPTBot, ChatGPT-User, CCBot, Claude, Google-Extended, PerplexityBot and similar crawlers to robots.txt.') }}</p>
+            </div>
+            <div {{ vl.attrs('seo', __('Allow search engines to index this site'), 'search_engine_visibility', 'general', __('Search Engines'), 'noindex indexing search') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="search_engine_visibility" value="0">
+                    <input type="checkbox" name="search_engine_visibility" value="1"
+                           {{ settings.search_engine_visibility|default('1') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Allow search engines to index this site') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('When disabled, the site adds a noindex robots meta tag on all pages.') }}</p>
+            </div>
+            <div {{ vl.attrs('seo', __('Add noindex to archive / tag pages'), 'seo_noindex_archives', 'general', __('Search Engines'), 'noindex archives tags categories') }}>
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="seo_noindex_archives" value="0">
+                    <input type="checkbox" name="seo_noindex_archives" value="1"
+                           {{ settings.seo_noindex_archives|default('0') == '1' ? 'checked' }}
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {{ __('Add noindex to archive / tag pages') }}
+                </label>
+                <p class="mt-1 text-xs text-gray-400 ml-5">{{ __('Prevents category and tag archive pages from appearing in search results.') }}</p>
+            </div>
+            <details class="mt-3">
+                <summary class="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 select-none">{{ __('Preview generated robots.txt') }}</summary>
+                <pre class="mt-1 w-full rounded-lg border bg-gray-50 dark:bg-gray-800/50 p-3 font-mono text-xs text-gray-800 overflow-x-auto whitespace-pre-wrap" x-text="preview"></pre>
+            </details>
+        </div>
+
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Search Engine Verification') }}</p>
+        <p class="text-xs text-gray-400 mb-4">{{ __('Paste the verification code from your search engine webmaster tools below. The corresponding meta tags will be added to your site head.') }}</p>
+        <div class="space-y-4">
+            <div {{ vl.attrs('seo', __('Google Search Console'), 'meta_google_verification', 'general', __('Search Engine Verification'), 'google search console webmaster') }}>
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    {{ __('Google Search Console') }}
+                    <a href="{{ signup_urls.verification.google }}" target="_blank" rel="noopener"
+                       class="text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                        ↗ {{ __('Sign up') }}
+                    </a>
+                </label>
+                <input type="text" name="meta_google_verification" value="{{ settings.meta_google_verification|default('') }}"
+                       placeholder="google-site-verification content"
+                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+            </div>
+            <div {{ vl.attrs('seo', __('Yandex Webmaster'), 'meta_yandex_verification', 'general', __('Search Engine Verification'), 'yandex webmaster verification') }}>
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    {{ __('Yandex Webmaster') }}
+                    <a href="{{ signup_urls.verification.yandex }}" target="_blank" rel="noopener"
+                       class="text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                        ↗ {{ __('Sign up') }}
+                    </a>
+                </label>
+                <input type="text" name="meta_yandex_verification" value="{{ settings.meta_yandex_verification|default('') }}"
+                       placeholder="yandex-verification content"
+                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+            </div>
+            <div {{ vl.attrs('seo', __('Bing Webmaster Tools'), 'meta_bing_verification', 'general', __('Search Engine Verification'), 'bing microsoft webmaster') }}>
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    {{ __('Bing Webmaster Tools') }}
+                    <a href="{{ signup_urls.verification.bing }}" target="_blank" rel="noopener"
+                       class="text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                        ↗ {{ __('Sign up') }}
+                    </a>
+                </label>
+                <input type="text" name="meta_bing_verification" value="{{ settings.meta_bing_verification|default('') }}"
+                       placeholder="msvalidate.01 content"
+                       class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
+            </div>
+            </div>
+        </div>
+
+    </form>
+</div>

@@ -1,0 +1,1163 @@
+    {# ══ Payment sub-panel — single source of truth ══ #}
+    {# Standalone /admin/payment redirects here (PaymentController::wizard). #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-payment" class="ec-tab-panel hidden">
+    <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ __('Payment Gateways') }}</h3>
+    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{ __('All enabled methods are offered at checkout. The default is pre-selected.') }}</p>
+
+    {% set default_gw = paymentConfig.default_gateway|default('stripe') %}
+    {% set any_enabled = paymentConfig.stripe.enabled == '1'
+        or paymentConfig.paypal.enabled == '1'
+        or paymentConfig.mollie.enabled == '1'
+        or paymentConfig.twocheckout.enabled == '1'
+        or paymentConfig.checkoutcom.enabled == '1'
+        or paymentConfig.banktransfer.enabled == '1' %}
+    {% set enabled_gateways = [] %}
+    {% if paymentConfig.stripe.enabled == '1' %}
+        {% set label = 'Stripe' ~ (default_gw == 'stripe' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+    {% if paymentConfig.paypal.enabled == '1' %}
+        {% set label = 'PayPal' ~ (default_gw == 'paypal' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+    {% if paymentConfig.mollie.enabled == '1' %}
+        {% set label = 'Mollie' ~ (default_gw == 'mollie' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+    {% if paymentConfig.twocheckout.enabled == '1' %}
+        {% set label = '2Checkout' ~ (default_gw == 'twocheckout' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+    {% if paymentConfig.checkoutcom.enabled == '1' %}
+        {% set label = 'Checkout.com' ~ (default_gw == 'checkoutcom' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+    {% if paymentConfig.banktransfer.enabled == '1' %}
+        {% set label = 'Bank Transfer' ~ (default_gw == 'banktransfer' ? ' (Default)' : '') %}
+        {% set enabled_gateways = enabled_gateways|merge([label]) %}
+    {% endif %}
+
+    {% if enabled_gateways|length > 0 %}
+    <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+        ✓ {{ __('Active gateways') }}: <strong>{{ enabled_gateways|join(', ') }}</strong>
+    </div>
+    {% else %}
+    <div class="mb-4 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+        ⚠ {{ __('No payment gateway is enabled. Configure and enable at least one provider.') }}
+    </div>
+    {% endif %}
+
+    {% set step_hint = __('Enter credentials → Save & Test (auto-enables) → Set as default (optional).') %}
+
+    {# Smart card expansion: after a save/test/toggle the touched card opens,
+       on a plain GET everything stays collapsed. `payment_open_card` is
+       single-use (consumed in SettingsController), so F5 collapses again. #}
+    {% set _open_card = payment_open_card|default('') %}
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 items-start">
+
+        {# ── Mollie ─────────────────────────────── #}
+        {% set mollie_enabled = paymentConfig.mollie.enabled == '1' %}
+        {% set mollie_tested = paymentConfig.mollie.tested|default('0') == '1' %}
+        {% set mollie_is_default = default_gw == 'mollie' %}
+        {% set mollie_can_enable = mollie_tested %}
+        <div data-provider-card="mollie" x-data="{ open: {{ _open_card == 'mollie' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', 'Mollie', 'mollie_enabled', 'payment', __('Payment Gateways'), 'mollie payment gateway enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ mollie_enabled ? 'pb-4 ring-2 ring-pink-400 dark:ring-pink-800 order-1' : 'pb-4 order-6' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>Mollie
+                        <a href="{{ signup_urls.payment_gateways.mollie.signup_url }}" target="_blank" rel="noopener"
+                           class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}" onclick="event.stopPropagation()">
+                            ↗ {{ __('Sign up') }}
+                        </a>
+                    </span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if mollie_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    {% if mollie_tested %}
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Tested') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Not tested') }}</span>
+                    {% endif %}
+                    {% if mollie_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="mollie">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable Mollie') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif mollie_can_enable %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="mollie">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable Mollie') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Test the connection first to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if mollie_enabled %}{{ __('Accepting payments.') }}{% if mollie_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif mollie_tested %}{{ __('Test passed — switch on to accept payments.') }}
+                {% else %}{{ __('Save credentials, then run Save & Test.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ step_hint }}</p>
+            {% if not mollie_can_enable and not mollie_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Test the connection first to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-mollie">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="mollie">
+
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('API Key'), 'api_key', 'payment', 'Mollie', 'mollie api key test live') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('API Key') }}</label>
+                    <input type="password" name="api_key" value="{{ paymentConfig.mollie.api_key }}" placeholder="test_... or live_..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.mollie.api_key %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 text-sm dark:text-gray-300">
+                        <input type="hidden" name="sandbox" value="0">
+                        <input type="checkbox" name="sandbox" value="1" {{ paymentConfig.mollie.sandbox == '1' ? 'checked' }}
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-pink-600 focus:ring-pink-500">
+                        {{ __('Sandbox mode (skip webhook, use test API keys)') }}
+                    </label>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Enable when running on localhost or a local network address unreachable from Mollie.') }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.mollie.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                {% if signup_urls.payment_gateways.mollie.api_urls is defined %}
+                <div class="mb-3 flex flex-wrap gap-2">
+                    {% if signup_urls.payment_gateways.mollie.api_urls.test %}
+                    <a href="{{ signup_urls.payment_gateways.mollie.api_urls.test }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Test API Keys') }}
+                    </a>
+                    {% endif %}
+                    {% if signup_urls.payment_gateways.mollie.api_urls.live %}
+                    <a href="{{ signup_urls.payment_gateways.mollie.api_urls.live }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Live API Keys') }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <button type="submit" formaction="{{ url('/admin/payment/test') }}" class="w-full rounded-lg bg-pink-500 dark:bg-pink-700 px-4 py-2 text-sm font-medium text-white hover:bg-pink-600 dark:hover:bg-pink-800 transition-colors">
+                    🔌 {{ __('Save & Test Gateway') }}
+                </button>
+                <p class="mt-1 text-center text-xs text-gray-400">{{ __('A successful test enables the provider automatically.') }}</p>
+            </form>
+
+            {% if mollie_is_default %}
+            <div class="mt-3 rounded-lg border border-pink-300 bg-pink-50 dark:border-pink-800 dark:bg-pink-900/40 px-4 py-2 text-center text-sm font-medium text-pink-700 dark:text-pink-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif mollie_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="mollie">
+                <button type="submit" class="w-full rounded-lg border border-pink-300 dark:border-pink-800 px-4 py-2 text-sm font-medium text-pink-700 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/40 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-pink-300 dark:border-pink-800 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ── PayPal ─────────────────────────────── #}
+        {% set paypal_enabled = paymentConfig.paypal.enabled == '1' %}
+        {% set paypal_tested = paymentConfig.paypal.tested|default('0') == '1' %}
+        {% set paypal_is_default = default_gw == 'paypal' %}
+        {% set paypal_can_enable = paypal_tested %}
+        <div data-provider-card="paypal" x-data="{ open: {{ _open_card == 'paypal' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', 'PayPal', 'paypal_enabled', 'payment', __('Payment Gateways'), 'paypal payment gateway enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ paypal_enabled ? 'pb-4 ring-2 ring-yellow-400 dark:ring-yellow-800 order-3' : 'pb-4 order-8' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>PayPal
+                        <a href="{{ signup_urls.payment_gateways.paypal.signup_url }}" target="_blank" rel="noopener"
+                           class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}" onclick="event.stopPropagation()">
+                            ↗ {{ __('Sign up') }}
+                        </a>
+                    </span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if paypal_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    {% if paypal_tested %}
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Tested') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Not tested') }}</span>
+                    {% endif %}
+                    {% if paypal_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="paypal">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable PayPal') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif paypal_can_enable %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="paypal">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable PayPal') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Test the connection first to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if paypal_enabled %}{{ __('Accepting payments.') }}{% if paypal_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif paypal_tested %}{{ __('Test passed — switch on to accept payments.') }}
+                {% else %}{{ __('Save credentials, then run Save & Test.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ step_hint }}</p>
+            {% if not paypal_can_enable and not paypal_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Test the connection first to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-paypal">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="paypal">
+
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('Client ID'), 'client_id', 'payment', 'PayPal', 'paypal client id') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Client ID') }}</label>
+                    <input type="text" name="client_id" value="{{ paymentConfig.paypal.client_id }}" placeholder="AX..." autocomplete="off"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Client Secret'), 'client_secret', 'payment', 'PayPal', 'paypal secret credentials') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Client Secret') }}</label>
+                    <input type="password" name="client_secret" value="{{ paymentConfig.paypal.client_secret }}" placeholder="EX..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.paypal.client_secret %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4 flex items-center gap-2">
+                    <input type="hidden" name="sandbox" value="0">
+                    <input type="checkbox" name="sandbox" id="paypal-sandbox-settings" value="1" {{ paymentConfig.paypal.sandbox == '1' ? 'checked' : '' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <label for="paypal-sandbox-settings" class="text-sm text-gray-700">{{ __('Sandbox mode (testing)') }}</label>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Webhook ID') }}</label>
+                    <input type="text" name="webhook_id" value="{{ paymentConfig.paypal.webhook_id|default('') }}"
+                           placeholder="XXXXXXXXXXXXX"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Required for subscription webhooks. Get it from the PayPal developer dashboard webhook settings. Without it, incoming webhooks are rejected.') }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.paypal.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                {% if signup_urls.payment_gateways.paypal.api_urls is defined %}
+                <div class="mb-3 flex flex-wrap gap-2">
+                    {% if signup_urls.payment_gateways.paypal.api_urls.test %}
+                    <a href="{{ signup_urls.payment_gateways.paypal.api_urls.test }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Test API Keys') }}
+                    </a>
+                    {% endif %}
+                    {% if signup_urls.payment_gateways.paypal.api_urls.live %}
+                    <a href="{{ signup_urls.payment_gateways.paypal.api_urls.live }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Live API Keys') }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <button type="submit" formaction="{{ url('/admin/payment/test') }}" class="w-full rounded-lg bg-yellow-500 dark:bg-yellow-700 px-4 py-2 text-sm font-medium text-white hover:bg-yellow-600 dark:hover:bg-yellow-800 transition-colors">
+                    🔌 {{ __('Save & Test Gateway') }}
+                </button>
+                <p class="mt-1 text-center text-xs text-gray-400">{{ __('A successful test enables the provider automatically.') }}</p>
+            </form>
+
+            {% if paypal_is_default %}
+            <div class="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/40 px-4 py-2 text-center text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif paypal_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="paypal">
+                <button type="submit" class="w-full rounded-lg border border-yellow-300 dark:border-yellow-800 px-4 py-2 text-sm font-medium text-yellow-700 dark:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/40 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-yellow-300 dark:border-yellow-800 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ── Stripe ─────────────────────────────── #}
+        {% set stripe_enabled = paymentConfig.stripe.enabled == '1' %}
+        {% set stripe_tested = paymentConfig.stripe.tested|default('0') == '1' %}
+        {% set stripe_is_default = default_gw == 'stripe' %}
+        {% set stripe_can_enable = stripe_tested %}
+        <div data-provider-card="stripe" x-data="{ open: {{ _open_card == 'stripe' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', 'Stripe', 'stripe_enabled', 'payment', __('Payment Gateways'), 'stripe payment gateway enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ stripe_enabled ? 'pb-4 ring-2 ring-gray-400 dark:ring-gray-600 order-2' : 'pb-4 order-7' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>Stripe
+                        <a href="{{ signup_urls.payment_gateways.stripe.signup_url }}" target="_blank" rel="noopener"
+                           class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}" onclick="event.stopPropagation()">
+                            ↗ {{ __('Sign up') }}
+                        </a>
+                    </span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if stripe_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    {% if stripe_tested %}
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Tested') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Not tested') }}</span>
+                    {% endif %}
+                    {% if stripe_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="stripe">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable Stripe') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif stripe_can_enable %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="stripe">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable Stripe') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Test the connection first to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if stripe_enabled %}{{ __('Accepting payments.') }}{% if stripe_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif stripe_tested %}{{ __('Test passed — switch on to accept payments.') }}
+                {% else %}{{ __('Save credentials, then run Save & Test.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ step_hint }}</p>
+            {% if not stripe_can_enable and not stripe_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Test the connection first to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-stripe">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="stripe">
+
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('Publishable Key'), 'publishable_key', 'payment', 'Stripe', 'stripe publishable pk key') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Publishable Key') }}</label>
+                    <input type="text" name="publishable_key" value="{{ paymentConfig.stripe.publishable_key }}" placeholder="pk_live_..." autocomplete="off"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('Secret Key'), 'secret_key', 'payment', 'Stripe', 'stripe secret sk key') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Secret Key') }}</label>
+                    <input type="password" name="secret_key" value="{{ paymentConfig.stripe.secret_key }}" placeholder="sk_live_..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.stripe.secret_key %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Webhook Secret'), 'webhook_secret', 'payment', 'Stripe', 'stripe webhook whsec') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Webhook Secret') }}</label>
+                    <input type="password" name="webhook_secret" value="{{ paymentConfig.stripe.webhook_secret }}" placeholder="whsec_..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.stripe.webhook_secret %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Webhook secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% else %}
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Webhook URL') }}: <code>{{ site_url }}/webhooks/stripe</code></p>
+                    {% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.stripe.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                {# Stripe payment method types — Automatic / Card only / Custom #}
+                {% set stripe_methods_catalog = stripe_payment_methods|default({}) %}
+                {% set stripe_methods_value = paymentConfig.stripe.payment_method_types|default('') %}
+                {% set stripe_methods_mode = stripe_methods_value == '' ? 'auto' : (stripe_methods_value == 'card' ? 'card' : 'custom') %}
+                <div class="mb-4 rounded-lg border border-gray-200 dark:border-gray-800 p-3"
+                     x-data="{
+                        mode: 'auto',
+                        methods: [],
+                        available: [],
+                        input: '',
+                        fetching: false,
+                        fetched: false,
+                        strict: false,
+                        note: '',
+                        endpoint: '',
+                        msgLoaded: '',
+                        msgFallback: '',
+                        msgUnavailable: '',
+                        init() {
+                            const el = this.$el;
+                            this.endpoint = el.dataset.endpoint || '';
+                            this.msgLoaded = el.dataset.msgLoaded || '';
+                            this.msgFallback = el.dataset.msgFallback || '';
+                            this.msgUnavailable = el.dataset.msgUnavailable || '';
+                            this.mode = el.dataset.mode || 'auto';
+                            const map = JSON.parse(el.dataset.catalogJson || '{}');
+                            this.available = Object.keys(map).map(key => ({ key: key, label: map[key] }));
+                            this.methods = (el.dataset.methods || '').split(',').map(s => s.trim().toLowerCase()).filter(v => v !== '');
+                            if (this.mode === 'custom') { this.loadMethods(); }
+                        },
+                        get availableKeys() {
+                            return this.available.map(m => m.key);
+                        },
+                        get customMethods() {
+                            return this.methods.filter(m => this.availableKeys.indexOf(m) === -1);
+                        },
+                        isUnavailable(key) {
+                            return this.strict && this.availableKeys.indexOf(key) === -1;
+                        },
+                        addCustom() {
+                            const v = this.input.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+                            if (v !== '' && this.methods.indexOf(v) === -1) { this.methods.push(v); }
+                            this.input = '';
+                        },
+                        removeMethod(key) {
+                            const i = this.methods.indexOf(key);
+                            if (i !== -1) { this.methods.splice(i, 1); }
+                        },
+                        async loadMethods(force) {
+                            if (this.fetching || (this.fetched && !force)) { return; }
+                            this.fetching = true;
+                            this.note = '';
+                            const ctrl = new AbortController();
+                            const timer = setTimeout(() => ctrl.abort(), 10000);
+                            try {
+                                const res = await fetch(this.endpoint + (force ? '?refresh=1' : ''), {
+                                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                    signal: ctrl.signal
+                                });
+                                const data = await res.json();
+                                if (Array.isArray(data.methods) && data.methods.length > 0) {
+                                    this.available = data.methods;
+                                    this.strict = data.source === 'stripe';
+                                    this.note = this.strict ? this.msgLoaded : this.msgFallback;
+                                } else {
+                                    this.note = this.msgFallback;
+                                }
+                            } catch (e) {
+                                this.note = this.msgFallback;
+                            }
+                            clearTimeout(timer);
+                            this.fetching = false;
+                            this.fetched = true;
+                        }
+                     }"
+                     data-mode="{{ stripe_methods_mode }}"
+                     data-methods="{{ stripe_methods_value }}"
+                     data-catalog-json="{{ stripe_methods_catalog|json_encode }}"
+                     data-endpoint="{{ url('/admin/payment/stripe/methods') }}"
+                     data-msg-loaded="{{ __('Methods loaded from your Stripe account.') }}"
+                     data-msg-fallback="{{ __('Could not reach Stripe — showing the default method list.') }}"
+                     data-msg-unavailable="{{ __('Not available on your Stripe account — Stripe will reject it at checkout.') }}">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Payment Methods') }}</label>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button type="button" @click="mode = 'auto'"
+                                :class="mode === 'auto' ? 'border-gray-900 bg-gray-900 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                                class="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
+                            {{ __('Automatic') }}
+                        </button>
+                        <button type="button" @click="mode = 'card'"
+                                :class="mode === 'card' ? 'border-gray-900 bg-gray-900 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                                class="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
+                            {{ __('Card only') }}
+                        </button>
+                        <button type="button" @click="mode = 'custom'; loadMethods()"
+                                :class="mode === 'custom' ? 'border-gray-900 bg-gray-900 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900' : 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'"
+                                class="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors">
+                            {{ __('Custom') }}
+                        </button>
+                    </div>
+
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500" x-show="mode === 'auto'">
+                        {{ __('Recommended. Stripe picks the methods dynamically from your Dashboard settings, which may include local methods like iDEAL.') }}
+                    </p>
+                    <p class="mt-2 text-xs text-gray-400 dark:text-gray-500" x-show="mode === 'card'" x-cloak>
+                        {{ __('Only card payments: Visa, Mastercard, Amex — plus Apple Pay / Google Pay.') }}
+                    </p>
+
+                    <div class="mt-3" x-show="mode === 'custom'" x-cloak>
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <p class="text-xs text-gray-400 dark:text-gray-500" x-show="fetching">{{ __('Loading methods from your Stripe account…') }}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500" x-show="!fetching" x-cloak x-text="note"></p>
+                            <button type="button" @click="loadMethods(true)" :disabled="fetching"
+                                    class="shrink-0 inline-flex items-center gap-1 rounded-md border border-gray-300 dark:border-gray-700 px-2 py-0.5 text-[11px] text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
+                                    title="{{ __('Refresh from Stripe') }}"><span class="vl-icon-refresh" :class="fetching ? 'vl-icon-spin' : ''"></span> {{ __('Refresh') }}</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <template x-for="m in available" :key="m.key">
+                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <input type="checkbox" x-model="methods" :value="m.key"
+                                           class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                    <span class="text-xs">
+                                        <span class="block font-mono text-gray-700 dark:text-gray-200" x-text="m.key"></span>
+                                        <span class="block text-[11px] text-gray-400 dark:text-gray-500" x-text="m.label"></span>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap gap-1.5" x-show="customMethods.length > 0" x-cloak>
+                            <template x-for="method in customMethods" :key="method">
+                                <span class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                                      :class="isUnavailable(method) ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300' : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'"
+                                      :title="isUnavailable(method) ? msgUnavailable : ''">
+                                    <span class="font-mono" x-text="method"></span>
+                                    <button type="button" @click="removeMethod(method)" class="font-bold leading-none opacity-60 hover:opacity-100" title="{{ __('Remove') }}">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+
+                        <p class="mt-2 text-xs text-amber-600 dark:text-amber-400" x-show="strict && customMethods.length > 0" x-cloak>
+                            {{ __('Some selected methods are not available on your Stripe account and will be rejected at checkout.') }}
+                        </p>
+
+                        <div class="mt-3 flex gap-2">
+                            <input type="text" x-model="input" @keydown.enter.prevent="addCustom()"
+                                   placeholder="{{ __('Other method type, e.g. twint') }}"
+                                   class="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+                            <button type="button" @click="addCustom()"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">+ {{ __('Add') }}</button>
+                        </div>
+                        <p class="mt-2 text-xs text-amber-600 dark:text-amber-400" x-show="methods.length === 0" x-cloak>
+                            {{ __('No method selected — saving keeps Automatic.') }}
+                        </p>
+                        <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                            {{ __('Only the selected methods are allowed. A method unavailable for the currency or your account country is rejected by Stripe at checkout.') }}
+                        </p>
+                    </div>
+
+                    <input type="hidden" name="payment_method_types"
+                           :value="mode === 'auto' ? '' : (mode === 'card' ? 'card' : methods.join(','))">
+                </div>
+
+                {% if signup_urls.payment_gateways.stripe.api_urls is defined %}
+                <div class="mb-3 flex flex-wrap gap-2">
+                    {% if signup_urls.payment_gateways.stripe.api_urls.test %}
+                    <a href="{{ signup_urls.payment_gateways.stripe.api_urls.test }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Test API Keys') }}
+                    </a>
+                    {% endif %}
+                    {% if signup_urls.payment_gateways.stripe.api_urls.live %}
+                    <a href="{{ signup_urls.payment_gateways.stripe.api_urls.live }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Live API Keys') }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <button type="submit" formaction="{{ url('/admin/payment/test') }}" class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                    🔌 {{ __('Save & Test Gateway') }}
+                </button>
+                <p class="mt-1 text-center text-xs text-gray-400">{{ __('A successful test enables the provider automatically.') }}</p>
+            </form>
+
+            {% if stripe_is_default %}
+            <div class="mt-3 rounded-lg border border-gray-400 bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50 px-4 py-2 text-center text-sm font-medium text-gray-800 dark:text-gray-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif stripe_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="stripe">
+                <button type="submit" class="w-full rounded-lg border border-gray-400 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800/50 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-gray-400 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ── 2Checkout ──────────────────────────── #}
+        {% set tco_enabled = paymentConfig.twocheckout.enabled == '1' %}
+        {% set tco_tested = paymentConfig.twocheckout.tested|default('0') == '1' %}
+        {% set tco_is_default = default_gw == 'twocheckout' %}
+        {% set tco_can_enable = tco_tested %}
+        <div data-provider-card="twocheckout" x-data="{ open: {{ _open_card == 'twocheckout' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', '2Checkout', 'twocheckout_enabled', 'payment', __('Payment Gateways'), 'twocheckout verifone payment gateway enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ tco_enabled ? 'pb-4 ring-2 ring-blue-400 dark:ring-blue-800 order-4' : 'pb-4 order-9' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>2Checkout <span class="text-xs text-gray-400 font-normal">(Verifone)</span>
+                        <a href="{{ signup_urls.payment_gateways.twocheckout.signup_url }}" target="_blank" rel="noopener"
+                           class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}" onclick="event.stopPropagation()">
+                            ↗ {{ __('Sign up') }}
+                        </a>
+                    </span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if tco_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    {% if tco_tested %}
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Tested') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Not tested') }}</span>
+                    {% endif %}
+                    {% if tco_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="twocheckout">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable 2Checkout') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif tco_can_enable %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="twocheckout">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable 2Checkout') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Test the connection first to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if tco_enabled %}{{ __('Accepting payments.') }}{% if tco_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif tco_tested %}{{ __('Test passed — switch on to accept payments.') }}
+                {% else %}{{ __('Save credentials, then run Save & Test.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ step_hint }}</p>
+            {% if not tco_can_enable and not tco_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Test the connection first to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-twocheckout">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="twocheckout">
+
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('Merchant Code'), 'merchant_code', 'payment', '2Checkout', 'twocheckout merchant id') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Merchant Code') }}</label>
+                    <input type="text" name="merchant_code" value="{{ paymentConfig.twocheckout.merchant_code }}" placeholder="123456789" autocomplete="off"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('API Secret Key'), 'api_secret', 'payment', '2Checkout', 'twocheckout api secret pgUE') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('API Secret Key') }}</label>
+                    <input type="password" name="api_secret" value="{{ paymentConfig.twocheckout.api_secret }}" placeholder="pgUE..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.twocheckout.api_secret %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('API secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-400">{{ __('From 2Checkout Dashboard → Integrations → Webhooks & API → API → Secret Key (starts with "pgUE..."). Used for REST API.') }}</p>
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('INS Secret Word'), 'secret_key', 'payment', '2Checkout', 'twocheckout ins webhook secret') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('INS Secret Word') }}</label>
+                    <input type="password" name="secret_key" value="{{ paymentConfig.twocheckout.secret_key }}" placeholder="********" autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.twocheckout.secret_key %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret word is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-400">{{ __('From 2Checkout Dashboard → Integrations → Webhooks & API → Secret Word → INS secret word. Used for webhook verification.') }}</p>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('To receive payment notifications: set INS to ON and webhook URL') }} <code>{{ site_url }}/webhooks/twocheckout</code> {{ __('in the 2Checkout dashboard.') }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.twocheckout.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                {% if signup_urls.payment_gateways.twocheckout.api_urls is defined %}
+                <div class="mb-3 flex flex-wrap gap-2">
+                    {% if signup_urls.payment_gateways.twocheckout.api_urls.test %}
+                    <a href="{{ signup_urls.payment_gateways.twocheckout.api_urls.test }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Test API Keys') }}
+                    </a>
+                    {% endif %}
+                    {% if signup_urls.payment_gateways.twocheckout.api_urls.live %}
+                    <a href="{{ signup_urls.payment_gateways.twocheckout.api_urls.live }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Live API Keys') }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <button type="submit" formaction="{{ url('/admin/payment/test') }}" class="w-full rounded-lg bg-blue-500 dark:bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 dark:hover:bg-blue-800 transition-colors">
+                    🔌 {{ __('Save & Test Gateway') }}
+                </button>
+                <p class="mt-1 text-center text-xs text-gray-400">{{ __('A successful test enables the provider automatically.') }}</p>
+            </form>
+
+            {% if tco_is_default %}
+            <div class="mt-3 rounded-lg border border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/40 px-4 py-2 text-center text-sm font-medium text-blue-700 dark:text-blue-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif tco_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="twocheckout">
+                <button type="submit" class="w-full rounded-lg border border-blue-300 dark:border-blue-800 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-blue-300 dark:border-blue-800 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ── Bank Transfer (Manual) ────────────────────────────── #}
+        {% set bt_enabled = paymentConfig.banktransfer.enabled == '1' %}
+        {% set bt_is_default = default_gw == 'banktransfer' %}
+        {% set bt_required_ok = paymentConfig.banktransfer.bank_name != '' and paymentConfig.banktransfer.holder_name != '' and paymentConfig.banktransfer.iban != '' %}
+        <div data-provider-card="banktransfer" x-data="{ open: {{ _open_card == 'banktransfer' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', __('Bank Transfer'), 'banktransfer_enabled', 'payment', __('Payment Gateways'), 'bank transfer manual payment enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ bt_enabled ? 'pb-4 ring-2 ring-green-400 dark:ring-green-800 order-6' : 'pb-4 order-11' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>🏦 {{ __('Bank Transfer') }} <span class="text-xs font-normal text-gray-400">({{ __('Manual') }})</span></span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if bt_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ __('No test needed') }}</span>
+                    {% if bt_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="banktransfer">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable Bank Transfer') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif bt_required_ok %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="banktransfer">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable Bank Transfer') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Complete the required fields to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if bt_enabled %}{{ __('Accepting payments.') }}{% if bt_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif bt_required_ok %}{{ __('Ready — switch on to accept payments.') }}
+                {% else %}{{ __('Fill in bank name, account holder and IBAN, then save.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            {% if not bt_required_ok and not bt_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Complete the required fields to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-banktransfer">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="banktransfer">
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.banktransfer.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                <hr class="my-4 border-gray-200">
+
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Bank Name'), 'bank_name', 'payment', __('Bank Transfer'), 'bank name wire transfer') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Bank Name') }} *</label>
+                    <input type="text" name="bank_name" value="{{ paymentConfig.banktransfer.bank_name }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Account Holder Name'), 'holder_name', 'payment', __('Bank Transfer'), 'account holder beneficiary') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Account Holder Name') }} *</label>
+                    <input type="text" name="holder_name" value="{{ paymentConfig.banktransfer.holder_name }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('IBAN / Account Number'), 'iban', 'payment', __('Bank Transfer'), 'iban account number wire') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('IBAN / Account Number') }} *</label>
+                    <input type="text" name="iban" value="{{ paymentConfig.banktransfer.iban }}" placeholder="TR12 0000 0000 0000 0000 0000 00"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('IBAN for EU/TR, Account Number for other regions.') }}</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('SWIFT / BIC') }}
+                        <span class="text-xs font-normal text-gray-400">({{ __('optional') }})</span>
+                    </label>
+                    <input type="text" name="swift" value="{{ paymentConfig.banktransfer.swift }}" placeholder="BOFAUS3N"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Routing Number (ABA)') }}
+                        <span class="text-xs font-normal text-gray-400">({{ __('optional') }})</span>
+                    </label>
+                    <input type="text" name="routing" value="{{ paymentConfig.banktransfer.routing }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Required for US domestic transfers.') }}</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Branch') }}
+                        <span class="text-xs font-normal text-gray-400">({{ __('optional') }})</span>
+                    </label>
+                    <input type="text" name="branch" value="{{ paymentConfig.banktransfer.branch }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Max Payment Days') }}</label>
+                    <input type="number" name="max_days" value="{{ paymentConfig.banktransfer.max_days }}" min="1" max="90"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Customer must complete the transfer within this many days after placing the order.') }}</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Instructions') }}
+                        <span class="text-xs font-normal text-gray-400">({{ __('shown on order success page') }})</span>
+                    </label>
+                    <textarea name="description" rows="4"
+                              class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">{{ paymentConfig.banktransfer.description }}</textarea>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Available placeholders') }}: <code class="rounded-sm bg-gray-200 px-1 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{order_number}</code> <code class="rounded-sm bg-gray-200 px-1 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{order_id}</code> <code class="rounded-sm bg-gray-200 px-1 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{order_total}</code></p>
+                </div>
+
+                <button type="submit" class="w-full rounded-lg bg-green-500 dark:bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 dark:hover:bg-green-800 transition-colors">
+                    {{ __('Save') }}
+                </button>
+            </form>
+
+            {% if bt_is_default %}
+            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-900/40 px-4 py-2 text-center text-sm font-medium text-green-700 dark:text-green-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif bt_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="banktransfer">
+                <button type="submit" class="w-full rounded-lg border border-green-300 dark:border-green-800 px-4 py-2 text-sm font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-green-300 dark:border-green-800 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+        {# ── Checkout.com ────────────────────────────────────── #}
+        {% set cko_enabled = paymentConfig.checkoutcom.enabled == '1' %}
+        {% set cko_tested = paymentConfig.checkoutcom.tested|default('0') == '1' %}
+        {% set cko_is_default = default_gw == 'checkoutcom' %}
+        {% set cko_can_enable = cko_tested %}
+        <div data-provider-card="checkoutcom" x-data="{ open: {{ _open_card == 'checkoutcom' ? 'true' : 'false' }} }" {{ vl.attrs('ecommerce', 'Checkout.com', 'checkoutcom_enabled', 'payment', __('Payment Gateways'), 'checkout.com payment gateway enable') }} class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs {{ cko_enabled ? 'pb-4 ring-2 ring-indigo-400 dark:ring-indigo-800 order-5' : 'pb-4 order-10' }}">
+            <div class="flex items-center justify-between gap-2">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <span>Checkout.com
+                        <a href="{{ signup_urls.payment_gateways.checkoutcom.signup_url }}" target="_blank" rel="noopener"
+                           class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}" onclick="event.stopPropagation()">
+                            ↗ {{ __('Sign up') }}
+                        </a>
+                    </span>
+                    <svg x-show="open" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg x-show="!open" x-cloak class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-1.5">
+                    {% if cko_is_default %}
+                    <span class="rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-semibold text-white dark:bg-gray-100 dark:text-gray-900">★ {{ __('Default') }}</span>
+                    {% endif %}
+                    {% if cko_tested %}
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Tested') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Not tested') }}</span>
+                    {% endif %}
+                    {% if cko_enabled %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="checkoutcom">
+                        <input type="hidden" name="enabled" value="0">
+                        <span class="text-xs font-medium text-green-700 mr-1">{{ __('Enabled') }}</span>
+                        <button type="submit" title="{{ __('Disable Checkout.com') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% elseif cko_can_enable %}
+                    <form method="post" action="{{ url('/admin/payment/toggle') }}" class="flex items-center gap-2">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="provider" value="checkoutcom">
+                        <input type="hidden" name="enabled" value="1">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="submit" title="{{ __('Enable Checkout.com') }}"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="flex items-center gap-2" title="{{ __('Test the connection first to enable.') }}">
+                        <span class="text-xs font-medium text-gray-400 mr-1">{{ __('Disabled') }}</span>
+                        <button type="button" disabled
+                                class="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white dark:bg-gray-900 transition-transform"></span>
+                        </button>
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {% if cko_enabled %}{{ __('Accepting payments.') }}{% if cko_is_default %} {{ __('Preselected at checkout.') }}{% endif %}
+                {% elseif cko_tested %}{{ __('Test passed — switch on to accept payments.') }}
+                {% else %}{{ __('Save credentials, then run Save & Test.') }}{% endif %}
+            </p>
+
+            <div x-show="open" class="mt-4" x-cloak>
+            <hr class="my-4 border-gray-200">
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ step_hint }}</p>
+            {% if not cko_can_enable and not cko_enabled %}
+            <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{{ __('Test the connection first to enable.') }}</p>
+            {% endif %}
+            <form method="post" action="{{ url('/admin/payment/save') }}" id="pay-save-checkoutcom">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="checkoutcom">
+
+                <div class="mb-3" {{ vl.attrs('ecommerce', __('Secret Key'), 'secret_key', 'payment', 'Checkout.com', 'checkout.com secret api key') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Secret Key') }}</label>
+                    <input type="password" name="secret_key" value="{{ paymentConfig.checkoutcom.secret_key }}" placeholder="sk_..." autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.checkoutcom.secret_key %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Secret key is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                </div>
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Webhook Signing Secret'), 'webhook_secret', 'payment', 'Checkout.com', 'checkout.com webhook signing') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Webhook Signing Secret') }}</label>
+                    <input type="password" name="webhook_secret" value="{{ paymentConfig.checkoutcom.webhook_secret }}" placeholder="••••••••" autocomplete="new-password"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    {% if paymentConfig.checkoutcom.webhook_secret %}
+                    <p class="mt-1 text-xs text-green-600">✓ {{ __('Webhook secret is saved. Leave unchanged to keep current value.') }}</p>
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Webhook URL') }}: <code>{{ site_url }}/webhooks/checkoutcom</code></p>
+                </div>
+
+                <div class="mb-4" {{ vl.attrs('ecommerce', __('Processing Channel ID'), 'processing_channel_id', 'payment', 'Checkout.com', 'checkout.com processing channel pc') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Processing Channel ID') }}</label>
+                    <input type="text" name="processing_channel_id" value="{{ paymentConfig.checkoutcom.processing_channel_id }}" placeholder="pc_..."
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('From Checkout.com dashboard → Account settings → Processing channels. Starts with') }} <code>pc_</code>.</p>
+                </div>
+
+                <div class="mb-4 flex items-center gap-2">
+                    <input type="hidden" name="sandbox" value="0">
+                    <input type="checkbox" name="sandbox" id="checkoutcom-sandbox-settings" value="1" {{ paymentConfig.checkoutcom.sandbox == '1' ? 'checked' : '' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    <label for="checkoutcom-sandbox-settings" class="text-sm text-gray-700">{{ __('Sandbox mode (testing)') }}</label>
+                </div>
+
+                <div class="mb-4">
+                    <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('API Base URL') }} <span class="font-normal text-gray-400">({{ __('optional — leave blank for default') }})</span></label>
+                    <input type="url" name="base_url" value="{{ paymentConfig.checkoutcom.base_url }}"
+                           placeholder="https://[account-id].api.sandbox.checkout.com"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Use your account-specific endpoint from Checkout.com dashboard → Account settings → API keys.') }}</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Payment Label') }}</label>
+                    <input type="text" name="label" value="{{ paymentConfig.checkoutcom.label }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Displayed as the payment method name on checkout.') }}</p>
+                </div>
+
+                {% if signup_urls.payment_gateways.checkoutcom.api_urls is defined %}
+                <div class="mb-3 flex flex-wrap gap-2">
+                    {% if signup_urls.payment_gateways.checkoutcom.api_urls.test %}
+                    <a href="{{ signup_urls.payment_gateways.checkoutcom.api_urls.test }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Test API Keys') }}
+                    </a>
+                    {% endif %}
+                    {% if signup_urls.payment_gateways.checkoutcom.api_urls.live %}
+                    <a href="{{ signup_urls.payment_gateways.checkoutcom.api_urls.live }}" target="_blank" rel="noopener"
+                       class="text-xs text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Get Live API Keys') }}
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <button type="submit" formaction="{{ url('/admin/payment/test') }}" class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                    🔌 {{ __('Save & Test Gateway') }}
+                </button>
+                <p class="mt-1 text-center text-xs text-gray-400">{{ __('A successful test enables the provider automatically.') }}</p>
+            </form>
+
+            {% if cko_is_default %}
+            <div class="mt-3 rounded-lg border border-indigo-300 bg-slate-50 dark:border-indigo-800 dark:bg-indigo-900/40 px-4 py-2 text-center text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                ✓ {{ __('Default Gateway') }} <span class="font-normal">— {{ __('Preselected at checkout.') }}</span>
+            </div>
+            {% elseif cko_enabled %}
+            <form method="post" action="{{ url('/admin/payment/default') }}" class="mt-3">
+                {{ csrf_field() }}
+                <input type="hidden" name="provider" value="checkoutcom">
+                <button type="submit" class="w-full rounded-lg border border-indigo-300 dark:border-indigo-800 px-4 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-indigo-900/40 transition-colors">
+                    {{ __('Set Default') }}
+                </button>
+            </form>
+            {% else %}
+            <button type="button" disabled title="{{ __('Enable this provider first.') }}" class="mt-3 w-full cursor-not-allowed rounded-lg border border-indigo-300 dark:border-indigo-800 px-4 py-2 text-sm font-medium text-gray-400">
+                {{ __('Set Default') }}
+            </button>
+            {% endif %}
+            </div>
+        </div>
+
+    </div>
+    </div>{# /ec-tab-payment #}
+

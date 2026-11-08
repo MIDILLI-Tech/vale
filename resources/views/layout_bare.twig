@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{ current_locale() ?? 'en' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name|default('Vale') }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{% endblock %}">
+    {{ theme_hook('head') }}
+    {% block head %}{% endblock %}
+
+    {% if settings.custom_css %}
+    <style>{{ settings.custom_css|raw }}</style>
+    {% endif %}
+
+    {% if settings.custom_header_scripts %}
+    {{ settings.custom_header_scripts|raw }}
+    {% endif %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    {% block scripts %}{% endblock %}
+
+    {% if settings.custom_footer_scripts %}
+    {{ settings.custom_footer_scripts|raw }}
+    {% endif %}
+</body>
+</html>

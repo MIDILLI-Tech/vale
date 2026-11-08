@@ -1,0 +1,39 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Refund Request Submitted') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('New Refund Request') }}</h2>
+<p>{{ __('A customer submitted a refund/cancellation request.') }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Email') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.email|default('—') }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Status') }}</td>
+    <td style="padding:8px 0; font-weight:700; color:#b45309; text-transform:capitalize;">{{ order.status ? __(order.status) : '—' }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+{% if reason %}
+<p style="margin-top:14px; padding:10px 12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text }};">
+  <strong>{{ __('Reason:') }}</strong> {{ reason }}
+</p>
+{% endif %}
+
+{% if site_url %}
+<p style="margin-top:18px;">
+  <a href="{{ site_url }}/admin/orders/{{ order.id }}" class="btn" style="display:inline-block; padding:8px 14px; font-size:13px;">{{ __('Review Order') }}</a>
+</p>
+{% endif %}
+{% endblock %}

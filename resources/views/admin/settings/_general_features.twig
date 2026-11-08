@@ -1,0 +1,230 @@
+{# General › Features — feature enable switches (configs stay under Content) #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="general-tab-features" class="general-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="general">
+        <input type="hidden" name="_subtab" value="features">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Features') }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Enable or disable built-in modules. The individual settings for each feature can be found on the Content tab.') }}</p>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {# Blog #}
+            <div {{ vl.attrs('general', __('Enable blog'), 'blog_enabled', 'features', __('Features'), 'posts blogging') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="blog_enabled" value="0">
+                    <input type="checkbox" name="blog_enabled" value="1"
+                           :checked="$store.vlFeatures.blog"
+                           @change="$store.vlFeatures.blog = $event.target.checked; Alpine.store('vlFeatures').blog = $event.target.checked"
+                           {{ settings.blog_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable blog') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('When disabled, all blog routes return 404.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Pages #}
+            <div {{ vl.attrs('general', __('Enable pages'), 'pages_enabled', 'features', __('Features'), 'static pages') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="pages_enabled" value="0">
+                    <input type="checkbox" name="pages_enabled" value="1"
+                           :checked="$store.vlFeatures.pages"
+                           @change="$store.vlFeatures.pages = $event.target.checked; Alpine.store('vlFeatures').pages = $event.target.checked"
+                           {{ settings.pages_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable pages') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('When disabled, all page routes return 404.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Newsletter #}
+            <div {{ vl.attrs('general', __('Enable newsletter'), 'newsletter_enabled', 'features', __('Features'), 'email subscribers') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="newsletter_enabled" value="0">
+                    <input type="checkbox" name="newsletter_enabled" value="1"
+                           :checked="$store.vlFeatures.newsletter"
+                           @change="$store.vlFeatures.newsletter = $event.target.checked; Alpine.store('vlFeatures').newsletter = $event.target.checked"
+                           {{ settings.newsletter_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable newsletter') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('When disabled, newsletter features are hidden and tracking URLs are disabled.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Form Builder #}
+            <div {{ vl.attrs('general', __('Enable form builder'), 'form_builder_enabled', 'features', __('Features'), 'forms contact') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="form_builder_enabled" value="0">
+                    <input type="checkbox" name="form_builder_enabled" value="1"
+                           :checked="$store.vlFeatures.formBuilder"
+                           @change="$store.vlFeatures.formBuilder = $event.target.checked; Alpine.store('vlFeatures').formBuilder = $event.target.checked"
+                           {{ settings.form_builder_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable form builder') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('When disabled, forms will not be displayed on the frontend and all form submission routes return 404.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Custom Content Types #}
+            <div {{ vl.attrs('general', __('Enable custom content types'), 'custom_content_types_enabled', 'features', __('Features'), 'cpt post types') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="custom_content_types_enabled" value="0">
+                    <input type="checkbox" name="custom_content_types_enabled" value="1"
+                           :checked="$store.vlFeatures.cpt"
+                           @change="$store.vlFeatures.cpt = $event.target.checked; Alpine.store('vlFeatures').cpt = $event.target.checked"
+                           {{ settings.custom_content_types_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable custom content types') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Define custom post types with their own fields. When disabled, custom type routes return 404 and Content Types are hidden from the sidebar.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Multi-Language #}
+            <div {{ vl.attrs('general', __('Enable multi-language content'), 'multi_language_content', 'features', __('Features'), 'i18n translations multilingual') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="multi_language_content" value="0">
+                    <input type="checkbox" name="multi_language_content" value="1"
+                           :checked="$store.vlFeatures.mlc"
+                           @change="$store.vlFeatures.mlc = $event.target.checked; Alpine.store('vlFeatures').mlc = $event.target.checked"
+                           {{ settings.multi_language_content|default('0') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable multi-language content') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Allows creating translations for posts, pages, products, categories, tags, and more. Localized URLs like /tr/path will be enabled.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Advertisement #}
+            <div {{ vl.attrs('general', __('Enable advertisement'), 'advertisement_enabled', 'features', __('Features'), 'ads adsense shortcode') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="advertisement_enabled" value="0">
+                    <input type="checkbox" name="advertisement_enabled" value="1"
+                           :checked="$store.vlFeatures.ads"
+                           @change="$store.vlFeatures.ads = $event.target.checked; Alpine.store('vlFeatures').ads = $event.target.checked"
+                           {{ settings.advertisement_enabled|default('0') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable advertisement') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Display advertisement slots and enable the [ad] shortcode.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Shop #}
+            <div {{ vl.attrs('general', __('Enable shop'), 'shop_enabled', 'features', __('Features'), 'ecommerce store products') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="shop_enabled" value="0">
+                    <input type="checkbox" name="shop_enabled" value="1"
+                           :checked="$store.vlFeatures.shop"
+                           @change="$store.vlFeatures.shop = $event.target.checked; Alpine.store('vlFeatures').shop = $event.target.checked"
+                           {{ settings.shop_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable shop') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Allow visitors to browse shop, use cart, and purchase items using configured payment gateways.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Subscriptions #}
+            <div {{ vl.attrs('general', __('Enable subscriptions'), 'subscriptions_enabled', 'features', __('Features'), 'membership recurring payments') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="subscriptions_enabled" value="0">
+                    <input type="checkbox" name="subscriptions_enabled" value="1"
+                           :checked="$store.vlFeatures.subscriptions"
+                           @change="$store.vlFeatures.subscriptions = $event.target.checked; Alpine.store('vlFeatures').subscriptions = $event.target.checked"
+                           {{ settings.subscriptions_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable subscriptions') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Allow users to subscribe, make donations or recurring payments, and enable paid content based on their tiers.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# User Registration #}
+            <div {{ vl.attrs('general', __('Enable user registration'), 'registration_enabled', 'features', __('Features'), 'signup account') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="registration_enabled" value="0">
+                    <input type="checkbox" name="registration_enabled" value="1"
+                           :checked="$store.vlFeatures.registration"
+                           @change="$store.vlFeatures.registration = $event.target.checked; Alpine.store('vlFeatures').registration = $event.target.checked"
+                           {{ settings.registration_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable user registration') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Global toggle. When disabled, registration is completely turned off.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# SEO System #}
+            <div {{ vl.attrs('general', __('Enable SEO system'), 'seo_enabled', 'features', __('Features'), 'meta tags search engine') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="seo_enabled" value="0">
+                    <input type="checkbox" name="seo_enabled" value="1"
+                           :checked="$store.vlFeatures.seo"
+                           @change="$store.vlFeatures.seo = $event.target.checked; Alpine.store('vlFeatures').seo = $event.target.checked"
+                           {{ settings.seo_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable SEO system') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Global toggle for meta tags, social previews, and search engine optimization features.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Analytics #}
+            <div {{ vl.attrs('general', __('Enable analytics'), 'analytics_enabled', 'features', __('Features'), 'pageviews stats tracking') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="analytics_enabled" value="0">
+                    <input type="checkbox" name="analytics_enabled" value="1"
+                           :checked="$store.vlFeatures.analytics"
+                           @change="$store.vlFeatures.analytics = $event.target.checked; Alpine.store('vlFeatures').analytics = $event.target.checked"
+                           {{ settings.analytics_enabled|default('1') == '1' ? 'checked' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable analytics') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Track pageviews, referrers, browser, and device information. No cookies required.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Plugins — not a feature toggle, a shortcut to the plugin manager #}
+            {% set _can_plugins = (_sa is defined and _sa) or (user_permissions is defined and 'system.plugins' in user_permissions) %}
+            <div {{ vl.attrs('general', __('Plugins'), '', 'features', __('Features'), 'extensions drop-ins plugin manager mu-plugins') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <span class="flex items-center gap-2">
+                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Plugins') }}</span>
+                            {% if plugins_enabled is defined and not plugins_enabled %}
+                            <span class="rounded-sm bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Off') }}</span>
+                            {% endif %}
+                        </span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Enable or disable drop-in extensions on the plugin screen.') }}</span>
+                    </div>
+                    {% if _can_plugins %}
+                    <a href="{{ url('/admin/plugins') }}"
+                       class="shrink-0 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600">
+                        {{ __('Manage plugins') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>

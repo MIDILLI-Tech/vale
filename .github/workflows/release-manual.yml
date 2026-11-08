@@ -1,0 +1,113 @@
+name: Build & Release (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.2.3)'
+        required: true
+      description:
+        description: 'Release description / notes (optional)'
+        required: false
+      publish_docker:
+        description: 'Also publish the Docker images for this version'
+        required: false
+        type: choice
+        default: 'yes'
+        options:
+          - 'yes'
+          - 'no'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release-meta.outputs.tag }}
+      version: ${{ steps.release-meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, sodium
+          tools: composer:v2
+
+      - name: Generate release package and tag
+        id: release-meta
+        env:
+          UPDATE_PRIVATE_KEY_ED25519: ${{ secrets.UPDATE_PRIVATE_KEY_ED25519 }}
+          RELEASE_DESCRIPTION: ${{ github.event.inputs.description }}
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          VERSION="${TAG#v}"
+          TAG="v${VERSION}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$UPDATE_PRIVATE_KEY_ED25519" ]; then
+            echo "Signing enabled (key loaded from secret)"
+          else
+            echo "WARNING: UPDATE_PRIVATE_KEY_ED25519 not set — release will NOT be signed"
+          fi
+
+          # orchestrate-release.php creates and pushes the annotated tag before
+          # building the ZIP, so a manual release always leaves a tag behind.
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          ARGS=(--version="$VERSION" --tag --changelog --build --include-vendor --compress)
+          if [ -n "$RELEASE_DESCRIPTION" ]; then
+            ARGS+=(--description="$RELEASE_DESCRIPTION")
+          fi
+
+          php scripts/orchestrate-release.php "${ARGS[@]}"
+
+      - name: Update manifest download_url
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          ZIP="vale-${VERSION}.zip"
+          MANIFEST="dist/manifest-${VERSION}.json"
+          STABLE_MANIFEST="dist/manifest.json"
+          DOWNLOAD_URL="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${ZIP}"
+          jq --arg url "$DOWNLOAD_URL" '.download_url = $url' "$MANIFEST" > tmp.json
+          mv tmp.json "$MANIFEST"
+          cp "$MANIFEST" "$STABLE_MANIFEST"
+          echo "download_url set to: $DOWNLOAD_URL"
+          echo "stable manifest created: $STABLE_MANIFEST"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.release-meta.outputs.tag }}
+          files: |
+            dist/vale-*.zip
+            dist/manifest-*.json
+            dist/manifest.json
+          body_path: dist/changelog-${{ steps.release-meta.outputs.version }}.md
+          generate_release_notes: true
+
+  # A tag created by action-gh-release uses GITHUB_TOKEN, and events raised with
+  # that token do not start another workflow run — so the images are published
+  # from this run instead of relying on docker-publish.yml's tag trigger.
+  docker:
+    name: Publish Docker images
+    needs: release
+    if: ${{ inputs.publish_docker == 'yes' }}
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+      flavor: all
+      push: true
+      ref: ${{ needs.release.outputs.tag }}
+    secrets: inherit

@@ -1,0 +1,28 @@
+{% extends "mail/layout.twig" %}
+
+{% block body %}
+<p>{{ __('Hello Admin,') }}</p>
+
+<p>{{ __('This is an automated notification that a product in your shop has reached a low stock level or is now out of stock.') }}</p>
+
+<div style="margin: 20px 0; padding: 15px; border-left: 4px solid #f59e0b; background: #fffbeb;">
+    <h3 style="margin-top: 0;">{{ __('Product Information') }}</h3>
+    <p><strong>{{ __('Name:') }}</strong> {{ product_name }}</p>
+    {% if variation_name %}
+    <p><strong>{{ __('Variation:') }}</strong> {{ variation_name }}</p>
+    {% endif %}
+    {% if sku %}
+    <p><strong>{{ __('SKU:') }}</strong> {{ sku }}</p>
+    {% endif %}
+    <p><strong>{{ __('Current Stock:') }}</strong> <span style="font-weight: bold; color: {{ is_out_of_stock ? '#ef4444' : '#d97706' }}">{{ current_stock }}</span></p>
+    <p><strong>{{ __('Status:') }}</strong> {{ stock_status|replace({'_': ' '})|capitalize }}</p>
+</div>
+
+<p>{{ __('You can manage this product and restock it via the admin dashboard:') }}</p>
+
+<p style="text-align: center; margin: 30px 0;">
+    <a href="{{ admin_edit_url }}" class="btn" style="padding:10px 20px;">{{ __('Edit Product') }}</a>
+</p>
+
+<p>{{ __('Thank you,') }}<br>{{ site_name }}</p>
+{% endblock %}

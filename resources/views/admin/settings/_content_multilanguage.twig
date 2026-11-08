@@ -1,0 +1,76 @@
+{# Content › Multi-Language #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="{{ content_tab_id|default('content-tab-mlc') }}" class="content-tab-panel {{ is_active ? '' : 'hidden' }}">
+<form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="PUT">
+    <input type="hidden" name="_group" value="content">
+    <input type="hidden" name="_subtab" value="mlc">
+
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Multi-Language') }}</p>
+    <div x-data="{ showOriginals: {{ settings.i18n_display_originals_fallback|default('1') == '1' ? 'true' : 'false' }} }" class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+        <div class="mt-0 border-t-0 pt-0" {{ vl.attrs('content', __('Display originals if a translation is not found'), 'i18n_display_originals_fallback', 'mlc', __('Multi-Language'), 'fallback translation') }}>
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="i18n_display_originals_fallback" value="0">
+                <input type="checkbox" name="i18n_display_originals_fallback" value="1"
+                       x-model="showOriginals"
+                       {{ settings.i18n_display_originals_fallback|default('1') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Display originals if a translation is not found') }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('If an original content does not have a translation in the current language, show the original instead of hiding it.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        <div x-show="showOriginals" x-cloak class="mt-4 border-t border-blue-200 pt-4 dark:border-blue-900/40" {{ vl.attrs('content', __('Display language notice for untranslated content'), 'i18n_fallback_content_notice', 'mlc', __('Multi-Language'), 'fallback notice language') }}>
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="i18n_fallback_content_notice" value="0">
+                <input type="checkbox" name="i18n_fallback_content_notice" value="1"
+                       {{ settings.i18n_fallback_content_notice|default('1') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Display language notice for untranslated content') }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Show a notice when content is displayed in its original language because no translation is available.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        <div {{ vl.attrs('content', __('Content Languages'), 'content_languages', 'mlc', __('Multi-Language'), 'languages translation locales') }} x-data="{
+                items: '{{ settings.content_languages|default(settings.default_locale|default('en')) }}'.split(',').filter(Boolean),
+                languageLabels: {
+                    {% for code, name in all_locales %}
+                    '{{ code|e('js') }}': '{{ locale_name(code)|e('js') }}'{{ not loop.last ? ',' : '' }}
+                    {% endfor %}
+                },
+                langName(code) { return this.languageLabels[code] || code.toUpperCase(); },
+                add(code) { if (code && !this.items.includes(code)) this.items.push(code); },
+                remove(code) { this.items = this.items.filter(i => i !== code); }
+            }" class="mt-4 border-t border-blue-200 pt-4 dark:border-blue-900/40">
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Content Languages') }}</label>
+
+            <div class="flex flex-wrap gap-2 mb-3">
+                <template x-for="lang in items" :key="lang">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-200 text-blue-900 px-3 py-1 text-sm font-medium dark:bg-blue-900/60 dark:text-blue-300">
+                        <span x-text="langName(lang) + ' (' + lang.toUpperCase() + ')'"></span>
+                        <button @click="remove(lang)" type="button" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 font-bold transition-colors">&times;</button>
+                    </span>
+                </template>
+            </div>
+
+            <select @change="add($event.target.value); $event.target.value=''"
+                    class="mt-1 w-auto min-w-48 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                <option value="">— {{ __('Add language') }} —</option>
+                {% for code, name in all_locales %}
+                <option value="{{ code }}"
+                        x-show="!items.includes('{{ code }}')">{{ locale_name(code) }} ({{ code|upper }})</option>
+                {% endfor %}
+            </select>
+
+            <input type="hidden" name="content_languages" :value="items.join(',')">
+
+            <p class="mt-2 text-xs text-gray-500">{{ __('Select which languages are available for content translations. Only selected languages will appear in the language switcher.') }}</p>
+        </div>
+    </div>
+</form>
+</div>

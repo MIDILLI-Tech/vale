@@ -1,0 +1,235 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+{% set allIds = products|map(p => p.id) %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> products</p>
+    </div>
+    <a href="{{ url('/admin/products/create') }}"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ Add Product</a>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <form method="get" action="{{ url('/admin/products') }}" class="flex flex-wrap items-center gap-2">
+        <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-200">
+            <option value="">All Statuses</option>
+            {% for s in ['draft', 'published', 'scheduled', 'archived', 'expired'] %}
+            <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
+            {% endfor %}
+            <option value="on_sale" {{ filters.status|default('') == 'on_sale' ? 'selected' }}>On Sale</option>
+        </select>
+        {% if multi_language_content %}
+        <select name="language" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-200">
+            <option value="">{{ __('All Languages') }}</option>
+            {% for code, name in supported_locales %}
+                <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
+    </form>
+    {{ table.search('Search…') }}
+    {{ table.contentSearch() }}
+    {{ table.columnsToggle() }}
+</div>
+
+{% if filterCategoryName %}
+<div class="mb-4">
+    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 px-3 py-1 text-sm font-medium dark:bg-green-900/40 dark:text-green-300">
+        Category: {{ filterCategoryName }}
+        <a href="{{ url('/admin/products') }}" class="text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200">&times;</a>
+    </span>
+</div>
+{% endif %}
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs" data-vl-products-table>
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th('Product', 'name') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
+                {{ table.th('SKU', 'sku') }}
+                {{ table.th('Price', 'price') }}
+                {{ table.th('Categories', 'categories') }}
+                {{ table.th('Stock', 'stock_quantity', 'center', {cellClass: 'px-2'}) }}
+                {{ table.th('Sold', 'total_sold', 'center', {cellClass: 'px-2'}) }}
+                {{ table.th('Status', 'status', 'center') }}
+                {{ table.th(__('Created'), 'created_at', 'left', {defaultHidden: true}) }}
+                {{ table.th(__('Updated'), 'updated_at', 'left', {defaultHidden: true}) }}
+                {{ table.th_static('Actions', 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for p in products %}
+            {% set catNames = p.categoryIds|map(cid => categoryMap[cid]|default(''))|join(', ') %}
+            <tr data-row-id="{{ p.id }}" data-sort="{{ {id: p.id, language: p.language, name: p.name, sku: p.sku ?? '', price: p.price, categories: catNames, stock_quantity: p.stockQuantity, total_sold: p.totalSold, status: p.status, created_at: p.createdAt is defined and p.createdAt ? p.createdAt.format('Y-m-d H:i:s') : '', updated_at: p.updatedAt is defined and p.updatedAt ? p.updatedAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(p.id) }}
+                <td class="px-6 py-4">
+                    <a href="{{ url('/admin/products/' ~ p.id ~ '/edit') }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ p.name }}</a>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ routing_shop_prefix }}/{{ p.slug }}</p>
+                </td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 text-center">
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 uppercase">
+                        {{ p.language }}
+                    </span>
+                </td>
+                {% endif %}
+                <td class="vl-sku-cell px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% if p.sku %}
+                    <span class="flex min-w-0 items-center gap-1.5">
+                        <button type="button"
+                                title="{{ p.sku|e('html_attr') }} — {{ __('Click to copy') }}"
+                                onclick="copyToClipboard('{{ p.sku|e('js') }}', this)"
+                                class="vl-sku-text min-w-0 flex-1 truncate text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:underline cursor-pointer">{{ p.sku }}</button>
+                        {% include 'admin/components/_copy_button.twig' with {
+                            text: p.sku,
+                            size: 'h-3.5 w-3.5',
+                            class: 'shrink-0 text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300'
+                        } %}
+                    </span>
+                    {% else %}
+                    <span class="text-gray-300 dark:text-gray-600">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    {% if p.salePrice and p.isSaleActive() %}
+                    <span class="block text-xs text-gray-400 dark:text-gray-500 line-through">{{ p.price|price(default_currency) }}</span>
+                    <span class="text-red-600 dark:text-red-400 font-medium">{{ p.salePrice|price(default_currency) }}</span>
+                    {% elseif p.salePrice %}
+                    <span class="block text-xs text-gray-400 dark:text-gray-500 line-through">{{ p.price|price(default_currency) }}</span>
+                    <span class="text-gray-400 dark:text-gray-500 font-medium">{{ p.salePrice|price(default_currency) }}</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">⏰</span>
+                    {% else %}
+                    <span class="dark:text-gray-300">{{ p.price|price(default_currency) }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 text-center">
+                    {% if p.categoryIds %}
+                    <div class="flex w-full flex-wrap justify-center gap-1">
+                        {% for cid in p.categoryIds %}
+                            {% set catName = categoryMap[cid]|default('') %}
+                            {% if catName %}
+                            <a href="{{ url('/admin/products?category_id=' ~ cid) }}" class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600" title="{{ __('See what else shares this category') }}">{{ catName }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <span class="text-gray-300 dark:text-gray-600">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-2 py-4 text-center text-sm dark:text-gray-300">
+                    {{ p.stockQuantity }}
+                    <span class="block text-xs text-gray-400 dark:text-gray-500">{{ p.stockStatus|replace({'_': ' '})|capitalize }}</span>
+                </td>
+                <td class="px-2 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
+                    {% if p.totalSold %}
+                    <a href="{{ url('/admin/orders?product_id=' ~ p.id) }}" class="hover:underline" title="Click to see orders containing this product">{{ p.totalSold }}</a>
+                    {% else %}
+                    0
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-center">
+                    {% set sc = {published: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', archived: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400', expired: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[p.status]|default('bg-gray-100') }}">{{ p.status|capitalize }}</span>
+                    {% if p.status in ['draft', 'unlisted'] and p.publishedAt and p.publishedAt|date('Y-m-d H:i:s') > "now"|date('Y-m-d H:i:s') %}
+                    <span class="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">({{ __('scheduled')|capitalize }})</span>
+                    {% endif %}
+                    {% if p.status == 'scheduled' and not p.publishedAt %}
+                    <span class="mt-1 block inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" title="{{ __('No publish date set — this product will never publish automatically') }}">{{ __('No date') }}</span>
+                    {% endif %}
+                    {% if p.expiresAt and p.expiresAt|date('Y-m-d H:i:s') <= "now"|date('Y-m-d H:i:s') and p.status in ['published', 'unlisted'] %}
+                    <span class="mt-1 block inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" title="{{ __('Expired — should be archived') }}">{{ __('Expired') }}</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.createdAt is defined and p.createdAt ? p.createdAt.format('Y-m-d') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.updatedAt is defined and p.updatedAt ? p.updatedAt.format('Y-m-d') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        {% if p.status not in ['draft', 'archived', 'expired'] %}
+                        <a href="{{ absolute_url(url(routing_shop_prefix ~ '/' ~ p.slug)) }}" target="_blank" rel="noopener"
+                           title="{{ (routing_shop_prefix ~ '/' ~ p.slug)|e }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
+                        {% endif %}
+                        <a href="{{ url('/admin/products/' ~ p.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                        <form method="POST" action="{{ url('/admin/products/' ~ p.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Delete?')|e('js') }}')">
+                            {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="{{ multi_language_content ? 12 : 11 }}" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No products yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% set exportQuery = {} %}
+{% for key in ['status', 'language', 'category_id', 'search', 'search_body', 'on_sale'] %}
+    {% if filters[key] is defined and filters[key] is not empty %}{% set exportQuery = exportQuery|merge({(key): filters[key]}) %}{% endif %}
+{% endfor %}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'products', extraActions: [
+    {label: __('Publish'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+    {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},
+    {label: __('Export'), name: 'export_scope', value: 'selected', formaction: url('/admin/products/bulk-export', {}, exportQuery), class: 'bg-blue-600/10 text-blue-700 dark:text-blue-400 hover:bg-blue-600/20', attributes: 'data-no-disable="true"'},
+]} %}
+</div>
+
+<script>
+/**
+ * Adaptive SKU column (products table).
+ *
+ * The full SKU stays in the DOM — search, copy button and tooltip all work on
+ * it — and only the column width adapts: it is capped while the table really
+ * overflows its wrapper and released again as soon as free space appears
+ * (hidden columns, wider viewport). Re-measured on resize and whenever the
+ * shared column-toggle component applies a new visibility set.
+ */
+(function () {
+    var wrap = document.querySelector('[data-vl-products-table]');
+    var table = wrap ? wrap.querySelector('table') : null;
+    if (!table) return;
+
+    var CAPPED = 'vl-sku-capped';
+
+    function isOverflowing() {
+        // Measured with the cap removed, so this is the table's natural width.
+        table.classList.remove(CAPPED);
+        return table.getBoundingClientRect().width > wrap.clientWidth + 1;
+    }
+
+    function sync() {
+        // Remove, measure and re-apply in a single task: no repaint flicker.
+        table.classList.toggle(CAPPED, isOverflowing());
+    }
+
+    var timer = null;
+    function schedule() {
+        clearTimeout(timer);
+        timer = setTimeout(sync, 50);
+    }
+
+    window.addEventListener('resize', schedule);
+    document.addEventListener('vl:columns-changed', schedule);
+    document.addEventListener('DOMContentLoaded', schedule);
+    sync();
+})();
+</script>
+{% endblock %}

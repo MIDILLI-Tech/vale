@@ -1,0 +1,41 @@
+{% set email_primary = email_primary|default(vl_email_colors['--theme-primary']|default('#1f2937')) %}
+{% set email_primary_hover = email_primary_hover|default(vl_email_colors['--theme-primary-hover']|default('#374151')) %}
+{% set email_accent = email_accent|default(vl_email_colors['--theme-accent']|default('#2563eb')) %}
+{% set email_bg = email_bg|default(vl_email_colors['--theme-bg']|default('#f9fafb')) %}
+{% set email_surface = email_surface|default(vl_email_colors['--theme-surface']|default('#ffffff')) %}
+{% set email_text = email_text|default(vl_email_colors['--theme-text']|default('#111827')) %}
+{% set email_text_muted = email_text_muted|default(vl_email_colors['--theme-text-muted']|default('#6b7280')) %}
+{% set email_border = email_border|default(vl_email_colors['--theme-border']|default('#e5e7eb')) %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}{% endblock %}</title>
+{% block head_extra %}{% endblock %}
+<style>
+  body { margin:0; padding:0; background:{{ email_bg }}; font-family: 'Inter', Arial, sans-serif; }
+  .wrapper { max-width:600px; margin:32px auto; background:{{ email_surface }}; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .header { background:{{ email_primary }}; padding:28px 40px; }
+  .header a { color:#fff; font-size:20px; font-weight:700; text-decoration:none; }
+  .body { padding:40px; color:{{ email_text }}; font-size:15px; line-height:1.7; }
+  .body h2 { margin-top:0; color:{{ email_text }}; font-size:22px; }
+  .btn { display:inline-block; margin:24px 0; padding:12px 28px; background:{{ email_primary }}; color:#fff; border-radius:6px; text-decoration:none; font-weight:600; font-size:15px; }
+  .footer { padding:24px 40px; background:{{ email_bg }}; border-top:1px solid {{ email_border }}; font-size:13px; color:{{ email_text_muted }}; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <a href="{{ site_url ~ '/' }}">{{ site_name|default('Vale') }}</a>
+  </div>
+  <div class="body">
+    {% block body %}{% block content %}{% endblock %}{% endblock %}
+  </div>
+  <div class="footer">
+    &copy; {{ 'now'|date('Y') }} {{ site_name|default('Vale') }}. {{ __('All rights reserved.') }}
+    {% block footer_extra %}{% endblock %}
+  </div>
+</div>
+</body>
+</html>

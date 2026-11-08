@@ -1,0 +1,23 @@
+<div class="account-nav mb-8 flex flex-wrap gap-4 border-b pb-4 text-sm">
+    <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="account-tab{{ active_tab == 'profile' ? ' account-tab-active' }}">{{ __('Profile') }}</a>
+    {% set showShopLinks = showShopAccountLinks is defined ? showShopAccountLinks : (shop_enabled|default(true)) == true %}
+    {% set showSubLink = showSubscriptionAccountLink is defined ? showSubscriptionAccountLink : subscriptions_enabled == true %}
+    {% set showAccountNav = showShopLinks or showSubLink %}
+    {% if showAccountNav %}
+        {% if showShopLinks %}
+        <a href="{{ url(routing_account_prefix ~ '/addresses') }}" class="account-tab{{ active_tab == 'addresses' ? ' account-tab-active' }}">{{ __('Addresses') }}</a>
+        {% endif %}
+        {% if showShopLinks or showSubLink %}
+        <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="account-tab{{ active_tab == 'orders' ? ' account-tab-active' }}">{{ __('Order History') }}</a>
+        {% endif %}
+        {% if showSubLink %}
+        <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="account-tab{{ active_tab == 'subscription' ? ' account-tab-active' }}">{{ __('Subscription') }}</a>
+        {% endif %}
+    {% endif %}
+    {% set showDeleteTab = settings.gdpr_download_enabled|default('0') == '1' or settings.gdpr_account_deletion_enabled|default('1') == '1' %}
+    {% if showDeleteTab %}
+    <a href="{{ url(routing_account_prefix ~ '/delete') }}" class="account-tab account-tab-danger{{ active_tab == 'delete' ? ' account-tab-active' }}">
+        {{ settings.gdpr_download_enabled|default('0') == '1' or settings.gdpr_account_deletion_enabled|default('1') == '1' ? __('Manage Account') : __('Delete Account') }}
+    </a>
+    {% endif %}
+</div>

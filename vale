@@ -1,0 +1,190 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Vale CLI — Symfony Console entry point.
+ *
+ * Usage:
+ *   php vale cache:clear
+ *   php vale cron:run
+ *   php vale user:create
+ */
+
+require __DIR__ . '/vendor/autoload.php';
+
+// Load global helpers (base_path(), env(), site_url(), etc.)
+require_once __DIR__ . '/app/helpers.php';
+
+use DI\ContainerBuilder;
+use Dotenv\Dotenv;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\CommandLoader\FactoryCommandLoader;
+use ValeApp\App\Commands\BackupCreateCommand;
+use ValeApp\App\Commands\BackupDeleteCommand;
+use ValeApp\App\Commands\BackupListCommand;
+use ValeApp\App\Commands\BackupRestoreAllCommand;
+use ValeApp\App\Commands\BackupRestoreDbCommand;
+use ValeApp\App\Commands\BackupRestoreFilesCommand;
+use ValeApp\App\Commands\CacheClearCommand;
+use ValeApp\App\Commands\CacheWarmCommand;
+use ValeApp\App\Commands\CronCommand;
+use ValeApp\App\Commands\DbOptimizeCommand;
+use ValeApp\App\Commands\DbResetCommand;
+use ValeApp\App\Commands\DoctorCommand;
+use ValeApp\App\Commands\ExportCommand;
+use ValeApp\App\Commands\ExportProductsCommand;
+use ValeApp\App\Commands\ImportAmazonCommand;
+use ValeApp\App\Commands\ImportCommand;
+use ValeApp\App\Commands\ImportEbayCommand;
+use ValeApp\App\Commands\ImportEtsyCommand;
+use ValeApp\App\Commands\ImportGhostCommand;
+use ValeApp\App\Commands\ImportProductsCommand;
+use ValeApp\App\Commands\ImportShopifyCommand;
+use ValeApp\App\Commands\ImportWordPressCommand;
+use ValeApp\App\Commands\ImportWxrCommand;
+use ValeApp\App\Commands\KeyGenerateCommand;
+use ValeApp\App\Commands\MediaScanCommand;
+use ValeApp\App\Commands\MediaWebpRemoveCommand;
+use ValeApp\App\Commands\MigrateCommand;
+use ValeApp\App\Commands\MigrateUrlsCommand;
+use ValeApp\App\Commands\PluginCheckUpdatesCommand;
+use ValeApp\App\Commands\PluginDisableCommand;
+use ValeApp\App\Commands\PluginEnableCommand;
+use ValeApp\App\Commands\PluginInstallCommand;
+use ValeApp\App\Commands\PluginListCommand;
+use ValeApp\App\Commands\PluginMigrateCommand;
+use ValeApp\App\Commands\PluginUpdateCommand;
+use ValeApp\App\Commands\RoleListCommand;
+use ValeApp\App\Commands\SeedCommand;
+use ValeApp\App\Commands\UpdateCheckCommand;
+use ValeApp\App\Commands\UserActivateCommand;
+use ValeApp\App\Commands\UserCreateCommand;
+use ValeApp\App\Commands\UserDeleteCommand;
+use ValeApp\App\Commands\UserResetPasswordCommand;
+use ValeApp\App\Commands\UserSetRoleCommand;
+use ValeApp\Application\Cron\CronService;
+use ValeApp\Application\Plugin\PluginManager;
+use ValeApp\Application\Plugin\PluginMigrator;
+use ValeApp\Application\Plugin\PluginUpdateService;
+use ValeApp\Application\Update\BackupService;
+use ValeApp\Application\Update\UpdateService;
+use ValeApp\Infrastructure\Cache\PageCache;
+use ValeApp\Infrastructure\Database\Connection;
+
+// Load environment
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->safeLoad();
+
+// Database table prefix — used globally by repositories and raw SQL
+define('VL_DB_PREFIX', env('DB_PREFIX', 'vl_'));
+
+// Bootstrap DI container (needed for CronCommand)
+$containerBuilder = new ContainerBuilder();
+$containerBuilder->addDefinitions(__DIR__ . '/config/services.php');
+$container = $containerBuilder->build();
+
+// Apply configured timezone from settings (fallback: UTC) so CLI cron
+// agrees with the web process on scheduled/expiry comparisons.
+date_default_timezone_set('UTC');
+try {
+    $configuredTz = $container->get(\ValeApp\Infrastructure\Persistence\DbalSettingsRepository::class)
+        ->get('timezone', 'UTC');
+    if (in_array($configuredTz, \DateTimeZone::listIdentifiers(), true)) {
+        date_default_timezone_set($configuredTz);
+    }
+} catch (\Throwable) {
+    // Database unavailable — keep UTC baseline
+}
+
+$versionFile = __DIR__ . '/version.php';
+$version     = file_exists($versionFile) ? require $versionFile : 'dev';
+$cli         = new Application('vale CLI', $version);
+
+$connection = Connection::createFromEnv();
+$hasher     = $container->get(ValeApp\Infrastructure\Auth\PasswordHasher::class);
+
+// Commands are registered lazily so that unrelated commands never force a
+// database connection at startup (e.g. `doctor` must work without a reachable DB).
+$cli->setCommandLoader(new FactoryCommandLoader([
+    'backup:create'      => fn () => new BackupCreateCommand($container->get(BackupService::class), $container->get(UpdateService::class)),
+    'backup:list'        => fn () => new BackupListCommand($container->get(BackupService::class)),
+    'backup:delete'      => fn () => new BackupDeleteCommand($container->get(BackupService::class), __DIR__),
+    'backup:restore-all' => fn () => new BackupRestoreAllCommand(
+        $container->get(UpdateService::class),
+        $container->get(BackupService::class),
+        __DIR__
+    ),
+    'backup:restore-db' => fn () => new BackupRestoreDbCommand(
+        $container->get(UpdateService::class),
+        $container->get(BackupService::class),
+        __DIR__
+    ),
+    'backup:restore-files' => fn () => new BackupRestoreFilesCommand(
+        $container->get(UpdateService::class),
+        $container->get(BackupService::class),
+        __DIR__
+    ),
+    'cache:clear'          => fn () => new CacheClearCommand($container->get(PageCache::class)),
+    'cache:warm'           => fn () => new CacheWarmCommand(),
+    'plugin:list'          => fn () => new PluginListCommand($container->get(PluginManager::class)),
+    'plugin:install'       => fn () => new PluginInstallCommand($container->get(PluginUpdateService::class)),
+    'plugin:check-updates' => fn () => new PluginCheckUpdatesCommand($container->get(PluginUpdateService::class)),
+    'plugin:update'        => fn () => new PluginUpdateCommand(
+        $container->get(PluginUpdateService::class),
+        $container->get(PageCache::class),
+    ),
+    'plugin:enable'        => fn () => new PluginEnableCommand(
+        $container->get(PluginManager::class),
+        $container->get(PluginMigrator::class),
+        $container->get(PageCache::class),
+    ),
+    'plugin:disable'       => fn () => new PluginDisableCommand(
+        $container->get(PluginManager::class),
+        $container->get(PageCache::class),
+    ),
+    'plugin:migrate'       => fn () => new PluginMigrateCommand($container->get(PluginMigrator::class)),
+    'key:generate'         => fn () => new KeyGenerateCommand(),
+    'cron:run'             => fn () => new CronCommand($container->get(CronService::class)),
+    'media:scan'           => fn () => new MediaScanCommand(
+        $container->get(ValeApp\Infrastructure\Media\MediaScanService::class),
+        $connection,
+    ),
+    'media:webp-remove'    => fn () => new MediaWebpRemoveCommand(
+        $connection,
+        $container->get(ValeApp\Infrastructure\Persistence\DbalSettingsRepository::class),
+        $container->get('config.media')['upload_dir'],
+    ),
+    'doctor'               => fn () => new DoctorCommand($connection, $container->get(ValeApp\Domain\Content\RoutingValidator::class)),
+    'migrate'              => fn () => new MigrateCommand(),
+    'migrate:urls'         => fn () => new MigrateUrlsCommand($connection),
+    'db:seed'              => fn () => new SeedCommand(),
+    'db:reset'             => fn () => new DbResetCommand($connection),
+    'update:check'         => fn () => new UpdateCheckCommand($container->get(UpdateService::class), $container->get(BackupService::class)),
+    'db:optimize'          => fn () => new DbOptimizeCommand(
+        $connection,
+        $container->get(ValeApp\Domain\Content\Repository\RevisionRepositoryInterface::class),
+        $container->get(ValeApp\Domain\Comment\Repository\CommentRepositoryInterface::class),
+        $container->get(ValeApp\Domain\Media\Repository\MediaRepositoryInterface::class),
+        $container->get(ValeApp\Infrastructure\Media\MediaUploadService::class),
+    ),
+    'user:create'         => fn () => new UserCreateCommand($connection, $hasher),
+    'user:delete'         => fn () => new UserDeleteCommand($connection, $hasher),
+    'user:activate'       => fn () => new UserActivateCommand($connection),
+    'user:set-role'       => fn () => new UserSetRoleCommand($connection),
+    'user:reset-password' => fn () => new UserResetPasswordCommand($connection, $hasher),
+    'role:list'           => fn () => new RoleListCommand($connection),
+    'import:wordpress'    => fn () => new ImportWordPressCommand($connection, $hasher, $container->get(ValeApp\Infrastructure\Media\MediaScanService::class), $container->get(PageCache::class)),
+    'import:ghost'        => fn () => new ImportGhostCommand($connection, $hasher, $container->get(ValeApp\Infrastructure\Media\MediaScanService::class), $container->get(PageCache::class)),
+    'export'              => fn () => new ExportCommand($container->get(ValeApp\Application\Maintenance\ExportImportService::class)),
+    'import'              => fn () => new ImportCommand($container->get(ValeApp\Application\Maintenance\ExportImportService::class), $container->get(PageCache::class)),
+    'import:shopify'      => fn () => new ImportShopifyCommand($container->get(\ValeApp\Application\Shop\ProductImporter::class), $container->get(PageCache::class)),
+    'import:etsy'         => fn () => new ImportEtsyCommand($container->get(\ValeApp\Application\Shop\ProductImporter::class), $container->get(PageCache::class)),
+    'import:ebay'         => fn () => new ImportEbayCommand($container->get(\ValeApp\Application\Shop\ProductImporter::class), $container->get(PageCache::class)),
+    'import:amazon'       => fn () => new ImportAmazonCommand($container->get(\ValeApp\Application\Shop\ProductImporter::class), $container->get(PageCache::class)),
+    'import:products'     => fn () => new ImportProductsCommand($container->get(\ValeApp\Application\Shop\ProductImporter::class), $container->get(PageCache::class)),
+    'export:products'     => fn () => new ExportProductsCommand($container->get(\ValeApp\Domain\Shop\Repository\ProductRepositoryInterface::class)),
+]));
+
+$cli->run();

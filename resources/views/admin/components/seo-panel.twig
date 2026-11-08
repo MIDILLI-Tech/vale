@@ -1,0 +1,307 @@
+{# ────────────────────────────────────────────────────────
+   SEO Panel — reusable component for post / page / product forms.
+
+   Expected variables:
+     seo       — SeoMeta entity (or null for new entities)
+     site_name — global var (already available via Twig globals)
+   ──────────────────────────────────────────────────────── #}
+<div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs" x-data='seoPanel({{ {
+    seoEnabled: seo_enabled ? true : false,
+    metaTitle: seo ? seo.metaTitle : '',
+    metaDesc: seo ? seo.metaDescription : '',
+    ogTitle: seo ? seo.ogTitle : '',
+    ogDesc: seo ? seo.ogDescription : '',
+    twitterCard: seo ? seo.twitterCardType : 'summary',
+    imageId: seo and seo.ogImageId ? seo.ogImageId : 0
+}|json_encode|raw }})'>
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">SEO</h3>
+        <template x-if="!seoEnabled">
+            <span class="rounded-sm bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-amber-700 ring-1 ring-amber-200">
+                {{ __('Disabled') }}
+            </span>
+        </template>
+    </div>
+
+    <template x-if="!seoEnabled">
+        <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-200 mb-4">
+            <p class="font-semibold">{{ __('SEO features are currently disabled.') }}</p>
+            <p class="mt-1 opacity-80">{{ __('You can re-enable them in Settings → SEO.') }}</p>
+        </div>
+    </template>
+
+    <div :class="!seoEnabled && 'opacity-40 pointer-events-none grayscale select-none'">
+    {# Sub-tabs #}
+    <div class="vl-seo-panel-tabs flex gap-2 mb-4 border-b text-xs">
+        <button type="button" @click="tab='general'"
+                :class="tab==='general' ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'"
+                class="border-b-2 pb-1.5 font-medium">{{ __('General') }}</button>
+        <button type="button" @click="tab='social'"
+                :class="tab==='social' ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'"
+                class="border-b-2 pb-1.5 font-medium">{{ __('Social') }}</button>
+        <button type="button" @click="tab='advanced'"
+                :class="tab==='advanced' ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'"
+                class="border-b-2 pb-1.5 font-medium">{{ __('Advanced') }}</button>
+    </div>
+
+    {# ── General tab ─────────────────── #}
+    <div x-show="tab==='general'" class="space-y-3">
+        {# SERP preview #}
+        <div class="rounded-lg border bg-white dark:bg-gray-900 p-3 text-xs">
+            <p class="text-[11px] text-gray-400 mb-1">{{ __('Search Preview') }}</p>
+            <p class="text-blue-700 text-sm font-medium truncate" x-text="previewTitle + '{{ seo_title_separator|e('js') }}' + '{{ site_name|e('js') }}'"></p>
+            <p class="text-green-700 truncate">{{ site_url }}/...</p>
+            <p class="text-gray-600 line-clamp-2" x-text="previewDesc"></p>
+        </div>
+
+        {# Focus keyword #}
+        <div>
+            <label for="seo_focus_keyword" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Focus Keyword') }}</label>
+            <input type="text" id="seo_focus_keyword" name="seo[focus_keyword]"
+                   value="{{ seo ? seo.focusKeyword : '' }}"
+                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                   placeholder="{{ __('Primary keyword') }}">
+        </div>
+
+        {# Meta title #}
+        <div>
+            <label for="seo_meta_title" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Meta Title') }}</label>
+            <input type="text" id="seo_meta_title" name="seo[meta_title]"
+                   x-model="metaTitle"
+                   value="{{ seo ? seo.metaTitle : '' }}"
+                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                   maxlength="70">
+            <p class="mt-0.5 text-[11px]"
+               :class="titleLen > 60 ? 'text-orange-500' : 'text-gray-400'"
+               x-text="titleLen + '/60'"></p>
+        </div>
+
+        {# Meta description #}
+        <div>
+            <label for="seo_meta_description" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Meta Description') }}</label>
+            <textarea id="seo_meta_description" name="seo[meta_description]" rows="2"
+                      x-model="metaDesc"
+                      class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                      maxlength="170">{{ seo ? seo.metaDescription : '' }}</textarea>
+            <div class="flex justify-between mt-0.5">
+                <p class="text-[11px]"
+                   :class="descLen > 155 ? 'text-orange-500' : 'text-gray-400'"
+                   x-text="descLen + '/155'"></p>
+                <p class="text-[10px] text-blue-500 font-medium italic">✨ {{ __('Also used for LLM Optimization (LLMO)') }}</p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Social tab ──────────────────── #}
+    <div x-show="tab==='social'" x-cloak x-data="{ previewTab: 'facebook', previewOpen: false }" class="space-y-3">
+        {# Input fields at top #}
+        <div>
+            <label for="seo_og_title" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('OG Title') }}</label>
+            <input type="text" id="seo_og_title" name="seo[og_title]"
+                   x-model="ogTitle"
+                   value="{{ seo ? seo.ogTitle : '' }}"
+                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                   placeholder="{{ __('Defaults to Meta Title') }}">
+        </div>
+        <div>
+            <label for="seo_og_description" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('OG Description') }}</label>
+            <textarea id="seo_og_description" name="seo[og_description]" rows="2"
+                      x-model="ogDesc"
+                      class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                      placeholder="{{ __('Defaults to Meta Description') }}">{{ seo ? seo.ogDescription : '' }}</textarea>
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('OG Image') }}</label>
+            <input type="hidden" name="seo[og_image_id]" :value="imageId">
+            <div x-show="imageId > 0" class="mb-3">
+                <img :src="thumbnailUrl" alt="OG" class="w-full rounded-lg border object-cover aspect-[1.91/1] cursor-pointer hover:opacity-90 transition-opacity" @click="openBrowser()" title="{{ __('Click to change image') }}">
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <button type="button" @click="openBrowser()"
+                            class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-2xs transition-colors">
+                        {{ __('Change image') }}
+                    </button>
+                    <button type="button" @click="removeImage()"
+                            class="rounded-md border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 px-2.5 py-1 text-xs font-medium transition-colors">
+                        ✕ {{ __('Remove image') }}
+                    </button>
+                </div>
+            </div>
+            <button type="button" @click="openBrowser()" x-show="imageId == 0"
+                    class="w-full rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 py-8 text-center text-sm text-gray-500 dark:text-gray-400 hover:border-gray-500 hover:text-gray-900 dark:text-gray-100 transition-colors">
+                📷 {{ __('Choose OG Image') }}
+            </button>
+
+            {% include 'admin/components/media-browser-modal.twig' %}
+        </div>
+        {# Preview subtabs at bottom #}
+        <div class="pt-2">
+            <div class="flex items-center justify-between gap-2 mb-2 border-b text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="font-medium text-gray-500 dark:text-gray-400 pb-1.5">{{ __('Preview:') }}</span>
+                    <div class="flex gap-2">
+                        <button type="button" @click="previewTab='facebook'; previewOpen = true"
+                                :class="previewTab==='facebook' ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'"
+                                class="border-b-2 pb-1.5 font-medium">{{ __('Facebook') }}</button>
+                        <button type="button" @click="previewTab='twitter'; previewOpen = true"
+                                :class="previewTab==='twitter' ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'"
+                                class="border-b-2 pb-1.5 font-medium">Twitter (X)</button>
+                    </div>
+                </div>
+                <button type="button" @click="previewOpen = !previewOpen" :aria-expanded="previewOpen"
+                        :title="previewOpen ? '{{ __('Hide Preview')|e('js') }}' : '{{ __('Show Preview')|e('js') }}'"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg x-show="previewOpen" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                    <svg x-show="!previewOpen" x-cloak class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 010-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+            </div>
+            <div x-show="previewOpen" x-cloak>
+            {# Facebook Preview #}
+            <div x-show="previewTab==='facebook'" class="rounded-lg border bg-white dark:bg-gray-900 overflow-hidden shadow-xs">
+                <div class="p-2 border-b bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Facebook</span>
+                    <div class="flex gap-1">
+                        <span class="h-2 w-2 rounded-full bg-red-400"></span>
+                        <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+                        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                </div>
+                <div class="bg-[#f0f2f5] p-3">
+                    <div class="bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 max-w-md mx-auto">
+                        <div class="aspect-[1.91/1] max-h-52 bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <template x-if="thumbnailUrl">
+                                <img :src="thumbnailUrl" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!thumbnailUrl">
+                                <div class="flex flex-col items-center text-gray-300">
+                                    <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span class="text-[10px] uppercase font-bold mt-1">{{ __('No Image Selected') }}</span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="px-3 py-2.5 bg-white dark:bg-gray-900">
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-tight truncate">{{ site_url|replace({'http://': '', 'https://': ''}) }}</p>
+                            <p class="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mt-0.5 leading-snug line-clamp-2" x-text="ogTitle || previewTitle"></p>
+                            <p class="text-[13px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug line-clamp-2" x-text="ogDesc || previewDesc"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Twitter Preview #}
+            <div x-show="previewTab==='twitter'" class="rounded-lg border bg-white dark:bg-gray-900 overflow-hidden shadow-xs">
+                <div class="p-3 border-b bg-white dark:bg-gray-900">
+                    <label for="seo_twitter_card_type" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Twitter Card Type') }}</label>
+                    <select id="seo_twitter_card_type" name="seo[twitter_card_type]" x-model="twitterCard"
+                            class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                        <option value="summary">Summary</option>
+                        <option value="summary_large_image">Summary Large Image</option>
+                    </select>
+                </div>
+                <div class="p-2 border-b bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Twitter (X)</span>
+                    <span class="text-[9px] text-gray-400 font-medium" x-text="twitterCard === 'summary_large_image' ? 'Summary Large Image' : 'Summary'"></span>
+                </div>
+                <div class="bg-[#eff1f4] p-3">
+                    {# summary card: small square image left, text right #}
+                    <template x-if="twitterCard === 'summary'">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 max-w-sm mx-auto flex">
+                            <div class="w-28 h-28 shrink-0 bg-gray-100 overflow-hidden">
+                                <template x-if="thumbnailUrl">
+                                    <img :src="thumbnailUrl" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="!thumbnailUrl">
+                                    <div class="w-full h-full flex items-center justify-center text-gray-300">
+                                        <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="flex-1 p-3 min-w-0">
+                                <p class="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2" x-text="ogTitle || previewTitle"></p>
+                                <p class="text-[13px] text-gray-600 mt-0.5 leading-snug line-clamp-2" x-text="ogDesc || previewDesc"></p>
+                                <p class="text-[12px] text-gray-400 mt-1 truncate">{{ site_url|replace({'http://': '', 'https://': ''}) }}</p>
+                            </div>
+                        </div>
+                    </template>
+                    {# summary_large_image: wide image with text below #}
+                    <template x-if="twitterCard === 'summary_large_image'">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 max-w-sm mx-auto">
+                            <div class="aspect-2/1 max-h-52 bg-gray-100 flex items-center justify-center overflow-hidden">
+                                <template x-if="thumbnailUrl">
+                                    <img :src="thumbnailUrl" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="!thumbnailUrl">
+                                    <div class="flex flex-col items-center text-gray-300">
+                                        <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <span class="text-[10px] uppercase font-bold mt-1">{{ __('No Image Selected') }}</span>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="p-3">
+                                <p class="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2" x-text="ogTitle || previewTitle"></p>
+                                <p class="text-[13px] text-gray-600 mt-0.5 leading-snug line-clamp-2" x-text="ogDesc || previewDesc"></p>
+                                <p class="text-[12px] text-gray-400 mt-1 truncate">{{ site_url|replace({'http://': '', 'https://': ''}) }}</p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Advanced tab ────────────────── #}
+    <div x-show="tab==='advanced'" x-cloak class="space-y-3"
+         x-data="{
+            allowIndex: {{ seo is null or 'noindex' not in seo.robots ? 'true' : 'false' }},
+            allowFollow: {{ seo is null or 'nofollow' not in seo.robots ? 'true' : 'false' }},
+            showSitemap: {{ seo is null or not seo.sitemapExcluded ? 'true' : 'false' }}
+         }">
+        <div class="flex items-center gap-2">
+            <input type="hidden" name="seo[allow_index]" value="0">
+            <input type="checkbox" id="seo_allow_index" name="seo[allow_index]" value="1"
+                   x-model="allowIndex"
+                   @change="if (!allowIndex) showSitemap = false"
+                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            <label for="seo_allow_index" class="text-sm text-gray-700 dark:text-gray-300">{{ __('Show this page in search results') }}</label>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="hidden" name="seo[allow_follow]" value="0">
+            <input type="checkbox" id="seo_allow_follow" name="seo[allow_follow]" value="1"
+                   x-model="allowFollow"
+                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            <label for="seo_allow_follow" class="text-sm text-gray-700 dark:text-gray-300">{{ __('Let search engines follow links on this page') }}</label>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="hidden" name="seo[show_sitemap]" value="0">
+            <input type="checkbox" id="seo_show_sitemap" name="seo[show_sitemap]" value="1"
+                   x-model="showSitemap"
+                   :disabled="!allowIndex"
+                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-40">
+            <label for="seo_show_sitemap" class="text-sm text-gray-700 dark:text-gray-300">{{ __('Show this page in the sitemap') }}</label>
+        </div>
+        <p x-show="!allowIndex" x-cloak class="text-xs text-gray-500 dark:text-gray-400">{{ __('Hidden pages are always excluded from the sitemap.') }}</p>
+        {% if hasRss|default(false) %}
+        <div class="flex items-center gap-2">
+            <input type="hidden" name="rss_exclude" value="0">
+            <input type="checkbox" id="seo_rss_exclude" name="rss_exclude" value="1"
+                   {{ post is not null and post.isRssExcluded ? 'checked' }}
+                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            <label for="seo_rss_exclude" class="text-sm text-gray-700">{{ __('Exclude from RSS Feed') }}</label>
+        </div>
+        {% endif %}
+        <div>
+            <label for="seo_canonical_url" class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Canonical URL') }}</label>
+            <input type="url" id="seo_canonical_url" name="seo[canonical_url]"
+                   value="{{ seo ? seo.canonicalUrl : '' }}"
+                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                   placeholder="{{ __('Leave empty to use default') }}">
+        </div>
+    </div>
+    </div>
+</div>

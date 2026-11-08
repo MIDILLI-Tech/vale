@@ -1,0 +1,60 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ page.metaTitle|default(page.title) }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+{% if not page.hideTitle or page.excerpt %}
+<div class="relative overflow-hidden vl-post-gradient">
+    <div class="pointer-events-none absolute -top-16 -right-16 h-80 w-80 rounded-full opacity-10 vl-radial-glow"></div>
+    <div class="pointer-events-none absolute -bottom-10 -left-10 h-60 w-60 rounded-full opacity-10 vl-radial-glow"></div>
+
+    <div class="relative mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-16 text-center">
+        {% if not page.hideTitle %}<h1 class="font-display text-2xl sm:text-4xl lg:text-5xl font-bold text-white drop-shadow-xs leading-tight break-words">
+            {{ page.title }}
+        </h1>{% endif %}
+        {% if page.excerpt %}
+        <p class="mt-4 text-emerald-100 text-lg leading-relaxed max-w-2xl mx-auto">
+            {{ page.excerpt }}
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}">
+    {% include 'partials/_fallback_notice.twig' with {entity_label: 'page'} %}
+
+    {% if has_access is defined and not has_access %}
+        <div class="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-8 text-center shadow-xs backdrop-blur-xs">
+            <p class="text-xl font-bold text-emerald-950">{{ __('This content is for members only.') }}</p>
+            <p class="mt-2 text-sm text-emerald-800">{{ __('Subscribe to get full access.') }}</p>
+            <a href="{{ url('/membership') }}" class="mt-5 inline-block rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-all shadow-xs hover:shadow-md">{{ __('View Membership Plans') }}</a>
+        </div>
+    {% else %}
+        {# ── Advertisement: Above Content ── #}
+        {% if advertisement_enabled == '1' and advertisement_placement == 'above_content' and advertisement_code %}
+        <div class="vl-ad-above-content mb-8 flex justify-center">
+            {{ advertisement_code|raw }}
+        </div>
+        {% endif %}
+
+        <div class="prose prose-emerald max-w-none
+                    prose-headings:font-display prose-headings:text-gray-900
+                    prose-a:text-emerald-600 prose-a:no-underline prose-a:hover:underline
+                    prose-img:rounded-2xl prose-img:shadow-md
+                    prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-emerald-50 prose-blockquote:px-5 prose-blockquote:py-1 prose-blockquote:rounded-r-lg
+                    prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:rounded-sm prose-code:px-1">
+            {{ page.body|shortcodes(page)|raw }}
+        </div>
+
+        {% include 'partials/_content_pagination.twig' %}
+
+        {# ── Advertisement: Below Content ── #}
+        {% if advertisement_enabled == '1' and advertisement_placement == 'below_content' and advertisement_code %}
+        <div class="vl-ad-below-content mt-8 flex justify-center">
+            {{ advertisement_code|raw }}
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

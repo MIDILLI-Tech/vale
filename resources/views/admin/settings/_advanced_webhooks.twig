@@ -1,0 +1,591 @@
+    {# ══ Webhooks sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    {#  — prepare bootstrap state for Alpine when returning from a failed form submit — #}
+    {%- set _whHasOld  = webhookFormOld is not empty -%}
+    {%- set _whIsEdit  = _whHasOld and webhookFormOld._id is defined -%}
+    {%- set _whOldHdrs = [] -%}
+    {%- if _whHasOld -%}
+        {%- for _r in (webhookFormOld.headers ?? []) -%}
+            {%- set _whOldHdrs = _whOldHdrs|merge([{'key': _r.key|default(''), 'value': _r.value|default('')}]) -%}
+        {%- endfor -%}
+    {%- endif -%}
+    {%- set _whOldEvents = webhookFormOld.events ?? [] -%}
+    {%- set _whOldActive = not _whHasOld or (webhookFormOld.is_active|default('0') == '1') -%}
+    {%- set _whOldMethod = _whHasOld ? (webhookFormOld.method|default('POST')|upper) : 'POST' -%}
+    {%- set _whOldBody   = _whHasOld ? (webhookFormOld.body_template|default('')) : '' -%}
+
+    <div id="advanced-tab-webhooks" class="advanced-tab-panel hidden"
+         x-data="{
+             open:          {{ _whHasOld ? 'true' : 'false' }},
+             editing:       {{ _whIsEdit ? webhookFormOld._id : 'null' }},
+             formName:      '{{ _whHasOld ? (webhookFormOld.name|default('')|e('js')) : '' }}',
+             formUrl:       '{{ _whHasOld ? (webhookFormOld.url|default('')|e('js')) : '' }}',
+             formMethod:    '{{ _whOldMethod|e('js') }}',
+             bodyTemplate:  '{{ _whOldBody|e('js') }}',
+             isActive:      {{ _whOldActive ? 'true' : 'false' }},
+             secret:        '',
+             showSecret:    false,
+             headers:       {{ _whOldHdrs|json_encode }},
+             checkedEvents: {{ _whOldEvents ? _whOldEvents|json_encode : '[]' }},
+             testLoading:   false,
+             testResult:    null,
+             get hasBody()  { return ['POST','PUT','PATCH'].includes(this.formMethod); },
+             addHeader()    { this.headers.push({key:'',value:''}); },
+             removeHeader(i){ this.headers.splice(i,1); },
+             generateSecret(){
+                 this.secret = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(b=>b.toString(16).padStart(2,'0')).join('');
+                 this.showSecret = true;
+             },
+             openNew(){
+                 this.editing = null;
+                 this.formName = ''; this.formUrl = ''; this.formMethod = 'POST'; this.bodyTemplate = '';
+                 this.isActive = true; this.secret = ''; this.showSecret = false; this.headers = [];
+                 this.checkedEvents = {{ available_events|keys|json_encode }};
+                 this.testLoading = false; this.testResult = null;
+                 this.open = true;
+             },
+             openEdit(id,name,url,method,bodyTpl,hasSecret,headers,events,active){
+                 this.editing = id;
+                 this.formName = name; this.formUrl = url; this.formMethod = method; this.bodyTemplate = bodyTpl;
+                 this.isActive = active;
+                 this.secret = hasSecret ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '';
+                 this.showSecret = false;
+                 this.headers = Object.entries(headers).map(([k,v])=>({key:k,value:v}));
+                 this.checkedEvents = events;
+                 this.testLoading = false; this.testResult = null;
+                 this.open = true;
+             },
+             runTest(){
+                 if(!this.formUrl) { this.testResult = {ok:false,error:'Enter a URL first'}; return; }
+                 this.testLoading = true; this.testResult = null;
+                 fetch('{{ url('/admin/webhooks/test-preview') }}', {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content ?? ''
+                     },
+                     body: JSON.stringify({
+                         url:           this.formUrl,
+                         method:        this.formMethod,
+                         body_template: this.bodyTemplate,
+                         secret:        this.secret,
+                         editing_id:    this.editing,
+                         headers:       this.headers,
+                         events:        this.checkedEvents
+                     })
+                 })
+                 .then(r=>r.json())
+                 .then(d=>{ this.testResult = d; this.testLoading = false; })
+                 .catch(()=>{ this.testResult = {ok:false,error:'Request failed'}; this.testLoading = false; });
+             },
+             showVars:      false,
+             isEventChecked(ev){ return this.checkedEvents.includes(ev); },
+             toggleEvent(ev){
+                 const i = this.checkedEvents.indexOf(ev);
+                 if(i===-1) this.checkedEvents.push(ev); else this.checkedEvents.splice(i,1);
+             },
+             allEvents: {{ available_events|keys|json_encode }},
+             selectAllEvents(){ this.checkedEvents = [...this.allEvents]; },
+             selectNoneEvents(){ this.checkedEvents = []; },
+             insertPlaceholder(tag){
+                 const ta = this.$refs.bodyTpl;
+                 if (!ta) { this.bodyTemplate += tag; return; }
+                 const s = ta.selectionStart ?? this.bodyTemplate.length;
+                 const e = ta.selectionEnd   ?? this.bodyTemplate.length;
+                 this.bodyTemplate = this.bodyTemplate.substring(0,s) + tag + this.bodyTemplate.substring(e);
+                 this.$nextTick(() => { ta.selectionStart = ta.selectionEnd = s + tag.length; ta.focus(); });
+             }
+         }">
+
+        {# ── Panel header ── #}
+        <div class="mb-4 flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Outbound Webhooks') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Send signed HTTP POST notifications when orders are placed or status changes.') }}</p>
+            </div>
+            <button type="button" @click="openNew()"
+                    class="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-xs hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                {{ __('Add Webhook') }}
+            </button>
+        </div>
+
+        {# ── Webhook list ── #}
+        {% if webhooks is empty %}
+            <div class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-12 text-center">
+                <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <p class="mt-3 text-sm font-medium text-gray-700">{{ __('No webhooks configured yet') }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Add a webhook to receive real-time order notifications in external systems.') }}</p>
+                <button type="button" @click="openNew()"
+                        class="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                    {{ __('Add your first webhook') }}
+                </button>
+            </div>
+        {% else %}
+            <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:bg-gray-900 shadow-xs">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800/50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Name') }}</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">URL</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Events') }}</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Last Delivery') }}</th>
+                            <th class="px-4 py-3 text-center font-medium text-gray-500 dark:text-gray-400">{{ __('Active') }}</th>
+                            <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for wh in webhooks %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 align-top transition-colors" x-data="{ testLoading: false, testResult: null }">
+                            <td class="px-4 py-3 font-medium">
+                                <button type="button"
+                                        @click="openEdit(
+                                            {{ wh.getId() }},
+                                            '{{ wh.getName()|e('js') }}',
+                                            '{{ wh.getUrl()|e('js') }}',
+                                            '{{ wh.getMethod()|e('js') }}',
+                                            '{{ (wh.getBodyTemplate() ?? '')|e('js') }}',
+                                            {{ wh.getSecret() ? 'true' : 'false' }},
+                                            {{ wh.getHeaders()|json_encode }},
+                                            {{ wh.getEvents()|json_encode }},
+                                            {{ wh.isActive() ? 'true' : 'false' }}
+                                        )"
+                                        class="text-gray-900 dark:text-gray-100 hover:underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors">{{ wh.getName() }}</button>
+                            </td>
+                            <td class="max-w-xs px-4 py-3">
+                                <span class="block truncate font-mono text-xs text-gray-600" title="{{ wh.getUrl() }}">{{ wh.getUrl() }}</span>
+                            </td>
+                            <td class="w-48 px-4 py-3">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for ev in wh.getEvents() %}
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-200">{{ ev }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                                {% if wh.getLastDeliveryAt() %}
+                                    <span class="inline-flex items-center gap-1">
+                                        {% if wh.getLastDeliveryStatus() == 'ok' %}
+                                            <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                                            <span class="text-green-700">OK</span>
+                                        {% else %}
+                                            <span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+                                            <span class="text-red-600">{{ __('Error') }}</span>
+                                        {% endif %}
+                                        &mdash; {{ wh.getLastDeliveryAt()|date('Y-m-d H:i') }}
+                                        {% if wh.getLastDeliveryMs() %}<span class="text-gray-400">({{ wh.getLastDeliveryMs() }}ms)</span>{% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="italic text-gray-400">{{ __('Never') }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-center">
+                                {% if wh.isActive() %}
+                                    <span class="inline-block h-2.5 w-2.5 rounded-full bg-green-500"></span>
+                                {% else %}
+                                    <span class="inline-block h-2.5 w-2.5 rounded-full bg-gray-300"></span>
+                                {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <div class="inline-flex items-center justify-end gap-2">
+                                    {# Test button #}
+                                    <button type="button"
+                                            :disabled="testLoading"
+                                            @click="
+                                                testLoading = true; testResult = null;
+                                                fetch('{{ url('/admin/webhooks/' ~ wh.getId() ~ '/test') }}', {
+                                                    method: 'POST',
+                                                    headers: {'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content ?? ''}
+                                                })
+                                                .then(r=>r.json())
+                                                .then(d=>{ testResult=d; testLoading=false; })
+                                                .catch(()=>{ testResult={ok:false,error:'Request failed'}; testLoading=false; })
+                                            "
+                                            class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 ring-1 ring-indigo-300 hover:bg-indigo-50 dark:text-indigo-300 dark:ring-indigo-700 dark:hover:bg-indigo-900/50 transition-colors">
+                                        <span x-show="!testLoading">{{ __('Test') }}</span>
+                                        <span x-show="testLoading" x-cloak>{{ __('Testing...') }}</span>
+                                    </button>
+                                    <template x-if="testResult !== null">
+                                        <span class="inline-flex flex-wrap items-center gap-1"
+                                              :class="testResult.ok ? 'text-green-700 dark:text-green-300' : 'text-red-600 dark:text-red-300'">
+                                            <template x-for="r in (testResult.results ?? [{
+                                                event: '',
+                                                result: testResult,
+                                            }])" :key="r.event">
+                                                <span :class="r.result.ok ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' : 'bg-red-100 text-red-600 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'"
+                                                      class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                                                      x-text="(r.event ? r.event + ' ' : '') + (r.result.ok ? '✓ HTTP ' + (r.result.status ?? '') : '✗ ' + (r.result.error ?? 'Error'))"></span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                    {# Edit button #}
+                                    <button type="button"
+                                            @click="openEdit(
+                                                {{ wh.getId() }},
+                                                '{{ wh.getName()|e('js') }}',
+                                                '{{ wh.getUrl()|e('js') }}',
+                                                '{{ wh.getMethod()|e('js') }}',
+                                                '{{ (wh.getBodyTemplate() ?? '')|e('js') }}',
+                                                {{ wh.getSecret() ? 'true' : 'false' }},
+                                                {{ wh.getHeaders()|json_encode }},
+                                                {{ wh.getEvents()|json_encode }},
+                                                {{ wh.isActive() ? 'true' : 'false' }}
+                                            )"
+                                            class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Edit') }}</button>
+                                    {# Delete form #}
+                                    <form method="post" action="{{ url('/admin/webhooks/' ~ wh.getId() ~ '/delete') }}"
+                                          onsubmit="return confirm('{{ __('Delete this webhook?')|e('js') }}')">
+                                        {{ csrf_field()|raw }}
+                                        <button type="submit"
+                                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">{{ __('Delete') }}</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 rounded-lg border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/50 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+                <strong>{{ __('Verifying payloads:') }}</strong>
+                {{ __('If you set a secret, each request includes') }}
+                <code class="rounded-sm bg-blue-100 dark:bg-blue-900 px-1 font-mono text-xs dark:text-blue-200">X-VL-Signature: sha256=&lt;hex&gt;</code>.
+                {{ __('Verify with') }} <code class="rounded-sm bg-blue-100 dark:bg-blue-900 px-1 font-mono text-xs dark:text-blue-200">hash_hmac('sha256', $rawBody, $secret)</code>.
+            </div>
+            
+        {% endif %}
+
+        {# ══════════════════════════════════════════════════════════════ #}
+        {# ══ Add / Edit Modal                                         ══ #}
+        {# ══════════════════════════════════════════════════════════════ #}
+        <div x-show="open" x-cloak
+             class="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4"
+             @keydown.escape.window="open = false">
+            <div class="absolute inset-0 bg-black/40" @click="open = false"></div>
+            <div class="relative z-10 flex max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-2xl">
+
+                {# Modal header — title + Active toggle + close #}
+                <div class="flex shrink-0 items-center justify-between gap-4 border-b border-gray-100 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100"
+                        x-text="editing ? '{{ __('Edit Webhook')|e('js') }}' : '{{ __('Add Webhook')|e('js') }}'"></h2>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <input type="hidden" name="is_active" form="wh_form" value="0">
+                            <input type="checkbox" id="wh_modal_active" name="is_active" form="wh_form" value="1"
+                                   :checked="isActive"
+                                   @change="isActive = $event.target.checked"
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                            <label for="wh_modal_active" class="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300" {{ vl.attrs('advanced', __('Active — deliver events to this endpoint'), 'is_active', 'webhooks', __('Outbound Webhooks'), 'webhook active enable') }}>{{ __('Active — deliver events to this endpoint') }}</label>
+                        </div>
+                        <button type="button" @click="open = false"
+                                class="rounded-sm p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {# Modal form #}
+                <form method="post" id="wh_form"
+                      :action="editing ? '{{ url('/admin/webhooks') }}/' + editing : '{{ url('/admin/webhooks') }}'"
+                      class="flex min-h-0 flex-1 flex-col">
+                    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="_method" :value="editing ? 'PUT' : 'POST'">
+
+                    {# Validation errors #}
+                    {% if webhookFormErrors is not empty %}
+                        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                            <p class="text-sm font-medium text-red-700">{{ __('Please fix the following errors:') }}</p>
+                            <ul class="mt-1 list-inside list-disc text-sm text-red-600">
+                                {% for err in webhookFormErrors %}
+                                    <li>{{ err }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    {# Name #}
+                    <div>
+                        <div {{ vl.attrs('advanced', __('Name'), 'name', 'webhooks', __('Outbound Webhooks'), 'webhook name label') }}>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('A short label for your reference (e.g. "Order notifications → Zapier")') }}</p>
+                        <input type="text" name="name" x-model="formName" required autocomplete="off"
+                               class="mt-1.5 block w-full rounded-lg border px-3 py-2 text-sm shadow-xs focus:outline-hidden focus:ring-1 focus:ring-gray-500 {{ webhookFormErrors.name is defined ? 'border-red-400 focus:border-red-400' : 'border-gray-300 dark:border-gray-700 focus:border-gray-600' }}">
+                        {% if webhookFormErrors.name is defined %}
+                            <p class="mt-1 text-xs text-red-500 dark:text-red-400">{{ webhookFormErrors.name }}</p>
+                        {% endif %}
+                        </div>
+                    </div>
+
+                    {# URL + Method (side by side) #}
+                    <div class="grid grid-cols-[1fr_auto] gap-3 items-start">
+                        <div>
+                            <div {{ vl.attrs('advanced', __('Endpoint URL'), 'url', 'webhooks', __('Outbound Webhooks'), 'webhook url endpoint') }}>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('Endpoint URL') }} <span class="text-red-500">*</span></label>
+                            <p class="mt-0.5 text-xs text-gray-400">{{ __('Vale will send a request to this URL. Must be a public HTTPS (or HTTP) address.') }}</p>
+                            <input type="url" name="url" x-model="formUrl" required
+                                   placeholder="https://example.com/hooks/vale"
+                                   class="mt-1.5 block w-full rounded-lg border px-3 py-2 font-mono text-sm shadow-xs focus:outline-hidden focus:ring-1 focus:ring-gray-500 {{ webhookFormErrors.url is defined ? 'border-red-400 focus:border-red-400' : 'border-gray-300 dark:border-gray-700 focus:border-gray-600' }}">
+                            {% if webhookFormErrors.url is defined %}
+                                <p class="mt-1 text-xs text-red-500 dark:text-red-400">{{ webhookFormErrors.url }}</p>
+                            {% endif %}
+                            <p class="mt-1 text-xs text-gray-400">{{ __('Free services for testing:') }}
+                                {% for svc in services_list.webhook_test %}
+                                    <a href="{{ svc.url }}" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-900 dark:text-gray-100 hover:underline">{{ svc.name }}</a>{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                            </div>
+                        </div>
+                        <div class="pt-5">
+                            <div {{ vl.attrs('advanced', __('Method'), 'method', 'webhooks', __('Outbound Webhooks'), 'http method post put') }}>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ __('Method') }}</label>
+                            <select name="method" x-model="formMethod"
+                                    class="block rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-mono shadow-xs focus:border-gray-600 focus:outline-hidden focus:ring-1 focus:ring-gray-500">
+                                <option value="POST">POST</option>
+                                <option value="GET">GET</option>
+                                <option value="PUT">PUT</option>
+                                <option value="PATCH">PATCH</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Body template — only for methods that carry a body #}
+                    <div x-show="hasBody" x-cloak>
+                        <label class="block text-sm font-medium text-gray-700">
+                            {{ __('Body Template') }} <span class="font-normal text-gray-400">({{ __('optional') }})</span>
+                        </label>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Custom JSON body sent instead of the default envelope. Leave blank to use the default Vale envelope.') }}</p>
+
+                        {# Collapsible placeholder reference #}
+                        <div class="mt-1.5 mb-2">
+                            <button type="button" @click="showVars = !showVars"
+                                    class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium select-none dark:text-blue-300 dark:hover:text-blue-100 transition-colors">
+                                <svg :class="showVars ? 'rotate-90' : ''" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                {{ __('Available placeholders') }}
+                            </button>
+                            <div x-show="showVars" x-cloak class="mt-1 rounded-lg bg-blue-50 dark:bg-blue-900/50 p-3 text-xs text-blue-700 dark:text-blue-200 space-y-1.5">
+                                <p class="text-blue-500 dark:text-blue-300 italic">{{ __('Click any placeholder to insert it at cursor position.') }}</p>
+
+                                <p class="font-semibold">{{ __('Order events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(order.paid, order.status_changed)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{order_id}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_id}}' }}</code>
+                                    <code data-tag="{{ '{{order_number}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_number}}' }}</code>
+                                    <code data-tag="{{ '{{order_status}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_status}}' }}</code>
+                                    <code data-tag="{{ '{{new_status}}' }}"     @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{new_status}}' }}</code>
+                                    <code data-tag="{{ '{{order_total}}' }}"    @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_total}}' }}</code>
+                                    <code data-tag="{{ '{{currency}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{currency}}' }}</code>
+                                    <code data-tag="{{ '{{order_customer_email}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_customer_email}}' }}</code>
+                                    <code data-tag="{{ '{{order_customer_name}}' }}"  @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{order_customer_name}}' }}</code>
+                                </p>
+
+                                <p class="font-semibold">{{ __('Post events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(post.created, post.published, post.updated)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{post_id}}' }}"           @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_id}}' }}</code>
+                                    <code data-tag="{{ '{{post_title}}' }}"        @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_title}}' }}</code>
+                                    <code data-tag="{{ '{{post_slug}}' }}"         @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_slug}}' }}</code>
+                                    <code data-tag="{{ '{{post_status}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_status}}' }}</code>
+                                    <code data-tag="{{ '{{post_content_type}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_content_type}}' }}</code>
+                                    <code data-tag="{{ '{{post_author_id}}' }}"    @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_author_id}}' }}</code>
+                                    <code data-tag="{{ '{{post_published_at}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{post_published_at}}' }}</code>
+                                </p>
+
+                                <p class="font-semibold">{{ __('Product events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(product.created, product.updated, product.deleted)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{product_id}}' }}"         @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_id}}' }}</code>
+                                    <code data-tag="{{ '{{product_name}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_name}}' }}</code>
+                                    <code data-tag="{{ '{{product_slug}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_slug}}' }}</code>
+                                    <code data-tag="{{ '{{product_sku}}' }}"        @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_sku}}' }}</code>
+                                    <code data-tag="{{ '{{product_status}}' }}"     @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_status}}' }}</code>
+                                    <code data-tag="{{ '{{product_price}}' }}"      @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_price}}' }}</code>
+                                    <code data-tag="{{ '{{product_sale_price}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_sale_price}}' }}</code>
+                                    <code data-tag="{{ '{{product_stock}}' }}"      @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{product_stock}}' }}</code>
+                                    <code data-tag="{{ '{{variations}}' }}"       @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert (JSON array)') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{variations}}' }}</code>
+                                </p>
+
+                                <p class="font-semibold">{{ __('User events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(user.registered)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{user_id}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{user_id}}' }}</code>
+                                    <code data-tag="{{ '{{user_name}}' }}"  @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{user_name}}' }}</code>
+                                    <code data-tag="{{ '{{user_email}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{user_email}}' }}</code>
+                                </p>
+                                
+                                <p class="font-semibold">{{ __('Form events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(form.submitted)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{form_id}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{form_id}}' }}</code>
+                                    <code data-tag="{{ '{{form_name}}' }}"    @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{form_name}}' }}</code>
+                                    <code data-tag="{{ '{{form_slug}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{form_slug}}' }}</code>
+                                    <code data-tag="{{ '{{submission_id}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{submission_id}}' }}</code>
+                                    <code data-tag="{{ '{{fields}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{fields}}' }}</code>
+                                </p>
+
+                                <p class="font-semibold">{{ __('Subscriber events') }} <span class="font-normal text-blue-500 dark:text-blue-300">(subscriber.created)</span></p>
+                                <p class="flex flex-wrap gap-x-1.5 gap-y-1">
+                                    <code data-tag="{{ '{{subscriber_id}}' }}"     @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_id}}' }}</code>
+                                    <code data-tag="{{ '{{subscriber_email}}' }}"  @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_email}}' }}</code>
+                                    <code data-tag="{{ '{{subscriber_name}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_name}}' }}</code>
+                                    <code data-tag="{{ '{{subscriber_status}}' }}" @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_status}}' }}</code>
+                                    <code data-tag="{{ '{{subscriber_tier}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_tier}}' }}</code>
+                                    <code data-tag="{{ '{{subscriber_tags}}' }}"   @mousedown.prevent @click="insertPlaceholder($el.dataset.tag)" title="{{ __('Click to insert') }}" class="bg-blue-100 dark:bg-blue-900/40 px-1 rounded-sm cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800/40 text-blue-700 dark:text-blue-200">{{ '{{subscriber_tags}}' }}</code>
+                                </p>
+             
+                        </div>
+                    </div>
+             
+                    <textarea name="body_template" x-model="bodyTemplate" x-ref="bodyTpl" rows="5"
+                                  placeholder='{"token":"secret","order":"{{order_number}}","total":"{{order_total}}","email":"{{order_customer_email}}"}'
+                                  class="block w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 font-mono text-xs shadow-xs focus:border-gray-600 focus:outline-hidden focus:ring-1 focus:ring-gray-500"></textarea>
+                    </div>
+
+                    {# Secret #}
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-sm font-medium text-gray-700">
+                                {{ __('Secret') }} <span class="font-normal text-gray-400">({{ __('optional') }})</span>
+                            </label>
+                            <button type="button" @click="generateSecret()"
+                                    class="text-xs rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100 transition-colors">{{ __('Generate') }}</button>
+                        </div>
+                        <p class="mt-0.5 text-xs text-gray-400">
+                            {{ __('When set, each request includes') }} <code class="font-mono">X-VL-Signature: sha256=&lt;hmac&gt;</code>.
+                            <span x-show="editing" x-cloak>{{ __('Leave blank to keep the existing secret unchanged.') }}</span>
+                        </p>
+                        <div class="relative mt-1.5">
+                            <input :type="showSecret ? 'text' : 'password'" name="secret"
+                                   x-model="secret"
+                                   autocomplete="new-password"
+                                   :placeholder="editing ? '({{ __('unchanged')|e('js') }})' : '{{ __('Leave blank for no signature')|e('js') }}'"
+                                   class="block w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 pr-16 font-mono text-sm shadow-xs focus:border-gray-600 focus:outline-hidden focus:ring-1 focus:ring-gray-500">
+                            <button type="button" @click="showSecret = !showSecret"
+                                    :disabled="!secret || secret === '••••••••'"
+                                    :title="(!secret || secret === '••••••••') ? '{{ __('Nothing to reveal yet — type or generate a secret first')|e('js') }}' : ''"
+                                    class="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-gray-400"
+                                    x-text="showSecret ? '{{ __('hide')|e('js') }}' : '{{ __('show')|e('js') }}'"></button>
+                        </div>
+                    </div>
+
+                    {# Custom Headers #}
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">
+                                    {{ __('Custom Headers') }} <span class="font-normal text-gray-400">({{ __('optional') }})</span>
+                                </label>
+                                <p class="mt-0.5 text-xs text-gray-400">{{ __('Extra headers sent with every request, e.g.') }} <code class="font-mono">X-LUMI-TOKEN</code>.</p>
+                            </div>
+                            <button type="button" @click="addHeader()"
+                                    class="text-xs rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2.5 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100 transition-colors">+ {{ __('Add header') }}</button>
+                        </div>
+                        <div class="mt-2 space-y-2">
+                            <template x-for="(row, i) in headers" :key="i">
+                                <div class="flex items-center gap-2">
+                                    <input type="text" :name="'headers['+i+'][key]'" x-model="row.key"
+                                           placeholder="{{ __('Header name (e.g. X-LUMI-TOKEN)')|e }}"
+                                           class="w-2/5 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 font-mono text-xs shadow-xs focus:border-gray-600 focus:outline-hidden focus:ring-1 focus:ring-gray-500">
+                                    <input type="text" :name="'headers['+i+'][value]'" x-model="row.value"
+                                           placeholder="{{ __('Value')|e }}"
+                                           class="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 font-mono text-xs shadow-xs focus:border-gray-600 focus:outline-hidden focus:ring-1 focus:ring-gray-500">
+                                    <button type="button" @click="removeHeader(i)"
+                                            class="rounded-sm p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <p x-show="headers.length === 0" class="text-xs italic text-gray-400">{{ __('No custom headers. Click "+ Add header" to add one.') }}</p>
+                        </div>
+                    </div>
+
+                    {# Events #}
+                    <div {{ vl.attrs('advanced', __('Events'), 'events', 'webhooks', __('Outbound Webhooks'), 'webhook events triggers') }}>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-sm font-medium text-gray-700">{{ __('Events') }}</label>
+                            <div class="flex items-center gap-3 text-xs">
+                                <button type="button" @click="selectAllEvents()"
+                                        class="text-blue-600 hover:text-blue-800 font-medium dark:text-blue-300 dark:hover:text-blue-100 transition-colors">{{ __('Select all') }}</button>
+                                <button type="button" @click="selectNoneEvents()"
+                                        class="text-gray-500 hover:text-gray-700 font-medium dark:text-gray-400 dark:hover:text-gray-200 transition-colors">{{ __('Select none') }}</button>
+                            </div>
+                        </div>
+                        <p class="mt-0.5 text-xs text-gray-400">{{ __('Select the events that should trigger a delivery to this endpoint.') }}</p>
+                        {% if webhookFormErrors.events is defined %}
+                            <p class="mt-1 text-xs text-red-500 dark:text-red-400">{{ webhookFormErrors.events }}</p>
+                        {% endif %}
+                        <div class="mt-2 space-y-2">
+                            {% for event_key, event_desc in available_events %}
+                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <input type="checkbox" name="events[]" value="{{ event_key }}"
+                                           :checked="isEventChecked('{{ event_key }}')"
+                                           @change="toggleEvent('{{ event_key }}')"
+                                           class="mt-0.5 h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                                    <div>
+                                        <span class="block font-mono text-sm font-medium text-gray-800">{{ event_key }}</span>
+                                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ event_desc }}</span>
+                                    </div>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# Test delivery + form actions live in the always-visible footer #}
+
+                    </div>
+                    <div class="vl-modal-actions">
+                        <div class="flex w-full flex-col gap-2">
+                            {# Test result — visible without scrolling #}
+                            <template x-if="testResult !== null">
+                                <div class="max-h-48 space-y-2 overflow-y-auto">
+                                    <template x-for="r in (testResult.results ?? [{
+                                        event: '',
+                                        result: testResult,
+                                    }])" :key="r.event">
+                                        <div>
+                                            <span :class="r.result.ok ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700' : 'bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'"
+                                                  class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
+                                                  x-text="(r.event ? r.event + ' — ' : '') + (r.result.ok ? '✓ {{ __('Sent — HTTP')|e('js') }} ' + (r.result.status ?? '') : '✗ ' + (r.result.error ?? 'Error'))"></span>
+                                            <template x-if="r.result.body">
+                                                <pre class="mt-1 max-h-40 overflow-auto rounded-sm bg-gray-900 p-3 text-xs text-green-300 whitespace-pre-wrap break-all"
+                                                     x-text="r.result.body"></pre>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <div class="flex items-center gap-3">
+                                {# Test — sends with the CURRENT form values, no save needed #}
+                                <button type="button"
+                                        :disabled="testLoading || !formUrl"
+                                        @click.prevent="runTest()"
+                                        title="{{ __('Sends a test request using the current URL and settings in this form.') }}"
+                                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    <span x-show="!testLoading">{{ __('Test') }}</span>
+                                    <span x-show="testLoading" x-cloak>{{ __('Testing...') }}</span>
+                                </button>
+                                <div class="flex-1"></div>
+                                <button type="button" @click="open = false"
+                                        class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">{{ __('Cancel') }}</button>
+                                <button type="submit"
+                                        class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white shadow-xs hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                        x-text="editing ? '{{ __('Save Changes')|e('js') }}' : '{{ __('Add Webhook')|e('js') }}'"></button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {# /modal #}
+
+    </div>{# /advanced-tab-webhooks #}

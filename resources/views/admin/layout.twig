@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="{{ current_locale() ?? 'en' }}"{% if panel_rail|default(false) %} class="has-edit-rail"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ __('Admin') }}{% endblock %}{{ seo_title_separator }}{{ site_name }}</title>
+    {% if site_logo %}<link rel="icon" href="{{ site_logo }}">{% endif %}
+    {% if assets_use_cdn %}
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|roboto:400,500,700|open-sans:400,600,700|montserrat:400,600,700" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @custom-variant dark (&:where(.dark, .dark *));
+        @theme {
+            --color-gray-950: #030712;
+        }
+    </style>
+    {% else %}
+    {% include 'partials/_build_assets.twig' with { include_js: false, load_alt_fonts: false, load_display_fonts: false, preload_font: false } %}
+    {% endif %}
+    <script>window.APP_BASE_PATH = '{{ base_path|e('js') }}';</script>
+    <script>window.VL_CLIENT_SEARCH_FETCH_LIMIT = {{ client_search_fetch_limit|default(100) }};</script>
+    <script>window.VL_LANGUAGES = {{ languages|default({})|json_encode|raw }};</script>
+    <script>window.VL_THEME_COLORS = {{ vl_theme_colors|default([])|json_encode|raw }};</script>
+    <script>
+        (function() {
+            const theme = document.cookie.match(/vl_admin_theme=([^;]+)/)?.[1] || 'light';
+            if (theme === 'dark') document.documentElement.classList.add('dark');
+            const rail = document.cookie.match(/vl_admin_right_rail=([^;]+)/)?.[1];
+            if (rail === '0') document.documentElement.classList.add('rail-collapsed');
+        })();
+    </script>
+    <script>window._VL_COUPONS = {{ _VL_COUPONS|default([])|json_encode|raw }};</script>
+    <script>window._VL_COUPONS_TRUNCATED = {{ _VL_COUPONS_TRUNCATED|default(false)|json_encode|raw }};</script>
+    <script>window._VL_SHOP_ENABLED = '{{ shop_enabled|e('js') }}';</script>
+    <script>window._VL_MEMBERSHIP_ENABLED = '{{ membership_enabled|e('js') }}';</script>
+    <script>window._VL_SUBSCRIPTIONS_ENABLED = '{{ subscriptions_enabled|e('js') }}';</script>
+    <script>window._VL_PAGES_ENABLED = '{{ pages_enabled|e('js') }}';</script>
+    <script>window._VL_BLOG_ENABLED = '{{ blog_enabled|e('js') }}';</script>
+    <script>window._VL_NEWSLETTER_ENABLED = '{{ newsletter_enabled|e('js') }}';</script>
+    <script>window._VL_CAPTCHA = {{ vl_captcha_configured|default({'hcaptcha': false, 'recaptcha': false, 'turnstile': false})|json_encode|raw }};</script>
+    <script>window._VL_FORMS_ENABLED = '{{ form_builder_enabled|e('js') }}';</script>
+    <script>window._VL_MULTI_LANG_ENABLED = '{{ settings.multi_language_content|default("0") }}';</script>
+    {% set raw_content_langs = settings.content_languages|default(settings.default_locale|default('en')) %}
+    {% set content_langs_list = raw_content_langs is iterable ? raw_content_langs : raw_content_langs|split(',') %}
+    <script>window._VL_CONTENT_LANGUAGES = {{ content_langs_list|filter(Boolean)|json_encode|raw }};</script>
+    <script>window._VL_ACTIVE_CPTS = {{ _VL_ACTIVE_CPTS|default([])|json_encode|raw }};</script>
+    <script>window._VL_MEDIA_EMBEDS = {{ media_embeds|default({})|json_encode|raw }};</script>
+    <script>
+        window.VL_I18N = {
+            "Reset Layout": "{{ __('Reset Layout')|e('js') }}",
+            "Toggle Panels": "{{ __('Toggle Panels')|e('js') }}",
+            "Expand Panels": "{{ __('Expand Panels')|e('js') }}",
+            "Card width": "{{ __('Card width')|e('js') }}",
+            "Narrow": "{{ __('Narrow')|e('js') }}",
+            "Third": "{{ __('Third')|e('js') }}",
+            "Half": "{{ __('Half')|e('js') }}",
+            "Wide": "{{ __('Wide')|e('js') }}",
+            "Full": "{{ __('Full')|e('js') }}",
+            "Drag to resize height": "{{ __('Drag to resize height')|e('js') }}",
+            "Drag to reorder": "{{ __('Drag to reorder')|e('js') }}",
+            "Drag to move": "{{ __('Drag to move')|e('js') }}",
+            "Move to top": "{{ __('Move to top')|e('js') }}",
+            "Move up": "{{ __('Move up')|e('js') }}",
+            "Move down": "{{ __('Move down')|e('js') }}",
+            "Move to bottom": "{{ __('Move to bottom')|e('js') }}",
+            "Sort ascending": "{{ __('Sort ascending')|e('js') }}",
+            "Sort descending": "{{ __('Sort descending')|e('js') }}",
+            "%d min read": "{{ __('%d min read')|e('js') }}",
+            "Less than a minute read": "{{ __('Less than a minute read')|e('js') }}",
+            "Copied!": "{{ __('Copied!')|e('js') }}",
+            "Captcha": "{{ __('Captcha')|e('js') }}",
+            "Draft": "{{ __('Draft')|e('js') }}",
+            "Unlisted": "{{ __('Unlisted')|e('js') }}",
+            "Scheduled": "{{ __('Scheduled')|e('js') }}",
+            "Translated": "{{ __('Translated')|e('js') }}",
+            "Current": "{{ __('Current')|e('js') }}",
+            "Captcha Protection": "{{ __('Captcha Protection')|e('js') }}",
+            "Disabled": "{{ __('Disabled')|e('js') }}",
+            "Auto Tags": "{{ __('Auto Tags')|e('js') }}",
+            "Separate with comma. New tags are created automatically.": "{{ __('Separate with comma. New tags are created automatically.')|e('js') }}",
+            "e.g. vip, promo": "{{ __('e.g. vip, promo')|e('js') }}",
+            "Honeypot": "{{ __('Honeypot')|e('js') }}",
+            "Honeypot Field": "{{ __('Honeypot Field')|e('js') }}",
+            "Honeypot Field Name": "{{ __('Honeypot Field Name')|e('js') }}",
+            "Only used when Captcha is Honeypot.": "{{ __('Only used when Captcha is Honeypot.')|e('js') }}",
+            "Math Captcha": "{{ __('Math Captcha')|e('js') }}",
+            "Google reCAPTCHA": "{{ __('Google reCAPTCHA')|e('js') }}",
+            "hCaptcha": "{{ __('hCaptcha')|e('js') }}",
+            "Cloudflare Turnstile": "{{ __('Cloudflare Turnstile')|e('js') }}",
+            "Select...": "{{ __('Select...')|e('js') }}",
+            "Theme Colors": "{{ __('Theme Colors')|e('js') }}",
+            "Insert Form": "{{ __('Insert Form')|e('js') }}",
+            "Loading forms...": "{{ __('Loading forms...')|e('js') }}",
+            "Failed to load forms.": "{{ __('Failed to load forms.')|e('js') }}",
+            "No forms yet.": "{{ __('No forms yet.')|e('js') }}",
+            "Create one": "{{ __('Create one')|e('js') }}",
+            "Paragraph": "{{ __('Paragraph')|e('js') }}",
+            "Plain text paragraph": "{{ __('Plain text paragraph')|e('js') }}",
+            "Heading 1": "{{ __('Heading 1')|e('js') }}",
+            "Large section heading": "{{ __('Large section heading')|e('js') }}",
+            "Heading 2": "{{ __('Heading 2')|e('js') }}",
+            "Medium section heading": "{{ __('Medium section heading')|e('js') }}",
+            "Heading 3": "{{ __('Heading 3')|e('js') }}",
+            "Small section heading": "{{ __('Small section heading')|e('js') }}",
+            "Align Left": "{{ __('Align Left')|e('js') }}",
+            "Left-align text": "{{ __('Left-align text')|e('js') }}",
+            "Align Center": "{{ __('Align Center')|e('js') }}",
+            "Center-align text": "{{ __('Center-align text')|e('js') }}",
+            "Align Right": "{{ __('Align Right')|e('js') }}",
+            "Right-align text": "{{ __('Right-align text')|e('js') }}",
+            "Align Top": "{{ __('Align Top')|e('js') }}",
+            "Align Middle": "{{ __('Align Middle')|e('js') }}",
+            "Align Bottom": "{{ __('Align Bottom')|e('js') }}",
+            "Vertical alignment": "{{ __('Vertical alignment')|e('js') }}",
+            "Quote": "{{ __('Quote')|e('js') }}",
+            "Blockquote": "{{ __('Blockquote')|e('js') }}",
+            "Bullet List": "{{ __('Bullet List')|e('js') }}",
+            "Unordered list": "{{ __('Unordered list')|e('js') }}",
+            "Numbered List": "{{ __('Numbered List')|e('js') }}",
+            "Ordered list": "{{ __('Ordered list')|e('js') }}",
+            "Code Block": "{{ __('Code Block')|e('js') }}",
+            "Syntax-highlighted code": "{{ __('Syntax-highlighted code')|e('js') }}",
+            "Hard Break": "{{ __('Hard Break')|e('js') }}",
+            "Line break": "{{ __('Line break')|e('js') }}",
+            "Divider": "{{ __('Divider')|e('js') }}",
+            "Horizontal rule": "{{ __('Horizontal rule')|e('js') }}",
+            "MORE": "{{ __('MORE')|e('js') }}",
+            "Read more text (optional)...": "{{ __('Read more text (optional)...')|e('js') }}",
+            "Remove more break": "{{ __('Remove more break')|e('js') }}",
+            "NEXT PAGE": "{{ __('NEXT PAGE')|e('js') }}",
+            "Page title (optional)...": "{{ __('Page title (optional)...')|e('js') }}",
+            "Remove page break": "{{ __('Remove page break')|e('js') }}",
+            "Table": "{{ __('Table')|e('js') }}",
+            "Insert a table": "{{ __('Insert a table')|e('js') }}",
+            "Table of Contents": "{{ __('Table of Contents')|e('js') }}",
+            "Auto-generated TOC from headings": "{{ __('Auto-generated TOC from headings')|e('js') }}",
+            "Child Pages": "{{ __('Child Pages')|e('js') }}",
+            "Nested list of child pages": "{{ __('Nested list of child pages')|e('js') }}",
+            "Link": "{{ __('Link')|e('js') }}",
+            "Insert or edit a link": "{{ __('Insert or edit a link')|e('js') }}",
+            "Image": "{{ __('Image')|e('js') }}",
+            "Upload": "{{ __('Upload')|e('js') }}",
+            "Upload image, video or file": "{{ __('Upload image, video or file')|e('js') }}",
+            "This file type cannot be inserted into content.": "{{ __('This file type cannot be inserted into content.')|e('js') }}",
+            "Video": "{{ __('Video')|e('js') }}",
+            "Subtitles": "{{ __('Subtitles')|e('js') }}",
+            "subtitles": "{{ __('subtitles')|e('js') }}",
+            "Add subtitles": "{{ __('Add subtitles')|e('js') }}",
+            "Select Subtitles": "{{ __('Select Subtitles')|e('js') }}",
+            "Failed to load subtitles.": "{{ __('Failed to load subtitles.')|e('js') }}",
+            "No subtitles attached yet.": "{{ __('No subtitles attached yet.')|e('js') }}",
+            "Label (e.g. Türkçe)": "{{ __('Label (e.g. Türkçe)')|e('js') }}",
+            "Language code (e.g. tr, en)": "{{ __('Language code (e.g. tr, en)')|e('js') }}",
+            "Default subtitle track": "{{ __('Default subtitle track')|e('js') }}",
+            "lang": "{{ __('lang')|e('js') }}",
+            "WebVTT (.vtt) tracks. SubRip (.srt/.sub) uploads are converted automatically.": "{{ __('WebVTT (.vtt) tracks. SubRip (.srt/.sub) uploads are converted automatically.')|e('js') }}",
+            "Insert Selected": "{{ __('Insert Selected')|e('js') }}",
+            "Video Settings": "{{ __('Video Settings')|e('js') }}",
+            "Media Library": "{{ __('Media Library')|e('js') }}",
+            "Insert image, video or file from library": "{{ __('Insert image, video or file from library')|e('js') }}",
+            "Insert File Link": "{{ __('Insert File Link')|e('js') }}",
+            "Media + Text": "{{ __('Media + Text')|e('js') }}",
+            "Media + Text Settings": "{{ __('Media + Text Settings')|e('js') }}",
+            "Image with side text": "{{ __('Image with side text')|e('js') }}",
+            "Form": "{{ __('Form')|e('js') }}",
+            "Embed a form": "{{ __('Embed a form')|e('js') }}",
+            "Coupon": "{{ __('Coupon')|e('js') }}",
+            "Insert a discount coupon code": "{{ __('Insert a discount coupon code')|e('js') }}",
+            "Insert Coupon": "{{ __('Insert Coupon')|e('js') }}",
+            "Select from existing coupons, or create a new one with parameters below.": "{{ __('Select from existing coupons, or create a new one with parameters below.')|e('js') }}",
+            "Existing coupons": "{{ __('Existing coupons')|e('js') }}",
+            "Select an existing coupon to insert.": "{{ __('Select an existing coupon to insert.')|e('js') }}",
+            "No matching coupons": "{{ __('No matching coupons')|e('js') }}",
+            "Starts At (optional)": "{{ __('Starts At (optional)')|e('js') }}",
+            "No coupons found. Create one under Shop → Coupons.": "{{ __('No coupons found. Create one under Shop → Coupons.')|e('js') }}",
+            "No coupons found. Create one under Shop → Coupons or Membership → Plans.": "{{ __('No coupons found. Create one under Shop → Coupons or Membership → Plans.')|e('js') }}",
+            "choose a coupon": "{{ __('choose a coupon')|e('js') }}",
+            "Product": "{{ __('Product')|e('js') }}",
+            "Product Settings": "{{ __('Product Settings')|e('js') }}",
+            "Select Product": "{{ __('Select Product')|e('js') }}",
+            "Direct Product ID": "{{ __('Direct Product ID')|e('js') }}",
+            "Search products...": "{{ __('Search products...')|e('js') }}",
+            "Insert Product": "{{ __('Insert Product')|e('js') }}",
+            "No products found.": "{{ __('No products found.')|e('js') }}",
+            "Error loading products.": "{{ __('Error loading products.')|e('js') }}",
+            "No product selected. Click to pick.": "{{ __('No product selected. Click to pick.')|e('js') }}",
+            "No product selected.": "{{ __('No product selected.')|e('js') }}",
+            "Show product image": "{{ __('Show product image')|e('js') }}",
+            "Show product price": "{{ __('Show product price')|e('js') }}",
+            "Show short description": "{{ __('Show short description')|e('js') }}",
+            "Not publicly visible": "{{ __('Not publicly visible')|e('js') }}",
+            "Product not found. It may have been deleted.": "{{ __('Product not found. It may have been deleted.')|e('js') }}",
+            "Insert": "{{ __('Insert')|e('js') }}",
+            "Generate unique coupon per recipient (on send)": "{{ __('Generate unique coupon per recipient (on send)')|e('js') }}",
+            "Or enter a custom shortcode:": "{{ __('Or enter a custom shortcode:')|e('js') }}",
+            "Apply": "{{ __('Apply')|e('js') }}",
+            "Cancel": "{{ __('Cancel')|e('js') }}",
+            "Upload failed.": "{{ __('Upload failed.')|e('js') }}",
+            "Image upload failed: ": "{{ __('Image upload failed: ')|e('js') }}",
+            "Select Image": "{{ __('Select Image')|e('js') }}",
+            "Images": "{{ __('Images')|e('js') }}",
+            "Videos": "{{ __('Videos')|e('js') }}",
+            "Files": "{{ __('Files')|e('js') }}",
+            "All Types": "{{ __('All Types')|e('js') }}",
+            "Drop files to upload": "{{ __('Drop files to upload')|e('js') }}",
+            ":count file(s) not allowed here.": "{{ __(':count file(s) not allowed here.')|e('js') }}",
+            ":count file(s) queued.": "{{ __(':count file(s) queued.')|e('js') }}",
+            ":count product(s) selected": "{{ __(':count product(s) selected')|e('js') }}",
+            "Show more (:count remaining)": "{{ __('Show more (:count remaining)')|e('js') }}",
+            ":count more file(s) failed.": "{{ __(':count more file(s) failed.')|e('js') }}",
+            "You don't have permission to upload files.": "{{ __('You don\'t have permission to upload files.')|e('js') }}",
+            "Search...": "{{ __('Search...')|e('js') }}",
+            "No files found.": "{{ __('No files found.')|e('js') }}",
+            "Page :current of :total": "{{ __('Page :current of :total')|e('js') }}",
+            "Prev": "{{ __('Prev')|e('js') }}",
+            "Next": "{{ __('Next')|e('js') }}",
+            "Insert Video": "{{ __('Insert Video')|e('js') }}",
+            "Video URL": "{{ __('Video URL')|e('js') }}",
+            "Full width": "{{ __('Full width')|e('js') }}",
+            "Custom...": "{{ __('Custom...')|e('js') }}",
+            "Custom width": "{{ __('Custom width')|e('js') }}",
+            "YouTube, Vimeo, or direct MP4 link": "{{ __('YouTube, Vimeo, or direct MP4 link')|e('js') }}",
+            "Or paste iframe/video HTML": "{{ __('Or paste iframe/video HTML')|e('js') }}",
+            "Advanced: paste raw embed code": "{{ __('Advanced: paste raw embed code')|e('js') }}",
+            "Current embed uses raw HTML. Enter a URL to replace it.": "{{ __('Current embed uses raw HTML. Enter a URL to replace it.')|e('js') }}",
+            "Video Preview": "{{ __('Video Preview')|e('js') }}",
+            "Preview": "{{ __('Preview')|e('js') }}",
+            "Preview will appear here": "{{ __('Preview will appear here')|e('js') }}",
+            "Generic Link": "{{ __('Generic Link')|e('js') }}",
+            "Insert Link": "{{ __('Insert Link')|e('js') }}",
+            "External URL": "{{ __('External URL')|e('js') }}",
+            "Internal Content": "{{ __('Internal Content')|e('js') }}",
+            "Search pages / posts / products": "{{ __('Search pages / posts / products')|e('js') }}",
+            "Link text": "{{ __('Link text')|e('js') }}",
+            "Open in new tab": "{{ __('Open in new tab')|e('js') }}",
+            "Remove link": "{{ __('Remove link')|e('js') }}",
+            "Please enter or select a URL.": "{{ __('Please enter or select a URL.')|e('js') }}",
+            "Select parent page": "{{ __('Select parent page')|e('js') }}",
+            "Current page": "{{ __('Current page')|e('js') }}",
+            "Table properties": "{{ __('Table properties')|e('js') }}",
+            "Border": "{{ __('Border')|e('js') }}",
+            "Theme default": "{{ __('Theme default')|e('js') }}",
+            "Size": "{{ __('Size')|e('js') }}",
+            "Color": "{{ __('Color')|e('js') }}",
+            "Click to open the color palette": "{{ __('Click to open the color palette')|e('js') }}",
+            "Empty fields keep the theme border.": "{{ __('Empty fields keep the theme border.')|e('js') }}",
+            "Cell padding": "{{ __('Cell padding')|e('js') }}",
+            "Width": "{{ __('Width')|e('js') }}",
+            "Alignment": "{{ __('Alignment')|e('js') }}",
+            "Default (left)": "{{ __('Default (left)')|e('js') }}",
+            "Center": "{{ __('Center')|e('js') }}",
+            "Right": "{{ __('Right')|e('js') }}",
+            "Cell properties": "{{ __('Cell properties')|e('js') }}",
+            "Background": "{{ __('Background')|e('js') }}",
+            "Clear": "{{ __('Clear')|e('js') }}",
+            "Left": "{{ __('Left')|e('js') }}",
+            "Top": "{{ __('Top')|e('js') }}",
+            "Middle": "{{ __('Middle')|e('js') }}",
+            "Bottom": "{{ __('Bottom')|e('js') }}",
+            "Merge Cells": "{{ __('Merge Cells')|e('js') }}",
+            "Split Cell": "{{ __('Split Cell')|e('js') }}",
+            "Dragging a column handle sets per-column widths; an explicit width here wins over them.": "{{ __('Dragging a column handle sets per-column widths; an explicit width here wins over them.')|e('js') }}",
+            "Link Buttons": "{{ __('Link Buttons')|e('js') }}",
+            "Link Button Settings": "{{ __('Link Button Settings')|e('js') }}",
+            "Current button": "{{ __('Current button')|e('js') }}",
+            "Add a group of custom styled link buttons": "{{ __('Add a group of custom styled link buttons')|e('js') }}",
+            "Header row": "{{ __('Header row')|e('js') }}",
+            "Save": "{{ __('Save')|e('js') }}",
+            "Undo (Ctrl+Z)": "{{ __('Undo (Ctrl+Z)')|e('js') }}",
+            "Redo (Ctrl+Y)": "{{ __('Redo (Ctrl+Y)')|e('js') }}",
+            "Bold (Ctrl+B)": "{{ __('Bold (Ctrl+B)')|e('js') }}",
+            "Italic (Ctrl+I)": "{{ __('Italic (Ctrl+I)')|e('js') }}",
+            "Underline (Ctrl+U)": "{{ __('Underline (Ctrl+U)')|e('js') }}",
+            "Formatting options": "{{ __('Formatting options')|e('js') }}",
+            "Strike (Ctrl+Shift+X)": "{{ __('Strike (Ctrl+Shift+X)')|e('js') }}",
+            "Inline code": "{{ __('Inline code')|e('js') }}",
+            "Subscript": "{{ __('Subscript')|e('js') }}",
+            "Superscript": "{{ __('Superscript')|e('js') }}",
+            "Bullet list (Ctrl+Shift+8)": "{{ __('Bullet list (Ctrl+Shift+8)')|e('js') }}",
+            "Ordered list (Ctrl+Shift+7)": "{{ __('Ordered list (Ctrl+Shift+7)')|e('js') }}",
+            "Quote (Ctrl+Shift+B)": "{{ __('Quote (Ctrl+Shift+B)')|e('js') }}",
+            "Text color": "{{ __('Text color')|e('js') }}",
+            "Highlight": "{{ __('Highlight')|e('js') }}",
+            "Headings": "{{ __('Headings')|e('js') }}",
+            "Heading 1 (Ctrl+Alt+1)": "{{ __('Heading 1 (Ctrl+Alt+1)')|e('js') }}",
+            "Heading 2 (Ctrl+Alt+2)": "{{ __('Heading 2 (Ctrl+Alt+2)')|e('js') }}",
+            "Heading 3 (Ctrl+Alt+3)": "{{ __('Heading 3 (Ctrl+Alt+3)')|e('js') }}",
+            "Text alignment": "{{ __('Text alignment')|e('js') }}",
+            "Align left (Ctrl+Shift+L)": "{{ __('Align left (Ctrl+Shift+L)')|e('js') }}",
+            "Align center (Ctrl+Shift+E)": "{{ __('Align center (Ctrl+Shift+E)')|e('js') }}",
+            "Align right (Ctrl+Shift+R)": "{{ __('Align right (Ctrl+Shift+R)')|e('js') }}",
+            "Insert media": "{{ __('Insert media')|e('js') }}",
+            "Upload image or video (Ctrl+Shift+U)": "{{ __('Upload image or video (Ctrl+Shift+U)')|e('js') }}",
+            "Media library (Ctrl+Alt+M)": "{{ __('Media library (Ctrl+Alt+M)')|e('js') }}",
+            "Insert video (Ctrl+Alt+V)": "{{ __('Insert video (Ctrl+Alt+V)')|e('js') }}",
+            "Insert link (Ctrl+K)": "{{ __('Insert link (Ctrl+K)')|e('js') }}",
+            "Insert form (Ctrl+Alt+F)": "{{ __('Insert form (Ctrl+Alt+F)')|e('js') }}",
+            "Insert table (Ctrl+Alt+T)": "{{ __('Insert table (Ctrl+Alt+T)')|e('js') }}",
+            "Hard break (Shift+Enter)": "{{ __('Hard break (Shift+Enter)')|e('js') }}",
+            "Divider (Ctrl+Alt+D)": "{{ __('Divider (Ctrl+Alt+D)')|e('js') }}",
+            "Code block (Ctrl+Alt+C)": "{{ __('Code block (Ctrl+Alt+C)')|e('js') }}",
+            "Emoji": "{{ __('Emoji')|e('js') }}",
+            "Fullscreen": "{{ __('Fullscreen')|e('js') }}",
+            "HTML code": "{{ __('HTML code')|e('js') }}",
+            "Image Size": "{{ __('Image Size')|e('js') }}",
+            "Image Settings": "{{ __('Image Settings')|e('js') }}",
+            "Image URL": "{{ __('Image URL')|e('js') }}",
+            "e.g. /uploads/photo.png or https://…": "{{ __('e.g. /uploads/photo.png or https://…')|e('js') }}",
+            "Edit the URL if the image is broken (e.g. the file was moved or renamed).": "{{ __('Edit the URL if the image is broken (e.g. the file was moved or renamed).')|e('js') }}",
+            "Image URL cannot be empty.": "{{ __('Image URL cannot be empty.')|e('js') }}",
+            "Rounded (px)": "{{ __('Rounded (px)')|e('js') }}",
+            "Maintain aspect ratio": "{{ __('Maintain aspect ratio')|e('js') }}",
+            "Remove form": "{{ __('Remove form')|e('js') }}",
+            "Remove table of contents": "{{ __('Remove table of contents')|e('js') }}",
+            "Remove child pages": "{{ __('Remove child pages')|e('js') }}",
+            "Remove video": "{{ __('Remove video')|e('js') }}",
+            "Swap image side": "{{ __('Swap image side')|e('js') }}",
+            "Remove": "{{ __('Remove')|e('js') }}",
+            "Start writing, or type / for commands...": "{{ __('Start writing, or type / for commands...')|e('js') }}",
+            "Refresh": "{{ __('Refresh')|e('js') }}",
+            "Loading...": "{{ __('Loading...')|e('js') }}",
+            "words": "{{ __('words')|e('js') }}",
+            "characters": "{{ __('characters')|e('js') }}",
+            "H1 only": "{{ __('H1 only')|e('js') }}",
+            "H1–H2": "{{ __('H1–H2')|e('js') }}",
+            "H1–H3 (all)": "{{ __('H1–H3 (all)')|e('js') }}",
+            "1 level": "{{ __('1 level')|e('js') }}",
+            "2 levels": "{{ __('2 levels')|e('js') }}",
+            "3 levels (max)": "{{ __('3 levels (max)')|e('js') }}",
+            "Select heading depth": "{{ __('Select heading depth')|e('js') }}",
+            "Select nesting depth": "{{ __('Select nesting depth')|e('js') }}",
+            "Add Row Above": "{{ __('Add Row Above')|e('js') }}",
+            "Add Row Below": "{{ __('Add Row Below')|e('js') }}",
+            "Delete Row": "{{ __('Delete Row')|e('js') }}",
+            "Add Col Left": "{{ __('Add Col Left')|e('js') }}",
+            "Add Col Right": "{{ __('Add Col Right')|e('js') }}",
+            "Delete Col": "{{ __('Delete Col')|e('js') }}",
+            "Delete Table": "{{ __('Delete Table')|e('js') }}",
+            "Properties": "{{ __('Properties')|e('js') }}",
+            "Discount Type": "{{ __('Discount Type')|e('js') }}",
+            "Percentage (%)": "{{ __('Percentage (%)')|e('js') }}",
+            "Fixed Amount": "{{ __('Fixed Amount')|e('js') }}",
+            "Discount Percent (%)": "{{ __('Discount Percent (%)')|e('js') }}",
+            "Discount Fixed Amount": "{{ __('Discount Fixed Amount')|e('js') }}",
+            "e.g. 50%, 400px, auto": "{{ __('e.g. 50%, 400px, auto')|e('js') }}",
+            "Form width: percent, pixels or auto for full width.": "{{ __('Form width: percent, pixels or auto for full width.')|e('js') }}",
+            "Switch to side-by-side layout": "{{ __('Switch to side-by-side layout')|e('js') }}",
+            "Switch to stacked layout": "{{ __('Switch to stacked layout')|e('js') }}",
+            "Cards": "{{ __('Cards')|e('js') }}",
+            "Card Title": "{{ __('Card Title')|e('js') }}",
+            "Card description": "{{ __('Card description')|e('js') }}",
+            "Add a responsive grid of image cards": "{{ __('Add a responsive grid of image cards')|e('js') }}",
+            "Add card": "{{ __('Add card')|e('js') }}",
+            "Card Settings": "{{ __('Card Settings')|e('js') }}",
+            "Delete Cards": "{{ __('Delete Cards')|e('js') }}",
+            "Delete card": "{{ __('Delete card')|e('js') }}",
+            "Delete this card": "{{ __('Delete this card')|e('js') }}",
+            "Edit this card": "{{ __('Edit this card')|e('js') }}",
+            "Move card up": "{{ __('Move card up')|e('js') }}",
+            "Move card down": "{{ __('Move card down')|e('js') }}",
+            "Click here to add image": "{{ __('Click here to add image')|e('js') }}",
+            "Click to add or replace image": "{{ __('Click to add or replace image')|e('js') }}",
+            "Click to add or replace media": "{{ __('Click to add or replace media')|e('js') }}",
+            "No image": "{{ __('No image')|e('js') }}",
+            "Image URL or pick from library…": "{{ __('Image URL or pick from library…')|e('js') }}",
+            "Pick from media library": "{{ __('Pick from media library')|e('js') }}",
+            "Remove image": "{{ __('Remove image')|e('js') }}",
+            "Remove media": "{{ __('Remove media')|e('js') }}",
+            "Link URL": "{{ __('Link URL')|e('js') }}",
+            "e.g. /pricing — empty for no link": "{{ __('e.g. /pricing — empty for no link')|e('js') }}",
+            "Target": "{{ __('Target')|e('js') }}",
+            "Same window": "{{ __('Same window')|e('js') }}",
+            "New tab": "{{ __('New tab')|e('js') }}",
+            "Card Background (empty = group default)": "{{ __('Card Background (empty = group default)')|e('js') }}",
+            "Cards Background": "{{ __('Cards Background')|e('js') }}",
+            "Corner Rounding": "{{ __('Corner Rounding')|e('js') }}",
+            "Sharp (no rounding)": "{{ __('Sharp (no rounding)')|e('js') }}",
+            "Text Alignment": "{{ __('Text Alignment')|e('js') }}",
+            "Align left": "{{ __('Align left')|e('js') }}",
+            "Align right": "{{ __('Align right')|e('js') }}",
+            "Gap between cards (px)": "{{ __('Gap between cards (px)')|e('js') }}",
+            "Group Width": "{{ __('Group Width')|e('js') }}",
+            "e.g. 50%, 800px, auto": "{{ __('e.g. 50%, 800px, auto')|e('js') }}",
+            "Lightbox (click to enlarge)": "{{ __('Lightbox (click to enlarge)')|e('js') }}",
+            "Enable Lightbox (click to enlarge)": "{{ __('Enable Lightbox (click to enlarge)')|e('js') }}",
+            "Click to enlarge": "{{ __('Click to enlarge')|e('js') }}",
+            "Shadow Color": "{{ __('Shadow Color')|e('js') }}",
+            "Group Alignment": "{{ __('Group Alignment')|e('js') }}",
+            "Type to search…": "{{ __('Type to search…')|e('js') }}",
+            "No results.": "{{ __('No results.')|e('js') }}",
+            "Error loading pages.": "{{ __('Error loading pages.')|e('js') }}",
+            "Hero": "{{ __('Hero')|e('js') }}",
+            "Split Hero": "{{ __('Split Hero')|e('js') }}",
+            "CTA Card": "{{ __('CTA Card')|e('js') }}",
+            "Style": "{{ __('Style')|e('js') }}",
+            "Section width: percent, pixels or auto for full width.": "{{ __('Section width: percent, pixels or auto for full width.')|e('js') }}",
+            "e.g. Since 2024": "{{ __('e.g. Since 2024')|e('js') }}",
+            "Marketing hero — split or centered CTA": "{{ __('Marketing hero — split or centered CTA')|e('js') }}",
+            "Hero Settings": "{{ __('Hero Settings')|e('js') }}",
+            "Toggle variant": "{{ __('Toggle variant')|e('js') }}",
+            "Delete Hero": "{{ __('Delete Hero')|e('js') }}",
+            "Duplicate block": "{{ __('Duplicate block')|e('js') }}",
+            "Variants": "{{ __('Variants')|e('js') }}",
+            "Split Hero — heading beside media": "{{ __('Split Hero — heading beside media')|e('js') }}",
+            "CTA Card — centered caption": "{{ __('CTA Card — centered caption')|e('js') }}",
+            "Media Image": "{{ __('Media Image')|e('js') }}",
+            "Image Alt Text": "{{ __('Image Alt Text')|e('js') }}",
+            "Media Side": "{{ __('Media Side')|e('js') }}",
+            "Media on the right": "{{ __('Media on the right')|e('js') }}",
+            "Media on the left": "{{ __('Media on the left')|e('js') }}",
+            "Corner Badge": "{{ __('Corner Badge')|e('js') }}",
+            "Badge Background": "{{ __('Badge Background')|e('js') }}",
+            "Badge Text Color": "{{ __('Badge Text Color')|e('js') }}",
+            "Section Background": "{{ __('Section Background')|e('js') }}",
+            "Theme tint (default)": "{{ __('Theme tint (default)')|e('js') }}",
+            "White": "{{ __('White')|e('js') }}",
+            "Light gray": "{{ __('Light gray')|e('js') }}",
+            "Dark": "{{ __('Dark')|e('js') }}",
+            "Shadow": "{{ __('Shadow')|e('js') }}",
+            "Soft (default)": "{{ __('Soft (default)')|e('js') }}",
+            "None": "{{ __('None')|e('js') }}",
+            "Small": "{{ __('Small')|e('js') }}",
+            "Medium": "{{ __('Medium')|e('js') }}",
+            "Large": "{{ __('Large')|e('js') }}",
+            "Extra large": "{{ __('Extra large')|e('js') }}",
+            "Rounded": "{{ __('Rounded')|e('js') }}",
+            "Default": "{{ __('Default')|e('js') }}",
+            "Primary Button": "{{ __('Primary Button')|e('js') }}",
+            "Secondary Button (optional)": "{{ __('Secondary Button (optional)')|e('js') }}",
+            "Button Label": "{{ __('Button Label')|e('js') }}",
+            "Button Color": "{{ __('Button Color')|e('js') }}",
+            "Button Text Color": "{{ __('Button Text Color')|e('js') }}",
+            "Hero Media": "{{ __('Hero Media')|e('js') }}",
+            "Single Image": "{{ __('Single Image')|e('js') }}",
+            "Carousel": "{{ __('Carousel')|e('js') }}",
+            "Carousel Settings": "{{ __('Carousel Settings')|e('js') }}",
+            "Autoplay": "{{ __('Autoplay')|e('js') }}",
+            "Slide Duration (ms)": "{{ __('Slide Duration (ms)')|e('js') }}",
+            "Show Arrows": "{{ __('Show Arrows')|e('js') }}",
+            "Show Dots": "{{ __('Show Dots')|e('js') }}",
+            "Pause Button": "{{ __('Pause Button')|e('js') }}",
+            "Image Fit": "{{ __('Image Fit')|e('js') }}",
+            "Height": "{{ __('Height')|e('js') }}",
+            "Transition": "{{ __('Transition')|e('js') }}",
+            "Fade": "{{ __('Fade')|e('js') }}",
+            "Slide Left": "{{ __('Slide Left')|e('js') }}",
+            "Slide Right": "{{ __('Slide Right')|e('js') }}",
+            "Slide Up": "{{ __('Slide Up')|e('js') }}",
+            "Zoom": "{{ __('Zoom')|e('js') }}",
+            "Select Carousel Images": "{{ __('Select Carousel Images')|e('js') }}",
+            "No images selected": "{{ __('No images selected')|e('js') }}",
+            ":count images selected": "{{ __(':count images selected')|e('js') }}",
+            "Primary (theme accent)": "{{ __('Primary (theme accent)')|e('js') }}",
+            "Secondary (outline)": "{{ __('Secondary (outline)')|e('js') }}",
+            "Your hero heading": "{{ __('Your hero heading')|e('js') }}",
+            "Supporting text goes here…": "{{ __('Supporting text goes here…')|e('js') }}",
+            "Add a media — click here": "{{ __('Add a media — click here')|e('js') }}",
+            "Redirect": "{{ __('Redirect')|e('js') }}",
+            "Timed redirect to another URL": "{{ __('Timed redirect to another URL')|e('js') }}",
+            "Redirect Settings": "{{ __('Redirect Settings')|e('js') }}",
+            "Remove redirect": "{{ __('Remove redirect')|e('js') }}",
+            "Target URL": "{{ __('Target URL')|e('js') }}",
+            "e.g. https://example.com or /pricing": "{{ __('e.g. https://example.com or /pricing')|e('js') }}",
+            "Pick a page": "{{ __('Pick a page')|e('js') }}",
+            "Full URL or site path. A picked page slug is treated as a site path.": "{{ __('Full URL or site path. A picked page slug is treated as a site path.')|e('js') }}",
+            "Delay": "{{ __('Delay')|e('js') }}",
+            "Instant (no delay)": "{{ __('Instant (no delay)')|e('js') }}",
+            "Instant (302 Redirect)": "{{ __('Instant (302 Redirect)')|e('js') }}",
+            "3 seconds": "{{ __('3 seconds')|e('js') }}",
+            "5 seconds": "{{ __('5 seconds')|e('js') }}",
+            "10 seconds": "{{ __('10 seconds')|e('js') }}",
+            "30 seconds": "{{ __('30 seconds')|e('js') }}",
+            "Custom...": "{{ __('Custom...')|e('js') }}",
+            "Custom delay (seconds)": "{{ __('Custom delay (seconds)')|e('js') }}",
+            "No URL set — click the gear to configure.": "{{ __('No URL set — click the gear to configure.')|e('js') }}",
+            "This page has :count redirect blocks — only the first one navigates.": "{{ __('This page has :count redirect blocks — only the first one navigates.')|e('js') }}",
+            "Redirect after :count s": "{{ __('Redirect after :count s')|e('js') }}"
+        };
+        function tjs(text, replacements = {}) {
+            let translated = window.VL_I18N[text] || text;
+            for (const [key, value] of Object.entries(replacements)) {
+                translated = translated.replace(key, value);
+            }
+            return translated;
+        }
+        function copyToClipboard(text, btn) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    copyToClipboardFeedback(btn);
+                }).catch(function () {
+                    copyToClipboardFallback(text, btn);
+                });
+            } else {
+                copyToClipboardFallback(text, btn);
+            }
+        }
+        function copyToClipboardFallback(text, btn) {
+            var t = document.createElement('textarea');
+            t.value = text;
+            t.style.position = 'fixed';
+            t.style.opacity = '0';
+            document.body.appendChild(t);
+            t.select();
+            t.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            document.body.removeChild(t);
+            copyToClipboardFeedback(btn);
+        }
+        function copyToClipboardFeedback(btn) {
+            if (!btn) return;
+            // Never replace button content (icon buttons lose their SVG this
+            // way) — show a floating "Copied!" badge near the button instead.
+            if (btn.__vlCopyFb) {
+                copyToClipboardDismiss(btn.__vlCopyFb);
+            }
+            var el = document.createElement('div');
+            el.className = 'vl-copy-feedback';
+            el.setAttribute('role', 'status');
+            el.textContent = tjs('Copied!');
+            document.body.appendChild(el);
+            var state = { el: el, btn: btn, timer: null, reposition: null, dismiss: null };
+            var reposition = function () {
+                // Button gone from the DOM or without a layout box (hidden tab
+                // panel, x-cloak): drop the badge instead of leaving it
+                // floating at a random spot, detached from its button.
+                if (!document.body.contains(btn)) {
+                    copyToClipboardDismiss(state);
+                    return;
+                }
+                var rect = btn.getBoundingClientRect();
+                if (!rect.width && !rect.height) {
+                    copyToClipboardDismiss(state);
+                    return;
+                }
+                var vw = window.innerWidth || document.documentElement.clientWidth;
+                var vh = window.innerHeight || document.documentElement.clientHeight;
+                var w = el.offsetWidth, h = el.offsetHeight;
+                // Clamp the badge center into the viewport so an edge button
+                // never clips the "Copied!" text half off-screen.
+                var minLeft = w / 2 + 8;
+                var maxLeft = Math.max(minLeft, vw - w / 2 - 8);
+                var left = Math.min(Math.max(rect.left + rect.width / 2, minLeft), maxLeft);
+                var top = rect.bottom + 6;
+                if (top + h > vh - 8) {
+                    top = Math.max(rect.top - h - 6, 8);
+                }
+                el.style.left = left + 'px';
+                el.style.top = top + 'px';
+            };
+            var dismiss = function () {
+                copyToClipboardDismiss(state);
+            };
+            state.reposition = reposition;
+            state.dismiss = dismiss;
+            el.addEventListener('click', dismiss);
+            // Keep the badge glued to its button while the page scrolls.
+            window.addEventListener('scroll', reposition, true);
+            window.addEventListener('resize', reposition);
+            state.timer = setTimeout(dismiss, 1400);
+            btn.__vlCopyFb = state;
+            reposition();
+        }
+        function copyToClipboardDismiss(state) {
+            if (!state) return;
+            clearTimeout(state.timer);
+            window.removeEventListener('scroll', state.reposition, true);
+            window.removeEventListener('resize', state.reposition);
+            state.el.remove();
+            if (state.btn && state.btn.__vlCopyFb === state) {
+                state.btn.__vlCopyFb = null;
+            }
+        }
+        // Keep the read-only "copy public link" field in sync with the slug input
+        // so a scheduled/unlisted item's shareable URL is never stale.
+        var vlParentPath = { prefix: '' };
+        function syncLiveSlugLinks() {
+            var slug = document.getElementById('slug');
+            if (!slug) return;
+            document.querySelectorAll('[data-live-slug-prefix]').forEach(function (field) {
+                var prefix = field.getAttribute('data-live-slug-prefix');
+                // Parent-aware fields prepend the picked parent's own path.
+                if (field.hasAttribute('data-live-parent-aware')) {
+                    var base = field.getAttribute('data-base') || prefix;
+                    var mid  = vlParentPath.prefix || '';
+                    prefix = base + (mid ? mid + '/' : '');
+                }
+                field.value = prefix + slug.value;
+            });
+        }
+        document.addEventListener('input', function (e) {
+            if (e.target && e.target.id === 'slug') {
+                syncLiveSlugLinks();
+            }
+        });
+        // The async record picker (parent page, swap target) reports its choice
+        // so the shareable URL can be rebuilt before anything is saved.
+        document.addEventListener('vl-record-picked', function (e) {
+            var d = e.detail || {};
+            if (d.name !== 'parent_id') return;
+            vlParentPath.prefix = vlResolveParentPrefix(String(d.url || ''));
+            syncLiveSlugLinks();
+        });
+        /**
+         * Turn a picked page's full URL into the path a child would inherit:
+         * drop origin, base path and the page prefix — what remains is the
+         * parent's full path (its own slug included).
+         */
+        function vlResolveParentPrefix(url) {
+            if (!url) return '';
+            var path = url;
+            var m = /^[a-z][a-z0-9+.\-]*:\/\/[^/?#]*/i.exec(path);
+            if (m) path = path.slice(m[0].length);
+            path = path.split('#')[0].split('?')[0];
+            var base = window.APP_BASE_PATH || '';
+            if (base && path.indexOf(base) === 0) path = path.slice(base.length);
+            var field = document.querySelector('[data-live-parent-aware]');
+            if (field) {
+                var pfx = field.getAttribute('data-parent-prefix') || '';
+                if (pfx && path.indexOf(pfx) === 0) path = path.slice(pfx.length);
+            }
+            return path.split('/').filter(Boolean).join('/');
+        }
+        document.addEventListener('DOMContentLoaded', syncLiveSlugLinks);
+    </script>
+    <script>
+    /**
+     * Shared show/hide-columns state for admin tables. Spread into any Alpine
+     * scope that renders table.columnsToggle(): dataTable does it by default,
+     * pages with a custom inline x-data (e.g. coupons) spread it themselves
+     * and call this._initColumns() from init().
+     */
+    function vlColumnMixins() {
+        return {
+            columns: [], hiddenCols: [],
+            tableId: '', _colStyle: null, _storeKey: '',
+            _initColumns() {
+                const anchor = this.$refs.items || this.$refs.listItems;
+                let table = anchor ? anchor.closest('table') : null;
+                if (!table && this.$refs.listItems) table = this.$refs.listItems.closest('table');
+                if (!table) return;
+                const path = location.pathname.replace(/\/+$/, '');
+                const tables = Array.from(document.querySelectorAll('[x-data^="dataTable"]'));
+                const ordinal = Math.max(0, tables.indexOf(this.$el));
+                this._storeKey = 'vl_table_cols:' + path + ':' + ordinal;
+                this.tableId = 'vl-tbl-' + path.replace(/[^a-z0-9]+/gi, '-') + '-' + ordinal;
+                table.id = this.tableId;
+                const headerCells = Array.from(table.querySelectorAll('thead th'));
+                this.columns = headerCells
+                    .map((th, position) => {
+                        const isBulkSelect = !!th.querySelector('input[data-bulk-select-all]');
+                        const labeled = /sort\(['"]([^'"]+)['"]\)/.exec(th.innerHTML || '');
+                        const label = this._thLabel(th);
+                        return {
+                            key: labeled ? labeled[1] : this._slug(label) || ('col-' + (position + 1)),
+                            label: label || ('#' + (position + 1)),
+                            locked: isBulkSelect || String(th.className || '').includes('text-right'),
+                            index: position + 1,
+                            isBulkSelect: isBulkSelect,
+                            panel: label !== '',
+                            defaultHidden: th.hasAttribute('data-default-hidden'),
+                        };
+                    })
+                    .filter(c => !c.isBulkSelect);
+                const firstHideable = this.columns.findIndex(c => !c.locked);
+                if (firstHideable >= 0) this.columns[firstHideable].locked = true;
+                let saved = null;
+                try { saved = JSON.parse(localStorage.getItem(this._storeKey) || 'null'); } catch (e) { saved = null; }
+                const hideable = new Set(this.columns.filter(c => c.panel && !c.locked).map(c => c.key));
+                if (saved === null) {
+                    this.hiddenCols = this.columns
+                        .filter(c => c.panel && !c.locked && c.defaultHidden)
+                        .map(c => c.key);
+                    this._persistColumns();
+                } else {
+                    this.hiddenCols = Array.isArray(saved) ? [...new Set(saved.filter(k => hideable.has(k)))] : [];
+                    this._applyColumns();
+                }
+            },
+            _thLabel(th) {
+                const button = th.querySelector('button');
+                if (button) {
+                    const text = Array.from(button.childNodes)
+                        .filter(n => n.nodeType === 3)
+                        .map(n => n.textContent.trim())
+                        .join(' ');
+                    if (text) return text.replace(/\s+/g, ' ');
+                }
+                return (th.textContent || '').trim().replace(/\s+/g, ' ');
+            },
+            _slug(text) {
+                return String(text || '').toLowerCase().trim()
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            },
+            _applyColumns() {
+                if (!this.tableId) return;
+                if (!this._colStyle) {
+                    this._colStyle = document.createElement('style');
+                    this._colStyle.setAttribute('data-vl-table-columns', this.tableId);
+                    document.head.appendChild(this._colStyle);
+                }
+                this._colStyle.textContent = this.hiddenCols
+                    .map(key => {
+                        const col = this.columns.find(c => c.key === key);
+                        if (!col) return '';
+                        return '#' + this.tableId + ' th:nth-child(' + col.index + '), #'
+                            + this.tableId + ' td:nth-child(' + col.index + ') { display: none; }';
+                    })
+                    .join('\n');
+                // Lets width-adaptive table columns (e.g. the products SKU
+                // column) re-measure after a visibility change.
+                document.dispatchEvent(new CustomEvent('vl:columns-changed', {
+                    detail: { tableId: this.tableId }
+                }));
+            },
+            _persistColumns() {
+                try { localStorage.setItem(this._storeKey, JSON.stringify(this.hiddenCols)); } catch (e) {}
+                this._applyColumns();
+            },
+            isColHidden(key) { return this.hiddenCols.includes(key); },
+            toggleCol(key) {
+                const at = this.hiddenCols.indexOf(key);
+                if (at >= 0) this.hiddenCols.splice(at, 1);
+                else this.hiddenCols.push(key);
+                this._persistColumns();
+            },
+            resetCols() {
+                this.hiddenCols = this.columns
+                    .filter(c => c.panel && !c.locked && c.defaultHidden)
+                    .map(c => c.key);
+                this._persistColumns();
+            },
+        };
+    }
+
+    window.vlProductPool = function (config) {
+        const withVariations = !!(config && config.withVariations);
+        return {
+            allProducts: [],
+            allProductsTotal: 0,
+            allProductsLoading: false,
+            allHasMore: false,
+
+            async loadAllProducts() {
+                if (this.allProductsLoading) return;
+                const cache = window.__vlProductPoolCache;
+                if (cache && cache.items && cache.items.length && this.allProducts.length === 0) {
+                    this.allProducts = [...cache.items];
+                    this.allProductsTotal = cache.total;
+                    this.allHasMore = this.allProducts.length < this.allProductsTotal;
+                    if (!this.allHasMore) return;
+                }
+                if (this.allProductsTotal > 0 && this.allProducts.length >= this.allProductsTotal) {
+                    this.allHasMore = false;
+                    return;
+                }
+                this.allProductsLoading = true;
+                const batchSize = window.VL_CLIENT_SEARCH_FETCH_LIMIT || 100;
+                const page = Math.floor(this.allProducts.length / batchSize) + 1;
+                try {
+                    const params = new URLSearchParams({ page: String(page), per_page: String(batchSize) });
+                    if (withVariations) params.set('with_variations', '1');
+                    const resp = await fetch(window.APP_BASE_PATH + '/admin/products/list-json?' + params.toString());
+                    const res = await resp.json();
+                    const items = res.data || [];
+                    this.allProducts = [...this.allProducts, ...items];
+                    this.allProductsTotal = res.total || this.allProductsTotal;
+                    this.allHasMore = this.allProducts.length < this.allProductsTotal;
+                    if (!window.__vlProductPoolCache) window.__vlProductPoolCache = { items: [], total: 0 };
+                    window.__vlProductPoolCache.items = [...this.allProducts];
+                    window.__vlProductPoolCache.total = this.allProductsTotal;
+                } catch (e) {}
+                this.allProductsLoading = false;
+            },
+        };
+    };
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('dataTable', (config = {}) => ({
+            ...vlColumnMixins(),
+            sortBy: config.sort || '', sortDir: config.dir || 'desc',
+            perPage: config.perPage || 20, page: config.page || 1, search: config.search || '',
+            searchBody: !!config.searchBody,
+            allRows: [], listRows: [], visibleCount: 0,
+            serverSide: !!config.serverSide,
+            totalItems: config.totalItems || 0,
+            baseUrl: config.baseUrl || '',
+            isNavigating: false,
+            navTimer: null,
+            init() {
+                this._initColumns();
+                // Always watched: checking the toggle on a small (client-side)
+                // table navigates to a server-side URL carrying search_body.
+                this.$watch('searchBody', () => { this.page = 1; this._debouncedNav(); });
+                if (this.serverSide) {
+                    this.visibleCount = this.totalItems;
+                    this.$watch('search', () => { this.page = 1; this._debouncedNav(); });
+                    this.$watch('perPage', () => { this.page = 1; this._nav(); });
+                    return;
+                }
+                this.allRows = Array.from(this.$refs.items.querySelectorAll('[data-sort]'));
+                this.allRows.forEach(r => { try { r._s = JSON.parse(r.dataset.sort); } catch(e) { r._s = {}; } });
+                this.listRows = [];
+                if (this.$refs.listItems) {
+                    this.listRows = Array.from(this.$refs.listItems.querySelectorAll('[data-sort]'));
+                    this.listRows.forEach(r => { try { r._s = JSON.parse(r.dataset.sort); } catch(e) { r._s = {}; } });
+                }
+                this.apply();
+            },
+            apply() {
+                if (this.serverSide) return;
+                const q = this.search.trim().toLowerCase();
+                const rowMatches = (r) => {
+                    if (!q) return true;
+                    // Cells often render a truncated preview (e.g. SKU "ABC12…",
+                    // first 5 tags, first 3 form fields) while the full value
+                    // lives in data-search or the data-sort payload. Search all
+                    // three so hidden parts remain findable.
+                    const parts = [];
+                    if (r.dataset.search) parts.push(r.dataset.search);
+                    if (r._s) parts.push(Object.values(r._s).join(' '));
+                    parts.push(r.textContent || '');
+                    return parts.join(' ').toLowerCase().includes(q);
+                };
+                const filterRows = (rows) => q ? rows.filter(rowMatches) : rows;
+                const sortRows = (rows) => {
+                    if (!this.sortBy) return rows;
+                    const col = this.sortBy, dir = this.sortDir === 'asc' ? 1 : -1;
+                    return [...rows].sort((a, b) => {
+                        let va = a._s[col] ?? '', vb = b._s[col] ?? '';
+                        const na = Number(va), nb = Number(vb);
+                        if (va !== '' && vb !== '' && !isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+                        return String(va).localeCompare(String(vb), undefined, {numeric: true}) * dir;
+                    });
+                };
+                const grid = sortRows(filterRows(this.allRows));
+                const list = sortRows(filterRows(this.listRows));
+                this.visibleCount = new Set([...grid, ...list].map(r => r.getAttribute('data-row-id') || r)).size;
+                const start = (this.page - 1) * this.perPage, end = start + this.perPage;
+                const render = (all, filtered, container) => {
+                    if (!container) return;
+                    const shown = new Set(filtered.filter((r, i) => i >= start && i < end));
+                    all.forEach(r => {
+                        const visible = shown.has(r);
+                        r.style.display = visible ? '' : 'none';
+                        if (visible) {
+                            container.appendChild(r);
+                            const id = r.getAttribute('data-row-id');
+                            if (id) {
+                                const d = container.querySelector('[data-detail-for="'+id+'"]');
+                                if (d) container.appendChild(d);
+                            }
+                        }
+                    });
+                };
+                render(this.allRows, grid, this.$refs.items);
+                render(this.listRows, list, this.$refs.listItems || null);
+                this.$refs.items.querySelectorAll('[data-detail-for]').forEach(r => r.style.display = 'none');
+                if (this.$refs.listItems) {
+                    this.$refs.listItems.querySelectorAll('[data-detail-for]').forEach(r => r.style.display = 'none');
+                }
+            },
+            sort(col) {
+                if (this.sortBy === col) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+                else { this.sortBy = col; this.sortDir = 'asc'; }
+                this.page = 1;
+                if (this.serverSide) { this._nav(); return; }
+                this.apply();
+            },
+            setPage(n) {
+                if (n >= 1 && n <= this.totalPages) {
+                    this.page = n;
+                    if (this.serverSide) { this._nav(); return; }
+                    this.apply();
+                }
+            },
+            _nav() {
+                clearTimeout(this.navTimer);
+                this.isNavigating = true;
+                const u = new URL(this.baseUrl, location.origin);
+                if (this.search) u.searchParams.set('search', this.search);
+                if (this.searchBody) u.searchParams.set('search_body', '1');
+                if (this.sortBy) { u.searchParams.set('sort', this.sortBy); u.searchParams.set('dir', this.sortDir); }
+                if (this.page > 1) u.searchParams.set('page', String(this.page));
+                if (this.perPage !== (config.perPage || 20)) u.searchParams.set('per_page', String(this.perPage));
+                const target = u.toString();
+                // Let the spinner/overlay paint before the full-page navigation.
+                requestAnimationFrame(() => setTimeout(() => { location.href = target; }, 30));
+            },
+            _debouncedNav() {
+                clearTimeout(this.navTimer);
+                // No isNavigating here: the overlay/spinner must only appear
+                // once navigation actually starts (_nav sets it), otherwise
+                // it flashes on the first keystroke while still typing.
+                this.navTimer = setTimeout(() => this._nav(), 700);
+            },
+            get totalPages() {
+                if (this.serverSide) return Math.max(1, Math.ceil(this.totalItems / this.perPage));
+                return Math.max(1, Math.ceil(this.visibleCount / this.perPage));
+            },
+            get pageList() {
+                const t = this.totalPages;
+                if (t <= 7) return Array.from({length: t}, (_, i) => i + 1);
+                const p = this.page, r = [1];
+                if (p > 3) r.push('…');
+                for (let i = Math.max(2, p - 1); i <= Math.min(t - 1, p + 1); i++) r.push(i);
+                if (p < t - 2) r.push('…');
+                if (t > 1) r.push(t);
+                return r;
+            }
+        }));
+        // Unified searchable record picker.
+        // mode: 'async' | 'static'
+        //   async  — preloads a list, then searches the server (debounced)
+        //   static — filters the options rendered by Twig
+        const createEntityPicker = (config = {}) => ({
+            mode: config.mode === 'static' ? 'static' : 'async',
+            name: config.name || '',
+            valueField: config.valueField === 'slug' ? 'slug' : 'id',
+            endpoint: config.endpoint || '/admin/posts/list-json',
+            itemEndpoint: config.itemEndpoint || '/admin/posts/:id/json',
+            params: config.params && !Array.isArray(config.params) ? config.params : {},
+            contentType: config.contentType || 'page',
+            excludeId: config.excludeId ? String(config.excludeId) : '',
+            options: [],
+            selectedValue: config.initialValue ? String(config.initialValue) : '',
+            selectedLabel: config.initialLabel || '',
+            selectedUrl: '',
+            query: config.initialLabel || '',
+            search: '',
+            open: false,
+            loading: false,
+            preloaded: false,
+            placeholder: config.placeholder || 'Search…',
+            emptyLabel: config.emptyLabel || '',
+            emptyHint: config.emptyHint || '',
+            showEmptyRow: config.showEmptyRow === true,
+            loadingLabel: config.loadingLabel || 'Loading…',
+            preloadPerPage: config.preloadPerPage || window.VL_CLIENT_SEARCH_FETCH_LIMIT || 100,
+            searchTimer: null,
+            initialSelectedValue: config.initialValue ? String(config.initialValue) : '',
+            targetSelector: config.targetSelector || '',
+            targetLanguage: config.targetLanguage || '',
+            _targetEl: null,
+
+            init() {
+                this.options = (config.options || []).map((option) => this.normalizeOption(option));
+                if (this.selectedValue) {
+                    const match = this.options.find((option) => option.value === this.selectedValue);
+                    if (match) {
+                        this.selectedLabel = match.label;
+                        this.selectedUrl = match.url || '';
+                        this.query = match.label;
+                        this.announce();
+                    } else if (this.mode === 'async') {
+                        if (this.selectedLabel) {
+                            this.ensureOption({ value: this.selectedValue, label: this.selectedLabel });
+                            this.query = this.selectedLabel;
+                        } else {
+                            this.resolveInitial();
+                        }
+                    }
+                }
+                this.$watch('open', (value) => this.setElevated(value));
+
+                // Dynamic translation filtering: react to the content-language select.
+                if (this.targetSelector) {
+                    const sync = () => {
+                        const el = document.querySelector(this.targetSelector);
+                        if (el) {
+                            this._targetEl = el;
+                            this.targetLanguage = el.value || this.targetLanguage;
+                        }
+                    };
+                    sync();
+                    const el = this._targetEl;
+                    if (el) {
+                        el.addEventListener('change', () => { sync(); });
+                    }
+                } else if (this.targetLanguage === '' && this._targetEl === null) {
+                    // no-op
+                }
+                if (this.targetLanguage === '' && this._targetEl) {
+                    this.targetLanguage = this._targetEl.value || '';
+                }
+            },
+
+            normalizeOption(option) {
+                return {
+                    value: option.value === null || option.value === undefined ? '' : String(option.value),
+                    label: option.label || '',
+                    baseLabel: option.label || '',
+                    url: option.url || '',
+                    disabled: !!option.disabled,
+                    language: option.language || '',
+                    status: option.status || 'published',
+                    translatedLanguages: Array.isArray(option.translatedLanguages) ? option.translatedLanguages : []
+                };
+            },
+
+            // The label is real input text, never a placeholder, so a selected
+            // record keeps the normal text color in both themes.
+            get filterTerm() {
+                const term = (this.query || '').trim();
+                if (this.selectedLabel && term === this.selectedLabel) return '';
+                return term.toLowerCase();
+            },
+
+            get displayOptions() {
+                const term = this.filterTerm;
+                const tl = this.targetLanguage;
+                const translatedLabel = tjs('Translated');
+                const currentLabel = tjs('Current');
+                const statusLabels = {
+                    draft: tjs('Draft'),
+                    unlisted: tjs('Unlisted'),
+                    scheduled: tjs('Scheduled')
+                };
+                return this.options
+                    .filter((option) => !tl || option.language !== tl)
+                    .filter((option) => !term || (option.baseLabel || option.label).toLowerCase().indexOf(term) !== -1)
+                    .map((option) => {
+                        const isCurrent = !!this.selectedValue && option.value === this.selectedValue;
+                        const disabled = !!tl && (option.translatedLanguages || []).indexOf(tl) !== -1 && !isCurrent;
+                        const base = option.baseLabel || option.label;
+                        const statusHint = (option.status && option.status !== 'published' && statusLabels[option.status])
+                            ? ' (' + statusLabels[option.status] + ')' : '';
+                        const translatedHint = disabled ? ' (' + translatedLabel + ')' : '';
+                        const currentHint = isCurrent && tl ? ' (' + currentLabel + ')' : '';
+                        return Object.assign({}, option, {
+                            disabled: disabled,
+                            label: base + statusHint + translatedHint + currentHint
+                        });
+                    });
+            },
+
+            onFocus(event) {
+                this.open = true;
+                if (this.query && this.query === this.selectedLabel && event.target.select) {
+                    event.target.select();
+                }
+                this.openDropdown();
+            },
+
+            onInput(event) {
+                this.query = event.target.value;
+                this.search = this.query;
+                this.open = true;
+                if (this.mode === 'async') this.onSearchInput();
+            },
+
+            closeDropdown() {
+                this.open = false;
+                this.search = '';
+                this.query = this.selectedLabel || '';
+            },
+
+            setElevated(active) {
+                if (this._elevatedNodes) {
+                    this._elevatedNodes.forEach(function(node) {
+                        node.classList.remove('vl-async-select-open');
+                    });
+                }
+                this._elevatedNodes = [];
+                if (active) {
+                    var node = this.$el.parentElement;
+                    while (node && node !== document.body) {
+                        if (node.hasAttribute('data-vl-setting') || node.hasAttribute('x-data')) {
+                            node.classList.add('vl-async-select-open');
+                            this._elevatedNodes.push(node);
+                        }
+                        node = node.parentElement;
+                    }
+                }
+                this.$el.classList.toggle('vl-async-select-open', active);
+            },
+
+            // Replaces the option list while keeping the current selection — used by
+            // modals that reuse one picker for every record they open.
+            setOptions(list) {
+                this.options = (list || []).map((option) => this.normalizeOption(option));
+            },
+
+            setValue(value, label) {
+                const next = value === null || value === undefined ? '' : String(value);
+                this.selectedValue = next;
+                this.open = false;
+                this.search = '';
+                if (next === '') {
+                    this.selectedLabel = '';
+                    this.selectedUrl = '';
+                    this.query = '';
+                    this.announce();
+                    return;
+                }
+                const match = this.options.find((option) => option.value === next);
+                this.selectedLabel = match ? (match.baseLabel || match.label) : (label || '');
+                this.selectedUrl = match && match.url ? match.url : '';
+                this.query = this.selectedLabel;
+                this.announce();
+            },
+
+            ensureOption(option) {
+                var existing = this.options.find(function(item) {
+                    return item.value === option.value;
+                });
+                if (existing) {
+                    if (!existing.url && option.url) existing.url = option.url;
+                    return;
+                }
+                this.options.push(this.normalizeOption(option));
+                this.sortOptions();
+            },
+
+            sortOptions() {
+                if (this.mode !== 'async') return;
+                this.options.sort(function(a, b) {
+                    return a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+                });
+            },
+
+            async resolveInitial() {
+                var bp = window.APP_BASE_PATH || '';
+                try {
+                    if (this.valueField === 'id' && /^\d+$/.test(String(this.selectedValue))) {
+                        var res = await fetch(bp + this.itemEndpoint.replace(':id', encodeURIComponent(this.selectedValue)));
+                        if (!res.ok) return;
+                        var data = await res.json();
+                        this.selectedLabel = data.title || data.name || '';
+                        if (data.id) {
+                            this.ensureOption({ value: String(data.id), label: this.selectedLabel, url: data.url || '' });
+                            this.query = this.selectedLabel;
+                        }
+                        this.announce();
+                        return;
+                    }
+                    if (this.valueField === 'slug' && this.selectedValue) {
+                        var listed = await this.fetchJson(this.selectedValue, 1, 20);
+                        var match = (listed.items || []).find(function(item) {
+                            return item.slug === this.selectedValue;
+                        }.bind(this));
+                        if (match) {
+                            this.selectedLabel = match.title || match.name || '';
+                            this.ensureOption({ value: match.slug, label: this.selectedLabel });
+                            this.query = this.selectedLabel;
+                        }
+                    }
+                } catch (e) { /* keep empty label */ }
+            },
+
+            async openDropdown() {
+                this.open = true;
+                if (this.mode === 'async' && !this.preloaded) {
+                    await this.preload();
+                }
+            },
+
+            async preload() {
+                const cacheKey = this.endpoint + '|' + JSON.stringify(this.params) + '|' + this.contentType + '|' + this.valueField;
+                const cached = window.__entityPickerCache && window.__entityPickerCache.get(cacheKey);
+                if (cached) {
+                    this.mergeItems(cached.items);
+                    this.preloaded = true;
+                    return;
+                }
+                this.loading = true;
+                try {
+                    var data = await this.fetchJson('', 1, this.preloadPerPage);
+                    var items = data.items || [];
+                    if (!window.__entityPickerCache) window.__entityPickerCache = new Map();
+                    window.__entityPickerCache.set(cacheKey, { items: items });
+                    this.mergeItems(items);
+                    this.preloaded = true;
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            onSearchInput() {
+                var self = this;
+                clearTimeout(this.searchTimer);
+                this.searchTimer = setTimeout(function() {
+                    var term = self.filterTerm;
+                    if (term.length >= 1) {
+                        self.fetchAndMerge(term);
+                    } else if (!self.preloaded) {
+                        self.preload();
+                    }
+                }, 250);
+            },
+
+            mergeItems(items) {
+                var self = this;
+                items.forEach(function(item) {
+                    var value = self.valueField === 'slug' ? item.slug : String(item.id);
+                    if (self.excludeId && value === self.excludeId) return;
+                    self.ensureOption({ value: value, label: item.title || item.name || '', url: item.url || '' });
+                });
+            },
+
+            async fetchJson(q, page, perPage) {
+                var bp = window.APP_BASE_PATH || '';
+                var params = new URLSearchParams(Object.assign({
+                    page: String(page || 1),
+                    per_page: String(perPage || (q ? 20 : this.preloadPerPage)),
+                }, this.params));
+                if (this.contentType && !params.has('type')) params.set('type', this.contentType);
+                if (q) params.set('q', q);
+                var res = await fetch(bp + this.endpoint + '?' + params.toString());
+                if (!res.ok) throw new Error('fetch failed');
+                return res.json();
+            },
+
+            async fetchAndMerge(q) {
+                this.loading = true;
+                try {
+                    var data = await this.fetchJson(q, 1, 20);
+                    this.mergeItems(data.items || []);
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            select(option) {
+                this.selectedValue = option.value === null || option.value === undefined ? '' : String(option.value);
+                this.selectedLabel = option.baseLabel || option.label || '';
+                this.selectedUrl = option.url || '';
+                this.query = this.selectedLabel;
+                this.search = '';
+                this.open = false;
+                this.announce();
+            },
+
+            selectEmpty() {
+                this.clear();
+            },
+
+            clear() {
+                this.selectedValue = '';
+                this.selectedLabel = '';
+                this.selectedUrl = '';
+                this.query = '';
+                this.search = '';
+                this.open = false;
+                this.announce();
+            },
+
+            announce() {
+                var payload = { name: this.name, value: this.selectedValue, url: this.selectedUrl };
+                this.$nextTick(() => this.$dispatch('vl-record-picked', payload));
+            },
+        });
+        Alpine.data('entityPicker', createEntityPicker);
+        Alpine.data('asyncPageSelect', (config = {}) => createEntityPicker(Object.assign({ mode: 'async' }, config)));
+        Alpine.data('searchableSelect', (config = {}) => createEntityPicker(Object.assign({ mode: 'static' }, config)));
+        Alpine.data('rolePicker', () => ({
+            selectedRole: '',
+            pick(slug) { this.selectedRole = slug; },
+            isSelected(slug) { return this.selectedRole === slug; },
+        }));
+        Alpine.store('bulk', {
+            selected: [],
+            selectAll: false,
+            selectAllVisible: false,
+            lastSelectedId: null,
+            updateTrigger: 0,
+            getVisibleCheckboxes() {
+                const checkboxes = document.querySelectorAll('[data-row-id] input[type=checkbox][data-bulk-item]');
+                return Array.from(checkboxes).filter(cb => {
+                    const row = cb.closest('[data-row-id]');
+                    if (!row) return false;
+                    const rowRect = row.getBoundingClientRect();
+                    const checkboxRect = cb.getBoundingClientRect();
+                    return rowRect.width > 0 && rowRect.height > 0 && checkboxRect.width > 0 && checkboxRect.height > 0;
+                });
+            },
+            getVisibleCheckbox(id) {
+                const key = String(id);
+                return this.getVisibleCheckboxes().find(cb => String(cb.value) === key) || null;
+            },
+            getVisibleSelectAllCheckbox() {
+                const checkboxes = document.querySelectorAll('input[type=checkbox][data-bulk-select-all]');
+                return Array.from(checkboxes).find(cb => {
+                    const rect = cb.getBoundingClientRect();
+                    return rect.width > 0 && rect.height > 0;
+                }) || null;
+            },
+            toggle(id) {
+                const key = String(id);
+                const idx = this.selected.indexOf(key);
+                if (idx === -1) {
+                    this.selected = [...this.selected, key];
+                    this.lastSelectedId = key;
+                } else {
+                    this.selected = this.selected.filter(i => i !== key);
+                    if (String(this.lastSelectedId) === key) this.lastSelectedId = this.selected[this.selected.length - 1] || null;
+                }
+                this.selectAll = false;
+                this.selectAllVisible = false;
+                this.updateTrigger++;
+            },
+            toggleAll(ids) {
+                const visibleIds = this.getVisibleCheckboxes().map(cb => String(cb.value)).filter(id => id !== '');
+                const fallbackIds = Array.from(ids || [], id => String(id)).filter(id => id !== '');
+                const targetIds = visibleIds.length > 0 ? visibleIds : fallbackIds;
+                const allSelected = targetIds.length > 0 && targetIds.every(id => this.selected.includes(id));
+                if (allSelected) {
+                    this.selected = [];
+                    this.selectAll = false;
+                    this.selectAllVisible = false;
+                    this.lastSelectedId = null;
+                } else {
+                    this.selected = [...targetIds];
+                    this.selectAll = true;
+                    this.selectAllVisible = false;
+                    this.lastSelectedId = targetIds[targetIds.length - 1] || null;
+                }
+                this.updateTrigger++;
+            },
+            selectVisible() {
+                const visibleIds = this.getVisibleCheckboxes().map(cb => String(cb.value)).filter(id => id !== '');
+                const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => this.selected.includes(id));
+                if (allVisibleSelected) {
+                    this.selected = [];
+                    this.selectAll = false;
+                    this.selectAllVisible = false;
+                    this.lastSelectedId = null;
+                } else {
+                    this.selected = visibleIds;
+                    this.selectAll = false;
+                    this.selectAllVisible = visibleIds.length > 0;
+                    this.lastSelectedId = visibleIds[visibleIds.length - 1] || null;
+                }
+                this.updateTrigger++;
+            },
+            selectAllItems() {
+                if (this.selectAll) {
+                    this.selected = [];
+                    this.selectAll = false;
+                    this.selectAllVisible = false;
+                    this.lastSelectedId = null;
+                } else {
+                    const allIds = [];
+                    document.querySelectorAll('[data-row-id] input[type=checkbox][data-bulk-item]').forEach(cb => {
+                        allIds.push(String(cb.value));
+                    });
+                    this.selected = [...new Set(allIds.filter(id => id !== ''))];
+                    this.selectAll = true;
+                    this.selectAllVisible = false;
+                    this.lastSelectedId = this.selected[this.selected.length - 1] || null;
+                }
+                this.updateTrigger++;
+            },
+            clear() {
+                this.selected = [];
+                this.selectAll = false;
+                this.selectAllVisible = false;
+                this.lastSelectedId = null;
+                this.updateTrigger++;
+            },
+            isSelected(id) {
+                return this.selected.includes(String(id));
+            },
+            get count() {
+                return this.selected.length;
+            }
+        });
+    });
+    </script>
+
+    {# Global featuredImage function (used by posts, products, and custom content type forms) #}
+    <script>
+    window.featuredImage = (initialId) => {
+        const bp = window.APP_BASE_PATH || '';
+        return {
+            imageId: initialId || 0,
+            thumbnailUrl: '',
+            showModal: false,
+            loading: false,
+            mediaPage: 1,
+            mediaTotalPages: 1,
+            mediaQuery: '',
+            searchTimer: null,
+            mediaItems: [],
+            async init() {
+                if (this.imageId > 0) {
+                    const [found] = await fetchMediaByIds(bp, [this.imageId]);
+                    if (found) this.thumbnailUrl = found.thumbnail || found.url;
+                }
+            },
+            removeImage() { this.imageId = 0; this.thumbnailUrl = ''; },
+            async loadMediaPage(page = 1) {
+                this.loading = true;
+                try {
+                    const data = await fetchImageMediaPage(bp, page, this.mediaQuery, 40);
+                    this.mediaItems = data.items || [];
+                    this.mediaPage = data.page || page;
+                    this.mediaTotalPages = data.total_pages || 1;
+                } finally {
+                    this.loading = false;
+                }
+            },
+            async prevMediaPage() {
+                if (this.mediaPage > 1) await this.loadMediaPage(this.mediaPage - 1);
+            },
+            async nextMediaPage() {
+                if (this.mediaPage < this.mediaTotalPages) await this.loadMediaPage(this.mediaPage + 1);
+            },
+            async openBrowser() {
+                this.showModal = true;
+                this.mediaQuery = '';
+                if (this.imageId > 0) {
+                    const foundPage = await findImagePageById(bp, this.imageId, 40);
+                    await this.loadMediaPage(foundPage);
+                } else if (this.mediaItems.length === 0) {
+                    await this.loadMediaPage(1);
+                }
+            },
+            async refreshMedia() {
+                clearMediaCache();
+                this.mediaItems = [];
+                await this.loadMediaPage(1);
+            },
+            onSearchInput() {
+                clearTimeout(this.searchTimer);
+                this.searchTimer = setTimeout(() => this.loadMediaPage(1), 300);
+            },
+            selectImage(item) {
+                this.imageId = item.id;
+                this.thumbnailUrl = item.thumbnail || item.url;
+                this.showModal = false;
+            },
+            // Drag-drop upload (assets/js/media-upload.js): reload the grid
+            // and auto-select the first uploaded image.
+            async handleDroppedFiles(result) {
+                await this.refreshMedia();
+                const first = (result && result.uploaded || [])[0];
+                if (first) this.selectImage(first);
+            }
+        };
+    };
+
+    window.seoPanel = function (initial = {}) {
+        const bp = window.APP_BASE_PATH || '';
+        return {
+            tab: 'general',
+            seoEnabled: !!initial.seoEnabled,
+            metaTitle: initial.metaTitle || '',
+            metaDesc: initial.metaDesc || '',
+            ogTitle: initial.ogTitle || '',
+            ogDesc: initial.ogDesc || '',
+            twitterCard: initial.twitterCard || 'summary',
+            imageId: Number(initial.imageId || 0),
+            thumbnailUrl: '',
+            showModal: false,
+            loading: false,
+            mediaPage: 1,
+            mediaTotalPages: 1,
+            mediaQuery: '',
+            searchTimer: null,
+            mediaItems: [],
+            liveTitle: '',
+            liveDesc: '',
+            syncLiveFields() {
+                this.liveTitle = document.getElementById('title')?.value
+                    || document.querySelector('input[name="name"]')?.value
+                    || '';
+                this.liveDesc = document.getElementById('excerpt')?.value
+                    || document.querySelector('textarea[name="short_description"]')?.value
+                    || document.querySelector('textarea[name="excerpt"]')?.value
+                    || '';
+            },
+            get previewTitle() {
+                return this.metaTitle || this.liveTitle || 'Untitled';
+            },
+            get previewDesc() {
+                return this.metaDesc || this.liveDesc || 'No description set';
+            },
+            get titleLen() {
+                return String(this.metaTitle || '').length;
+            },
+            get descLen() {
+                return String(this.metaDesc || '').length;
+            },
+            async init() {
+                this.syncLiveFields();
+                if (this.imageId > 0) {
+                    const [found] = await fetchMediaByIds(bp, [this.imageId]);
+                    if (found) this.thumbnailUrl = found.thumbnail || found.url;
+                }
+                const sync = () => this.syncLiveFields();
+                document.addEventListener('input', (event) => {
+                    if (!event.target) return;
+                    const match = event.target.matches('#title, input[name="name"], #excerpt, textarea[name="short_description"], textarea[name="excerpt"]');
+                    if (match) sync();
+                });
+                document.addEventListener('change', (event) => {
+                    if (!event.target) return;
+                    const match = event.target.matches('#title, input[name="name"], #excerpt, textarea[name="short_description"], textarea[name="excerpt"]');
+                    if (match) sync();
+                });
+            },
+            removeImage() {
+                this.imageId = 0;
+                this.thumbnailUrl = '';
+            },
+            async loadMediaPage(page = 1) {
+                this.loading = true;
+                try {
+                    const data = await fetchImageMediaPage(bp, page, this.mediaQuery, 40);
+                    this.mediaItems = data.items || [];
+                    this.mediaPage = data.page || page;
+                    this.mediaTotalPages = data.total_pages || 1;
+                } finally {
+                    this.loading = false;
+                }
+            },
+            async prevMediaPage() {
+                if (this.mediaPage > 1) await this.loadMediaPage(this.mediaPage - 1);
+            },
+            async nextMediaPage() {
+                if (this.mediaPage < this.mediaTotalPages) await this.loadMediaPage(this.mediaPage + 1);
+            },
+            async openBrowser() {
+                this.showModal = true;
+                this.mediaQuery = '';
+                if (this.imageId > 0) {
+                    const foundPage = await findImagePageById(bp, this.imageId, 40);
+                    await this.loadMediaPage(foundPage);
+                } else if (this.mediaItems.length === 0) {
+                    await this.loadMediaPage(1);
+                }
+            },
+            async refreshMedia() {
+                clearMediaCache();
+                this.mediaItems = [];
+                await this.loadMediaPage(1);
+            },
+            onSearchInput() {
+                clearTimeout(this.searchTimer);
+                this.searchTimer = setTimeout(() => this.loadMediaPage(1), 300);
+            },
+            selectImage(item) {
+                this.imageId = item.id;
+                this.thumbnailUrl = item.thumbnail || item.url;
+                this.showModal = false;
+            },
+            // Drag-drop upload (assets/js/media-upload.js): reload the grid
+            // and auto-select the first uploaded image.
+            async handleDroppedFiles(result) {
+                await this.refreshMedia();
+                const first = (result && result.uploaded || [])[0];
+                if (first) this.selectImage(first);
+            }
+        };
+    };
+    </script>
+
+    {# Shared media browse helpers (used by featuredImage / productGallery / mediaPicker across all admin pages) #}
+    <script>
+    window.CLIENT_SEARCH_FETCH_LIMIT = {{ client_search_fetch_limit|default(100) }};
+    const _mediaBrowseCache = new Map();
+    async function _mediaBrowseFetch(url) {
+        if (_mediaBrowseCache.has(url)) return _mediaBrowseCache.get(url);
+        const res = await fetch(url);
+        const data = await res.json();
+        _mediaBrowseCache.set(url, data);
+        return data;
+    }
+    function clearMediaCache() { _mediaBrowseCache.clear(); _clientMediaStore.reset(); }
+
+    function getContentLanguageForMedia() {
+        const sel = document.getElementById('language');
+        if (sel && sel.value) return sel.value;
+        if (typeof window.getEditorContentLanguage === 'function') return window.getEditorContentLanguage();
+        if (typeof window._VL_CONTENT_LANG === 'string' && window._VL_CONTENT_LANG) return window._VL_CONTENT_LANG;
+        return '';
+    }
+
+    /**
+     * Client-side media store: when the library (per type + lang) has at most
+     * CLIENT_SEARCH_FETCH_LIMIT files, it is preloaded once and search/paging
+     * are served from memory; larger libraries are declined after the first
+     * response (total > limit) and fall back to per-request browse-json calls.
+     * Mirrors the media page's client-side search limit.
+     */
+    const _clientMediaStore = {
+        _entries: new Map(),
+        _key(type, lang) { return `${type || ''}|${lang || ''}`; },
+        _entry(type, lang) {
+            const key = this._key(type, lang);
+            if (!this._entries.has(key)) {
+                this._entries.set(key, { all: null, promise: null, declined: false });
+            }
+            return this._entries.get(key);
+        },
+        reset() { this._entries.clear(); },
+        _matches(item, needle) {
+            const hay = [item.name, item.alt_text, item.description, item.title]
+                .filter(v => typeof v === 'string' && v !== '').join(' ').toLowerCase();
+            return hay.includes(needle);
+        },
+        async _preload(bp, type, lang, entry) {
+            const q = type ? `&type=${encodeURIComponent(type)}` : '';
+            const langParam = lang ? `&lang=${encodeURIComponent(lang)}` : '';
+            const first = await _mediaBrowseFetch(`${bp}/admin/media/browse-json?page=1&per_page=40${q}${langParam}`);
+            if (Number(first.total || 0) > window.CLIENT_SEARCH_FETCH_LIMIT) {
+                entry.declined = true;
+                return null;
+            }
+            const items = first.items || [];
+            const totalPages = Number(first.total_pages || 1);
+            for (let p = 2; p <= totalPages; p++) {
+                const next = await _mediaBrowseFetch(`${bp}/admin/media/browse-json?page=${p}&per_page=40${q}${langParam}`);
+                items.push(...(next.items || []));
+            }
+            entry.all = items;
+            return items;
+        },
+        async all(bp, type, lang) {
+            const entry = this._entry(type, lang);
+            if (entry.all) return entry.all;
+            if (entry.declined) return null;
+            if (!entry.promise) {
+                entry.promise = this._preload(bp, type, lang, entry)
+                    .catch(() => { entry.declined = true; return null; });
+            }
+            return entry.promise;
+        },
+        async page(bp, type, page = 1, query = '', perPage = 40, lang = '') {
+            const items = await this.all(bp, type, lang);
+            if (items === null) return null;
+            const needle = (query || '').trim().toLowerCase();
+            const filtered = needle ? items.filter(i => this._matches(i, needle)) : items;
+            const start = (page - 1) * perPage;
+            return {
+                items: filtered.slice(start, start + perPage),
+                total: filtered.length,
+                page,
+                per_page: perPage,
+                total_pages: Math.max(1, Math.ceil(filtered.length / perPage)),
+            };
+        },
+    };
+
+    async function vlMediaBrowsePage(bp, page = 1, query = '', { type = '', lang = '', perPage = 40 } = {}) {
+        if (window.CLIENT_SEARCH_FETCH_LIMIT > 0) {
+            const local = await _clientMediaStore.page(bp, type, page, query, perPage, lang);
+            if (local) return local;
+        }
+        const q = query ? `&q=${encodeURIComponent(query)}` : '';
+        const typeParam = type ? `&type=${encodeURIComponent(type)}` : '';
+        const langParam = lang ? `&lang=${encodeURIComponent(lang)}` : '';
+        return _mediaBrowseFetch(`${bp}/admin/media/browse-json?page=${page}&per_page=${perPage}${typeParam}${q}${langParam}`);
+    }
+
+    async function fetchImageMediaPage(bp, page = 1, query = '', perPage = 40, lang = '') {
+        const contentLang = lang || getContentLanguageForMedia();
+        return vlMediaBrowsePage(bp, page, query, { type: 'image/', lang: contentLang, perPage });
+    }
+
+    /** Product gallery browser (images + videos) — excludes other file types. */
+    async function fetchGalleryMediaPage(bp, page = 1, query = '', perPage = 40, lang = '') {
+        const contentLang = lang || getContentLanguageForMedia();
+        return vlMediaBrowsePage(bp, page, query, { type: 'image/,video/', lang: contentLang, perPage });
+    }
+
+    /** Untyped browser (any file type) — used by download/file pickers. */
+    async function fetchFileMediaPage(bp, page = 1, query = '', perPage = 40) {
+        return vlMediaBrowsePage(bp, page, query, { type: '', perPage });
+    }
+
+    async function findImageById(bp, id) {
+        let page = 1, totalPages = 1;
+        do {
+            const data = await fetchImageMediaPage(bp, page, '', 80);
+            const found = (data.items || []).find(i => Number(i.id) === Number(id));
+            if (found) return found;
+            totalPages = data.total_pages || 1;
+            page++;
+        } while (page <= totalPages);
+        return null;
+    }
+    async function findImagePageById(bp, id, perPage = 40) {
+        let page = 1, totalPages = 1;
+        do {
+            const data = await fetchImageMediaPage(bp, page, '', perPage);
+            const found = (data.items || []).some(i => Number(i.id) === Number(id));
+            if (found) return page;
+            totalPages = data.total_pages || 1;
+            page++;
+        } while (page <= totalPages);
+        return 1;
+    }
+    /** Batch resolve media rows by ID (order-preserving, null for missing). */
+    async function fetchMediaByIds(bp, ids) {
+        const wanted = [...new Set((ids || []).map(Number).filter(id => Number.isInteger(id) && id > 0))].slice(0, 200);
+        if (wanted.length === 0) return [];
+        const rows = [];
+        let page = 1, totalPages = 1;
+        do {
+            const data = await _mediaBrowseFetch(`${bp}/admin/media/browse-json?page=${page}&per_page=80&ids=${wanted.join(',')}`);
+            rows.push(...(data.items || []));
+            totalPages = data.total_pages || 1;
+            page++;
+        } while (page <= totalPages);
+        const byId = new Map(rows.map(i => [Number(i.id), i]));
+        return wanted.map(id => byId.get(id) || null);
+    }
+    </script>
+    {% if assets_use_cdn %}
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+    {# App logic (rail toggle, panel/nav reorder, editors) has no CDN copy:
+       it always comes from the local bundle and uses the CDN globals above. #}
+    <script defer src="{{ asset('assets/build/admin.js') }}"></script>
+    {% else %}
+    <script defer src="{{ asset('assets/build/admin-vendor.js') }}"></script>
+    <script defer src="{{ asset('assets/build/admin.js') }}"></script>
+    {% endif %}
+<style>
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Inter', sans-serif; }
+        .drag-handle { cursor: move; }
+        .drag-handle:hover { color: #111827; text-decoration: underline; }
+        .dark .drag-handle:hover { color: #d1d5db; }
+        /* Custom scrollbar - thin and modern */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .dark input[type="date"]::-webkit-calendar-picker-indicator,
+        .dark input[type="time"]::-webkit-calendar-picker-indicator,
+        .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.8;
+        }
+    </style>
+    <link rel="stylesheet" href="{{ asset('assets/css/admin-style.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/editor.css') }}">
+    {# Editor table preview mirrors the ACTIVE FRONT-END THEME (theme.json
+       "tables" + the resolved --theme-text), not the admin chrome — so these
+       variables intentionally have no .dark variants. #}
+    {% set _table_palette = vl_table_palette|default({}) %}
+    <style>
+        :root {
+            --vl-table-border: {{ _table_palette.border|default('#d1d5db') }};
+            --vl-table-head-bg: {{ _table_palette.header_background|default('#f3f4f6') }};
+            --vl-table-head-text: {{ vl_theme_colors['--theme-text'].value ?? '#111827' }};
+        }
+    </style>
+    <script>window.CURRENCY_SYMBOL = '{{ default_currency_symbol|default(currency_symbol)|raw }}';window.APP_DEBUG = {% if env('APP_DEBUG') or env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};window.VL_VERBOSE = {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};</script>
+    {% if assets_use_cdn %}
+    <script type="module" src="{{ asset('assets/js/editor.js') }}"></script>
+    {% else %}
+    <script defer src="{{ asset('assets/build/editor.js') }}"></script>
+    {% endif %}
+    {# Shared media facade behavior (video/audio tile posters + click-to-load
+       player) for the media library, gallery pickers and editor browsers #}
+    <script defer src="{{ asset('assets/js/media-facade.js') }}"></script>
+    {# Shared drag-drop upload (transport + drop zone UI) for every media
+       picker modal — featured image, gallery, library, download files #}
+    <script defer src="{{ asset('assets/js/media-upload.js') }}"></script>
+    {% set _sa = user.hasRole('super_admin') %}
+    {% set _can_upload_media = _sa or (user_permissions is defined and 'media.upload' in user_permissions) %}
+    {# Upload permission gate for client-side upload surfaces (drag-drop in
+       media pickers). The server enforces the same permission on
+       /admin/media/upload-json* — this only keeps the UI honest. #}
+    <script>window.VL_CAN_UPLOAD_MEDIA = {{ _can_upload_media ? 'true' : 'false' }};</script>
+    {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}<script>console.debug('editor.js: cache disabled (dev mode)');</script>{% endif %}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+    // Dirty-state guard: warns before navigation with unsaved changes and
+    // toggles all [data-dirty-badge] / [data-clean-badge] indicators on the page.
+    // Defined in <head> so page-level scripts (content block) can call it immediately.
+    // Usage: vlDirtyGuard() for document scope, or vlDirtyGuard({ root: '#sel', clicks: true }).
+    // clicks: also mark dirty when a button[type="button"] is clicked (Alpine-driven UIs).
+    // Buttons can opt out with data-no-dirty.
+    window.vlDirtyGuard = function (opts) {
+        opts = opts || {};
+        var scope = opts.root ? document.querySelector(opts.root) : document;
+        if (!scope) return null;
+        var dirty = false;
+        // Ignore input/change events fired while the page is still initializing
+        // (editor mount, Alpine init, option rebuilds). The guard arms itself
+        // just after DOMContentLoaded.
+        var armed = document.readyState !== 'loading';
+        if (!armed) {
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(function () { armed = true; }, 0);
+            });
+        }
+        var api = {
+            mark: function () { if (!armed) return; dirty = true; api.sync(); },
+            reset: function () { dirty = false; api.sync(); },
+            isDirty: function () { return dirty; },
+            sync: function () {
+                document.querySelectorAll('[data-dirty-badge]').forEach(function (el) {
+                    el.classList.toggle('hidden', !dirty);
+                });
+                document.querySelectorAll('[data-clean-badge]').forEach(function (el) {
+                    el.classList.toggle('hidden', dirty);
+                });
+            }
+        };
+        scope.addEventListener('input', api.mark, true);
+        scope.addEventListener('change', api.mark, true);
+        if (opts.clicks) {
+            scope.addEventListener('click', function (e) {
+                if (e.target.closest && e.target.closest('button[type="button"]:not([data-no-dirty])')) api.mark();
+            }, true);
+        }
+        scope.addEventListener('submit', api.reset, true);
+        window.addEventListener('beforeunload', function (e) {
+            if (dirty) { e.preventDefault(); e.returnValue = ''; }
+        });
+        return api;
+    };
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-950 antialiased" x-data="{
+        sidebarOpen: (() => {
+            const wide = window.matchMedia('(min-width: 1024px)').matches;
+            try {
+                const stored = localStorage.getItem('vl_admin_sidebar');
+                if (wide && (stored === '1' || stored === '0')) return stored === '1';
+            } catch (e) {}
+            return wide;
+        })(),
+        toggleSidebar() { this.sidebarOpen = !this.sidebarOpen; this.saveSidebar(); },
+        closeSidebar() { this.sidebarOpen = false; this.saveSidebar(); },
+        saveSidebar() { try { localStorage.setItem('vl_admin_sidebar', this.sidebarOpen ? '1' : '0'); } catch (e) {} }
+    }">
+
+    <div class="flex">
+        {# ── Sidebar ──────────────────────────────────────── #}
+        <aside class="fixed inset-y-0 left-0 z-30 w-56 bg-gray-900 dark:bg-black text-white lg:sticky lg:top-0 lg:h-screen"
+               :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:hidden'"
+             @keydown.escape.window="if (window.innerWidth < 1024 && (!window.lpHasModal || !window.lpHasModal())) sidebarOpen = false">
+            <div class="flex h-12 items-center justify-between px-4">
+                <a href="{{ url('/admin') }}" class="flex items-center gap-2">
+                    <img src="{{ url('/assets/img/vale-gray.png') }}" alt="Vale" class="h-5 w-auto">
+                    <span class="text-base font-bold text-gray-500 min-w-0 max-w-[9rem] truncate" title="{{ site_name }}">{{ site_name }}</span>
+                </a>
+                <button @click="closeSidebar()" class="rounded-sm p-1 text-gray-400 hover:text-white lg:hidden">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <nav class="space-y-1 px-3 overflow-y-auto" style="height: calc(100vh - 3rem)"
+                 x-data="lpNavReorder()" x-init="init()">
+                {% block sidebar %}
+                {# ── Nav items (data-driven, drag-reorderable) ── #}
+                <div id="vl-nav-sortable"
+                     class="space-y-0.5">
+
+                    {% for item in nav_groups %}
+
+                        {# ── lone link (dashboard, users) ── #}
+                        {% if item.type == 'link' %}
+                        <div class="vl-nav-block" data-id="{{ item.id }}">
+                            <a href="{{ item.href }}"
+                               class="group flex flex-wrap items-center rounded-lg px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white vl-nav-link">
+                                 <span x-show="reordering" class="drag-handle mr-2 cursor-move text-gray-600 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300 select-none" title="{{ __('Hold to drag') }}">⠿</span>
+                                <svg class="mr-3 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ item.icon }}"/>
+                                </svg>
+                                {{ __(item.label) }}
+                            </a>
+                        </div>
+
+                        {# ── group (section header + children) ── #}
+                        {% elseif item.type == 'group' %}
+                        <div class="vl-nav-block mt-4" data-id="{{ item.id }}">
+                            <div class="flex items-center mb-2 px-3">
+                                <span x-show="reordering" class="drag-handle mr-2 cursor-move text-gray-600 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300 select-none" title="{{ __('Hold to drag') }}">⠿</span>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">{{ __(item.label) }}</span>
+                            </div>
+                            <div class="space-y-0.5" data-nav-group-children="{{ item.id }}">
+                                {% for child in item.children %}
+                                {% set is_plugin_child = child.id starts with 'plugin-' %}
+                                <a href="{{ child.href }}"
+                                   data-nav-child="{{ child.id }}"{% if is_plugin_child %} data-plugin-child="1"{% endif %}
+                                   class="flex flex-wrap items-center rounded-lg px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white vl-nav-link">
+                                    <span x-show="reordering" class="child-drag-handle mr-2 cursor-move select-none text-gray-600 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300" title="{{ __('Hold to drag') }}">⠿</span>
+                                    <svg class="mr-3 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ child.icon }}"/>
+                                    </svg>
+                                    {% if child.label_cpt is defined %}
+                                        {{ __(child.label, {':cpt': child.label_cpt}) }}
+                                    {% else %}
+                                        {{ __(child.label) }}
+                                    {% endif %}
+                                    {% if child.id == 'update' and update_available_version is defined and update_available_version %}
+                                    <span class="ml-auto rounded-full bg-green-500 w-2 h-2 shrink-0"></span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {# ── collapsible (More Settings) ── #}
+                        {% elseif item.type == 'collapsible' %}
+                        <div class="vl-nav-block mt-1" data-id="{{ item.id }}"
+                             x-data="{ open: {{ item.active_paths is defined ? item.active_paths|map(p => "window.location.pathname.startsWith('" ~ p ~ "')")|join(' || ') : 'false' }} }">
+                            <div class="flex items-center">
+                                <span x-show="reordering" class="drag-handle cursor-move text-gray-600 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300 select-none px-2" title="{{ __('Hold to drag') }}">⠿</span>
+                                <button @click="open = !open" type="button"
+                                        class="flex w-full flex-wrap items-center rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white">
+                                    <svg class="mr-3 h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ item.icon }}"/>
+                                    </svg>
+                                    {{ __(item.label) }}
+                                    <svg class="ml-auto h-4 w-4 transition-transform" :class="open && 'rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div x-show="open" x-cloak class="ml-4 mt-1 space-y-0.5 border-l border-gray-700 pl-3" data-nav-group-children="{{ item.id }}">
+                                {% for child in item.children %}
+                                {% set is_plugin_child = child.id starts with 'plugin-' %}
+                                <a href="{{ child.href }}"
+                                   data-nav-child="{{ child.id }}"{% if is_plugin_child %} data-plugin-child="1"{% endif %}
+                                   class="flex flex-wrap items-center rounded-lg px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white vl-nav-link">
+                                    <span x-show="reordering" class="child-drag-handle mr-2 cursor-move select-none text-gray-600 hover:text-gray-300 dark:text-gray-500 dark:hover:text-gray-300" title="{{ __('Hold to drag') }}">⠿</span>
+                                    <svg class="mr-3 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ child.icon }}"/>
+                                    </svg>
+                                    {% if child.label_cpt is defined %}
+                                        {{ __(child.label, {':cpt': child.label_cpt}) }}
+                                    {% else %}
+                                        {{ __(child.label) }}
+                                    {% endif %}
+                                    {% if child.id == 'update' and update_available_version is defined and update_available_version %}
+                                    <span class="ml-auto rounded-full bg-green-500 w-2 h-2 shrink-0"></span>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {# ── Reorder / Save button ── #}
+                <div class="mt-6 px-3 pb-2 space-y-2">
+                    <button x-show="!reordering" @click="start()"
+                            class="w-full flex items-center justify-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+                        </svg>
+                        {{ __('Reorder') }}
+                    </button>
+                    <button x-show="reordering" x-cloak @click="save()"
+                            class="w-full flex items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 transition-colors">
+                        {{ __('Save Order') }}
+                    </button>
+                    <button x-show="reordering" x-cloak @click="reset()"
+                            class="w-full flex items-center justify-center gap-1.5 rounded-lg border border-red-900/60 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-950/40 hover:text-red-200 transition-colors">
+                        {{ __('Reset Order') }}
+                    </button>
+                </div>
+                {% endblock %}
+            </nav>
+        </aside>
+
+        {# ── Main area (overflow-x: clip keeps sticky inside working; min-w-0 guards the flex child) ── #}
+        <div class="flex-1 min-w-0" style="overflow-x: clip">
+
+            {# Top bar #}
+            <header class="flex h-12 items-center justify-between border-b dark:border-gray-800 bg-white dark:bg-gray-900 px-4 shadow-xs">
+                <button @click="toggleSidebar()" class="rounded-sm p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+
+                <div class="flex items-center space-x-2 sm:space-x-3 dark:text-gray-300" x-data="{
+                    darkMode: document.documentElement.classList.contains('dark'),
+                    toggleDarkMode() {
+                        this.darkMode = !this.darkMode;
+                        if (this.darkMode) {
+                            document.documentElement.classList.add('dark');
+                            document.cookie = 'vl_admin_theme=dark; path=/; max-age=31536000';
+                        } else {
+                            document.documentElement.classList.remove('dark');
+                            document.cookie = 'vl_admin_theme=light; path=/; max-age=31536000';
+                        }
+                    }
+                }">
+                    <a href="{{ site_url }}" target="_blank" class="text-sm/7 pr-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{{ __('View Site') }}</a>
+                    {% if update_available_version is defined and update_available_version %}
+                    <a href="{{ url('/admin/update') }}" title="{{ __('New version available, go to updates') }}"
+                       class="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        v{{ update_available_version }}
+                    </a>
+                    {% endif %}
+
+                    <div class="h-5 w-px bg-gray-200 dark:bg-gray-800"></div>
+
+                    <button @click="toggleDarkMode()" type="button" class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-hidden" :title="darkMode ? '{{ __('Switch to Light Mode')|e('js') }}' : '{{ __('Switch to Dark Mode')|e('js') }}'">
+                        <svg x-show="!darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <svg x-show="darkMode" x-cloak class="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </button>
+
+                    <div class="h-5 w-px bg-gray-200 dark:bg-gray-800"></div>
+
+                    <div x-data="{ userMenu: false }" @click.away="userMenu = false" class="relative flex items-center space-x-2">
+                        <button @click="userMenu = !userMenu" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                            <span class="hidden lg:inline max-w-[150px] truncate" title="{{ user.name ?? user.email ?? '' }}">{{ user.name ?? user.email ?? '' }}</span>
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div x-show="userMenu" x-cloak
+                             class="absolute right-0 top-full z-50 mt-1 flex w-56 max-h-[70vh] flex-col rounded-md bg-white py-1 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 dark:bg-gray-900">
+                            <a href="{{ url('/admin/settings') }}" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+        <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        {{ __('Settings') }}
+    </a>
+                            {# ── Help (opens the documentation in a new tab) ── #}
+                            {% if docs_url|default('') is not empty %}
+                            <a href="{{ docs_url }}" target="_blank" rel="noopener noreferrer"
+                               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+                                </svg>
+                                <span>{{ __('Help') }}</span>
+                                <svg class="ml-auto h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+                                </svg>
+                            </a>
+                            {% endif %}
+                            <form method="POST" action="{{ url(routing_logout_prefix) }}" class="block" x-data="{
+                                submitWithRedirect() {
+                                    const url = window.location.pathname + window.location.search + window.location.hash;
+                                    this.$el.action = this.$el.action + '?redirect=' + encodeURIComponent(url);
+                                    this.$el.submit();
+                                }
+                            }" @submit.prevent="submitWithRedirect()">
+                                {{ csrf_field() }}
+                                <button type="submit" class="flex w-full items-center gap-1.5 px-4 py-2 text-sm text-red-600 hover:bg-gray-100 text-left dark:text-red-400 dark:hover:bg-gray-800">
+        <svg class="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        {{ __('Logout') }}
+    </button>
+                            </form>
+                            {# ── Quick Actions (same order as dashboard; qa_ordered global from FlashMiddleware)
+                                 Last block and the only scrolling region, so the items above never get scrolled away. ── #}
+                            {% if qa_ordered|default([]) is not empty %}
+                            <div class="my-1 border-t border-gray-200 dark:border-gray-700" data-qa-section></div>
+                            <p class="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500" data-qa-section>{{ __('Quick Actions') }}</p>
+                            <div class="min-h-0 flex-1 overflow-y-auto">
+                            {% for _qa in qa_ordered|default([]) %}
+                                {% if _qa.key in ['optimize', 'warm_cache'] %}
+                                <form method="POST" action="{{ url(_qa.path) }}" data-qa-key="{{ _qa.key }}">
+                                    {{ csrf_field() }}
+                                    <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left dark:text-gray-300 dark:hover:bg-gray-800">
+                                        <svg class="h-4 w-4 shrink-0 {{ qa_icon_colors[_qa.color]|default('text-gray-400') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ _qa.icon }}"/>
+                                        </svg>
+                                        <span class="truncate">{{ __(_qa.label) }}</span>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <a href="{{ url(_qa.path) }}" data-qa-key="{{ _qa.key }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                                    <svg class="h-4 w-4 shrink-0 {{ qa_icon_colors[_qa.color]|default('text-gray-400') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ _qa.icon }}"/>
+                                    </svg>
+                                    <span class="truncate">{{ __(_qa.label) }}</span>
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {# Page content #}
+            <main class="p-6">
+                {% if panel_rail|default(false) %}
+                {# Sticky action bar — visible only while the right rail is collapsed on edit screens (right-rail.js) #}
+                <div data-rail-bar class="hidden sticky top-0 z-30 -mx-6 -mt-6 mb-6 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 px-6 py-2.5 shadow-xs backdrop-blur">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                        <span data-rail-status-wrap class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Status') }}</span>
+                            <select data-rail-status class="w-32 rounded-lg border-gray-300 dark:border-gray-700 text-sm shadow-xs focus:border-gray-600 focus:ring-gray-500"></select>
+                        </span>
+                        <div class="ml-auto flex flex-wrap items-center gap-2">
+                            <button type="button" data-rail-publish data-no-dirty
+                                    class="flex items-center gap-1 rounded-lg border border-blue-400 dark:border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                                &#9889; {{ __('Publish') }}
+                            </button>
+                            <button type="button" data-rail-preview data-no-dirty
+                                    class="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                &#128065; {{ __('Preview') }}
+                            </button>
+                            <button type="button" data-rail-submit data-no-dirty
+                                    class="rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
+                                {{ __('Update') }}
+                            </button>
+                            <button type="button" data-rail-expand data-no-dirty
+                                    title="{{ __('Expand Panels') }}"
+                                    class="flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Flash messages — inside main so they sit below the sticky rail bar #}
+                {% if flash is defined %}
+                    {% for type, messages in flash %}
+                        {% for message in messages %}
+                        <div class="mb-4" x-data="{ show: true }" x-show="show">
+                            <div class="flex items-center justify-between rounded-lg p-4
+                                {{ type == 'success' ? 'bg-green-50 text-green-800' : '' }}
+                                {{ type == 'error' ? 'bg-red-50 text-red-800' : '' }}
+                                {{ type == 'info' ? 'bg-blue-50 text-blue-800' : '' }}
+                                {{ type == 'warning' ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' : '' }}">
+                                <span>{{ message|raw }}</span>
+                                <button @click="show = false" class="ml-4 text-current opacity-50 hover:opacity-100">&times;</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    {% block scripts %}{% endblock %}
+    <script>
+    function tagInput(config) {
+        var allTags = Array.isArray(config && config.allTags) ? config.allTags : [];
+        var initial = String((config && config.initial) || '');
+        return {
+            items: initial.split(',').map(function (v) { return v.trim(); }).filter(function (v) { return v !== ''; }),
+            input: '',
+            showSuggestions: false,
+            focusedIndex: -1,
+            get filteredSuggestions() {
+                var q = this.input.trim().toLowerCase();
+                var self = this;
+                // Empty query lists everything preloaded, so clicking the
+                // field alone offers all tags for point-and-click selection.
+                return allTags.filter(function (tag) {
+                    return (q === '' || tag.toLowerCase().indexOf(q) !== -1) && self.items.indexOf(tag) === -1;
+                });
+            },
+            addFromInput: function () {
+                var tag = this.input.trim().replace(/,+$/, '');
+                if (tag === '' || this.items.indexOf(tag) !== -1) return;
+                this.items.push(tag);
+                this.input = '';
+                this.showSuggestions = false;
+                this.focusedIndex = -1;
+                this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            remove: function (tag) {
+                this.items = this.items.filter(function (t) { return t !== tag; });
+                this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            selectSuggestion: function (tag) {
+                if (this.items.indexOf(tag) === -1) this.items.push(tag);
+                this.input = '';
+                this.showSuggestions = false;
+                this.focusedIndex = -1;
+                this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+            },
+            onInput: function () {
+                this.showSuggestions = true;
+                this.focusedIndex = -1;
+            },
+            onKeydown: function (e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    if (this.focusedIndex >= 0 && this.focusedIndex < this.filteredSuggestions.length) {
+                        this.selectSuggestion(this.filteredSuggestions[this.focusedIndex]);
+                    } else {
+                        this.addFromInput();
+                    }
+                } else if (e.key === 'Backspace' && this.input === '' && this.items.length > 0) {
+                    this.items.pop();
+                    this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (this.focusedIndex < this.filteredSuggestions.length - 1) this.focusedIndex++;
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (this.focusedIndex > -1) this.focusedIndex--;
+                } else if (e.key === 'Escape') {
+                    this.showSuggestions = false;
+                    this.focusedIndex = -1;
+                }
+            },
+            onBlur: function () {
+                var self = this;
+                setTimeout(function () { self.showSuggestions = false; }, 200);
+            },
+        };
+    }
+    </script>
+    <script>
+    document.addEventListener('keydown', function(e) {
+        var modifier = e.ctrlKey || e.metaKey;
+        if (!modifier) return;
+
+        if (e.key.toLowerCase() === 's' && !e.shiftKey && !e.altKey) {
+            var form = document.querySelector('form[data-autosave]');
+            if (form) { e.preventDefault(); form.requestSubmit(); }
+            return;
+        }
+
+        if (e.key.toLowerCase() === 's' && e.shiftKey && !e.altKey) {
+            var activeVersion = document.querySelector('[data-show-active-version]');
+            if (activeVersion) { e.preventDefault(); activeVersion.click(); }
+            return;
+        }
+
+        if (e.key.toLowerCase() === 'p' && e.shiftKey && !e.altKey) {
+            var preview = document.querySelector('[data-preview-action]');
+            if (preview) { e.preventDefault(); preview.click(); }
+        }
+    });
+    </script>
+    <script>
+    (function () {
+        var path = window.location.pathname.replace(/\/$/, '') || '/';
+        var searchParams = new URLSearchParams(window.location.search);
+        var contentType = searchParams.get('content_type');
+        var entityType = searchParams.get('entity_type');
+        var links = document.querySelectorAll('.vl-nav-link');
+        var bp = window.APP_BASE_PATH || '';
+        var best = null, bestLen = 0;
+        links.forEach(function (a) {
+            var href = a.getAttribute('href');
+            var hrefUrl = new URL(href, location.origin);
+            var hrefPath = (hrefUrl.pathname || href).replace(/\/$/, '') || '/';
+            var hrefCt = hrefUrl.searchParams.get('content_type');
+            var hrefEt = hrefUrl.searchParams.get('entity_type');
+            var normPath = path;
+            var normHref = hrefPath;
+            if (bp && normPath.startsWith(bp)) normPath = normPath.substring(bp.length);
+            if (bp && normHref.startsWith(bp)) normHref = normHref.substring(bp.length);
+            var pathMatches = normPath === normHref || (normHref !== '/admin' && normPath.startsWith(normHref + '/')) || (normHref === '/admin' && normPath === '/admin');
+            // For /admin/posts, match content_type if specified
+            // For /admin/comments, match entity_type if specified
+            if (pathMatches) {
+                if (normHref === '/admin/posts') {
+                    if (!contentType && !hrefCt) {
+                        if (normHref.length > bestLen) { best = a; bestLen = normHref.length; }
+                    } else if (contentType && hrefCt === contentType) {
+                        if (normHref.length > bestLen) { best = a; bestLen = normHref.length; }
+                    }
+                } else if (normHref === '/admin/comments') {
+                    if (!entityType && !hrefEt) {
+                        if (normHref.length > bestLen) { best = a; bestLen = normHref.length; }
+                    } else if (entityType && hrefEt === entityType) {
+                        if (normHref.length > bestLen) { best = a; bestLen = normHref.length; }
+                    }
+                } else {
+                    if (normHref.length > bestLen) { best = a; bestLen = normHref.length; }
+                }
+            }
+        });
+        // Fallback: if no match found and we're on /admin/posts with non-post content_type,
+        // still highlight the base /admin/posts link (for backward compatibility)
+        if (!best && path.includes('/admin/posts') && (!contentType || contentType === 'all')) {
+            links.forEach(function (a) {
+                var href = a.getAttribute('href');
+                var hrefUrl = new URL(href, location.origin);
+                var hrefPath = (hrefUrl.pathname || href).replace(/\/$/, '') || '/';
+                if (hrefPath === '/admin/posts') {
+                    best = a;
+                }
+            });
+        }
+        // Fallback: if on /admin/comments without matching entity_type, highlight base comments link
+        if (!best && path.includes('/admin/comments')) {
+            links.forEach(function (a) {
+                var href = a.getAttribute('href');
+                var hrefUrl = new URL(href, location.origin);
+                var hrefPath = (hrefUrl.pathname || href).replace(/\/$/, '') || '/';
+                if (hrefPath === '/admin/comments') {
+                    best = a;
+                    return false;
+                }
+            });
+        }
+        if (best) {
+            best.classList.remove('text-gray-300');
+            best.classList.add('bg-gray-800', 'text-white');
+            best.querySelector('svg')?.classList.replace('text-gray-400', 'text-white');
+            best.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        }
+    })();
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var title = document.getElementById('title');
+        var slug  = document.getElementById('slug');
+        if (!title || !slug) return;
+        var manual = slug.value.trim() !== '';
+        slug.addEventListener('input', function () { manual = true; });
+        title.addEventListener('input', function () {
+            if (manual) return;
+            slug.value = title.value
+                .toLowerCase()
+                .replace(/[ğ]/g,'g').replace(/[ü]/g,'u').replace(/[ş]/g,'s')
+                .replace(/[ı]/g,'i').replace(/[ö]/g,'o').replace(/[ç]/g,'c')
+                .replace(/[ä]/g,'ae').replace(/[ë]/g,'e').replace(/[ï]/g,'i')
+                .replace(/[ô]/g,'o').replace(/[û]/g,'u').replace(/[ñ]/g,'n')
+                .replace(/[àáâã]/g,'a').replace(/[èéê]/g,'e').replace(/[ìíî]/g,'i')
+                .replace(/[òóõ]/g,'o').replace(/[ùúû]/g,'u')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .trim()
+                .replace(/[\s]+/g, '-')
+                .replace(/-+/g, '-');
+            // Programmatic assignment fires no 'input' event, so refresh the
+            // "copy public link" field explicitly.
+            if (typeof syncLiveSlugLinks === 'function') syncLiveSlugLinks();
+        });
+    });
+    </script>
+    <script>
+        // ── CSRF-aware fetch helper ──────────────────────────────────────
+        function vlPost(url, data) {
+            const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+            const bp = window.APP_BASE_PATH || '';
+            return fetch(bp + url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+                body: JSON.stringify(data),
+            }).then(r => r.json());
+        }
+        // ── Open a create modal on page load (?modal=add) ────────────────
+        // Quick actions point at list pages with ?modal=add so the matching
+        // create modal opens automatically. The param is stripped from the
+        // URL so reloads and table pagination never re-open the modal.
+        function vlAutoOpenModal(name, open) {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('modal') !== name) return;
+            params.delete('modal');
+            const qs = params.toString();
+            window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+            open();
+        }
+        // ── Quick actions hidden from the top-right menu (per browser) ───
+        // The dashboard "Manage" mode writes hidden keys to localStorage.
+        // The header menu filters itself on every page load; the dashboard
+        // grid keeps the cards visible (dimmed) so they stay clickable.
+        function vlQaHiddenKeys() {
+            try { return JSON.parse(localStorage.getItem('vl_quick_actions_hidden') || '[]'); } catch (e) { return []; }
+        }
+        function vlQaSaveHidden(keys) {
+            try { localStorage.setItem('vl_quick_actions_hidden', JSON.stringify(keys)); } catch (e) {}
+        }
+        function vlQaApplyHidden(root) {
+            root = root || document;
+            const hidden = vlQaHiddenKeys();
+            let anyVisible = false;
+            root.querySelectorAll('[data-qa-key]').forEach(function (el) {
+                const isHidden = hidden.indexOf(el.getAttribute('data-qa-key')) > -1;
+                el.style.display = isHidden ? 'none' : '';
+                if (!isHidden) anyVisible = true;
+            });
+            // Hide the section label + divider too when everything is hidden.
+            root.querySelectorAll('[data-qa-section]').forEach(function (el) {
+                el.style.display = anyVisible ? '' : 'none';
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () { vlQaApplyHidden(); });
+        // ── Nav reorder ────────────────────────────────────────────────
+        function lpNavReorder() {
+            return {
+                reordering: false,
+                _sortable: null,
+                _childSortables: [],
+                init() {},
+                start() {
+                    this.reordering = true;
+                    this._sortable = Sortable.create(
+                        document.getElementById('vl-nav-sortable'),
+                        { handle: '.drag-handle', animation: 150, ghostClass: 'opacity-40' }
+                    );
+                    this._childSortables = [];
+                    document.querySelectorAll('[data-nav-group-children]').forEach((list) => {
+                        this._childSortables.push(Sortable.create(list, {
+                            handle: '.child-drag-handle',
+                            draggable: '[data-nav-child]',
+                            animation: 150,
+                            ghostClass: 'opacity-40',
+                        }));
+                    });
+                },
+                childOrder() {
+                    const children = {};
+                    document.querySelectorAll('[data-nav-group-children]').forEach((list) => {
+                        const groupId = list.getAttribute('data-nav-group-children');
+                        const ids = Array.from(list.children)
+                            .filter((child) => child.hasAttribute('data-nav-child'))
+                            .map((child) => child.getAttribute('data-nav-child'));
+                        if (groupId && ids.length) children[groupId] = ids;
+                    });
+                    return children;
+                },
+                save() {
+                    const order = Array.from(
+                        document.querySelectorAll('#vl-nav-sortable .vl-nav-block[data-id]')
+                    ).map(b => b.dataset.id);
+                    const children = this.childOrder();
+                    vlPost('/admin/nav-order', { order, children }).then(() => {
+                        this.reordering = false;
+                        this._sortable && this._sortable.destroy();
+                        this._sortable = null;
+                        this._childSortables.forEach((sortable) => sortable.destroy());
+                        this._childSortables = [];
+                    });
+                },
+                reset() {
+                    if (!confirm('{{ __('Reset the sidebar order to the default?')|e('js') }}')) return;
+                    vlPost('/admin/nav-order', { order: [], children: {} }).then(() => {
+                        location.reload();
+                    });
+                },
+            };
+        }
+        // ── Prevent double submit ───────────────────────────────────────
+        (function() {
+            function disableSubmitButtons(form) {
+                const buttons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                buttons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btn.style.cursor = 'not-allowed';
+                });
+            }
+            document.addEventListener('submit', function(e) {
+                const form = e.target.closest('form');
+                if (!form) return;
+                const submitter = e.submitter;
+                if (form.hasAttribute('data-no-disable') || (submitter && submitter.hasAttribute('data-no-disable'))) return;
+                const action = form.getAttribute('action') || '';
+                const formaction = submitter ? (submitter.getAttribute('formaction') || '') : '';
+                if (action.includes('/export') || formaction.includes('/export')) return;
+
+                const hasFetchHandler = form.hasAttribute('data-fetch') ||
+                    form.querySelector('[data-fetch]') ||
+                    (form.getAttribute('onsubmit') || '').includes('fetch');
+                if (hasFetchHandler) return;
+
+                // Delay disabling to allow the browser to include the clicked button's name/value in the POST body.
+                requestAnimationFrame(() => {
+                    if (e.defaultPrevented) return;
+                    disableSubmitButtons(form);
+                });
+            }, true);
+        })();
+        // ── Insert variable at cursor position ───────────────────────────────────
+        window.lpInsertVar = function(tag) {
+            const activeEl = document.activeElement;
+            let targetEl = null;
+            if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+                targetEl = activeEl;
+            } else {
+                targetEl = document.querySelector('[data-editor], textarea, input');
+            }
+            if (!targetEl) return;
+            const start = targetEl.selectionStart || 0;
+            const end = targetEl.selectionEnd || 0;
+            const val = targetEl.value;
+            targetEl.value = val.substring(0, start) + tag + val.substring(end);
+            const newPos = start + tag.length;
+            targetEl.selectionStart = targetEl.selectionEnd = newPos;
+            targetEl.focus();
+            targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+            targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Order Reports') }}{% endblock %}
+
+{% block head %}
+{% if assets_use_cdn %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% else %}
+<script src="{{ asset('assets/build/charts.js') }}"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Order Reports') }}</h1>
+    </div>
+
+    <form method="get" action="{{ url('/admin/orders/reports') }}" class="mt-4 flex items-end gap-3 flex-wrap" x-data="datePresets()">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('From') }}</label>
+            <input type="date" name="from" x-ref="fromInput" value="{{ from }}"
+                   class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('To') }}</label>
+            <input type="date" name="to" x-ref="toInput" value="{{ to }}"
+                   class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm focus:border-gray-600 focus:ring-1 focus:ring-gray-500 focus:outline-hidden">
+        </div>
+        <button type="submit"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            {{ __('Show') }}
+        </button>
+        <a href="{{ url('/admin/orders/reports/pdf') }}?from={{ from }}&to={{ to }}" target="_blank"
+           class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+            {{ __('Export PDF') }}
+        </a>
+        <div class="flex gap-1 w-full mt-2" @click.prevent.stop>
+            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
+            <button type="button" @click="setPreset('thisMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This month') }}</button>
+            <button type="button" @click="setPreset('lastMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last month') }}</button>
+            <button type="button" @click="setPreset('thisYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This year') }}</button>
+            <button type="button" @click="setPreset('lastYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last year') }}</button>
+            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">180d</button>
+        </div>
+    </form>
+</div>
+
+{% set s = data.summary %}
+{% set totalActive = s.total_orders - s.cancelled_count - s.refunded_count %}
+
+{# ── Summary Cards ── #}
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Orders') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ totalActive }}</p>
+        <p class="text-xs text-gray-400">{{ __('cancelled') }}: {{ s.cancelled_count }}, {{ __('refunded') }}: {{ s.refunded_count }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Revenue') }}</p>
+        <p class="mt-1 text-2xl font-bold text-green-700 dark:text-green-400">{{ s.total_revenue|price(current_currency) }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Avg Order') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ s.avg_order_value|price(current_currency) }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Tax') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ s.total_tax|price(current_currency) }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Shipping') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ s.total_shipping|price(current_currency) }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Discount') }}</p>
+        <p class="mt-1 text-2xl font-bold text-amber-700 dark:text-amber-400">{{ s.total_discount|price(current_currency) }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Refunded') }}</p>
+        <p class="mt-1 text-2xl font-bold text-red-700 dark:text-red-400">-{{ s.total_refunded|price(current_currency) }}</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    {# ── Revenue Chart ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Revenue') }} ({{ from }} &mdash; {{ to }})</h2>
+        <div class="relative" style="max-width:100%;overflow:hidden;">
+            <canvas id="revenueChart" height="250" style="max-width:100%;max-height:250px;"></canvas>
+        </div>
+    </div>
+
+    {# ── Status Breakdown ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Order Status') }} ({{ from }} &mdash; {{ to }})</h2>
+        <div class="relative" style="max-width:100%;overflow:hidden;">
+            <canvas id="statusChart" height="250" style="max-width:100%;max-height:250px;"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    {# ── Monthly Table ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Monthly Breakdown') }}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <th class="py-2 pr-4">{{ __('Month') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Orders') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Revenue') }}</th>
+                        <th class="py-2 text-right">{{ __('Refunds') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in data.monthly %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2 pr-4 font-medium text-gray-800">{{ m.month }}</td>
+                        <td class="py-2 pr-4 text-right text-gray-700">{{ m.orders }}</td>
+                        <td class="py-2 pr-4 text-right text-green-700">{{ m.revenue|price(current_currency) }}</td>
+                        <td class="py-2 text-right text-red-600">-{{ m.refunds|price(current_currency) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="py-4 text-center text-gray-400">{{ __('No data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── Payment Methods ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Payment Methods') }}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <th class="py-2 pr-4">{{ __('Method') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Orders') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Revenue') }}</th>
+                        <th class="py-2 text-right">{{ __('Refunded') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pm in data.payment_methods %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2 pr-4 font-medium text-gray-800 capitalize">{{ pm.method }}</td>
+                        <td class="py-2 pr-4 text-right text-gray-700">{{ pm.orders }}</td>
+                        <td class="py-2 pr-4 text-right text-green-700">{{ pm.revenue|price(current_currency) }}</td>
+                        <td class="py-2 text-right text-red-600">{{ pm.refunded_orders }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="py-4 text-center text-gray-400">{{ __('No data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    {# ── Top Products ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Top Selling Products') }}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <th class="py-2 pr-4">{{ __('Product') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Sold') }}</th>
+                        <th class="py-2 text-right">{{ __('Revenue') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in data.top_products %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2 pr-4 font-medium text-gray-800"><a href="{{ url('/admin/products/' ~ p.product_id ~ '/edit') }}" class="hover:underline">{{ p.product_name }}</a></td>
+                        <td class="py-2 pr-4 text-right text-gray-700">{{ p.qty }}</td>
+                        <td class="py-2 text-right text-green-700">{{ p.revenue|price(current_currency) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="py-4 text-center text-gray-400">{{ __('No data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── Status Breakdown Table ── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Orders by Status') }}</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <th class="py-2 pr-4">{{ __('Status') }}</th>
+                        <th class="py-2 pr-4 text-right">{{ __('Orders') }}</th>
+                        <th class="py-2 text-right">{{ __('Total') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set statusLabels = {
+                        'pending': 'Pending Payment',
+                        'processing': 'Processing',
+                        'on-hold': 'On Hold',
+                        'shipped': 'Shipped',
+                        'completed': 'Completed',
+                        'refunded': 'Refunded',
+                        'refund_requested': 'Refund Requested',
+                        'refund_rejected': 'Refund Rejected',
+                        'cancelled': 'Cancelled',
+                    } %}
+                    {% for st in data.status_breakdown %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2 pr-4 font-medium text-gray-800 capitalize">{{ statusLabels[st.status]|default(st.status) }}</td>
+                        <td class="py-2 pr-4 text-right text-gray-700">{{ st.orders }}</td>
+                        <td class="py-2 text-right text-gray-900 dark:text-gray-100">{{ st.total|price(current_currency) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="py-4 text-center text-gray-400">{{ __('No data') }}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('datePresets', function () {
+        function fmt(d) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
+        }
+        return {
+            setPreset(key) {
+                var today = new Date();
+                var from, to;
+
+                switch (key) {
+                    case '7d':
+                        from = new Date(today); from.setDate(from.getDate() - 7); to = new Date(today);
+                        break;
+                    case '30d':
+                        from = new Date(today); from.setDate(from.getDate() - 30); to = new Date(today);
+                        break;
+                    case '180d':
+                        from = new Date(today); from.setDate(from.getDate() - 180); to = new Date(today);
+                        break;
+                    case 'thisMonth':
+                        from = new Date(today.getFullYear(), today.getMonth(), 1); to = new Date(today);
+                        break;
+                    case 'lastMonth':
+                        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        to = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    case 'thisYear':
+                        from = new Date(today.getFullYear(), 0, 1); to = new Date(today);
+                        break;
+                    case 'lastYear':
+                        from = new Date(today.getFullYear() - 1, 0, 1);
+                        to = new Date(today.getFullYear() - 1, 11, 31);
+                        break;
+                }
+
+                this.$refs.fromInput.value = fmt(from);
+                this.$refs.toInput.value = fmt(to);
+            }
+        };
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var dailyData  = {{ data.daily|json_encode|raw }};
+    var statusData  = {{ data.status_breakdown|json_encode|raw }};
+    var currency    = '{{ currency_symbol|default('$') }}';
+
+    var isDark    = document.documentElement.classList.contains('dark');
+    var textColor = isDark ? '#e5e7eb' : '#374151';
+    var gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    // ── Revenue Chart ──
+    if (document.getElementById('revenueChart')) {
+        var labels = dailyData.map(function (d) { return d.day; });
+        var revenue = dailyData.map(function (d) { return d.revenue; });
+        var refunds = dailyData.map(function (d) { return -d.refunds; });
+
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: revenue,
+                        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                        borderColor: 'rgb(34, 197, 94)',
+                        borderWidth: 1,
+                    },
+                    {
+                        label: 'Refunds',
+                        data: refunds,
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgb(239, 68, 68)',
+                        borderWidth: 1,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                color: textColor,
+                plugins: {
+                    legend: { position: 'top', labels: { color: textColor } },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + currency + Math.abs(ctx.raw).toFixed(2);
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function (v) { return currency + v.toFixed(2); }, color: textColor },
+                        grid: { color: gridColor },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Status Doughnut Chart ──
+    if (document.getElementById('statusChart')) {
+        var statusLabels = {
+            'pending': 'Pending Payment',
+            'processing': 'Processing',
+            'on-hold': 'On Hold',
+            'shipped': 'Shipped',
+            'completed': 'Completed',
+            'refunded': 'Refunded',
+            'refund_requested': 'Refund Requested',
+            'refund_rejected': 'Refund Rejected',
+            'cancelled': 'Cancelled',
+        };
+        var colors = {
+            'pending': '#f59e0b',
+            'processing': '#3b82f6',
+            'on-hold': '#f97316',
+            'shipped': '#8b5cf6',
+            'completed': '#22c55e',
+            'refunded': '#ef4444',
+            'refund_requested': '#f43f5e',
+            'refund_rejected': '#a1a1aa',
+            'cancelled': '#6b7280',
+        };
+
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: statusData.map(function (s) { return statusLabels[s.status] || s.status; }),
+                datasets: [{
+                    data: statusData.map(function (s) { return s.orders; }),
+                    backgroundColor: statusData.map(function (s) { return colors[s.status] || '#d1d5db'; }),
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1f2937' : '#ffffff',
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                color: textColor,
+                plugins: {
+                    legend: { position: 'right', labels: { color: textColor } },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                                var pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                                return ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+});
+</script>
+{% endblock %}

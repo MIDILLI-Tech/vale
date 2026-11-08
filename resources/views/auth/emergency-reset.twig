@@ -1,0 +1,66 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Emergency Password Reset') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-md px-4 py-16">
+    <div class="rounded-xl border bg-white p-8 shadow-xs">
+
+        {% if success is defined and success %}
+        <h1 class="text-center text-2xl font-bold text-gray-900">{{ __('Password Reset') }}</h1>
+        <p class="mt-4 text-center text-sm text-green-600">{{ __('Password reset successfully for') }} <strong>{{ name }}</strong>.</p>
+        <div class="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            ⚠ {{ __('Remove') }} <code class="text-xs bg-amber-100 px-1 rounded-sm">EMERGENCY_RESET_TOKEN</code> {{ __('from your .env file now!') }}
+        </div>
+        <div class="mt-6 text-center">
+             <a href="{{ url(routing_login_prefix) }}" class="rounded-lg btn-primary px-4 py-2.5 text-sm font-medium inline-block">{{ __('Sign In') }}</a>
+        </div>
+
+        {% else %}
+
+        <h1 class="text-center text-2xl font-bold text-gray-900">{{ __('Emergency Password Reset') }}</h1>
+        <p class="mt-2 text-center text-sm text-gray-600">{{ __('Use this only if you are locked out of the admin panel.') }}</p>
+
+        {% if errors is defined %}
+        <div class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">
+            <ul class="list-disc pl-4">
+                {% for err in errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url('/admin/emergency-reset/' ~ token) }}" class="mt-6 space-y-5">
+            {{ csrf_field() }}
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">{{ __('Admin Email') }}</label>
+                <input type="email" id="email" name="email" required autocomplete="email"
+                       value="{{ email ?? '' }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">{{ __('New Password') }}</label>
+                <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password"
+                       pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}"
+                       title="{{ __('Password must be at least 8 characters, include at least one uppercase letter, one lowercase letter, one number, and one special character.') }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <div>
+                <label for="password_confirm" class="block text-sm font-medium text-gray-700">{{ __('Confirm Password') }}</label>
+                <input type="password" id="password_confirm" name="password_confirm" required minlength="8" autocomplete="new-password"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+
+            <button type="submit"
+                    class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium">
+                {{ __('Reset Password') }}
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

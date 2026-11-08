@@ -1,0 +1,79 @@
+{
+    "name": "Vivid",
+    "version": "1.0.0",
+    "description": "Bold magazine-style theme — emerald accents, full-width grid blog, immersive post hero. Drop-in demo of a complete custom theme.",
+    "author": "Vale",
+    "license": "MIT",
+    "menus": {
+        "primary": "Primary Navigation",
+        "footer": "Footer Links"
+    },
+    "colors": {
+        "header": "emerald-600",
+        "gradient": true,
+        "gradient_from": "emerald-600",
+        "gradient_to": "teal-500"
+    },
+    "tables": {
+        "border": "#d1d5db",
+        "header_background": "#f3f4f6"
+    },
+    "color_variables": {
+        "--theme-primary": {
+            "label": "Primary Color",
+            "default": "#059669"
+        },
+        "--theme-primary-hover": {
+            "label": "Primary Hover",
+            "default": "#047857"
+        },
+        "--theme-secondary": {
+            "label": "Secondary Color",
+            "default": "#0d9488"
+        },
+        "--theme-secondary-hover": {
+            "label": "Secondary Hover",
+            "default": "#0f766e"
+        },
+        "--theme-bg": {
+            "label": "Background Color",
+            "default": "#f9fafb"
+        },
+        "--theme-surface": {
+            "label": "Card / Container Background",
+            "default": "#ffffff"
+        },
+        "--theme-text": {
+            "label": "Text Color",
+            "default": "#111827"
+        },
+        "--theme-text-muted": {
+            "label": "Muted Text Color",
+            "default": "#4b5563"
+        },
+        "--theme-header-bg": {
+            "label": "Header Background",
+            "default": "#ffffff"
+        },
+        "--theme-footer-bg": {
+            "label": "Footer Background",
+            "default": "#ffffff"
+        },
+        "--theme-nav-bg": {
+            "label": "Navigation Bar Background",
+            "default": "#047857"
+        },
+        "--theme-hero-bg": {
+            "label": "Hero Gradient / Background",
+            "default": "linear-gradient(135deg, #059669 0%, #0891b2 50%, #6366f1 100%)"
+        },
+        "--theme-accent": {
+            "label": "Accent / Highlight Color",
+            "default": "#6366f1"
+        },
+        "--theme-border": {
+            "label": "Border / Divider Color",
+            "default": "#e5e7eb"
+        }
+    }
+}

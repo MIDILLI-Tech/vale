@@ -1,0 +1,10 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Welcome to :site', {':site': site_name}) }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Welcome, :name!', {':name': name}) }}</h2>
+<p>{{ __('Your account has been created successfully. You can now sign in and start using :site.', {':site': site_name}) }}</p>
+<a href="{{ login_url }}" class="btn">{{ __('Sign In') }}</a>
+<p style="color:{{ email_text_muted }}; font-size:13px;">{{ __('If you did not create this account, you can safely ignore this email.') }}</p>
+{% endblock %}

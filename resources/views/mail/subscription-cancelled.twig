@@ -1,0 +1,20 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Subscription Cancelled — :site', {':site': site_name}) }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Your :plan Subscription Has Been Cancelled', {':plan': plan_name}) }}</h2>
+<p>{{ __('Hi :name,', {':name': name|default(__('there'))}) }}</p>
+<p>{{ __('Your :plan membership subscription has been cancelled.', {':plan': '<strong>' ~ plan_name ~ '</strong>'})|raw }}</p>
+
+{% if message %}
+<p style="background:#fef3c7; border-left:4px solid #f59e0b; padding:12px 16px; margin:16px 0; border-radius:4px; color:#92400e;">{{ message }}</p>
+{% endif %}
+
+{% if expires_at %}
+<p>{{ __('You will continue to have access until :date. After that date, your membership benefits will end.', {':date': '<strong>' ~ expires_at ~ '</strong>'})|raw }}</p>
+{% endif %}
+
+<p style="color:{{ email_text_muted }}; font-size:13px;">{{ __('If you change your mind, you can resubscribe at any time.') }}</p>
+<a href="{{ membership_url }}" class="btn">{{ __('View Plans') }}</a>
+{% endblock %}

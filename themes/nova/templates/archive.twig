@@ -1,0 +1,77 @@
+{% extends 'layout.twig' %}
+{% set entity_label = 'post' %}
+
+{% block content %}
+<section class="pt-32 pb-24">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-16">
+            <h1 class="text-3xl sm:text-4xl lg:text-6xl font-display font-bold text-white mb-6 break-words">
+                {{ archive_title|default(__('Archive')) }}
+            </h1>
+            {% if archive_description %}
+            <p class="text-slate-400 max-w-2xl text-lg">
+                {{ archive_description }}
+            </p>
+            {% endif %}
+        </div>
+
+        {# Reuse blog grid logic #}
+        {% if posts is defined and posts|length > 0 %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for post in posts %}
+            <article class="glass-card rounded-3xl overflow-hidden flex flex-col group">
+                <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}" class="block aspect-16/10 overflow-hidden relative">
+                    {% if post.thumbnail %}
+                        <img src="{{ post.thumbnail.url }}" alt="{{ post.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% endif %}
+                    <div class="absolute inset-0 bg-linear-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                        <span class="text-white font-bold text-sm flex items-center gap-2">
+                            {{ __('Read Article') }}
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                        </span>
+                    </div>
+                </a>
+                <div class="p-8 flex-1 flex flex-col">
+                    <div class="flex items-center gap-3 mb-4 text-xs font-bold uppercase tracking-wider text-blue-400 flex-wrap">
+                        {% set pubDate = post.publishedAt|default(post.created_at|default(null)) %}
+                        {% if pubDate %}
+                        <span>{% include 'partials/_vtime.twig' with {value: pubDate, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                        {% if show_modification_date_on_posts|default('0') == '1' and post.updatedAt and post.updatedAt != pubDate %}
+                        <span class="h-1 w-1 bg-slate-700 rounded-full"></span>
+                        <span>{{ __('Updated') }}: {% include 'partials/_vtime.twig' with {value: post.updatedAt, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-4 group-hover:text-blue-400 transition-colors">
+                        <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}">{{ post.title }}</a>
+                    </h2>
+                    {% set teaser = post|post_teaser %}
+                    {% include 'partials/_post_card_summary.twig' with {
+                        teaser: teaser,
+                        post: post,
+                        excerpt_class: 'text-slate-400 text-sm leading-relaxed mb-6 line-clamp-3',
+                        html_class: 'text-slate-400 text-sm leading-relaxed mb-6 line-clamp-3'
+                    } %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="mt-16 flex justify-center gap-2">
+            {% for i in 1..total_pages %}
+                <a href="?page={{ i }}" class="h-12 w-12 flex items-center justify-center rounded-xl glass font-bold transition-all {{ current_page == i ? 'border-blue-500 text-blue-400' : 'text-slate-400 hover:border-slate-700' }}">
+                    {{ i }}
+                </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="py-20 text-center glass rounded-4xl">
+            <h2 class="text-xl font-bold text-white mb-2">{{ __('No posts found in this archive.') }}</h2>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

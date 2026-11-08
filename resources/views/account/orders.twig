@@ -1,0 +1,136 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Order History') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('View your past orders, invoices, and track order status.') }}{% endblock %}
+
+{% set showShopAccountLinks = (shop_enabled|default(true)) == true %}
+{% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+{% set active_tab = 'orders' %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="account-text mb-8 text-3xl font-bold">{{ __('Order History') }}</h1>
+
+    {% include "account/_nav.twig" %}
+
+    {% if orders is defined and orders is not empty %}
+    <div x-data="orderTable()">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <input type="text" x-model="search" placeholder="{{ __('Search orders...') }}"
+                       class="account-form-field rounded-lg border bg-white px-3 py-2 text-sm focus:outline-hidden focus:ring-1 w-56">
+                <select x-model="perPage" @change="page = 1; $nextTick(() => fitSelect($el))" x-init="fitSelect($el)"
+                        class="account-form-field w-auto rounded-lg border bg-white px-3 py-2 text-sm focus:outline-hidden focus:ring-1"
+                        style="min-width: 5rem; max-width: 100%;">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+        <div class="account-table-scroll account-table overflow-x-auto rounded-lg border">
+            <table class="divide-y text-sm" style="width: 100%; min-width: 960px;">
+                <thead class="account-table-head">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium">{{ __('Order') }}</th>
+                        <th class="px-4 py-3 text-left font-medium">{{ __('Date') }}</th>
+                        <th class="px-4 py-3 text-left font-medium">{{ __('Type') }}</th>
+                        <th class="px-4 py-3 text-left font-medium">{{ __('Plan / Items') }}</th>
+                        <th class="px-4 py-3 text-right font-medium">{{ __('Total') }}</th>
+                        <th class="px-4 py-3 text-left font-medium">{{ __('Status') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="account-table-body divide-y">
+                    <template x-for="(order, i) in filteredOrders" :key="order.orderNumber || i">
+                        <tr x-show="i >= (page - 1) * perPage && i < page * perPage" class="account-table-row">
+                            <td class="px-4 py-3 font-mono text-xs"><a :href="'{{ url('checkout.success')|e('js') }}?order=' + order.orderNumber" class="account-table-action hover:underline" x-text="order.orderNumber"></a></td>
+                            <td class="account-table-muted px-4 py-3" x-text="order.createdAt"></td>
+                            <td class="px-4 py-3">
+                                <span x-show="order.orderType === 'subscription'"
+                                      class="account-badge-success inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">{{ __('Subscription') }}</span>
+                                <span x-show="order.orderType !== 'subscription'"
+                                      class="account-badge-neutral inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">{{ __('Shop') }}</span>
+                            </td>
+                            <td class="px-4 py-3" x-text="order.itemsLabel"></td>
+                            <td class="px-4 py-3 text-right" x-text="'{{ currency_symbol|e('js') }}' + order.total"></td>
+                            <td class="px-4 py-3">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                      :class="statusClass(order.status)"
+                                      x-text="order.status.charAt(0).toUpperCase() + order.status.slice(1)"></span>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="filteredOrders.length === 0">
+                        <td colspan="6" class="account-table-muted px-4 py-8 text-center text-sm">{{ __('No orders match your search.') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 flex items-center justify-between text-sm account-table-muted" x-show="filteredOrders.length > perPage">
+            <span x-text="'{{ __('Showing') }} ' + (((page - 1) * perPage) + 1) + '-' + Math.min(page * perPage, filteredOrders.length) + ' {{ __('of') }} ' + filteredOrders.length"></span>
+            <div class="flex items-center gap-2">
+                <button @click="page = Math.max(1, page - 1)" :disabled="page === 1"
+                        class="account-secondary-button rounded-sm border px-3 py-1.5 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed">{{ __('Previous') }}</button>
+                <button @click="page = Math.min(pageCount, page + 1)" :disabled="page === pageCount"
+                        class="account-secondary-button rounded-sm border px-3 py-1.5 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed">{{ __('Next') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function orderTable() {
+        return {
+            search: '',
+            page: 1,
+            perPage: 10,
+            orders: {{ ordersJson|raw }},
+            get filteredOrders() {
+                var q = this.search.trim().toLowerCase();
+                if (q === '') return this.orders;
+                var self = this;
+                return this.orders.filter(function (o) {
+                    return (o.orderNumber && o.orderNumber.toLowerCase().indexOf(q) !== -1)
+                        || (o.orderType && o.orderType.toLowerCase().indexOf(q) !== -1)
+                        || (o.itemsLabel && o.itemsLabel.toLowerCase().indexOf(q) !== -1)
+                        || (o.status && o.status.toLowerCase().indexOf(q) !== -1);
+                });
+            },
+            get pageCount() {
+                return Math.max(1, Math.ceil(this.filteredOrders.length / this.perPage));
+            },
+            fitSelect(el) {
+                const options = Array.from(el.options || []);
+                if (!options.length) return;
+
+                const measure = document.createElement('span');
+                measure.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;white-space:nowrap;font:inherit;letter-spacing:inherit;text-transform:inherit;';
+                document.body.appendChild(measure);
+
+                let maxTextWidth = 0;
+                options.forEach(function (option) {
+                    measure.textContent = option.textContent || option.value || '';
+                    maxTextWidth = Math.max(maxTextWidth, measure.getBoundingClientRect().width);
+                });
+                measure.remove();
+
+                el.style.width = Math.ceil(maxTextWidth + 28) + 'px';
+            },
+            statusClass(status) {
+                if (status === 'processing' || status === 'completed') return 'account-badge-success';
+                if (status === 'pending') return 'account-badge-warning';
+                if (status === 'cancelled' || status === 'refunded') return 'account-badge-danger';
+                return 'account-badge-neutral';
+            },
+        };
+    }
+    </script>
+    {% else %}
+    <div class="account-card account-empty-card mx-auto w-full max-w-3xl rounded-lg border px-12 py-20 text-center">
+        <p class="account-table-muted">{{ __('No orders yet.') }}</p>
+        <a href="{{ url(routing_shop_prefix) }}" class="mt-6 inline-block rounded-lg btn-primary px-6 py-2 text-sm font-bold transition-colors">
+            {{ __('Start shopping') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

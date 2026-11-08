@@ -1,0 +1,4 @@
+{# Search marker attributes for admin settings fields. #}
+{% macro attrs(tab, label, key, subtab, section, keywords, id) -%}
+data-vl-setting data-vl-tab="{{ tab }}" data-vl-label="{{ label|e('html_attr') }}"{% if key|default('') %} data-vl-key="{{ key|e('html_attr') }}"{% endif %}{% if subtab|default('') %} data-vl-subtab="{{ subtab|e('html_attr') }}"{% endif %}{% if section|default('') %} data-vl-section="{{ section|e('html_attr') }}"{% endif %}{% if keywords|default('') %} data-vl-keywords="{{ keywords|e('html_attr') }}"{% endif %}{% if id|default('') %} data-vl-id="{{ id|e('html_attr') }}"{% endif %}
+{%- endmacro %}

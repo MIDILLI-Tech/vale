@@ -1,0 +1,98 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Edit Media') }}{% endblock %}
+
+{% block content %}
+{% set default_lang = settings.default_locale|default('en') %}
+{% set content_lang_codes = settings.content_languages|default(default_lang)|split(',')|filter(c => c) %}
+{% set active_locales = supported_locales|filter((name, code) => code in content_lang_codes) %}
+{% if active_locales is empty %}
+    {% set active_locales = supported_locales|filter((name, code) => code == default_lang) %}
+{% endif %}
+{% set i18n_fields = settings.multi_language_content|default('0') == '1' and active_locales|length > 1 %}
+{% set field_locales = i18n_fields ? active_locales : active_locales|filter((name, code) => code == default_lang) %}
+
+<div class="mx-auto max-w-3xl">
+    <h1 class="mb-6 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Edit Media') }}</h1>
+
+    <form method="post" action="{{ url('/admin/media/' ~ media.id ~ '') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {# Preview #}
+            <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+                {% if media.isImage %}
+                <img src="{{ url('/uploads/') }}{{ media.path }}" alt="{{ media.altText }}"
+                     class="w-full rounded-lg object-contain">
+                {% else %}
+                {% include 'admin/partials/_media_preview.twig' with { item: media, variant: 'full' } %}
+                {% endif %}
+
+                <dl class="mt-4 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div class="flex justify-between"><dt>{{ __('Filename') }}</dt><dd>{{ media.originalName }}</dd></div>
+                    <div class="flex justify-between"><dt>{{ __('Type') }}</dt><dd>{{ media.mimeType }}</dd></div>
+                    <div class="flex justify-between"><dt>{{ __('Size') }}</dt><dd>{{ (media.size / 1024)|round(1) }} KB</dd></div>
+                    <div class="flex items-center justify-between gap-2"><dt class="shrink-0">URL</dt><dd class="flex min-w-0 items-center gap-1.5"><a href="{{ url('/uploads/' ~ media.path ~ '') }}" target="_blank" class="truncate text-gray-900 dark:text-gray-100 hover:underline">/uploads/{{ media.path }}</a>{% include 'admin/components/_copy_button.twig' with { text: site_url ~ '/uploads/' ~ media.path, title: __('Copy URL'), size: 'h-3.5 w-3.5', class: 'shrink-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300' } %}</dd></div>
+                </dl>
+            </div>
+
+            {# Fields #}
+            <div class="space-y-4 rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Title') }}</label>
+                    <input type="text" name="title" value="{{ media.title }}"
+                           class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+                </div>
+
+                {% if i18n_fields %}
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Alt text and description can be translated for each content language.') }}</p>
+                {% endif %}
+
+                {% include 'admin/components/i18n-setting-field.twig' with {
+                    field: 'alt_text',
+                    label: __('Alt Text'),
+                    settings: media_fields,
+                    active_locales: active_locales,
+                    field_locales: field_locales,
+                    default_lang: default_lang,
+                    i18n_fields: i18n_fields,
+                } %}
+
+                {% include 'admin/components/i18n-setting-field.twig' with {
+                    field: 'description',
+                    label: __('Description'),
+                    type: 'textarea',
+                    settings: media_fields,
+                    active_locales: active_locales,
+                    field_locales: field_locales,
+                    default_lang: default_lang,
+                    i18n_fields: i18n_fields,
+                    rows: 4,
+                } %}
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <a href="{{ url('/admin/media') }}" class="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 dark:text-white dark:bg-gray-800/50">{{ __('Back') }}</a>
+                    <button type="submit"
+                            class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                        {{ __('Save') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% set _sa = user.role is defined and user.role == 'super_admin' %}
+    {% set _can_delete = _sa or (user_permissions is defined and 'media.delete' in user_permissions) %}
+    {% if _can_delete %}
+    <div class="mt-4 text-right">
+        <form method="post" action="{{ url('/admin/media/' ~ media.id ~ '') }}"
+              onsubmit="return confirm('{{ __('Are you sure?') }}')">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" value="DELETE">
+            <button class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-500 ">{{ __('Delete permanently') }}</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

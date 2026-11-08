@@ -1,0 +1,137 @@
+{# ── SEO & Meta Tags (Centralized via Theme Hook) ── #}
+{% set effective_title = (seo and seo.metaTitle) ? seo.metaTitle : (entity_title ? entity_title ~ seo_title_separator ~ site_name : site_name) %}
+{% set seo_entity    = (seo_state is defined and seo_state.entity) ? seo_state.entity : null %}
+{% set auto_desc     = seo_entity ? seo_entity|meta_teaser(160) : '' %}
+{% set effective_desc = (seo and seo.metaDescription) ? seo.metaDescription : (auto_desc ?: (entity_description|default('')|striptags|slice(0,160))) %}
+
+{# Canonical URL (language aware) #}
+{# Multi-language: translations_map maps locale => path for the same content. #}
+{# The canonical must point at the entity's OWN language, so a fallback page #}
+{# (e.g. English post served under /tr/...) canonicalises to the English URL. #}
+{% set translations_map = entity_translations is defined and entity_translations
+    ? entity_translations
+    : ((seo_state is defined and seo_state.translations) ? seo_state.translations : {}) %}
+{% set seo_entity_lang = post.language|default(page.language|default(product.language|default(null))) %}
+{% set canonical_href = current_url|default(site_url) %}
+{% if seo.canonicalUrl is defined and seo.canonicalUrl %}
+    {% set canonical_href = seo.canonicalUrl %}
+{% elseif canonical_url is defined and canonical_url %}
+    {% set canonical_href = canonical_url %}
+{% elseif multi_language_content and seo_entity_lang and translations_map[seo_entity_lang] is defined %}
+    {% set canonical_href = absolute_url(translations_map[seo_entity_lang], {}, {'lang': seo_entity_lang}) %}
+{% endif %}
+
+{# Open Graph #}
+<meta property="og:type" content="{{ og_type|default('website') }}">
+<meta property="og:url" content="{{ canonical_href }}">
+<meta property="og:title" content="{{ (seo and seo.effectiveOgTitle) ? seo.effectiveOgTitle : effective_title|striptags|trim }}">
+<meta property="og:description" content="{{ (seo and seo.effectiveOgDescription) ? seo.effectiveOgDescription : effective_desc|striptags|trim }}">
+
+{% set og_img_id = (seo and seo.ogImageId) ? seo.ogImageId : (post.featuredImageId|default(page.featuredImageId|default(product.featuredImageId|default(settings.social_preview_image|default(null))))) %}
+{% set og_img_url = get_media_url(og_img_id) %}
+{% if og_img_url %}
+    <meta property="og:image" content="{{ og_img_url }}">
+{% endif %}
+
+{# Twitter #}
+<meta name="twitter:card" content="{{ (seo and seo.twitterCardType) ? seo.twitterCardType : 'summary' }}">
+<meta name="twitter:title" content="{{ (seo and seo.effectiveOgTitle) ? seo.effectiveOgTitle : effective_title|striptags|trim }}">
+<meta name="twitter:description" content="{{ (seo and seo.effectiveOgDescription) ? seo.effectiveOgDescription : effective_desc|striptags|trim }}">
+{% if og_img_url %}
+    <meta name="twitter:image" content="{{ og_img_url }}">
+{% endif %}
+
+{% if seo.robots is defined and seo.robots %}
+    <meta name="robots" content="{{ seo.robots }}">
+{% elseif seo_state.archiveType is not null and seo_noindex_archives == '1' %}
+    <meta name="robots" content="noindex, follow">
+{% elseif seo_search_engine_visibility != '1' %}
+    <meta name="robots" content="noindex, nofollow">
+{% endif %}
+
+<link rel="canonical" href="{{ canonical_href }}">
+
+{# Multi-Language Hreflang #}
+    {% if multi_language_content and translations_map|length > 0 %}
+    {% for lang_code, path in translations_map %}
+        <link rel="alternate" hreflang="{{ lang_code }}" href="{{ absolute_url(path, {}, {'lang': lang_code}) }}">
+    {% endfor %}
+    {% if translations_map[default_locale] is defined %}
+        <link rel="alternate" hreflang="x-default" href="{{ absolute_url(translations_map[default_locale], {}, {'lang': default_locale}) }}">
+    {% else %}
+        <link rel="alternate" hreflang="x-default" href="{{ absolute_url('/', {}, {'lang': default_locale}) }}">
+    {% endif %}
+    {% endif %}
+
+{# Advertisement: Head #}
+{% if advertisement_enabled == '1' and advertisement_placement == 'head' and advertisement_code %}
+    {{ advertisement_code|raw }}
+{% endif %}
+
+{# Verification Codes #}
+{% if google_search_console_code %}<meta name="google-site-verification" content="{{ google_search_console_code }}">{% endif %}
+{% if bing_webmaster_code %}<meta name="msvalidate.01" content="{{ bing_webmaster_code }}">{% endif %}
+{% if yandex_verification_code %}<meta name="yandex-verification" content="{{ yandex_verification_code }}">{% endif %}
+
+{# Structured Data (JSON-LD) for LLMO & Search Engines #}
+{% if product %}
+    {% set ld_image = get_media_url(product.featuredImageId) %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": "{{ product.name|e('js') }}",
+      {% if ld_image %}"image": ["{{ ld_image }}"],{% endif %}
+      "description": "{{ (seo and seo.llmDescription) ? seo.llmDescription|striptags|e('js') : product.shortDescription|default(product.description|striptags|slice(0, 160))|e('js') }}",
+      {% if product.sku %}"sku": "{{ product.sku|e('js') }}",{% endif %}
+      {% if product.gtin %}"gtin": "{{ product.gtin|e('js') }}",{% endif %}
+      {% if product.mpn %}"mpn": "{{ product.mpn|e('js') }}",{% endif %}
+      {% if product.googleProductCategory %}"category": "{{ product.googleProductCategory|e('js') }}",{% endif %}
+      "brand": {
+        "@type": "Brand",
+        "name": "{{ product.brand|default(site_name)|e('js') }}"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "{{ canonical_href }}",
+        "priceCurrency": "{{ current_currency|default('USD') }}",
+        "price": "{{ product.getEffectivePrice()|number_format(2, '.', '') }}",
+        "availability": "https://schema.org/{{ product.stockStatus == 'in_stock' ? 'InStock' : (product.stockStatus in ['backorder', 'on_backorder'] ? 'BackOrder' : 'OutOfStock') }}",
+        "itemCondition": "https://schema.org/{{ product.condition == 'new' ? 'NewCondition' : (product.condition == 'refurbished' ? 'RefurbishedCondition' : 'UsedCondition') }}"
+      }{% if vote and vote.count > 0 %},
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ vote.avg }}",
+        "reviewCount": "{{ vote.count }}"
+      }
+      {% endif %}
+    }
+    </script>
+{% elseif post %}
+    {% set ld_image = get_media_url(post.featuredImageId) %}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "{{ post.contentType == 'page' ? 'WebPage' : 'Article' }}",
+      "headline": "{{ effective_title|striptags|e('js') }}",
+      "description": "{{ (seo and seo.llmDescription) ? seo.llmDescription|striptags|e('js') : effective_desc|striptags|e('js') }}",
+      {% if ld_image %}"image": ["{{ ld_image }}"],{% endif %}
+      "datePublished": "{{ post.publishedAt ? post.publishedAt|date('c') : post.createdAt|date('c') }}",
+      "dateModified": "{{ post.updatedAt ? post.updatedAt|date('c') : (post.publishedAt ? post.publishedAt|date('c') : post.createdAt|date('c')) }}"{% if post.contentType != 'page' %},
+      "author": [{
+          "@type": "Person",
+          "name": "{{ (author_name ?: site_name)|e('js') }}"
+        }],
+      "publisher": {
+        "@type": "Organization",
+        "name": "{{ site_name|e('js') }}"{% if site_logo %},
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{{ site_logo|e('js') }}"
+        }{% endif %}
+      },
+      "mainEntityOfPage": "{{ canonical_href }}"
+      {% endif %}
+    }
+    </script>
+{% endif %}

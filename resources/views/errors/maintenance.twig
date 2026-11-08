@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="{{ app_locale|default('en') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ __('Maintenance') }}{{ seo_title_separator }}{{ site_name|default('') }}</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,.06);
+            max-width: 480px;
+            width: 100%;
+            padding: 3rem 2.5rem;
+            text-align: center;
+        }
+        .icon { font-size: 3rem; margin-bottom: 1.25rem; }
+        h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .75rem; }
+        p  { font-size: 1rem; color: #6b7280; line-height: 1.6; }
+        .site { margin-top: 2rem; font-size: .875rem; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🔧</div>
+        <h1>{{ __("We'll be back soon") }}</h1>
+        <p>{{ maintenance_mode_message|default(__("We're currently performing scheduled maintenance. Please check back in a little while.")) }}</p>
+        {% if site_name is defined and site_name %}
+        <p class="site">{{ site_name }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

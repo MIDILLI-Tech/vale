@@ -1,0 +1,66 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('2FA Enabled Successfully') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 py-20">
+    <div class="text-center mb-10">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+            <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h1 class="account-text mb-2 text-3xl font-bold">{{ __('Two-Factor Enabled!') }}</h1>
+        <p class="account-table-muted text-gray-600 dark:text-gray-400">
+            {{ __('Your account is now protected with an additional layer of security.') }}
+        </p>
+    </div>
+
+    {% if two_factor_new_codes is defined %}
+    <div class="account-danger-card rounded-xl border p-8 shadow-lg relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
+
+        <div class="flex items-center gap-3 mb-6">
+            <div class="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg">
+                <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="font-bold text-xl text-red-600 dark:text-red-400">{{ __('Save Your Recovery Codes') }}</h3>
+        </div>
+
+        <p class="text-sm account-text mb-6 leading-relaxed">
+            {{ __('If you lose access to your authenticator app, these recovery codes are the **ONLY** way to regain access to your account. Each code can be used once.') }}
+        </p>
+
+        <div class="grid grid-cols-2 gap-3 bg-white dark:bg-black/40 p-6 rounded-xl font-mono text-base border dark:border-red-900/30 shadow-inner">
+            {% for code in two_factor_new_codes %}
+                <div class="account-danger-text font-bold text-center py-2 bg-red-50 dark:bg-red-900/20 rounded-lg tracking-wider border border-red-100 dark:border-red-900/10">{{ code }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8 flex flex-col sm:flex-row items-center gap-4">
+            <button onclick="window.print()" class="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-bold account-text hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-3a2 2 0 00-2-2H9a2 2 0 00-2 2v3a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                {{ __('Print Codes') }}
+            </button>
+            <div class="text-xs text-gray-500 italic">
+                {{ __('We recommend storing them in a secure password manager.') }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-10 text-center">
+        <a href="{{ url('/account/profile') }}" class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-8 py-3 text-sm font-bold text-white hover:bg-gray-800 transition-all shadow-md">
+            {{ __('Go to My Profile') }}
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        .account-danger-card, .account-danger-card * { visibility: visible; }
+        .account-danger-card { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+        button { display: none !important; }
+    }
+</style>
+{% endblock %}

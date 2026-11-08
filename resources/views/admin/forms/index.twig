@@ -1,0 +1,100 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Forms') }}{% endblock %}
+
+{% block content %}
+{% set allIds = forms|map(f => f.id) %}
+<div x-data="dataTable({perPage: 20})">
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ __('Forms') }}</h1>
+    <a href="{{ url('/admin/forms/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">+ {{ __('New Form') }}</a>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search(__('Search') ~ '…') }}
+    <div class="flex-1"></div>
+    {% if multi_language_content %}
+    <form method="get" action="{{ url('/admin/forms') }}">
+        <select name="language" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+            <option value="">{{ __('All Languages') }}</option>
+            {% for code, name in supported_locales %}
+                <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th(__('Name'), 'name') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language') }}{% endif %}
+                {{ table.th(__('Slug'), 'slug') }}
+                {{ table.th(__('Fields'), 'fields') }}
+                {{ table.th(__('Submissions'), 'submissions') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for f in forms %}
+            <tr data-row-id="{{ f.id }}" class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {name: f.name, slug: f.slug, language: f.language ?? '', fields: f.fields|length, submissions: f.submissionCount, status: f.enabled ? '1' : '0'}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(f.id) }}
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100"><a href="{{ url('/admin/forms/' ~ f.id ~ '/edit') }}" class="text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:underline">{{ f.name }}</a></td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-center">
+                    <span class="rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 text-xs font-bold uppercase" title="{{ locale_name(f.language) }}">
+                        {{ f.language }}
+                    </span>
+                </td>
+                {% endif %}
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.slug }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __(':count fields', {':count': f.fields|length}) }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400"><a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}" class="hover:underline" title="{{ __('View submissions') }}">{{ __(':count submissions', {':count': f.submissionCount}) }}</a></td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ f.enabled ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400' }}">
+                        {{ f.enabled ? __('Active') : __('Inactive') }}
+                    </span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <a href="{{ absolute_url(url('/form/' ~ f.slug)) }}" target="_blank" rel="noopener"
+                           title="{{ __('Open form') }}: /form/{{ f.slug|e }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
+                        <a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Submissions') }}</a>
+                        <a href="{{ url('/admin/forms/' ~ f.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '/clone') }}">
+                            {{ csrf_field() }}
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">{{ __('Clone') }}</button>
+                        </form>
+                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Delete this form?')|e('js') }}')">
+                            {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="{{ multi_language_content ? 8 : 7 }}" class="px-6 py-12 text-center text-gray-400">{{ __('No forms yet. Create one!') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'forms', extraActions: [
+    {label: __('Activate'), action: 'activate', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Deactivate'), action: 'deactivate', class: 'bg-red-600/10 text-red-700 dark:text-red-400 hover:bg-red-600/20'},
+]} %}
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{# Content #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+{% macro copyable_url(url, label, prefix) %}
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+    {% if prefix %}
+    <span class="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">{{ prefix }}</span>
+    {% endif %}
+    <a href="{{ url }}"
+       target="_blank"
+       rel="noopener noreferrer"
+       class="break-all text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">{{ url }}</a>
+    {% if label %}
+    <span class="shrink-0 text-gray-500 dark:text-gray-400">({{ label }})</span>
+    {% endif %}
+    {% include 'admin/components/_copy_button.twig' with {
+        text: url,
+        label: __('Copy'),
+        title: __('Copy URL'),
+        size: 'h-3 w-3',
+        class: 'inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-[10px] font-medium text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-400 dark:ring-gray-600 dark:hover:bg-gray-800'
+    } %}
+</div>
+{% endmacro %}
+{% set firstVisibleContentTab = 'media' %}
+<div id="tab-content" class="tab-panel hidden" data-default-subtab="{{ firstVisibleContentTab }}" x-data="{
+    init() {
+        var self = this;
+        this.$nextTick(function() {
+            window.vlSettingsNav.ensureVisibleContentTab();
+        });
+        ['blog', 'mlc', 'ads'].forEach(function(key) {
+            self.$watch(() => Alpine.store('vlFeatures')[key], function() {
+                self.$nextTick(function() {
+                    window.vlSettingsNav.ensureVisibleContentTab();
+                });
+            });
+        });
+    }
+}">
+    {# Content Sub-tabs — Media is always the first tab and fallback; blog/mlc/ads are hide/show. #}
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex gap-4 overflow-x-auto" id="content-subtabs">
+            <button type="button" data-subtab="media" class="content-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors duration-150 md:hover:bg-blue-50 md:hover:text-blue-700 dark:md:hover:bg-blue-900/20 dark:md:hover:text-blue-300">{{ __('Media') }}</button>
+            <button type="button" data-subtab="blog" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.blog" x-cloak>{{ __('Blog') }}</button>
+            <button type="button" data-subtab="mlc" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.mlc" x-cloak>{{ __('Multi-Language') }}</button>
+            <button type="button" data-subtab="ads" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.ads" x-cloak>{{ __('Advertisement') }}</button>
+        </nav>
+    </div>
+
+    {{ include('admin/settings/_content_media.twig', {content_tab_id: 'content-tab-media', is_active: true}) }}
+    {{ include('admin/settings/_content_blog.twig', {content_tab_id: 'content-tab-blog', is_active: false}) }}
+    {{ include('admin/settings/_content_multilanguage.twig', {content_tab_id: 'content-tab-mlc', is_active: false}) }}
+    {{ include('admin/settings/_content_advertisement.twig', {content_tab_id: 'content-tab-ads', is_active: false}) }}
+</div>

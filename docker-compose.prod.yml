@@ -1,0 +1,178 @@
+# Vale Production — two approaches:
+#
+#   1. Self-managed (auto-update / mutable) — DEFAULT
+#      Mounts the codebase from the host, so admin panel
+#      auto-updates persist across container restarts.
+#      Build args: VARIANT=apache|nginx, FLAVOR=mutable
+#
+#   2. Immutable (baked-in)
+#      Code is baked into the image. Auto-updates will NOT persist.
+#      Perfect for CI/CD, k8s, or immutable registry deploys.
+#      Build args: VARIANT=apache|nginx, FLAVOR=immutable
+#
+# Both flavors build from the single parameterized docker/Dockerfile.
+#
+# PHP limits are runtime overrides (baked defaults: 128M upload, 512M memory,
+# 120s timeouts):
+#   UPLOAD_MAX_FILESIZE=256M POST_MAX_SIZE=256M MEMORY_LIMIT=1G \
+#     docker compose -f docker-compose.prod.yml up -d
+#
+services:
+  # ─── 1. Self-Managed / Auto-Update (Mutable) ────────────────
+  # Apache (default — no profile needed)
+  vale-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: apache
+        FLAVOR: mutable
+    container_name: vale-app
+    ports:
+      - "${APP_PORT_APACHE:-80}:80"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor        # Prevents host bind-mount from shadowing pre-installed vendor/
+      - vale-storage:/var/www/html/storage
+      - vale-themes:/var/www/html/themes
+      - vale-content:/var/www/html/content
+    environment:
+      - APP_ENV=production
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # Nginx + PHP-FPM (enable with --profile nginx)
+  vale-nginx:
+    profiles: [nginx]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: nginx
+        FLAVOR: mutable
+    container_name: vale-nginx
+    ports:
+      - "${APP_PORT_NGINX:-80}:80"
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor        # Prevents host bind-mount from shadowing pre-installed vendor/
+      - vale-storage:/var/www/html/storage
+      - vale-themes:/var/www/html/themes
+      - vale-content:/var/www/html/content
+    environment:
+      - APP_ENV=production
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # ─── 2. Immutable / Baked-in ────────────────────────────────
+  # Apache Immutable (enable with --profile immutable or --profile immutable-apache)
+  vale-app-immutable:
+    profiles: [immutable, immutable-apache]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: apache
+        FLAVOR: immutable
+    container_name: vale-app-immutable
+    ports:
+      # APP_PORT_APACHE_IMMUTABLE lets this run alongside vale-app without a port clash
+      - "${APP_PORT_APACHE_IMMUTABLE:-${APP_PORT_APACHE:-80}}:80"
+    volumes:
+      - .env:/var/www/html/.env
+      - vale-storage:/var/www/html/storage
+      - vale-themes:/var/www/html/themes
+      - vale-content:/var/www/html/content
+    environment:
+      - APP_ENV=production
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # Nginx + PHP-FPM Immutable (enable with --profile immutable or --profile immutable-nginx)
+  vale-nginx-immutable:
+    profiles: [immutable, immutable-nginx]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        VARIANT: nginx
+        FLAVOR: immutable
+    container_name: vale-nginx-immutable
+    ports:
+      # APP_PORT_NGINX_IMMUTABLE lets this run alongside vale-nginx without a port clash
+      - "${APP_PORT_NGINX_IMMUTABLE:-${APP_PORT_NGINX:-80}}:80"
+    volumes:
+      - .env:/var/www/html/.env
+      - vale-storage:/var/www/html/storage
+      - vale-themes:/var/www/html/themes
+      - vale-content:/var/www/html/content
+    environment:
+      - APP_ENV=production
+      - UPLOAD_MAX_FILESIZE=${UPLOAD_MAX_FILESIZE:-128M}
+      - POST_MAX_SIZE=${POST_MAX_SIZE:-128M}
+      - MEMORY_LIMIT=${MEMORY_LIMIT:-512M}
+      - MAX_EXECUTION_TIME=${MAX_EXECUTION_TIME:-120}
+      - MAX_INPUT_TIME=${MAX_INPUT_TIME:-120}
+    networks:
+      - vale-network
+
+  # MySQL Database (optional — enable with --profile db, --profile mysql, or --profile db-mysql)
+  db-mysql:
+    profiles: [db, mysql, db-mysql]
+    image: mysql:8.4
+    container_name: vale-db-prod
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-vale}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USER:-vale_user}
+      MYSQL_PASSWORD: ${DB_PASS:-vale_pass}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - vale-db-mysql-data:/var/lib/mysql
+    networks:
+      - vale-network
+
+  # PostgreSQL Database (optional — enable with --profile postgresql, --profile postgres, or --profile db-postgres)
+  db-postgres:
+    profiles: [postgres, postgresql, db-postgres, db-postgresql]
+    image: postgres:16-alpine
+    container_name: vale-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vale}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - vale-db-postgres-data:/var/lib/postgresql/data
+    networks:
+      - vale-network
+
+networks:
+  vale-network:
+    driver: bridge
+
+volumes:
+  vale-db-mysql-data:
+  vale-db-postgres-data:
+  vale-storage:
+  vale-themes:
+  vale-content:

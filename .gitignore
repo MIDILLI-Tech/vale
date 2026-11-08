@@ -1,0 +1,49 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+
+# Build artifacts
+public/assets/build/
+public/assets/js/editor.js
+
+# Storage contents (keep directory with .gitkeep)
+storage/*
+!storage/.gitkeep
+
+# User uploads
+public/uploads/
+
+# User-owned plugin code (never shipped, never overwritten by updates)
+content/plugins/*
+!content/plugins/.gitkeep
+content/mu-plugins/*
+!content/mu-plugins/.gitkeep
+
+# Reference data
+resources/google-taxonomy.json
+
+# Export / backup files
+*.sql
+*.sql.gz
+*.eml
+*.wpress
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Logs
+storage/logs/*.log

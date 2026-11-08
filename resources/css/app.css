@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+@config "../../tailwind.config.js";
+
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, #e5e7eb);
+  }
+
+  .dark *, .dark ::after, .dark ::before, .dark ::backdrop, .dark ::file-selector-button {
+    border-color: var(--color-gray-700, #374151);
+  }
+
+  button, [type='button'], [type='reset'], [type='submit'], a, [role="button"] {
+    cursor: pointer;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: #111827;
+    color: #111827;
+  }
+
+  .dark input[type="checkbox"],
+  .dark input[type="radio"] {
+    accent-color: #9ca3af;
+    color: #9ca3af;
+  }
+
+  input[type="checkbox"]:focus,
+  input[type="radio"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6b7280;
+  }
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* ── CodeJar & Twig Syntax Highlighter Styles ── */
+.codejar-wrapper {
+    position: relative;
+    display: flex;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background-color: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #334155;
+}
+
+.codejar-gutter {
+    padding: 1rem 0.5rem 1rem 0.75rem;
+    text-align: right;
+    user-select: none;
+    color: #64748b;
+    background-color: #0f172a;
+    border-right: 1px solid #334155;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    min-width: 3rem;
+    box-sizing: border-box;
+    height: 100%;
+    overflow-y: hidden;
+}
+
+.codejar-editor {
+    flex: 1;
+    padding: 1rem;
+    outline: none;
+    white-space: pre;
+    overflow-x: auto;
+    overflow-y: auto;
+    tab-size: 2;
+}
+
+/* Light Mode Overrides when forced or container specifies light */
+.codejar-wrapper.light-theme {
+    background-color: #f8fafc;
+    color: #0f172a;
+    border-color: #e2e8f0;
+}
+.codejar-wrapper.light-theme .codejar-gutter {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    border-right-color: #e2e8f0;
+}
+
+/* Prism Twig Syntax Highlighting Colors (Dark Default) */
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #64748b; font-style: italic; }
+.token.punctuation { color: #94a3b8; }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #f43f5e; }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #38bdf8; }
+.token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #f59e0b; }
+.token.atrule, .token.attr-value, .token.keyword { color: #c084fc; font-weight: 600; }
+.token.function, .token.class-name { color: #34d399; }
+.token.regex, .token.important, .token.variable { color: #fbbf24; }
+.token.delimiter, .token.tag .token.punctuation { color: #38bdf8; }
+
+/* Prism Light Theme Tokens */
+.codejar-wrapper.light-theme .token.comment, .codejar-wrapper.light-theme .token.prolog, .codejar-wrapper.light-theme .token.doctype, .codejar-wrapper.light-theme .token.cdata { color: #94a3b8; }
+.codejar-wrapper.light-theme .token.punctuation { color: #64748b; }
+.codejar-wrapper.light-theme .token.property, .codejar-wrapper.light-theme .token.tag, .codejar-wrapper.light-theme .token.boolean, .codejar-wrapper.light-theme .token.number, .codejar-wrapper.light-theme .token.constant, .codejar-wrapper.light-theme .token.symbol, .codejar-wrapper.light-theme .token.deleted { color: #e11d48; }
+.codejar-wrapper.light-theme .token.selector, .codejar-wrapper.light-theme .token.attr-name, .codejar-wrapper.light-theme .token.string, .codejar-wrapper.light-theme .token.char, .codejar-wrapper.light-theme .token.builtin, .codejar-wrapper.light-theme .token.inserted { color: #0284c7; }
+.codejar-wrapper.light-theme .token.operator, .codejar-wrapper.light-theme .token.entity, .codejar-wrapper.light-theme .token.url { color: #d97706; }
+.codejar-wrapper.light-theme .token.atrule, .codejar-wrapper.light-theme .token.attr-value, .codejar-wrapper.light-theme .token.keyword { color: #9333ea; }
+.codejar-wrapper.light-theme .token.function, .codejar-wrapper.light-theme .token.class-name { color: #059669; }
+.codejar-wrapper.light-theme .token.variable { color: #d97706; }
+
+/* ── Content Image & Figure Alignment ── */
+.prose [style*="text-align: center"] img,
+.prose [style*="text-align:center"] img,
+.prose [style*="text-align: center"] figure,
+.prose [style*="text-align:center"] figure,
+.prose [style*="text-align: center"] .vl-image-figure,
+.prose [style*="text-align:center"] .vl-image-figure,
+[style*="text-align: center"] > img,
+[style*="text-align:center"] > img,
+[style*="text-align: center"] > figure,
+[style*="text-align:center"] > figure {
+  display: inline-block !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.prose [style*="text-align: right"] img,
+.prose [style*="text-align:right"] img,
+.prose [style*="text-align: right"] figure,
+.prose [style*="text-align:right"] figure,
+.prose [style*="text-align: right"] .vl-image-figure,
+.prose [style*="text-align:right"] .vl-image-figure,
+[style*="text-align: right"] > img,
+[style*="text-align:right"] > img,
+[style*="text-align: right"] > figure,
+[style*="text-align:right"] > figure {
+  display: inline-block !important;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.prose [style*="text-align: left"] img,
+.prose [style*="text-align:left"] img,
+.prose [style*="text-align: left"] figure,
+.prose [style*="text-align:left"] figure,
+.prose [style*="text-align: left"] .vl-image-figure,
+.prose [style*="text-align:left"] .vl-image-figure,
+[style*="text-align: left"] > img,
+[style*="text-align:left"] > img,
+[style*="text-align: left"] > figure,
+[style*="text-align:left"] > figure {
+  display: inline-block !important;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* Media + Text block: stack columns on narrow screens.
+   The row layout is inline in saved markup, so the override needs
+   !important. Structural selector (no classes) also covers legacy posts. */
+@media (max-width: 640px) {
+  div[data-media-text] > div:not(.vl-media-text-header),
+  .vl-media-text-body > div {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  div[data-media-text] [data-mt-col="0"],
+  div[data-media-text] .vl-media-text-image {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+}
+
+/* TipTap emits <li><p>...</p></li>; Tailwind Typography adds paragraph margins inside list items, producing double spacing. Reset them (unlayered so it beats the plugin layer). */
+.prose li > p { margin: 0; }
+.prose li { margin: 0.25rem 0; }

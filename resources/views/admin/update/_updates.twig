@@ -1,0 +1,362 @@
+{# ── Updates tab content ───────────────────────────────────────── #}
+
+{# ── Baked (container-managed) image notice ─────────────────────── #}
+{% if is_baked|default(false) %}
+<div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800/60 p-5 flex items-start gap-4 shadow-xs">
+    <svg class="h-6 w-6 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <div>
+        <p class="font-semibold text-amber-800 dark:text-amber-200">{{ __('Container-managed (baked) image') }}</p>
+        <p class="text-sm text-amber-700 dark:text-amber-300 mt-0.5">{{ __('This installation runs from a Docker "baked" image. Updates applied from the admin panel will be lost when the container is restarted.') }}</p>
+    </div>
+</div>
+{% endif %}
+
+{# ── Version cards ────────────────────────────────────────────── #}
+<div class="grid gap-4 sm:grid-cols-3 mb-6">
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Installed Version') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">v{{ current_version }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Latest Version') }}</p>
+        {% if manifest %}
+            <p class="mt-1 text-2xl font-bold {{ update_available ? 'text-green-600' : 'text-gray-900 dark:text-gray-100' }}">
+                v{{ manifest.version }}
+            </p>
+        {% else %}
+            <p class="mt-1 text-xl font-semibold text-gray-400">{{ __('Unknown') }}</p>
+        {% endif %}
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs">
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Last Checked') }}</p>
+        {% if last_checked_at %}
+            <p class="mt-1 text-base font-semibold text-gray-700">
+                {{ last_checked_at|date('Y-m-d H:i') }}
+            </p>
+        {% else %}
+            <p class="mt-1 text-base font-semibold text-gray-400">{{ __('Never') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Missing System Requirements Collapsible Warning ── #}
+{% if missing_required_php or missing_required_exts|length > 0 or missing_recommended_exts|length > 0 %}
+<div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 p-5 shadow-xs" x-data="{ open: false }">
+    <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+            <svg class="h-6 w-6 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <div>
+                <p class="font-semibold text-amber-800 dark:text-amber-400">{{ __('System Requirements Warning') }}</p>
+                <p class="text-sm text-amber-700 dark:text-amber-500 mt-0.5">
+                    {{ __('Some required or recommended system requirements are missing. This may cause updates or features to fail.') }}
+                </p>
+            </div>
+        </div>
+        <button type="button" @click="open = !open" class="text-sm font-semibold text-amber-800 dark:text-amber-400 hover:underline shrink-0 flex items-center gap-1">
+            <span x-text="open ? '{{ __('Hide Details') }}' : '{{ __('Show Details') }}'"></span>
+            <svg x-show="open" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <svg x-show="!open" x-cloak class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+
+    <div x-show="open" x-cloak class="mt-4 pt-4 border-t border-amber-200/50 dark:border-amber-900/50 space-y-3 text-sm text-amber-900 dark:text-amber-300">
+        {% if missing_required_php %}
+        <div>
+            <span class="font-semibold text-red-600 dark:text-red-400">⚠️ {{ __('Required PHP Version:') }}</span> {{ __('Running PHP') }} {{ constant('PHP_VERSION') }} {{ __('but requires') }} {{ missing_required_php }}+
+        </div>
+        {% endif %}
+
+        {% if missing_required_exts|length > 0 %}
+        <div>
+            <span class="font-semibold text-red-600 dark:text-red-400">⚠️ {{ __('Missing Required Extensions:') }}</span>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+                {% for ext, desc in missing_required_exts %}
+                <li><strong>{{ ext }}</strong>: {{ desc }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if missing_recommended_exts|length > 0 %}
+        <div>
+            <span class="font-semibold text-amber-700 dark:text-amber-500">ℹ️ {{ __('Missing Recommended Extensions (Some features may not work as expected):') }}</span>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+                {% for ext, desc in missing_recommended_exts %}
+                <li><strong>{{ ext }}</strong>: {{ desc }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Status banner ────────────────────────────────────────────── #}
+{% if update_available %}
+<div class="mb-6 rounded-xl border border-green-200 bg-green-50 p-5 flex items-start gap-4">
+    <svg class="h-6 w-6 text-green-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+        <p class="font-semibold text-green-800">{{ __('Update available') }}: v{{ available_version }}</p>
+        <p class="text-sm text-green-700 mt-0.5">
+            {{ __('A new version of Vale is ready to install. Review the changelog below before updating.') }}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+{# A failed check must not look like a successful one: show the reason instead of
+   the "latest version" / "not yet performed" banners. #}
+{% if check_error %}
+<div class="mb-6 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 p-5 flex items-start gap-4">
+    <svg class="h-6 w-6 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <div>
+        <p class="font-semibold text-red-800 dark:text-red-300">{{ __('Update check failed') }}</p>
+        <p class="text-sm text-red-700 dark:text-red-400 mt-0.5">
+            {{ __('Last check failed on :date: :reason', {
+                ':date': check_error.at ? check_error.at|date('Y-m-d H:i') : '-',
+                ':reason': check_error.message,
+            }) }}
+        </p>
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+            {{ __('Vale keeps retrying in the background. You can also try again with "Check now".') }}
+        </p>
+    </div>
+</div>
+{% elseif not update_available and manifest %}
+<div class="mb-6 rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-5 flex items-start gap-4">
+    <svg class="h-6 w-6 text-gray-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    <p class="text-sm text-gray-600 mt-0.5">{{ __('You are running the latest version.') }}</p>
+</div>
+{% elseif not update_available %}
+<div class="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-5 flex items-start gap-4">
+    <svg class="h-6 w-6 text-yellow-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+        <p class="font-semibold text-yellow-800">{{ __('Update check not yet performed') }}</p>
+        {% if manifest_url %}
+            <p class="text-sm text-yellow-700 mt-0.5">{{ __('Click "Check now" to fetch the latest release info.') }}</p>
+        {% else %}
+            <p class="text-sm text-yellow-700 mt-0.5">
+                {{ __('UPDATE_MANIFEST_URL is not set in .env. Set it to enable automatic update checks.') }}
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Actions ──────────────────────────────────────────────────── #}
+<div class="flex flex-wrap gap-3 mb-6">
+
+    {# Check now #}
+    <form method="POST" action="{{ url('/admin/update/check') }}">
+        {{ csrf_field() }}
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 dark:bg-gray-800/50">
+            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            {{ __('Check now') }}
+        </button>
+    </form>
+
+    {# Apply update — only shown when an update is available #}
+    {% if update_available %}
+    {% set blocked_by_signature = signature_required and not manifest_has_signature %}
+    {% set blocked_by_hash = not manifest_has_sha256 %}
+    {% set blocked_by_policy = blocked_by_signature or blocked_by_hash %}
+    <form method="POST" action="{{ url('/admin/update/apply') }}"
+          x-data="{
+              busy: false,
+              blocked: {{ blocked_by_policy ? 'true' : 'false' }},
+              progress: 0,
+              stage: '{{ __('Preparing update...') }}',
+              timer: null,
+              startProgress() {
+                  this.busy = true;
+                  this.progress = 8;
+                  this.stage = '{{ __('Checking package and entering maintenance mode...') }}';
+                  this.timer = setInterval(() => {
+                      if (this.progress < 30) {
+                          this.progress += 7;
+                          this.stage = '{{ __('Downloading release package...') }}';
+                      } else if (this.progress < 65) {
+                          this.progress += 5;
+                          this.stage = '{{ __('Applying files and running migrations...') }}';
+                      } else if (this.progress < 90) {
+                          this.progress += 2;
+                          this.stage = '{{ __('Clearing cache and finalizing update...') }}';
+                      }
+                  }, 900);
+              }
+          }"
+                    @submit="if (!blocked) { startProgress() }">
+        {{ csrf_field() }}
+        <button type="submit"
+                                :disabled="busy || blocked"
+                                :class="blocked ? 'cursor-not-allowed bg-gray-50 dark:bg-gray-800/500 hover:bg-gray-50 dark:bg-gray-800/500' : (busy ? 'cursor-wait' : '')"
+                                class="inline-flex items-center gap-2 rounded-lg bg-green-600 dark:bg-green-700 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-green-700 dark:hover:bg-green-800 disabled:opacity-60">
+            <svg x-show="!busy" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <svg x-show="busy" x-cloak class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span x-text="blocked ? '{{ __('Blocked') }}' : (busy ? '{{ __('Updating…') }}' : '{{ __('Install update') }}')"></span>
+        </button>
+
+        {% if blocked_by_signature %}
+        <div class="mt-3 w-full max-w-xl rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            {{ __('This release is blocked: signature is required but missing in manifest.') }}
+            {{ __('Accepted signatures: Ed25519 or GPG.') }}
+        </div>
+        {% endif %}
+
+        {% if blocked_by_hash %}
+        <div class="mt-3 w-full max-w-xl rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            {{ __('This release is blocked: SHA-256 is missing or invalid in manifest.') }}
+        </div>
+        {% endif %}
+
+        {% if manifest and manifest.requires_migration|default(false) %}
+        <div class="mt-3 w-full max-w-xl rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
+            {{ __('This update includes database schema changes. A backup is created automatically before the update is applied, and can be restored from the Backups tab.') }}
+        </div>
+        {% endif %}
+
+        <div x-show="busy" x-cloak class="mt-3 w-full max-w-xl mx-auto rounded-lg border border-green-200 bg-green-50 p-3">
+            <div class="mb-1 flex items-center justify-between text-xs font-medium text-green-800">
+                <span x-text="stage"></span>
+                <span x-text="progress + '%'" class="font-mono"></span>
+            </div>
+            <div class="h-2 w-full overflow-hidden rounded-sm bg-green-100">
+                <div class="h-2 rounded-sm bg-green-600 transition-all duration-700" :style="`width:${progress}%`"></div>
+            </div>
+            <p class="mt-2 text-xs text-green-700">
+                {{ __('Please keep this tab open until the update completes. The page will refresh automatically when done.') }}
+            </p>
+        </div>
+    </form>
+    {% endif %}
+
+</div>
+
+{# ── Changelog (collapsed by default) ─────────────────────────── #}
+{% if manifest and manifest.changelog is defined and manifest.changelog %}
+<div class="mb-6 rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs" x-data="{ open: false }">
+    <button type="button" @click="open = !open" class="flex w-full items-center justify-between gap-4 text-left">
+        <span class="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {{ __('What\'s new in v') }}{{ manifest.version }}
+            {% if manifest.released_at is defined %}
+                <span class="ml-2 text-sm font-normal text-gray-400">({{ manifest.released_at }})</span>
+            {% endif %}
+        </span>
+        <span class="flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:underline">
+            <span x-text="open ? '{{ __('Hide Details') }}' : '{{ __('Show Details') }}'"></span>
+            <svg x-show="open" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+            <svg x-show="!open" x-cloak class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </span>
+    </button>
+    <div x-show="open" x-cloak>
+        <div class="mt-3 text-sm text-gray-700 leading-relaxed max-h-96 overflow-y-auto pr-2">
+            {{ manifest.changelog|changelog }}
+        </div>
+        {% if manifest.min_php is defined %}
+        <p class="mt-3 text-xs text-gray-400">{{ __('Requires PHP') }} {{ manifest.min_php }}+</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── Technical info ───────────────────────────────────────────── #}
+<div class="mt-8 rounded-xl border bg-white dark:bg-gray-900 p-5 shadow-xs">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">{{ __('Technical details') }}</h2>
+    <dl class="grid gap-2 text-sm">
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Manifest URL') }}</dt>
+            <dd class="text-gray-800 font-mono text-xs break-all">
+                {{ manifest_url ?: __('(not configured)') }}
+            </dd>
+        </div>
+        {% if manifest and manifest_has_sha256 %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Release SHA-256') }}</dt>
+            <dd class="text-gray-800 font-mono text-xs break-all">{{ manifest.sha256 }}</dd>
+        </div>
+        {% elseif manifest %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Release SHA-256') }}</dt>
+            <dd>
+                <span class="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-medium text-red-700">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M3.055 11a9 9 0 1117.89 0 9 9 0 01-17.89 0z"/>
+                    </svg>
+                    {{ __('Missing or invalid') }}
+                </span>
+            </dd>
+        </div>
+        {% endif %}
+        {% if manifest and manifest_has_signature %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Signature') }}</dt>
+            <dd>
+                {% if manifest.signatures.ed25519 is defined %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-xs font-medium text-green-700">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    Ed25519
+                </span>
+                {% endif %}
+                {% if manifest.signatures.gpg is defined %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs font-medium text-blue-700 ml-1">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    GPG
+                </span>
+                {% endif %}{% if manifest.signatures.ed25519 is defined or manifest.signatures.gpg is defined %}<span class="dark:text-gray-400">{{ __('(will be validated before installation)') }}</span>{% endif %}
+            </dd>
+        </div>
+        {% elseif manifest and signature_required %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Signature') }}</dt>
+            <dd>
+                <span class="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-medium text-red-700">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M3.055 11a9 9 0 1117.89 0 9 9 0 01-17.89 0z"/>
+                    </svg>
+                    {{ __('Missing (required)') }}
+                </span>
+                <span class="text-xs text-red-700 ml-2">{{ __('Release cannot be installed without a valid Ed25519 or GPG signature.') }}</span>
+            </dd>
+        </div>
+        {% elseif manifest %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Signature') }}</dt>
+            <dd><span class="text-xs text-gray-400">{{ __('None in manifest') }}</span></dd>
+        </div>
+        {% endif %}
+        {% if manifest and manifest.download_url is defined %}
+        <div class="flex gap-3">
+            <dt class="w-44 text-gray-500 dark:text-gray-400">{{ __('Download URL') }}</dt>
+            <dd class="text-gray-800 font-mono text-xs break-all">{{ manifest.download_url }}</dd>
+        </div>
+        {% endif %}
+    </dl>
+</div>

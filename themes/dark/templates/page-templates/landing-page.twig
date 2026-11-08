@@ -1,0 +1,4 @@
+{# DESCRIPTION: Landing page without title or excerpt, rendering only the body content. #}
+<div class="min-h-screen">
+    {{ page.body|shortcodes(page)|raw }}
+</div>

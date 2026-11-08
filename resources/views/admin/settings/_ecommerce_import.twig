@@ -1,0 +1,243 @@
+    {# ══ Import sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-import" class="ec-tab-panel hidden">
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-8">
+            <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Product Import') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {{ __('Import your product catalog, categories, variations, and images from other major platforms. To avoid web server timeouts on extremely large files, you can also use the CLI commands.') }}
+                </p>
+            </div>
+
+            <div x-data="{ importPlatform: 'shopify' }"
+                 x-on:change="if ($event.target && $event.target.name === 'import_platform_picker') { $el.querySelectorAll('input[type=file]').forEach(function (input) { input.value = ''; }); }">
+            {# ── Platform picker ── #}
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ __('Import Source') }}</p>
+            <div class="mt-2 mb-6">
+                <div class="flex flex-wrap gap-4">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="import_platform_picker" value="shopify" x-model="importPlatform"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Shopify
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="import_platform_picker" value="etsy" x-model="importPlatform"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Etsy
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="import_platform_picker" value="ebay" x-model="importPlatform"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        eBay
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="import_platform_picker" value="amazon" x-model="importPlatform"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        Amazon
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="radio" name="import_platform_picker" value="products" x-model="importPlatform"
+                               class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
+                        {{ __('Vale Products') }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8 max-w-2xl">
+                {# Shopify Import #}
+                <div x-show="importPlatform === 'shopify'" x-cloak
+                     class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Shopify</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        {{ __('Import products with handle-based grouping, multiple options, full product variations, and media downloads.') }}
+                        {% if import_export_urls.shopify %}
+                        <a href="{{ import_export_urls.shopify }}" target="_blank" rel="noopener noreferrer" class="ml-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                            {{ __('Get Export File') }} ↗
+                        </a>
+                        {% endif %}
+                    </p>
+                    <form method="post" action="{{ url('/admin/settings/import-products') }}" enctype="multipart/form-data" class="space-y-4 flex flex-col flex-1">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="platform" value="shopify">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('CSV file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".csv" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-gray-200">
+                        </div>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="import_media" value="1" checked
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Download and import product/variant images if URLs are present') }}</span>
+                        </label>
+                        <div class="mt-auto pt-4">
+                            <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    onclick="return confirm('{{ __('Are you sure you want to import Shopify products?') }}')">
+                                {{ __('Import Shopify CSV') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2 text-[10px] text-gray-400 font-mono">
+                        php vale import:shopify --file=path.csv --dry-run<br>
+                        php vale import:shopify --file=path.csv --import-media
+                    </div>
+                </div>
+
+                {# Etsy Import #}
+                <div x-show="importPlatform === 'etsy'" x-cloak
+                     class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Etsy</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        {{ __('Import products from Etsy Listings CSV, including descriptions, sections/categories, pricing, stock, and up to 10 listing images.') }}
+                        {{ __('Note: Etsy exports carry a single price per listing, so per-variation prices cannot be imported — adjust them in the product editor after import.') }}
+                        {% if import_export_urls.etsy %}
+                        <a href="{{ import_export_urls.etsy }}" target="_blank" rel="noopener noreferrer" class="ml-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                            {{ __('Get Export File') }} ↗
+                        </a>
+                        {% endif %}
+                    </p>
+                    <form method="post" action="{{ url('/admin/settings/import-products') }}" enctype="multipart/form-data" class="space-y-4 flex flex-col flex-1">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="platform" value="etsy">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('CSV file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".csv" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-gray-200">
+                        </div>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="import_media" value="1" checked
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Download and import product images if URLs are present') }}</span>
+                        </label>
+                        <div class="mt-auto pt-4">
+                            <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    onclick="return confirm('{{ __('Are you sure you want to import Etsy products?') }}')">
+                                {{ __('Import Etsy CSV') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2 text-[10px] text-gray-400 font-mono">
+                        php vale import:etsy --file=path.csv --dry-run<br>
+                        php vale import:etsy --file=path.csv --import-media
+                    </div>
+                </div>
+
+                {# eBay Import #}
+                <div x-show="importPlatform === 'ebay'" x-cloak
+                     class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">eBay</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        {{ __('Import active eBay listings from CSV, mapping custom SKU labels, category names, variations, and split image URLs.') }}
+                        {% if import_export_urls.ebay %}
+                        <a href="{{ import_export_urls.ebay }}" target="_blank" rel="noopener noreferrer" class="ml-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                            {{ __('Get Export File') }} ↗
+                        </a>
+                        {% endif %}
+                    </p>
+                    <form method="post" action="{{ url('/admin/settings/import-products') }}" enctype="multipart/form-data" class="space-y-4 flex flex-col flex-1">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="platform" value="ebay">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('CSV file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".csv" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-gray-200">
+                        </div>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="import_media" value="1" checked
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Download and import product/variant images if URLs are present') }}</span>
+                        </label>
+                        <div class="mt-auto pt-4">
+                            <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    onclick="return confirm('{{ __('Are you sure you want to import eBay products?') }}')">
+                                {{ __('Import eBay CSV') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2 text-[10px] text-gray-400 font-mono">
+                        php vale import:ebay --file=path.csv --dry-run<br>
+                        php vale import:ebay --file=path.csv --import-media
+                    </div>
+                </div>
+
+                {# Amazon Import #}
+                <div x-show="importPlatform === 'amazon'" x-cloak
+                     class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Amazon</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        {{ __('Import products from Amazon Seller Central Inventory Reports (CSV/TXT/XLSM/XLSX). Includes SKU, Title, Price, Stock, and ASIN as GTIN.') }}
+                        {% if import_export_urls.amazon %}
+                        <a href="{{ import_export_urls.amazon }}" target="_blank" rel="noopener noreferrer" class="ml-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                            {{ __('Get Export File') }} ↗
+                        </a>
+                        {% endif %}
+                    </p>
+                    <form method="post" action="{{ url('/admin/settings/import-products') }}" enctype="multipart/form-data" class="space-y-4 flex flex-col flex-1">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="platform" value="amazon">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('CSV file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".txt,.csv,.xlsm,.xlsx,.zip" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-gray-200">
+                        </div>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="import_media" value="1" checked
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Download and import product images if URLs are present') }}</span>
+                        </label>
+                        <div class="mt-auto pt-4">
+                            <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    onclick="return confirm('{{ __('Are you sure you want to import Amazon products?') }}')">
+                                {{ __('Import Amazon Report') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2 text-[10px] text-gray-400 font-mono">
+                        php vale import:amazon --file=path.txt --dry-run<br>
+                        php vale import:amazon --file=path.txt --import-media
+                    </div>
+                </div>
+
+                {# Vale Products Import #}
+                <div x-show="importPlatform === 'products'" x-cloak
+                     class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{{ __('Vale Products') }}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        {{ __('Import your own product CSV — includes all fields: pricing, inventory, variations, GMC, shipping, VAT, digital downloads, and more.') }}
+                        <a href="{{ url('/admin/products/export-template') }}" target="_blank" rel="noopener noreferrer" class="ml-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                            {{ __('Download Template') }} ↗
+                        </a>
+                    </p>
+                    <form method="post" action="{{ url('/admin/settings/import-products') }}" enctype="multipart/form-data" class="space-y-4 flex flex-col flex-1">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="platform" value="products">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('CSV file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".csv" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer hover:file:bg-gray-200 dark:file:bg-gray-700 dark:file:text-gray-200">
+                        </div>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="import_media" value="1" checked
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Download and import product/variant images if URLs are present') }}</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs cursor-pointer">
+                            <input type="checkbox" name="update_existing" value="1"
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Update existing products (match by slug)') }}</span>
+                        </label>
+                        <div class="mt-auto pt-4">
+                            <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                                    onclick="return confirm('{{ __('Are you sure you want to import Vale products?') }}')">
+                                {{ __('Import Vale Products CSV') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2 text-[10px] text-gray-400 font-mono">
+                        php vale import:products --file=products.csv --dry-run<br>
+                        php vale import:products --file=products.csv --import-media --update-existing
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>{# /ec-tab-import #}

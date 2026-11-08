@@ -1,0 +1,147 @@
+{# Content › Blog #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+{% import 'admin/settings/_content.twig' as content %}
+<div id="{{ content_tab_id|default('content-tab-blog') }}" class="content-tab-panel {{ is_active ? '' : 'hidden' }}">
+<form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="PUT">
+    <input type="hidden" name="_group" value="content">
+    <input type="hidden" name="_subtab" value="blog">
+
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Blog') }}</p>
+    <div class="mt-1 space-y-3">
+        <div {{ vl.attrs('content', __('Posts per page'), 'posts_per_page', 'blog', __('Blog'), 'pagination posts') }}>
+            <label class="block text-sm font-medium text-gray-700">{{ __('Posts per page') }}</label>
+            <input type="number" name="posts_per_page" value="{{ settings.posts_per_page|default('10') }}" min="1" max="100"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+        </div>
+        <div {{ vl.attrs('content', __('Show authors on blog posts'), 'show_author_on_posts', 'blog', __('Blog'), 'author byline') }}>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="show_author_on_posts" value="0">
+                <input type="checkbox" name="show_author_on_posts" value="1"
+                       {{ settings.show_author_on_posts|default('1') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Show authors on blog posts') }}
+            </label>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, author names are shown for posts in blog listings and on individual post pages.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Display also modification date using user\'s own locale'), 'show_modification_date_on_posts', 'blog', __('Blog'), 'modification date modified updated') }}>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="show_modification_date_on_posts" value="0">
+                <input type="checkbox" name="show_modification_date_on_posts" value="1"
+                       {{ settings.show_modification_date_on_posts|default('0') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Display also modification date using user\'s own locale') }}
+            </label>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, last updated date is shown alongside the published date.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Display timestamp using user\'s own locale'), 'show_timestamp_on_posts', 'blog', __('Blog'), 'timestamp time hour minute') }}>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="show_timestamp_on_posts" value="0">
+                <input type="checkbox" name="show_timestamp_on_posts" value="1"
+                       {{ settings.show_timestamp_on_posts|default('0') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Display timestamp using user\'s own locale') }}
+            </label>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, time (hours and minutes) is appended to dates.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Show reading time on blog posts'), 'show_reading_time_on_posts', 'blog', __('Blog'), 'reading time estimate') }} x-data="{ showReadingTime: {{ settings.show_reading_time_on_posts|default('0') == '1' ? 'true' : 'false' }} }">
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="show_reading_time_on_posts" value="0">
+                <input type="checkbox" name="show_reading_time_on_posts" value="1"
+                       x-model="showReadingTime"
+                       {{ settings.show_reading_time_on_posts|default('0') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Show reading time on blog posts') }}
+            </label>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, estimated reading time is shown for posts.') }}</p>
+            <div x-show="showReadingTime" x-cloak class="mt-3" {{ vl.attrs('content', __('Reading speed (WPM)'), 'reading_time_wpm', 'blog', __('Blog'), 'words per minute reading speed') }}>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Reading speed (WPM)') }}</label>
+                <input type="number" name="reading_time_wpm" value="{{ settings.reading_time_wpm|default('200') }}" min="1" max="2000"
+                       class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+                <p class="mt-1 text-xs text-gray-400">{{ __('Words per minute used to calculate estimated reading time.') }}</p>
+            </div>
+        </div>
+        <div {{ vl.attrs('content', __('Show read count on blog posts'), 'show_read_count_on_posts', 'blog', __('Blog'), 'read count views hit counter') }}>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="show_read_count_on_posts" value="0">
+                <input type="checkbox" name="show_read_count_on_posts" value="1"
+                       {{ settings.show_read_count_on_posts|default('1') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Show read count on blog posts') }}
+            </label>
+            <p class="mt-1 text-xs text-gray-400">{{ __('When enabled, the number of views is shown for posts.') }}</p>
+            {% if settings.analytics_enabled|default('1') != '1' %}
+            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">{{ __('Views are always counted, but detailed analytics logging stays disabled — no IP data is collected.') }}</p>
+            {% endif %}
+        </div>
+        <div {{ vl.attrs('content', __('Listing summary length (words)'), 'listing_teaser_words', 'blog', __('Blog'), 'summary teaser excerpt card listing preview words') }}>
+            <label class="block text-sm font-medium text-gray-700">{{ __('Listing summary length (words)') }}</label>
+            <input type="number" name="listing_teaser_words" value="{{ settings.listing_teaser_words|default('55') }}" min="0" max="200"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Used when a post has neither a summary nor a "Read more" break: the first N words are shown on cards, in the RSS description and in the meta description. Set 0 to disable the automatic summary.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Enable blog RSS feed'), 'blog_rss_enabled', 'blog', __('Blog'), 'rss feed syndication') }}>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="hidden" name="blog_rss_enabled" value="0">
+                <input type="checkbox" name="blog_rss_enabled" value="1"
+                       {{ settings.blog_rss_enabled|default('1') == '1' ? 'checked' }}
+                       class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Enable blog RSS feed') }}
+            </label>
+            {# Use the same locale list the front end serves (Translator), so the feeds shown
+               are exactly the ones that exist — not just the configured content languages. #}
+            {% set rss_lang_codes = supported_locales|default({})|keys %}
+            {% if settings.multi_language_content|default('0') == '1' and rss_lang_codes|length > 1 %}
+            <div class="mt-1 space-y-1">
+                {% for code in rss_lang_codes %}
+                {% set feed_url = absolute_url(routing_blog_prefix ~ '/feed.xml', {}, {lang: code}) %}
+                {{ content.copyable_url(feed_url, locale_name(code), __('Feed URL')) }}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="mt-1">
+                {{ content.copyable_url(absolute_url(routing_blog_prefix ~ '/feed.xml'), null, __('Feed URL')) }}
+            </div>
+            {% endif %}
+        </div>
+        <div {{ vl.attrs('content', __('Default post category'), 'default_category', 'blog', __('Blog'), 'category default') }}>
+            <label class="block text-sm font-medium text-gray-700">{{ __('Default post category') }}</label>
+            <select name="default_category" class="mt-1 w-auto min-w-48 max-w-[24rem] rounded-lg border-gray-300 dark:border-gray-700">
+                {% set cats = categories_all|default([]) %}
+                {% if cats is empty %}
+                <option value="" disabled selected>{{ __('No categories found') }}</option>
+                {% else %}
+                {% for cat in cats %}
+                <option value="{{ cat.id }}" {{ settings.default_category|default('1') == cat.id ~ '' ? 'selected' }}>
+                    {% if cat.depth|default(0) > 0 %}{% for i in 1..cat.depth %}— {% endfor %}{% endif %}{{ cat.name }}
+                </option>
+                {% endfor %}
+                {% endif %}
+            </select>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Automatically assigned to new posts when no category is selected.') }}</p>
+        </div>
+    </div>
+
+    <hr class="border-gray-200">
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Revisions') }}</p>
+    <div {{ vl.attrs('content', __('Enable revision history for posts and pages'), 'revisions_enabled', 'blog', __('Revisions'), 'history versions undo') }} x-data="{ showRevisions: {{ settings.revisions_enabled|default('1') == '1' ? 'true' : 'false' }} }">
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="hidden" name="revisions_enabled" value="0">
+            <input type="checkbox" name="revisions_enabled" value="1"
+                   x-model="showRevisions"
+                   {{ settings.revisions_enabled|default('1') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Enable revision history for posts and pages') }}
+        </label>
+        <div x-show="showRevisions" x-cloak class="mt-3" {{ vl.attrs('content', __('Maximum revisions per item'), 'revisions_max', 'blog', __('Revisions'), 'limit history count') }}>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <label for="revisions_max" class="text-sm font-medium text-gray-700">{{ __('Maximum revisions per item') }}</label>
+                <input id="revisions_max" type="number" name="revisions_max" value="{{ settings.revisions_max|default('10') }}" min="0" max="100"
+                       class="w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            </div>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Set to 0 for unlimited. Older revisions are automatically deleted when limit is reached.') }}</p>
+        </div>
+    </div>
+</form>
+</div>

@@ -1,0 +1,341 @@
+﻿{% extends "layout.twig" %}
+
+{% block title %}{{ __('Shop') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Explore our full product catalog, search items, and sort by price or popularity.') }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-2 pb-12 md:pt-12"
+     x-data="{ catOpen: false }"
+     x-effect="document.body.style.overflow = catOpen ? 'hidden' : ''"
+     @keydown.escape.window="if (catOpen) { catOpen = false; document.getElementById('shop-cat-trigger')?.focus() }"
+     @resize.window="if (window.innerWidth >= 768) catOpen = false">
+    {# Mobile category trigger (lives outside the grid component so it shares this scope) #}
+    <button type="button" id="shop-cat-trigger"
+            @click="catOpen = true; $nextTick(() => document.getElementById('shop-cat-close')?.focus())"
+            class="md:hidden mb-6 flex w-full items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 text-left shadow-xs hover:bg-gray-50"
+            :aria-expanded="catOpen ? 'true' : 'false'"
+            aria-controls="shop-cat-drawer">
+        <span class="flex min-w-0 items-center gap-2.5">
+            <svg class="h-5 w-5 shrink-0 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <span class="min-w-0">
+                <span class="block truncate text-sm font-semibold text-gray-900">
+                    {% if active_category is defined and active_category %}{{ active_category.name }}{% else %}{{ __('Categories') }}{% endif %}
+                </span>
+                <span class="block text-xs text-gray-500">{{ __('Browse all product categories') }}</span>
+            </span>
+        </span>
+        <svg class="h-5 w-5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </button>
+
+    <div class="flex flex-col md:flex-row gap-10">
+
+        {# Sidebar — categories (desktop only; mobile uses the drawer below) #}
+        <aside class="hidden md:block md:w-56 shrink-0">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-3">{{ __('Categories') }}</h2>
+            {% include 'partials/_shop_categories.twig' %}
+        </aside>
+
+        {# Product grid #}
+        <div class="flex-1" x-data="shopPagination">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+                {% if active_category is defined and active_category %}
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ active_category.name }}</h1>
+                    {% if active_category.description is defined and active_category.description %}
+                    <p class="mt-1 text-sm text-gray-600">{{ active_category.description }}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <h1 class="text-2xl font-bold text-gray-900">{{ __('Shop') }}</h1>
+                {% endif %}
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2 bg-white border rounded-lg px-3 py-2">
+                        <input type="checkbox" name="exclude_stock" value="1" id="exclude_stock"
+                               x-model="filters.exclude_stock" @change="fetchNewBatch(1)"
+                               class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-900">
+                        <label for="exclude_stock" class="text-xs text-gray-600 cursor-pointer whitespace-nowrap">{{ __('Hide out of stock') }}</label>
+                    </div>
+
+                    <select name="per_page" aria-label="{{ __('Products per page') }}" x-show="total > 12" x-cloak x-model.number="perPage" @change="changePerPage()" class="rounded-lg border-gray-300 text-sm pl-3 pr-8 py-2 bg-white w-auto focus:border-gray-900 focus:ring-gray-900">
+                        <option value="12">12 {{ __('per page') }}</option>
+                        <option value="24" x-show="total > 12">24 {{ __('per page') }}</option>
+                        <option value="50" x-show="total > 24">50 {{ __('per page') }}</option>
+                        <option value="100" x-show="total > 50">100 {{ __('per page') }}</option>
+                    </select>
+
+                    <select name="sort" aria-label="{{ __('Sort products by') }}" x-model="filters.sort" @change="fetchNewBatch(1)" class="rounded-lg border-gray-300 text-sm pl-3 pr-10 py-2 bg-white w-auto max-w-full focus:border-gray-900 focus:ring-gray-900">
+                        <option value="name_asc">{{ __('A-Z') }}</option>
+                        <option value="name_desc">{{ __('Z-A') }}</option>
+                        <option value="price_asc">{{ __('Price: Low to High') }}</option>
+                        <option value="price_desc">{{ __('Price: High to Low') }}</option>
+                        <option value="newest">{{ __('Newest') }}</option>
+                    </select>
+
+                    <div class="flex flex-1 lg:flex-none gap-2">
+                        <input type="text" name="search" aria-label="{{ __('Search products') }}" x-model="filters.search" @keydown.enter="fetchNewBatch(1)" placeholder="{{ __('Search products…') }}"
+                               class="flex-1 lg:w-48 rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-gray-900 focus:ring-gray-900">
+                        <button type="button" @click="fetchNewBatch(1)" class="rounded-lg btn-primary px-4 py-2 text-sm">{{ __('Search') }}</button>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="visibleProducts.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" x-cloak>
+                <template x-for="p in visibleProducts" :key="p.id">
+                    <a :href="p.url" class="group rounded-xl border bg-white shadow-xs hover:shadow-md transition overflow-hidden">
+                        <div class="aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                            <template x-if="p.thumbnail">
+                                <img :src="p.thumbnail" :alt="p.name" class="w-full h-full object-contain">
+                            </template>
+                            <template x-if="!p.thumbnail">
+                                <div class="w-full h-full flex items-center justify-center text-gray-300">
+                                    <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-gray-900 group-hover:text-gray-900 line-clamp-2" x-text="p.name"></h3>
+                            <div class="mt-2 flex items-center gap-2">
+                                <template x-if="p.min_price">
+                                    <span class="font-bold text-gray-900">
+                                        <template x-if="p.min_price === p.max_price">
+                                            <span x-text="formatCurrency(p.min_price)"></span>
+                                        </template>
+                                        <template x-if="p.min_price !== p.max_price">
+                                            <span x-text="formatCurrency(p.min_price) + ' – ' + formatCurrency(p.max_price)"></span>
+                                        </template>
+                                    </span>
+                                </template>
+                                <template x-if="!p.min_price && p.sale_price">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-red-600 font-bold" x-text="formatCurrency(p.sale_price)"></span>
+                                        <span class="text-gray-400 line-through text-xs" x-text="formatCurrency(p.price)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="!p.min_price && !p.sale_price">
+                                    <span class="font-bold text-gray-900" x-text="formatCurrency(p.price)"></span>
+                                </template>
+                            </div>
+                            <div x-show="p.rating_count > 0" class="mt-1.5" x-html="starRatingHtml(p.rating_avg, p.rating_count)"></div>
+                            <p x-show="p.stock_status == 'out_of_stock'" class="mt-1 text-xs text-red-500">{{ __('Out of stock') }}</p>
+                        </div>
+                    </a>
+                </template>
+            </div>
+
+            {# Pagination #}
+            <div class="mt-8 flex justify-center items-center gap-2" x-show="totalPages > 1" x-cloak>
+                <button type="button" @click="prevPage()" :disabled="page <= 1"
+                        class="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">{{ __('Previous') }}</button>
+
+                <span class="px-4 py-2 text-sm text-gray-500">
+                    <span x-text="page"></span> / <span x-text="totalPages"></span>
+                </span>
+
+                <button type="button" @click="nextPage()" :disabled="page >= totalPages"
+                        class="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">{{ __('Next') }}</button>
+            </div>
+
+            <div x-show="visibleProducts.length === 0 && !loading" class="text-center py-20 text-gray-600 dark:text-gray-400" x-cloak>
+                <p class="text-lg font-medium">{{ __('No products found.') }}</p>
+            </div>
+
+            <div x-show="loading" class="text-center py-20" x-cloak>
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-gray-600"></div>
+            </div>
+        </div>
+
+        {# Mobile category drawer (off-canvas from the left) #}
+        <div id="shop-cat-drawer" class="fixed inset-0 z-[70] md:hidden"
+             :class="catOpen ? '' : 'pointer-events-none'"
+             :aria-hidden="catOpen ? 'false' : 'true'"
+             role="dialog" aria-modal="true" aria-label="{{ __('Categories') }}">
+            <div x-show="catOpen" x-cloak @click="catOpen = false" aria-hidden="true"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-black/50"></div>
+            <div x-show="catOpen" x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="-translate-x-full"
+                 x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="translate-x-0"
+                 x-transition:leave-end="-translate-x-full"
+                 class="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b px-4 py-3">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500">{{ __('Categories') }}</h2>
+                    <button type="button" id="shop-cat-close"
+                            @click="catOpen = false; document.getElementById('shop-cat-trigger')?.focus()"
+                            class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                            aria-label="{{ __('Close menu') }}">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto px-3 py-3">
+                    {% include 'partials/_shop_categories.twig' with {variant: 'drawer'} %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include "partials/star-rating-card.twig" %}
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('shopPagination', () => ({
+        currentCurrency: '{{ current_currency|e('js') }}',
+        fxRate: {{ fx_rate|default(1.0) }},
+        formatCurrency(val) {
+            return new Intl.NumberFormat(navigator.language || 'en', { style: 'currency', currency: this.currentCurrency }).format(val * this.fxRate);
+        },
+        allProducts: {{ formattedProducts|json_encode|raw }},
+        total: {{ total }},
+        page: {{ page }},
+        perPage: {{ per_page }},
+        totalPages: {{ total_pages }},
+        filters: {{ (filters is empty ? '{}' : filters|json_encode)|raw }},
+        baseUrl: '{{ url(routing_shop_prefix)|e('js') }}',
+        loading: false,
+        bufferSize: {{ buffer_size|default(50) }}, // How many items to fetch from server at once
+
+        init() {
+            // Pre-calculate total pages if perPage changed
+            this.totalPages = Math.ceil(this.total / this.perPage);
+
+            // Handle browser back/forward
+            window.addEventListener('popstate', (e) => {
+                if (e.state && e.page) {
+                    this.goToPage(e.page, false);
+                }
+            });
+        },
+
+        get visibleProducts() {
+            const start = (this.page - 1) * this.perPage;
+            const products = [];
+            for (let i = 0; i < this.perPage; i++) {
+                const item = this.allProducts[start + i];
+                if (item) products.push(item);
+            }
+            return products;
+        },
+
+        async nextPage() {
+            if (this.page < this.totalPages) {
+                await this.goToPage(this.page + 1);
+            }
+        },
+
+        async prevPage() {
+            if (this.page > 1) {
+                await this.goToPage(this.page - 1);
+            }
+        },
+
+        async changePerPage() {
+            this.totalPages = Math.ceil(this.total / this.perPage);
+            await this.fetchNewBatch(1);
+        },
+
+        async goToPage(page, updateHistory = true) {
+            this.page = page;
+            if (updateHistory) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('page', page);
+                url.searchParams.set('per_page', this.perPage);
+                window.history.pushState({page}, '', url.toString());
+            }
+
+            // Check if we have products for this page
+            const start = (this.page - 1) * this.perPage;
+            const end = start + this.perPage;
+
+            let hasAll = true;
+            for (let i = start; i < end; i++) {
+                if (!this.allProducts[i] && i < this.total) {
+                    hasAll = false;
+                    break;
+                }
+            }
+
+            if (!hasAll) {
+                await this.fetchBatch(this.page);
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        async fetchNewBatch(page = 1) {
+            this.allProducts = [];
+            this.page = page;
+
+            // Update URL with current filters
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', page);
+            url.searchParams.set('per_page', this.perPage);
+
+            if (this.filters.search) url.searchParams.set('search', this.filters.search);
+            else url.searchParams.delete('search');
+
+            if (this.filters.sort) url.searchParams.set('sort', this.filters.sort);
+            else url.searchParams.delete('sort');
+
+            if (this.filters.exclude_stock) url.searchParams.set('exclude_stock', '1');
+            else url.searchParams.delete('exclude_stock');
+
+            window.history.pushState({page}, '', url.toString());
+
+            await this.fetchBatch(page);
+        },
+
+        async fetchBatch(startPage) {
+            this.loading = true;
+            try {
+                const apiBatchSize = this.bufferSize;
+                const apiPage = Math.floor(((this.page - 1) * this.perPage) / apiBatchSize) + 1;
+
+                const apiParams = new URLSearchParams();
+                if (this.filters.search) apiParams.set('search', this.filters.search);
+                if (this.filters.sort && typeof this.filters.sort === 'string') apiParams.set('sort', this.filters.sort);
+                if (this.filters.exclude_stock) apiParams.set('exclude_stock', '1');
+                if (this.filters.category) apiParams.set('category', this.filters.category);
+
+                apiParams.set('page', apiPage);
+                apiParams.set('per_page', apiBatchSize);
+
+                const apiRes = await fetch(`${this.baseUrl}?${apiParams.toString()}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const apiData = await apiRes.json();
+
+                this.total = apiData.total;
+                this.totalPages = Math.ceil(apiData.total / this.perPage);
+
+                const startOffset = (apiPage - 1) * apiBatchSize;
+                apiData.products.forEach((p, index) => {
+                    this.allProducts[startOffset + index] = p;
+                });
+
+            } catch (e) {
+                console.error("Failed to fetch products", e);
+            } finally {
+                this.loading = false;
+            }
+        }
+    }));
+});
+</script>
+{% endblock %}

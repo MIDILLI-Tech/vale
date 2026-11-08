@@ -1,0 +1,851 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Checkout') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Enter your billing and shipping details to complete your order securely.') }}{% endblock %}
+
+{% block content %}
+{% set defaultAddress = user_address is defined and user_address is not empty ? user_address : {} %}
+<div class="mx-auto max-w-5xl px-4 py-10">
+    <h1 class="mb-8 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ __('Checkout') }}</h1>
+
+    <form method="post" action="{{ url('checkout') }}" id="checkout-form" @submit="syncCouponCode(); submitting = true"
+               x-data="checkoutForm('{{ active_gateway }}', {{ subtotal }}, {{ shipping|default(0) }}, {{ tax_display_rate|default(tax_policy.rate|default(0)) }}, '{{ tax_policy.regime|default('normal_vat')|e('js') }}', {{ tax_mixed|default(false) ? 'true' : 'false' }}, {{ has_physical_items|default(false) ? 'true' : 'false' }}, '{{ shipping_countries_list|json_encode|e('js') }}', {{ shipping_enabled|default(false) ? 'true' : 'false' }})">
+        {{ csrf_field() }}
+
+        {% if saved_address_error|default('') %}
+        <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 dark:text-red-400 text-sm dark:bg-red-900/30 dark:border-red-800">{{ saved_address_error }}</div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+
+            {# ── Billing ─────────────────── #}
+            <div class="lg:col-span-2">
+                <div class="rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-900 p-6 shadow-xs">
+                    <h2 class="mb-5 text-lg font-semibold text-gray-800 dark:text-gray-200">{{ __('Billing Details') }}</h2>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        {% if checkout_display.first_name ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('First Name') }}{% if checkout_required.first_name ?? true %} *{% endif %}</label>
+                            <input type="text" name="first_name" value="{{ old.first_name ?? defaultAddress.first_name ?? '' }}"{% if checkout_required.first_name ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.first_name|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.first_name }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.last_name ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Last Name') }}{% if checkout_required.last_name ?? true %} *{% endif %}</label>
+                            <input type="text" name="last_name" value="{{ old.last_name ?? defaultAddress.last_name ?? '' }}"{% if checkout_required.last_name ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.last_name|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.last_name }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.email ?? true %}
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Email') }}{% if checkout_required.email ?? true %} *{% endif %}</label>
+                            <input type="email" name="email" value="{{ old.email ?? defaultAddress.email ?? '' }}"{% if checkout_required.email ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.email|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.email }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.phone ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Phone') }}{% if checkout_required.phone|default(false) %} *{% endif %}</label>
+                            <input type="tel" name="phone" value="{{ old.phone ?? defaultAddress.phone ?? '' }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.phone|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.phone }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.country ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country') }}{% if checkout_required.country|default(false) %} *{% endif %}</label>
+                              <select name="country"{% if checkout_required.country|default(false) %} required{% endif %}
+                                      x-data="{
+                                         regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                             ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                             : null,
+                                         init() {
+                                             var sel = this.$el, val = sel.value, items = [];
+                                             for (var i = 0; i < sel.options.length; i++) {
+                                                 var code = sel.options[i].value;
+                                                 if (!code) continue;
+                                                 var name = code;
+                                                 if (this.regionNames) {
+                                                     try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                                 }
+                                                 items.push({ code: code, name: name });
+                                             }
+                                             if (!items.length) return;
+                                             items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                             while (sel.options.length > 0) { sel.remove(0); }
+                                             items.forEach(function(item) {
+                                                 var opt = document.createElement('option');
+                                                 opt.value = item.code;
+                                                 opt.textContent = item.name + ' (' + item.code + ')';
+                                                 if (item.code === val) opt.selected = true;
+                                                 sel.appendChild(opt);
+                                             });
+                                         }
+                                     }"
+                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                                 {% for code, name in countries %}
+                                 <option value="{{ code }}" {{ (old.country ?? defaultAddress.country ?? default_country ?? 'US') == code ? 'selected' }}>{{ code }}</option>
+                                 {% endfor %}
+                             </select>
+                            {% if errors.country|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.country }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.address ?? true %}
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Address') }}{% if checkout_required.address ?? true %} *{% endif %}</label>
+                            <input type="text" name="address" value="{{ old.address ?? defaultAddress.address ?? '' }}"{% if checkout_required.address ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.address|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.address }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.city ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('City') }}{% if checkout_required.city ?? true %} *{% endif %}</label>
+                            <input type="text" name="city" value="{{ old.city ?? defaultAddress.city ?? '' }}"{% if checkout_required.city ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.city|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.city }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.state ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('State / Region') }}{% if checkout_required.state ?? false %} *{% endif %}</label>
+                            <input type="text" name="state" value="{{ old.state ?? defaultAddress.state ?? '' }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.state|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.state }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.postcode ?? true %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Postcode') }}{% if checkout_required.postcode ?? true %} *{% endif %}</label>
+                            <input type="text" name="postcode" value="{{ old.postcode ?? defaultAddress.postcode ?? '' }}"{% if checkout_required.postcode ?? true %} required{% endif %}
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                            {% if errors.postcode|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.postcode }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_display.note ?? true %}
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Order Notes') }}{% if checkout_required.note ?? false %} *{% endif %}</label>
+                            <textarea name="note" rows="3"
+                                      class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">{{ old.note ?? '' }}</textarea>
+                            {% if errors.note|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.note }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if checkout_fields is defined and checkout_fields|length > 0 %}
+                            <div class="col-span-2 mt-2 border-t border-gray-200 dark:border-gray-700 pt-4">
+                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Additional Information') }}</h3>
+                            </div>
+                            {% for field in checkout_fields %}
+                                {% set fieldName = field.name %}
+                                {% set oldVal = fieldName ? attribute(old|default({}), fieldName)|default('') : '' %}
+                                {% set fieldClass = field.type == 'textarea' or field.type == 'static_text' ? 'col-span-2' : '' %}
+                                <div class="{{ fieldClass }}">
+                                    {% if field.type == 'static_text' %}
+                                        <p class="text-sm leading-6 text-gray-600 dark:text-gray-400 whitespace-pre-line">{{ field.label }}</p>
+                                    {% elseif field.type == 'newsletter_subscribe' %}
+                                        <label class="flex items-center gap-2 text-sm">
+                                                     <input type="checkbox" name="{{ fieldName }}" value="1" {{ oldVal ? 'checked' : '' }}{{ field.required ? ' required' : '' }} class="rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                                             {{ field.label }}
+                                        </label>
+                                        {% if fieldName and attribute(errors|default({}), fieldName)|default('') %}
+                                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ attribute(errors|default({}), fieldName) }}</p>
+                                        {% endif %}
+                                    {% else %}
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}{% if field.required %} *{% endif %}</label>
+                                        {% if field.type == 'textarea' %}
+                                             <textarea name="{{ fieldName }}" rows="3"{% if field.required %} required{% endif %}
+                                                       class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">{{ oldVal }}</textarea>
+                                        {% elseif field.type == 'select' %}
+                                             <select name="{{ fieldName }}"{% if field.required %} required{% endif %} class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                                                <option value="">—</option>
+                                                {% for opt in field.options %}
+                                                <option value="{{ opt }}" {{ oldVal == opt ? 'selected' }}>{{ opt }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% elseif field.type == 'checkbox' %}
+                                            {% if field.options is defined and field.options|length > 0 %}
+                                                <div class="space-y-2">
+                                                    {% for opt in field.options %}
+                                                        {% set checkedVals = attribute(old|default({}), fieldName)|default([]) %}
+                                                        <label class="flex items-center gap-2 text-sm">
+                                                            <input type="checkbox" name="{{ fieldName }}[]" value="{{ opt }}" {{ checkedVals is iterable and opt in checkedVals ? 'checked' : '' }} class="rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                                                            {{ opt }}
+                                                        </label>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <label class="flex items-center gap-2 text-sm">
+                                             <input type="checkbox" name="{{ fieldName }}" value="1" {{ oldVal ? 'checked' : '' }}{{ field.required ? ' required' : '' }} class="rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                                                    {{ field.label }}
+                                                </label>
+                                            {% endif %}
+                                        {% elseif field.type == 'radio' %}
+                                            <div class="space-y-2">
+                                                {% for opt in field.options %}
+                                                    <label class="flex items-center gap-2 text-sm">
+                                                        <input type="radio" name="{{ fieldName }}" value="{{ opt }}" {{ oldVal == opt ? 'checked' : '' }} class="border-gray-300 dark:border-gray-700">
+                                                        {{ opt }}
+                                                    </label>
+                                                {% endfor %}
+                                            </div>
+                                        {% else %}
+                                             <input type="{{ field.type == 'email' ? 'email' : (field.type == 'tel' ? 'tel' : 'text') }}"
+                                                    name="{{ fieldName }}" value="{{ oldVal }}"{% if field.required %} required{% endif %}
+                                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                                        {% endif %}
+                                        {% if fieldName and attribute(errors|default({}), fieldName)|default('') %}
+                                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ attribute(errors|default({}), fieldName) }}</p>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if user_address is defined and user_address is not empty %}
+                <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="save_addresses" value="1" checked
+                               class="rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                        <span>{{ __('Save addresses to my profile') }}</span>
+                    </label>
+                </div>
+                {% endif %}
+
+                {# ── Shipping ─────────────────── #}
+                {% if has_physical_items %}
+                <div x-show="hasPhysicalItems" class="mt-6 rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-900 p-6 shadow-xs">
+                    <h2 class="mb-5 text-lg font-semibold text-gray-800 dark:text-gray-200">{{ __('Shipping Details') }}</h2>
+
+                    <label class="flex items-center gap-2 text-sm cursor-pointer mb-4">
+                        <input type="checkbox" name="same_as_billing" value="1" x-model="sameAsBilling" {{ old.same_as_billing|default(0) ? 'checked' : '' }} @change="refreshQuote(); validateShippingCountry();"
+                               class="rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                        <span>{{ __('Use same address as billing') }}</span>
+                    </label>
+
+                    <div x-show="!sameAsBilling" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('First Name') }}</label>
+                            <input type="text" name="shipping_first_name" value="{{ old.shipping_first_name ?? user_shipping_address.first_name|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Last Name') }}</label>
+                            <input type="text" name="shipping_last_name" value="{{ old.shipping_last_name ?? user_shipping_address.last_name|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Company') }}</label>
+                            <input type="text" name="shipping_company" value="{{ old.shipping_company ?? user_shipping_address.company|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Address') }}</label>
+                            <input type="text" name="shipping_address" value="{{ old.shipping_address ?? user_shipping_address.address|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Address Line 2') }}</label>
+                            <input type="text" name="shipping_address_2" value="{{ old.shipping_address_2 ?? user_shipping_address.address_2|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('City') }}</label>
+                            <input type="text" name="shipping_city" value="{{ old.shipping_city ?? user_shipping_address.city|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('State / Region') }}</label>
+                            <input type="text" name="shipping_state" value="{{ old.shipping_state ?? user_shipping_address.state|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Postcode') }}</label>
+                            <input type="text" name="shipping_postcode" value="{{ old.shipping_postcode ?? user_shipping_address.postcode|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country') }}</label>
+                              <select name="shipping_country"
+                                      x-data="{
+                                         regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                             ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                             : null,
+                                         init() {
+                                             var sel = this.$el, val = sel.value, items = [];
+                                             for (var i = 0; i < sel.options.length; i++) {
+                                                 var code = sel.options[i].value;
+                                                 if (!code) continue;
+                                                 var name = code;
+                                                 if (this.regionNames) {
+                                                     try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                                 }
+                                                 items.push({ code: code, name: name });
+                                             }
+                                             if (!items.length) return;
+                                             items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                             while (sel.options.length > 0) { sel.remove(0); }
+                                             items.forEach(function(item) {
+                                                 var opt = document.createElement('option');
+                                                 opt.value = item.code;
+                                                 opt.textContent = item.name + ' (' + item.code + ')';
+                                                 if (item.code === val) opt.selected = true;
+                                                 sel.appendChild(opt);
+                                             });
+                                         }
+                                     }"
+                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                                  {% for code, name in shipping_country_options|default(shipping_countries_list|default(countries)) %}
+                                  <option value="{{ code }}" {{ (old.shipping_country ?? user_shipping_address.country|default('')) == code ? 'selected' }}>{{ code }}</option>
+                                  {% endfor %}
+                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Phone') }}</label>
+                            <input type="tel" name="shipping_phone" value="{{ old.shipping_phone ?? user_shipping_address.phone|default('') }}"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden">
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not has_physical_items %}
+                <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-300">
+                    {{ __('Digital products only — no shipping address required.') }}
+                </div>
+                {% endif %}
+
+                {# Payment Method #}
+                <div class="mt-6 rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-900 p-6 shadow-xs">
+                    <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-200">{{ __('Payment Method') }}</h2>
+
+                    {% if stripe_enabled and stripe_key %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'stripe' ? 'border-gray-400 dark:border-gray-500' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="stripe"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-gray-700 dark:text-gray-300">
+                        {% if stripe_label == stripe_via %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">💳 {{ stripe_label }}</span>
+                        {% else %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">💳 {{ stripe_label }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-300">via {{ stripe_via }}</span>
+                        {% endif %}
+                    </label>
+                    {% endif %}
+
+                    {% if paypal_enabled %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'paypal' ? 'border-yellow-300 dark:border-yellow-700' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="paypal"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-yellow-600 dark:text-yellow-400">
+                        {% if paypal_label == paypal_via %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">🅿 {{ paypal_label }}</span>
+                        {% else %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">🅿 {{ paypal_label }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-300">via {{ paypal_via }}</span>
+                        {% endif %}
+                    </label>
+                    {% endif %}
+
+                    {% if mollie_enabled %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'mollie' ? 'border-pink-300 dark:border-pink-700' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="mollie"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-pink-600 dark:text-pink-400">
+                        {% if mollie_label == mollie_via %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ mollie_label }}</span>
+                        {% else %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ mollie_label }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-300">via {{ mollie_via }}</span>
+                        {% endif %}
+                    </label>
+                    {% endif %}
+
+                    {% if twocheckout_enabled %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'twocheckout' ? 'border-blue-300 dark:border-blue-700' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="twocheckout"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-blue-600 dark:text-blue-400">
+                        {% if twocheckout_label == twocheckout_via %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ twocheckout_label }}</span>
+                        {% else %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ twocheckout_label }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-300">via {{ twocheckout_via }}</span>
+                        {% endif %}
+                    </label>
+                    {% endif %}
+
+                    {% if checkoutcom_enabled %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'checkoutcom' ? 'border-indigo-300 dark:border-indigo-700' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="checkoutcom"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-indigo-600 dark:text-indigo-400">
+                        {% if checkoutcom_label == checkoutcom_via %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ checkoutcom_label }}</span>
+                        {% else %}
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ checkoutcom_label }}</span>
+                        <span class="ml-auto text-xs text-gray-400 dark:text-gray-300">via {{ checkoutcom_via }}</span>
+                        {% endif %}
+                    </label>
+                    {% endif %}
+
+                    {% if banktransfer_enabled %}
+                    <label class="flex items-center gap-3 cursor-pointer rounded-lg border p-3 mb-3 transition-colors"
+                           :class="paymentMethod === 'banktransfer' ? 'border-green-300 dark:border-green-700' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'">
+                        <input type="radio" name="payment_method" value="banktransfer"
+                               x-model="paymentMethod"
+                               class="h-4 w-4 text-gray-700 dark:text-gray-300">
+                        <span class="font-medium text-gray-800 dark:text-gray-200">{{ banktransfer_label }}</span>
+                    </label>
+                    {% endif %}
+
+                    {% if not stripe_enabled and not paypal_enabled and not mollie_enabled and not twocheckout_enabled and not checkoutcom_enabled and not banktransfer_enabled %}
+                    <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 rounded-lg p-3">
+                        ⚠ {{ __('No payment method is configured. Contact the store administrator.') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ── Order Summary ────────────── #}
+            <div>
+                <div class="rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-900 p-6 shadow-xs sticky top-4">
+                    <h2 class="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-200">{{ __('Order Summary') }}</h2>
+                    <div x-show="shippingError" x-cloak class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 dark:text-red-400 text-xs dark:bg-red-900/30 dark:border-red-800">
+                        <span x-text="shippingError"></span>
+                    </div>
+                    {% for item in items %}
+                    <div class="py-2 text-sm border-b dark:border-gray-700 last:border-0">
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="text-gray-700 dark:text-gray-300"><a href="{{ url(routing_shop_prefix ~ '/' ~ item.product.slug) }}" class="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 underline underline-offset-2 decoration-gray-300 dark:decoration-gray-600">{{ item.product.name }}</a> <span class="text-gray-400 dark:text-gray-500">× {{ item.qty }}</span></span>
+                            <span class="font-medium shrink-0">{{ (item.price * item.qty)|price(current_currency) }}</span>
+                        </div>
+                        {% if item.variation %}
+                        <div class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                            {% for attr, val in item.variation %}{% if val %}{{ attr }}: {{ val }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.shipping_class is defined and item.shipping_class == 'do_not_ship' %}
+                        <div class="mt-0.5 text-xs text-red-500 dark:text-red-400 font-medium">⚠ {{ __('Cannot be shipped to selected country') }}</div>
+                        {% endif %}
+                        {% if item.shipping_class is defined and item.shipping_class == 'digital' %}
+                        <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 font-medium">📦 {{ __('Digital product — no shipping') }}</div>
+                        {% endif %}
+                        {% set varRefundMode = item.variation_row.refund_mode|default('use_parent') %}
+                        {% set isNonRef = (varRefundMode != 'use_parent' and varRefundMode == 'non_refundable') or (varRefundMode == 'use_parent' and item.product.refundMode|default('use_global') == 'non_refundable') %}
+                        {% if isNonRef %}
+                        <div class="mt-0.5">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-800 text-[10px] font-medium">
+                                🚫 {{ __('Non-refundable') }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if item.custom_attrs|default({})|length > 0 %}
+                        <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            {% for attr, val in item.custom_attrs %}{{ attr }}: <span class="font-medium text-gray-700 dark:text-gray-300">{{ val }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if item.max_qty is defined and item.max_qty is not null and item.qty > item.max_qty %}
+                        <div class="text-xs text-red-500 dark:text-red-400 mt-1">{{ __('Only :count left in stock. Your quantity was adjusted.', {':count': item.max_qty}) }}</div>
+                        {% elseif item.max_qty is defined and item.max_qty is not null %}
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Available: :count', {':count': item.max_qty}) }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="mt-4 space-y-1 border-t dark:border-gray-700 pt-3">
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400" x-show="isNormalVat()">
+                            <span>{{ __('Subtotal (excl. Tax)') }}</span>
+                            <span x-text="displaySubtotalExclTax()">{{ subtotal_excl_tax|default(subtotal)|price(current_currency) }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400" x-show="!isNormalVat()">
+                            <span>{{ __('Subtotal') }}</span>
+                            <span>{{ subtotal|price(current_currency) }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400" x-show="shippingAmount > 0">
+                            <span>{{ __('Shipping') }}</span>
+                            <span x-text="displayShipping()">{{ shipping|default(0)|price(current_currency) }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-green-600 dark:text-green-400" x-show="shippingAmount <= 0 && !freeShipping">
+                            <span>{{ __('Shipping') }}</span>
+                            <span>{{ __('Free') }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-green-600 dark:text-green-400" x-show="freeShipping">
+                            <span>{{ __('Shipping') }}</span>
+                            <span>{{ __('Free (Coupon)') }}</span>
+                        </div>
+                        {% if shipping_estimate is defined and shipping_estimate is not empty and (shipping_estimate.min is not null or shipping_estimate.max is not null) %}
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <span>{{ __('Estimated Delivery') }}</span>
+                            <span x-text="shippingEstimate && (shippingEstimate.min !== null || shippingEstimate.max !== null) ? '{{ __(':min–:max days')|e('js') }}'.replace(':min', shippingEstimate.min).replace(':max', shippingEstimate.max) : '{{ __(':min–:max days', {':min': shipping_estimate.min, ':max': shipping_estimate.max})|e('js') }}'"></span>
+                        </div>
+                        {% endif %}
+                        <div x-show="couponDiscount > 0" class="flex justify-between text-sm text-green-600 dark:text-green-400">
+                            <span>{{ __('Coupon') }} (<span x-text="appliedCode"></span>)</span>
+                            <span>– {{ currency_symbol }}<span x-text="couponDiscount.toFixed(2)"></span></span>
+                        </div>
+                        {% if tax_policy.regime|default('normal_vat') == 'normal_vat' and tax_policy.display_mode|default('incl_and_breakdown') == 'incl_and_breakdown' %}
+                        <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <span>{{ __('Included Tax') }}
+                                <template x-if="isNormalVat() && !taxMixed">
+                                    <span class="text-gray-400 dark:text-gray-500" x-text="'(' + taxRate.toFixed(2) + '%)'"></span>
+                                </template>
+                            </span>
+                            <span x-text="displayTax()">{{ tax_amount|default(0)|price(current_currency) }}</span>
+                        </div>
+                        {% elseif tax_policy.regime|default('normal_vat') == 'normal_vat' %}
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ __('Prices include VAT') }}{% if not tax_mixed %} ({{ tax_display_rate|default(tax_policy.rate|default(0))|num(2) }}%){% endif %}.</div>
+                        {% endif %}
+                        {% if tax_policy.regime|default('normal_vat') != 'normal_vat' and tax_policy.zero_reason|default('') != '' %}
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ tax_policy.zero_reason }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Coupon code input #}
+                    <div class="mt-3 border-t dark:border-gray-700 pt-3">
+                        <input type="hidden" name="coupon_code" x-ref="couponCode" x-model="appliedCode">
+                        <input type="text" x-model="couponInput" placeholder="{{ __('Coupon code') }}"
+                               class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-400 focus:outline-hidden uppercase"
+                               :disabled="couponApplied">
+                        <button type="button" @click="applyCoupon()"
+                                x-show="!couponApplied"
+                                 class="mt-2 w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600">
+                            {{ __('Apply') }}
+                        </button>
+                        <button type="button" @click="removeCoupon()"
+                                x-show="couponApplied"
+                                 class="mt-2 w-full rounded-lg bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50">
+                            {{ __('Remove') }}
+                        </button>
+                        <p x-show="couponMessage" x-text="couponMessage"
+                           :class="couponApplied ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'"
+                           class="mt-1 text-xs"></p>
+                    </div>
+                    <div class="mt-3 flex justify-between text-base font-bold border-t dark:border-gray-700 pt-3">
+                        <span>{{ __('Total') }}</span>
+                        <span x-text="displayTotal()">{{ total|price(current_currency) }}</span>
+                    </div>
+
+                    {# Currency selector — uses fetch to avoid nesting inside checkout form #}
+                     {% if available_currencies is defined and available_currencies|length > 1 %}
+                     <div class="mt-4 border-t dark:border-gray-700 pt-4">
+                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('Currency') }}</label>
+                         <select x-data="{
+                                     currencyNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                         ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'currency' })
+                                         : null,
+                                     init() {
+                                         var sel = this.$el, val = sel.value, items = [];
+                                         for (var i = 0; i < sel.options.length; i++) {
+                                             var code = sel.options[i].value;
+                                             if (!code) continue;
+                                             var name = code;
+                                             var symbol = sel.options[i].getAttribute('data-symbol') || '';
+                                             if (this.currencyNames) {
+                                                 try { name = this.currencyNames.of(code) || code; } catch(e) {}
+                                             }
+                                             items.push({ code: code, name: name, symbol: symbol });
+                                         }
+                                         if (!items.length) return;
+                                         items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                         while (sel.options.length > 0) { sel.remove(0); }
+                                         items.forEach(function(item) {
+                                             var opt = document.createElement('option');
+                                             opt.value = item.code;
+                                             opt.textContent = item.name + ' (' + item.symbol + ' — ' + item.code + ')';
+                                             if (item.code === val) opt.selected = true;
+                                             sel.appendChild(opt);
+                                         });
+                                     }
+                                 }"
+                                 class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-hidden focus:ring-2 focus:ring-gray-400"
+                                 @change="setCurrency($event.target.value)">
+                             {% for code, symbol in available_currencies %}
+                             <option value="{{ code }}" data-symbol="{{ symbol|e('html_attr') }}" {{ code == current_currency ? 'selected' }}>{{ code }} {{ symbol }}</option>
+                             {% endfor %}
+                         </select>
+                    </div>
+                    {% endif %}
+
+                    {% if policy_links is defined and policy_links|length > 0 %}
+                    {% set _policyLinks = [] %}
+                    {% if policy_links.terms is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.terms ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-100 dark:text-gray-300">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
+                    {% if policy_links.privacy is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.privacy ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-100 dark:text-gray-300">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
+                    {% if policy_links.returns is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.returns ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-100 dark:text-gray-300">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+                    <div class="mt-4 border-t dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-400">
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" required class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                            <span>{{ __('I have read and agree to the :links.', {':links': _policyLinks|join(', ')})|raw }}</span>
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    {% set _hasGateway = stripe_enabled or paypal_enabled or mollie_enabled or twocheckout_enabled or checkoutcom_enabled or banktransfer_enabled %}
+                    <button type="submit"
+                            class="mt-4 w-full rounded-lg btn-primary px-4 py-3 text-sm font-bold transition-colors"{% if _hasGateway %}
+                            :disabled="submitting || shippingError !== ''"
+                            :class="submitting || shippingError !== '' ? 'opacity-50 cursor-not-allowed' : ''"{% else %}
+                            disabled
+                            style="opacity:0.5;cursor:not-allowed"{% endif %}>
+                        <span x-show="!submitting">{{ __('Place Order') }} →</span>
+                        <span x-show="submitting" class="inline-flex items-center gap-2">
+                            <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                            {{ __('Processing...') }}
+                        </span>
+                    </button>
+                    <a href="{{ url('shop.cart') }}" class="mt-2 block text-center text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">← {{ __('Back to cart') }}</a>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+
+<script>
+ function checkoutForm(activeGateway, subtotal, shipping, taxRate, taxRegime, taxMixed, hasPhysicalItems, shippingCountriesJson, shippingEnabled) {
+    return {
+        submitting: false,
+        paymentMethod: activeGateway,
+        hasPhysicalItems: !!hasPhysicalItems,
+        shippingEnabled: !!shippingEnabled,
+        sameAsBilling: {{ old.same_as_billing|default(0) ? 'true' : 'false' }},
+        shippingCountriesList: (function() {
+            try { return Object.keys(JSON.parse(shippingCountriesJson || '{}')); }
+            catch (e) { return []; }
+        })(),
+        // coupon state — re-applied from the previous submission after a
+        // validation error so the discount is not silently lost
+        couponInput:    '',
+        appliedCode:    '{{ old.coupon_code|default('')|e('js') }}',
+        couponDiscount: 0,
+        couponApplied:  '{{ old.coupon_code|default('') }}' !== '',
+        couponMessage:  '',
+        freeShipping:   false,
+        _baseTotal:     parseFloat('{{ total }}') || 0,
+        _subtotal:      parseFloat(subtotal) || 0,
+        subtotalExclTax: parseFloat('{{ subtotal_excl_tax|default(subtotal) }}') || 0,
+        _shipping:      parseFloat(shipping) || 0,
+        shippingAmount: parseFloat(shipping) || 0,
+        taxRate:        parseFloat(taxRate) || 0,
+        taxRegime:      (taxRegime || 'normal_vat'),
+        taxMixed:       !!taxMixed,
+        taxAmount:      parseFloat('{{ tax_amount|default(0) }}') || 0,
+        _baseTaxAmount: parseFloat('{{ tax_amount|default(0) }}') || 0,
+        _csrfToken:     '{{ csrf_token() }}',
+        _quoteSeq:      0,
+        _ajaxBase:      {{ checkout_base_url|default(url('/checkout'))|json_encode|raw }},
+        shippingError:  '{{ shipping_error|default('')|e('js') }}',
+        shippingEstimate: {{ shipping_estimate|json_encode|raw }},
+
+        isNormalVat() {
+            return this.taxRegime === 'normal_vat' && this.taxRate > 0;
+        },
+
+        getBillingEmail() {
+            const selectors = ['[name="email"]', '[name="e_mail"]', '[name="mail"]'];
+            for (const selector of selectors) {
+                const value = (document.querySelector(selector)?.value ?? '').trim();
+                if (value !== '') return value;
+            }
+            return '';
+        },
+
+        syncCouponCode() {
+            this.$refs.couponCode.value = this.appliedCode;
+        },
+
+        getBillingCountry() {
+            const value = (document.querySelector('[name="country"]')?.value ?? '').trim();
+            return value.toUpperCase();
+        },
+
+        getShippingCountry() {
+            const value = (document.querySelector('[name="shipping_country"]')?.value ?? '').trim();
+            return value.toUpperCase();
+        },
+
+        effectiveShippingCountry() {
+            return this.sameAsBilling ? this.getBillingCountry() : this.getShippingCountry();
+        },
+
+        async refreshQuote() {
+            // Race guard: discard responses superseded by a newer call.
+            const seq = ++this._quoteSeq;
+
+            const resp = await fetch(this._ajaxBase + '/quote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': this._csrfToken,
+                },
+                body: JSON.stringify({
+                    country: this.getBillingCountry(),
+                    shipping_country: this.effectiveShippingCountry(),
+                    coupon_code: this.appliedCode,
+                    email: this.getBillingEmail(),
+                }),
+            });
+
+            const data = await resp.json();
+            if (seq !== this._quoteSeq) {
+                return; // a newer quote request superseded this one
+            }
+            this._subtotal = parseFloat(data.subtotal ?? this._subtotal) || 0;
+            this.subtotalExclTax = parseFloat(data.subtotal_excl_tax ?? this.subtotalExclTax) || 0;
+            this.shippingAmount = parseFloat(data.shipping ?? this.shippingAmount) || 0;
+            this.taxAmount = parseFloat(data.tax ?? this.taxAmount) || 0;
+            this.couponDiscount = parseFloat(data.discount ?? this.couponDiscount) || 0;
+            this.freeShipping   = data.free_shipping ?? false;
+            this._baseTotal = Math.max(0, this._subtotal + this.shippingAmount);
+            this.shippingError = data.shipping_error || '';
+            this.taxRate = parseFloat(data.tax_display_rate ?? this.taxRate) || 0;
+            this.taxMixed = !!data.tax_mixed;
+            this.taxRegime = data.regime || 'normal_vat';
+            if (data.shipping_estimate) {
+                this.shippingEstimate = data.shipping_estimate;
+            }
+        },
+
+        validateShippingCountry() {
+            if (!this.hasPhysicalItems) {
+                this.shippingError = '';
+                return;
+            }
+            if (!this.shippingEnabled) {
+                this.shippingError = '{{ __('Shipping is currently unavailable.')|e('js') }}';
+                return;
+            }
+            const list = this.shippingCountriesList || [];
+            const selected = this.sameAsBilling ? this.getBillingCountry() : this.effectiveShippingCountry();
+            if (selected && list.length > 0 && !list.includes(selected)) {
+                this.shippingError = '{{ __('We do not sell to your country you selected.')|e('js') }}';
+            } else {
+                this.shippingError = '';
+            }
+        },
+
+        async applyCoupon() {
+            const code = this.couponInput.trim().toUpperCase();
+            if (!code) return;
+            const resp = await fetch(this._ajaxBase + '/apply-coupon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': this._csrfToken,
+                },
+                body: JSON.stringify({ code, subtotal, email: this.getBillingEmail(), country: this.getBillingCountry(), shipping_country: this.effectiveShippingCountry() }),
+            });
+            const data = await resp.json();
+            if (data.valid) {
+                this.couponDiscount = parseFloat(data.discount) || 0;
+                this.taxAmount      = parseFloat(data.tax ?? this.taxAmount) || 0;
+                this.appliedCode    = data.code;
+                this.couponApplied  = true;
+                this.freeShipping   = data.free_shipping || false;
+                this.couponMessage  = data.message || 'Coupon applied!';
+            } else {
+                this.couponMessage  = data.message || 'Invalid coupon code.';
+                this.couponDiscount = 0;
+                this.couponApplied  = false;
+                this.freeShipping   = false;
+            }
+
+            await this.refreshQuote();
+        },
+
+        async removeCoupon() {
+            this.couponInput    = '';
+            this.appliedCode    = '';
+            this.couponDiscount = 0;
+            this.taxAmount      = this._baseTaxAmount;
+            this.couponApplied  = false;
+            this.freeShipping   = false;
+            this.couponMessage  = '';
+            await this.refreshQuote();
+        },
+
+        displayTotal() {
+            const t = Math.max(0, this._subtotal + this.shippingAmount - this.couponDiscount);
+            return "{{ currency_symbol|e('js') }}" + t.toFixed(2);
+        },
+
+        displayTax() {
+            return "{{ currency_symbol|e('js') }}" + this.taxAmount.toFixed(2);
+        },
+
+        displaySubtotalExclTax() {
+            return "{{ currency_symbol|e('js') }}" + this.subtotalExclTax.toFixed(2);
+        },
+
+        displayShipping() {
+            return "{{ currency_symbol|e('js') }}" + this.shippingAmount.toFixed(2);
+        },
+
+        async init() {
+            const countryInput = document.querySelector('[name="country"]');
+            if (countryInput) {
+                countryInput.addEventListener('change', () => {
+                    this.refreshQuote().then(() => this.validateShippingCountry());
+                });
+            }
+            // A guest only becomes identifiable once they type an email. Refresh
+            // the quote on change so the server records the abandoned cart.
+            for (const selector of ['[name="email"]', '[name="e_mail"]', '[name="mail"]']) {
+                const emailInput = document.querySelector(selector);
+                if (emailInput) {
+                    emailInput.addEventListener('change', () => {
+                        this.refreshQuote();
+                    });
+                }
+            }
+            const shippingCountryInput = document.querySelector('[name="shipping_country"]');
+            if (shippingCountryInput) {
+                shippingCountryInput.addEventListener('change', () => {
+                    this.refreshQuote().then(() => this.validateShippingCountry());
+                });
+            }
+            await this.refreshQuote();
+            // Keep Place Order disabled whenever the effective (shipping) country is no
+            // longer in the shippable set, even if the server returned no STALE error.
+            if (!this.shippingError) {
+                this.validateShippingCountry();
+            }
+        },
+
+        async setCurrency(code) {
+            const body = new URLSearchParams({ currency: code });
+            await fetch({{ url('currency.set')|json_encode|raw }}, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': this._csrfToken },
+                body: body.toString(),
+            });
+            window.location.reload();
+        },
+    };
+}
+</script>
+{% endblock %}

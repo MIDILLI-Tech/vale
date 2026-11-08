@@ -1,0 +1,133 @@
+{% extends 'layout.twig' %}
+{% set entity_label = 'post' %}
+
+{% block title %}
+    {% if archive_type is defined and archive_type %}
+        {% if archive_type == 'category' %}{{ __('Category') }}: {{ archive_entity.name }}
+        {% elseif archive_type == 'tag' %}{{ __('Tag') }}: {{ archive_entity.name }}
+        {% elseif archive_type == 'author' %}{{ __('Author') }}: {{ archive_entity.name }}
+        {% else %}{{ archive_entity.name }}{% endif %}
+    {% elseif search is defined and search %}{{ __('Search') }}: {{ search }}
+    {% else %}{{ __('Blog') }}{% endif %}
+    {{ seo_title_separator }}{{ site_name }}
+{% endblock %}
+
+{% block content %}
+<section class="pt-32 pb-24">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-16">
+            {% if archive_type is defined and archive_type and archive_entity is defined %}
+            <h1 class="text-3xl sm:text-4xl lg:text-6xl font-display font-bold text-white mb-6 break-words">
+                {% if archive_type == 'category' %}{{ __('Category') }}: {{ archive_entity.name }}
+                {% elseif archive_type == 'tag' %}{{ __('Tag') }}: {{ archive_entity.name }}
+                {% else %}{{ archive_entity.name }}{% endif %}
+            </h1>
+            {% if archive_entity.description is defined and archive_entity.description %}
+            <p class="text-slate-400 max-w-2xl text-lg">{{ archive_entity.description }}</p>
+            {% endif %}
+            {% else %}
+            <h1 class="text-3xl sm:text-4xl lg:text-6xl font-display font-bold text-white mb-6 break-words">
+                {{ __('Our') }} <span class="text-neon-gradient">{{ __('Insights') }}</span>
+            </h1>
+            <p class="text-slate-400 max-w-2xl text-lg">
+                {% if search is defined and search %}
+                    {{ __('Search results for') }} &ldquo;<span class="text-white">{{ search }}</span>&rdquo;
+                {% else %}
+                    {{ __('Exploring the intersection of design, technology, and strategy to help you stay ahead in the digital landscape.') }}
+                {% endif %}
+            </p>
+            {% endif %}
+            <form action="" method="get" role="search" class="mt-8 flex max-w-xl gap-3">
+                <input type="search" name="search" value="{{ search|default('') }}" placeholder="{{ __('Search articles...') }}" autocomplete="off"
+                       class="flex-1 rounded-lg border-slate-700 bg-slate-800 text-slate-200 text-sm px-4 py-3 placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500">
+                <button type="submit" class="rounded-lg btn-neon px-6 py-3 text-sm font-bold text-white whitespace-nowrap">{{ __('Search') }}</button>
+            </form>
+        </div>
+
+        {# Posts Grid #}
+        {% if posts is defined and posts|length > 0 %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {% for post in posts %}
+            <article class="glass-card rounded-3xl overflow-hidden flex flex-col group">
+                <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}" class="block aspect-16/10 overflow-hidden relative">
+                    {% if post.thumbnail %}
+                        <img src="{{ post.thumbnail.url }}" alt="{{ post.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {% else %}
+                        <div class="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600">
+                            <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                    {% endif %}
+                    <div class="absolute inset-0 bg-linear-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                        <span class="text-white font-bold text-sm flex items-center gap-2">
+                            {{ __('Read Article') }}
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                        </span>
+                    </div>
+                </a>
+                <div class="p-8 flex-1 flex flex-col">
+                    <div class="flex items-center gap-3 mb-4 text-xs font-bold uppercase tracking-wider text-blue-400 flex-wrap">
+                        {% set pubDate = post.publishedAt|default(post.created_at|default(null)) %}
+                        {% if pubDate %}
+                        <span>{% include 'partials/_vtime.twig' with {value: pubDate, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                        {% if show_modification_date_on_posts|default('0') == '1' and post.updatedAt and post.updatedAt != pubDate %}
+                        <span class="h-1 w-1 bg-slate-700 rounded-full"></span>
+                        <span>{{ __('Updated') }}: {% include 'partials/_vtime.twig' with {value: post.updatedAt, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                        {% endif %}
+                        {% if post.category %}
+                            <span class="h-1 w-1 bg-slate-700 rounded-full"></span>
+                            <span>{{ post.category.name }}</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="text-xl font-bold text-white mb-4 group-hover:text-blue-400 transition-colors">
+                        <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}">{{ post.title }}</a>
+                    </h2>
+                    {% set teaser = post|post_teaser %}
+                    {% include 'partials/_post_card_summary.twig' with {
+                        teaser: teaser,
+                        post: post,
+                        excerpt_class: 'text-slate-400 text-sm leading-relaxed mb-6 line-clamp-3',
+                        html_class: 'text-slate-400 text-sm leading-relaxed mb-6 line-clamp-3'
+                    } %}
+                    <div class="mt-auto pt-6 border-t border-slate-800 flex items-center justify-between">
+                        {% set author = authors[post.authorId]|default(post.author|default(null)) %}
+                        {% if show_author_on_posts|default('0') == '1' and author %}
+                        <div class="flex items-center gap-2">
+                            <div class="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
+                                {{ author.name|slice(0,1)|upper }}
+                            </div>
+                            <span class="text-xs text-slate-500">{{ author.name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+
+        {# Pagination #}
+        {% if total_pages > 1 %}
+        <div class="mt-16 flex justify-center gap-2">
+            {% for i in 1..total_pages %}
+                <a href="?page={{ i }}{% if search is defined and search %}&search={{ search|url_encode }}{% endif %}" class="h-12 w-12 flex items-center justify-center rounded-xl glass font-bold transition-all {{ current_page == i ? 'border-blue-500 text-blue-400' : 'text-slate-400 hover:border-slate-700' }}">
+                    {{ i }}
+                </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="py-20 text-center glass rounded-4xl">
+            <svg class="mx-auto h-12 w-12 text-slate-700 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2zM14 2v4h4"/></svg>
+            {% if search is defined and search %}
+            <h2 class="text-xl font-bold text-white mb-2">{{ __('No results found') }}</h2>
+            <p class="text-slate-500">{{ __('Try a different keyword or browse all articles.') }}</p>
+            {% else %}
+            <h2 class="text-xl font-bold text-white mb-2">{{ __('No insights found') }}</h2>
+            <p class="text-slate-500">{{ __('We are currently crafting new stories. Stay tuned!') }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

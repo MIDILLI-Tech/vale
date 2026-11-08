@@ -1,0 +1,205 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}Email Automations{% endblock %}
+
+{% block content %}
+<div x-data="{
+    search: '',
+    sortBy: 'Name',
+    sortDir: 1,
+    toggleSort(col) {
+        if (this.sortBy === col) { this.sortDir *= -1; }
+        else { this.sortBy = col; this.sortDir = 1; }
+    }
+}">
+
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Email Automations</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ sequences|length }} sequence{{ sequences|length != 1 ? 's' : '' }}</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">Campaigns</a>
+        <a href="{{ url('/admin/newsletter/automations/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ New Sequence</a>
+    </div>
+</div>
+
+<div class="mb-4">
+    <input type="text" x-model="search" placeholder="Search name, trigger or status…"
+           class="w-full max-w-sm rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+</div>
+
+{% if flash_success %}
+<div class="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">{{ flash_success }}</div>
+{% endif %}
+{% if flash_error %}
+<div class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{{ flash_error }}</div>
+{% endif %}
+
+{% if cronConfig.cron_mode|default('none') == 'none' %}
+<div class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+    <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <span>{{ __('Cron is currently disabled. Automations will not send emails until a cron job is configured. Enable it in') }} <a href="{{ url('/admin/settings') }}#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+</div>
+{% endif %}
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                <th @click="toggleSort('Name')"
+                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700">
+                    Name
+                    <span x-show="sortBy==='Name'" x-text="sortDir===1?'↑':'↓'" class="ml-1 text-gray-400"></span>
+                </th>
+                <th @click="toggleSort('Trigger')"
+                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700">
+                    Trigger
+                    <span x-show="sortBy==='Trigger'" x-text="sortDir===1?'↑':'↓'" class="ml-1 text-gray-400"></span>
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Steps</th>
+                <th @click="toggleSort('Enrollments')"
+                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700">
+                    Enrollments
+                    <span x-show="sortBy==='Enrollments'" x-text="sortDir===1?'↑':'↓'" class="ml-1 text-gray-400"></span>
+                </th>
+                <th @click="toggleSort('Status')"
+                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 cursor-pointer select-none hover:text-gray-700">
+                    Status
+                    <span x-show="sortBy==='Status'" x-text="sortDir===1?'↑':'↓'" class="ml-1 text-gray-400"></span>
+                </th>
+                <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody
+            class="divide-y divide-gray-200 dark:divide-gray-700"
+            x-effect="
+                const rows = [...$el.querySelectorAll('tr[data-row]')];
+                rows.sort((a, b) => {
+                    let va = a.dataset['sort' + sortBy] ?? '';
+                    let vb = b.dataset['sort' + sortBy] ?? '';
+                    const na = parseFloat(va), nb = parseFloat(vb);
+                    if (!isNaN(na) && !isNaN(nb)) { return (na - nb) * sortDir; }
+                    return va.localeCompare(vb) * sortDir;
+                });
+                rows.forEach(r => $el.appendChild(r));
+            "
+        >
+            {% for seq in sequences %}
+            {% set cnt = counts[seq.id] ?? {active: 0, completed: 0, cancelled: 0} %}
+            {% set step_count = stepSummaries[seq.id].count ?? 0 %}
+            {% set total_min  = stepSummaries[seq.id].total_minutes ?? 0 %}
+            {% if total_min >= 10080 %}
+                {% set duration = (total_min / 10080)|round ~ ' wk' ~ ((total_min / 10080)|round != 1 ? 's' : '') %}
+            {% elseif total_min >= 1440 %}
+                {% set duration = (total_min / 1440)|round ~ ' day' ~ ((total_min / 1440)|round != 1 ? 's' : '') %}
+            {% elseif total_min >= 60 %}
+                {% set duration = (total_min / 60)|round ~ ' hr' ~ ((total_min / 60)|round != 1 ? 's' : '') %}
+            {% else %}
+                {% set duration = total_min ~ ' min' %}
+            {% endif %}
+            {% if seq.triggerType == 'subscribe' %}
+                {% set trigger_label = 'Subscribe' %}
+            {% elseif seq.triggerType == 'manual' %}
+                {% set trigger_label = 'Manual' %}
+            {% elseif seq.triggerType == 'tag_assigned' %}
+                {% set trigger_label = 'Tag' %}
+            {% else %}
+                {% set trigger_label = seq.triggerType %}
+            {% endif %}
+            {% set search_text = (seq.name ~ ' ' ~ trigger_label ~ ' ' ~ (seq.isActive() ? 'active' : 'paused'))|lower|e('js') %}
+            <tr data-row
+                data-sort-Name="{{ seq.name|lower|e('html_attr') }}"
+                data-sort-Trigger="{{ trigger_label|lower|e('html_attr') }}"
+                data-sort-Enrollments="{{ cnt.active }}"
+                data-sort-Status="{{ seq.isActive() ? 'active' : 'paused' }}"
+                x-show="!search || '{{ search_text }}'.includes(search.toLowerCase())"
+            >
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <a href="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/edit') }}" class="hover:underline">{{ seq.name }}</a>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ trigger_label }}
+                    {% if seq.triggerFormId %}
+                    <span class="ml-1 text-gray-400">(form #{{ seq.triggerFormId }})</span>
+                    {% endif %}
+                    {% if seq.triggerTag %}
+                    {% set tags = seq.triggerTag|split(',') %}
+                    {% for tag in tags %}
+                    {% set t = tag|trim %}
+                    {% if t %}
+                    <span class="ml-1 inline-flex rounded-full bg-blue-100 px-2 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">#{{ t }}</span>
+                    {% endif %}
+                    {% endfor %}
+                    {% if seq.triggerTagMatch == 'all' %}
+                    <span class="ml-1 text-xs text-gray-400 italic">(all)</span>
+                    {% endif %}
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% if step_count > 0 %}
+                    <a href="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/edit') }}" class="text-gray-700 hover:underline">
+                        {{ step_count }} step{{ step_count != 1 ? 's' : '' }}
+                        {% if total_min > 0 %}<span class="text-gray-400">({{ duration }})</span>{% endif %}
+                    </a>
+                    {% else %}
+                    <a href="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/edit') }}" class="text-gray-400 italic hover:underline">No steps</a>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <span class="font-medium text-gray-700">{{ cnt.active }}</span> active
+                    <span class="mx-1 text-gray-300">/</span>
+                    <span class="text-gray-400">{{ cnt.completed }} done</span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% if seq.isActive() %}
+                    <span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-300">{{ __('Active') }}</span>
+                    {% else %}
+                    <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">Paused</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center gap-2">
+                        <a href="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+
+                        <form method="POST" action="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/clone') }}">
+                            {{ csrf_field() }}
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">Clone</button>
+                        </form>
+
+                        <form method="POST" action="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/toggle') }}">
+                            {{ csrf_field() }}
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium ring-1 {{ seq.isActive() ? 'text-yellow-700 dark:text-yellow-400 ring-yellow-300 dark:ring-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950/40' : 'text-green-700 dark:text-green-400 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-950/40' }}">
+                                {{ seq.isActive() ? 'Pause' : 'Activate' }}
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ url('/admin/newsletter/automations/' ~ seq.id) }}"
+                              onsubmit="return confirm('Delete this automation sequence? Enrolled subscribers will not receive further emails.')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                    No automation sequences yet.
+                    <a href="{{ url('/admin/newsletter/automations/create') }}" class="ml-1 font-medium text-gray-700 hover:underline">Create one →</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</div>
+{% endblock %}

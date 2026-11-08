@@ -1,0 +1,274 @@
+    {# ══ Currency sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-currency" class="ec-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="ecommerce">
+        <input type="hidden" name="_subtab" value="currency">
+
+        {# ── Currency ── #}
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Currency') }}</h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                    <div {{ vl.attrs('ecommerce', __('Default Currency'), 'currency', 'currency', __('Currency'), 'money base currency') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Default Currency') }}</label>
+                    <div x-data="{
+                            currencyNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'currency' })
+                                : null,
+                            init() {
+                                var sel = this.$el.querySelector('select'), val = sel.value, items = [];
+                                for (var i = 0; i < sel.options.length; i++) {
+                                    var code = sel.options[i].value;
+                                    if (!code) continue;
+                                    var name = code;
+                                    var symbol = sel.options[i].getAttribute('data-symbol') || '';
+                                    if (this.currencyNames) {
+                                        try { name = this.currencyNames.of(code) || code; } catch(e) {}
+                                    }
+                                    items.push({ code: code, name: name, symbol: symbol });
+                                }
+                                if (!items.length) return;
+                                items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                while (sel.options.length > 0) { sel.remove(0); }
+                                items.forEach(function(item) {
+                                    var opt = document.createElement('option');
+                                    opt.value = item.code;
+                                    opt.textContent = item.name + ' (' + item.symbol + ' — ' + item.code + ')';
+                                    if (item.code === val) opt.selected = true;
+                                    sel.appendChild(opt);
+                                });
+                            }
+                        }">
+                        <select name="currency" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            {% for c in currency_catalog|default([]) %}
+                            <option value="{{ c.code }}" data-symbol="{{ c.symbol|e('html_attr') }}" {{ settings.currency|default('USD') == c.code ? 'selected' }}>{{ c.code }} {{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Default currency for prices and orders.') }}</p>
+                    </div>
+                </div>
+                <div>
+                    <div {{ vl.attrs('ecommerce', __('Additional Currencies'), 'allowed_currencies', 'currency', __('Currency'), 'multi currency exchange') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Additional Currencies') }}</label>
+                    <div x-data="tokenMultiSelect({
+                            initial: '{{ settings.allowed_currencies|default('')|e('js') }}',
+                            options: [{% for c in currency_catalog|default([]) %}'{{ c.code }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                            kind: 'currency',
+                            labelMap: {
+                                {% for c in currency_catalog|default([]) %}
+                                '{{ c.code }}': '{{ c.symbol|e('js') }}'{% if not loop.last %},{% endif %}
+                                {% endfor %}
+                            },
+                            placeholder: '{{ __('Select currency')|e('js') }}'
+                        })"
+                        class="space-y-2">
+                        <div class="flex gap-2 min-w-0">
+                            <select x-model="selected"
+                                    class="flex-1 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                <option value="" x-text="placeholder"></option>
+                                <template x-for="opt in availableOptions()" :key="opt">
+                                    <option :value="opt" x-text="displayLabel(opt)"></option>
+                                </template>
+                            </select>
+                            <button type="button" @click="addSelected()"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Add') }}</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="item in items" :key="item">
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1 text-xs font-medium text-gray-700">
+                                    <span x-text="displayLabel(item)"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Remove">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <input type="hidden" name="allowed_currencies" :value="items.join(',')">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Select extra currencies customers can switch to. Leave empty for default currency only.') }}</p>
+                    </div>
+                </div>
+                <div>
+                    <div {{ vl.attrs('ecommerce', __('Blocked Currencies'), 'blocked_currencies', 'currency', __('Currency'), 'block currency restrict') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Blocked Currencies') }}</label>
+                    <div x-data="tokenMultiSelect({
+                            initial: '{{ settings.blocked_currencies|default('')|e('js') }}',
+                            options: [{% for c in currency_catalog|default([]) %}'{{ c.code }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                            kind: 'currency',
+                            labelMap: {
+                                {% for c in currency_catalog|default([]) %}
+                                '{{ c.code }}': '{{ c.symbol|e('js') }}'{% if not loop.last %},{% endif %}
+                                {% endfor %}
+                            },
+                            placeholder: '{{ __('Select currency')|e('js') }}'
+                        })"
+                        class="space-y-2">
+                        <div class="flex gap-2 min-w-0">
+                            <select x-model="selected"
+                                    class="flex-1 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                <option value="" x-text="placeholder"></option>
+                                <template x-for="opt in availableOptions()" :key="opt">
+                                    <option :value="opt" x-text="displayLabel(opt)"></option>
+                                </template>
+                            </select>
+                            <button type="button" @click="addSelected()"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Add') }}</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="item in items" :key="item">
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1 text-xs font-medium text-gray-700">
+                                    <span x-text="displayLabel(item)"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Remove">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <input type="hidden" name="blocked_currencies" :value="items.join(',')">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Select currencies to always block, even if they appear in additional currencies.') }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Exchange Rates ── #}
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5"
+             x-data="{
+                provider: '{{ settings.fx_provider|default('none') }}',
+                fxLoading: false,
+                fxResult: '',
+                fxOk: false,
+                async refreshRates() {
+                    if (this.fxLoading) return;
+                    this.fxLoading = true;
+                    this.fxResult = '';
+                    try {
+                        const token = document.querySelector('meta[name=csrf-token]')?.content ?? '';
+                        const r = await fetch('{{ url('/admin/exchange-rates/refresh') }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-Token': token,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                fx_provider: this.provider,
+                                fx_api_key: (document.querySelector(`input[name='fx_api_key']`)?.value ?? ''),
+                                fx_cache_hours: (document.querySelector(`input[name='fx_cache_hours']`)?.value ?? ''),
+                                currency: (document.querySelector(`select[name='currency']`)?.value ?? ''),
+                            }),
+                        });
+                        const data = await r.json();
+                        this.fxOk = !!data.ok;
+                        if (data.ok) {
+                            this.fxResult = data.message + (data.updated_at ? ' (' + data.updated_at + ', base: ' + (data.base || '') + ')' : '');
+                            // Persisted via refresh: drop the dirty flag so the
+                            // page no longer warns about unsaved changes.
+                            const form = this.$root?.closest('form') || document.querySelector('#ec-tab-currency form');
+                            if (form && typeof form.vlEstablishBaseline === 'function') {
+                                setTimeout(function () { form.vlEstablishBaseline(); }, 0);
+                            }
+                            if (typeof syncAnyDirty === 'function') syncAnyDirty();
+                            if (typeof updateFloatingSaveBar === 'function') updateFloatingSaveBar();
+                        } else {
+                            this.fxResult = data.message || '{{ __('Refresh failed.')|e('js') }}';
+                        }
+                    } catch (e) {
+                        this.fxOk = false;
+                        this.fxResult = '{{ __('Refresh failed: network error.')|e('js') }}';
+                    } finally {
+                        this.fxLoading = false;
+                    }
+                }
+             }">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Exchange Rates') }}</h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                    <div {{ vl.attrs('ecommerce', __('Rate Provider'), 'fx_provider', 'currency', __('Exchange Rates'), 'exchange rate frankfurter openexchangerates') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Rate Provider') }}</label>
+                    <select name="fx_provider" x-model="provider"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                        <option value="none">{{ __('None (no conversion)') }}</option>
+                        {% for p in services_list.exchange_rate %}
+                            <option value="{{ p.value }}">{{ p.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-xs text-gray-400">
+                        {{ __('Free-tier providers:') }}
+                        {% for p in services_list.exchange_rate %}
+                            {% if p.url is defined and p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener" class="underline hover:text-gray-600">{{ p.label|split(' (')|first }}</a>{% if not loop.last %}, {% endif %}{% endif %}
+                        {% endfor %}
+                    </p>
+                    </div>
+                </div>
+                <div x-show="provider !== 'none' && provider !== 'frankfurter'" x-cloak>
+                    <div {{ vl.attrs('ecommerce', __('API Key'), 'fx_api_key', 'currency', __('Exchange Rates'), 'exchange rate api key') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('API Key') }}</label>
+                    <input type="text" name="fx_api_key"
+                           value="{{ settings.fx_api_key|default('') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
+                           placeholder="your-api-key-here">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Required for OpenExchangeRates and ExchangeRate-API.') }}</p>
+                    </div>
+                </div>
+                <div x-show="provider !== 'none'" x-cloak>
+                    <div {{ vl.attrs('ecommerce', __('Cache Duration (hours)'), 'fx_cache_hours', 'currency', __('Exchange Rates'), 'cache refresh interval hours') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Cache Duration (hours)') }}</label>
+                    <input type="number" min="1" max="168" name="fx_cache_hours"
+                           value="{{ settings.fx_cache_hours|default('24') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                    <p class="mt-1 text-xs text-gray-400">{{ __('How long to keep cached rates before fetching again. 24 h recommended. To disable conversion entirely, set Provider to "None".') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="provider !== 'none'" x-cloak class="flex items-center gap-6 flex-wrap">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                    {% if settings.fx_rates_updated_at|default('') %}
+                        {{ __('Last updated') }}: <span class="font-medium text-gray-700">{{ settings.fx_rates_updated_at }}</span>
+                        ({{ __('base') }}: <span class="font-medium">{{ settings.fx_rates_base|default(settings.currency|default('USD')) }}</span>)
+                    {% else %}
+                        <span class="text-amber-600">{{ __('Rates not yet fetched.') }}</span>
+                    {% endif %}
+                </div>
+                <button type="button" @click.prevent="refreshRates()" :disabled="fxLoading"
+                        :class="fxLoading ? 'opacity-50 cursor-not-allowed' : ''"
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-400 bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-hidden cursor-pointer transition-colors">
+                    <span style="display:inline-block; transform: scaleX(-1)">
+                        <svg class="h-4 w-4" :class="fxLoading ? 'animate-spin' : ''" :style="fxLoading ? 'animation-direction: reverse' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    </span>
+                    <span x-text="fxLoading ? '{{ __('Refreshing…')|e('js') }}' : '{{ __('Refresh Rates Now')|e('js') }}'">{{ __('Refresh Rates Now') }}</span>
+                </button>
+                <p x-show="fxResult" x-cloak x-text="fxResult"
+                   :class="fxOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                   class="w-full text-xs"></p>
+            </div>
+
+            {# ── Status messages ── #}
+            <div x-show="provider === 'none'" x-cloak
+                 class="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 px-4 py-3 text-sm text-gray-600">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20A10 10 0 0112 2z"/>
+                </svg>
+                <span>{{ __('Exchange rate conversion is disabled. All prices will be shown in the base currency only.') }}</span>
+            </div>
+
+            {% if cronConfig.cron_mode|default('none') == 'none' %}
+             <div x-show="provider !== 'none'" x-cloak
+                  class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <span>{{ __('Cron is currently disabled. Exchange rates will not be refreshed automatically. Enable a cron mode in') }} <a href="#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a> {{ __('to keep rates up to date, or use the') }} <strong>{{ __('Refresh Rates Now') }}</strong> {{ __('button above.') }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+    </form>
+    </div>{# /ec-tab-currency #}

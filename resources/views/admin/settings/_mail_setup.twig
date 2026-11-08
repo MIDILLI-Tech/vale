@@ -1,0 +1,230 @@
+    {# ══ Mail Setup sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="mail-tab-setup" class="mail-tab-panel hidden">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div class="lg:col-span-2">
+                <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+                    <form method="post" action="{{ url('/admin/mail') }}" class="space-y-5">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="_METHOD" value="PUT">
+                        <input type="hidden" name="_subtab" value="setup">
+
+                        <div {{ vl.attrs('mail', __('Driver'), 'mail_driver', 'setup', __('Mail Setup'), 'smtp phpmail resend mailgun sendgrid') }}>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Driver') }}</label>
+                            <select name="mail_driver" id="mail_driver_settings"
+                                    class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm"
+                                    onchange="
+                                        document.getElementById('smtp_fields_settings').style.display = this.value === 'smtp' ? 'block' : 'none';
+                                        document.getElementById('resend_fields_settings').style.display = this.value === 'resend' ? 'block' : 'none';
+                                        document.getElementById('unosend_fields_settings').style.display = this.value === 'unosend' ? 'block' : 'none';
+                                        document.getElementById('mailgun_fields_settings').style.display = this.value === 'mailgun' ? 'block' : 'none';
+                                        document.getElementById('sendgrid_fields_settings').style.display = this.value === 'sendgrid' ? 'block' : 'none';
+                                        var logCb = document.getElementById('mail_log_enabled_settings');
+                                        if (this.value === 'log') { logCb.checked = true; logCb.disabled = true; } else { logCb.disabled = false; }
+                                    ">
+                                <option value="log"     {{ mailConfig.mail_driver == 'log'     ? 'selected' }}>{{ __('Log (dev only)') }}</option>
+                                <option value="phpmail" {{ mailConfig.mail_driver == 'phpmail' ? 'selected' }}>PHP mail()</option>
+                                <option value="smtp"    {{ mailConfig.mail_driver == 'smtp'    ? 'selected' }}>SMTP</option>
+                                <option value="resend"  {{ mailConfig.mail_driver == 'resend'  ? 'selected' }}>Resend</option>
+                                <option value="unosend" {{ mailConfig.mail_driver == 'unosend' ? 'selected' }}>Unosend</option>
+                                <option value="mailgun" {{ mailConfig.mail_driver == 'mailgun' ? 'selected' }}>Mailgun</option>
+                                <option value="sendgrid" {{ mailConfig.mail_driver == 'sendgrid' ? 'selected' }}>SendGrid</option>
+                            </select>
+                            <a href="{{ url('/admin/mail/logs') }}"
+                               class="mt-2 inline-flex rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                {{ __('View Logs') }}
+                            </a>
+                        </div>
+
+                        <div {{ vl.attrs('mail', __('Log outgoing emails'), 'mail_log_enabled', 'setup', __('Mail Setup'), 'debug log mail') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
+                            <label class="flex items-center gap-3">
+                                <input type="hidden" name="mail_log_enabled" value="0">
+                                <input type="checkbox" name="mail_log_enabled" value="1"
+                                       {{ mailConfig.mail_log_enabled|default('1') == '1' ? 'checked' }}
+                                       {{ mailConfig.mail_driver == 'log' ? 'disabled' }}
+                                       id="mail_log_enabled_settings"
+                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Log outgoing emails') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Write a copy of every email to a log file. Useful for debugging.') }}</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        {# ── Batch Sending Settings ── #}
+                        <div {{ vl.attrs('mail', __('Batch Sending & Queue'), 'mail_batch_enabled', 'setup', __('Mail Setup'), 'batch bulk queue chunk limit') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-4" x-data="{ batchEnabled: {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'true' : 'false' }} }">
+                            <label class="flex items-center gap-3">
+                                <input type="hidden" name="mail_batch_enabled" value="0">
+                                <input type="checkbox" name="mail_batch_enabled" value="1"
+                                       {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'checked' }}
+                                       @change="batchEnabled = $event.target.checked"
+                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Use provider bulk API (faster)') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Sends each group in a single provider request. When off, emails go out one by one — queueing is not affected.') }}</span>
+                                </span>
+                            </label>
+
+                            {% if cronConfig.cron_mode|default('none') == 'none' %}
+                            <div x-show="batchEnabled" x-cloak
+                                 class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                                <span>{{ __('Batch sending delivers campaigns in chunks via cron. Cron is currently disabled, so queued campaigns will not progress. Enable a cron mode in') }} <a href="#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+                            </div>
+                            {% endif %}
+
+                            <div x-show="batchEnabled" x-cloak>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Max Batch Chunk Size') }}</label>
+                                <input type="number" name="mail_batch_size" value="{{ mailConfig.mail_batch_size|default('1000') }}" min="1" max="1000"
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Maximum number of emails processed per cron cycle, capped per driver (Mailgun/SendGrid/Log: 1000, SMTP: 500, Resend/Unosend: 100, PHP mail: 50).') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div {{ vl.attrs('mail', __('From Address'), 'mail_from_address', 'setup', __('Mail Setup'), 'sender email from address') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('From Address') }}</label>
+                                <input type="email" name="mail_from_address" value="{{ mailConfig.mail_from_address }}"
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                            </div>
+                            <div {{ vl.attrs('mail', __('From Name'), 'mail_from_name', 'setup', __('Mail Setup'), 'sender name from name') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('From Name') }}</label>
+                                <input type="text" name="mail_from_name" value="{{ mailConfig.mail_from_name }}"
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                            </div>
+                        </div>
+
+                        <div id="smtp_fields_settings" {% if mailConfig.mail_driver != 'smtp' %}style="display:none"{% endif %}
+                             class="space-y-4 rounded-lg border border-indigo-100 bg-gray-100 p-4 dark:border-indigo-900/50 dark:bg-gray-800/50">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100">SMTP</p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div {{ vl.attrs('mail', __('Host'), 'mail_smtp_host', 'setup', 'SMTP', 'smtp server hostname') }}>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Host') }}</label>
+                                    <input type="text" name="mail_smtp_host" value="{{ mailConfig.mail_smtp_host }}" placeholder="smtp.example.com"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                </div>
+                                <div {{ vl.attrs('mail', __('Port'), 'mail_smtp_port', 'setup', 'SMTP', 'smtp port 587 465') }}>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Port') }}</label>
+                                    <input type="number" name="mail_smtp_port" value="{{ mailConfig.mail_smtp_port|default('587') }}"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div {{ vl.attrs('mail', __('Username'), 'mail_smtp_user', 'setup', 'SMTP', 'smtp login username') }}>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Username') }}</label>
+                                    <input type="text" name="mail_smtp_user" value="{{ mailConfig.mail_smtp_user }}" autocomplete="off"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                </div>
+                                <div {{ vl.attrs('mail', __('Password'), 'mail_smtp_pass', 'setup', 'SMTP', 'smtp password credentials') }}>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Password') }}</label>
+                                    <input type="password" name="mail_smtp_pass" value="{{ mailConfig.mail_smtp_pass }}" autocomplete="new-password"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                </div>
+                            </div>
+                            <div {{ vl.attrs('mail', __('Encryption'), 'mail_smtp_encryption', 'setup', 'SMTP', 'tls ssl starttls encryption') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Encryption') }}</label>
+                                <select name="mail_smtp_encryption" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                    <option value="tls" {{ mailConfig.mail_smtp_encryption == 'tls' ? 'selected' }}>TLS (STARTTLS)</option>
+                                    <option value="ssl" {{ mailConfig.mail_smtp_encryption == 'ssl' ? 'selected' }}>SSL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="resend_fields_settings" {% if mailConfig.mail_driver != 'resend' %}style="display:none"{% endif %}
+                             class="space-y-4 rounded-lg border border-purple-100 bg-purple-50 p-4 dark:border-purple-900/50 dark:bg-purple-950/30">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Resend</p>
+                            <div {{ vl.attrs('mail', __('API Key'), 'mail_resend_api_key', 'setup', 'Resend', 'resend api key email') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
+                                <input type="password" name="mail_resend_api_key" value="{{ mailConfig.mail_resend_api_key }}"
+                                       autocomplete="new-password" placeholder="re_..."
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ __('Get your API key') }} <a href="{{ mail_drivers.resend.api_key_url }}" target="_blank" rel="noopener" class="text-purple-600 dark:text-purple-400 underline font-medium">{{ __('here') }}</a>.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div id="unosend_fields_settings" {% if mailConfig.mail_driver != 'unosend' %}style="display:none"{% endif %}
+                             class="space-y-4 rounded-lg border border-orange-100 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-950/30">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">Unosend</p>
+                            <div {{ vl.attrs('mail', __('API Key'), 'mail_unosend_api_key', 'setup', 'Unosend', 'unosend api key email') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
+                                <input type="password" name="mail_unosend_api_key" value="{{ mailConfig.mail_unosend_api_key }}"
+                                       autocomplete="new-password" placeholder="un_..."
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ __('Get your API key') }} <a href="{{ mail_drivers.unosend.api_key_url }}" target="_blank" rel="noopener" class="text-orange-600 dark:text-orange-400 underline font-medium">{{ __('here') }}</a>.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div id="mailgun_fields_settings" {% if mailConfig.mail_driver != 'mailgun' %}style="display:none"{% endif %}
+                             class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Mailgun</p>
+                            <div {{ vl.attrs('mail', __('API Key'), 'mail_mailgun_api_key', 'setup', 'Mailgun', 'mailgun api key email') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
+                                <input type="password" name="mail_mailgun_api_key" value="{{ mailConfig.mail_mailgun_api_key }}"
+                                       autocomplete="new-password" placeholder="key-..."
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ __('Get your API key') }} <a href="{{ mail_drivers.mailgun.api_key_url }}" target="_blank" rel="noopener" class="text-red-600 dark:text-red-400 underline font-medium">{{ __('here') }}</a>.
+                                </span>
+                            </div>
+                            <div {{ vl.attrs('mail', __('Domain'), 'mail_mailgun_domain', 'setup', 'Mailgun', 'domain mailgun') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Domain') }}</label>
+                                <input type="text" name="mail_mailgun_domain" value="{{ mailConfig.mail_mailgun_domain }}"
+                                       placeholder="mg.yourdomain.com"
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                            </div>
+                        </div>
+
+                        <div id="sendgrid_fields_settings" {% if mailConfig.mail_driver != 'sendgrid' %}style="display:none"{% endif %}
+                             class="space-y-4 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">SendGrid</p>
+                            <div {{ vl.attrs('mail', __('API Key'), 'mail_sendgrid_api_key', 'setup', 'SendGrid', 'sendgrid api key email') }}>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
+                                <input type="password" name="mail_sendgrid_api_key" value="{{ mailConfig.mail_sendgrid_api_key }}"
+                                       autocomplete="new-password" placeholder="SG.xxx..."
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {{ __('Get your API key') }} <a href="{{ mail_drivers.sendgrid.api_key_url }}" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 underline font-medium">{{ __('here') }}</a>.
+                                </span>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs">
+                    <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Send Test Email') }}</h3>
+                    <form method="post" action="{{ url('/admin/mail/test') }}" class="space-y-3">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="_subtab" value="setup">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Recipient') }}</label>
+                            <input type="email" name="test_to" placeholder="you@example.com"
+                                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                        </div>
+                        <button type="submit"
+                                class="w-full rounded-lg border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                            {{ __('Send Test') }}
+                        </button>
+                    </form>
+                </div>
+                <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                    <p class="font-semibold text-gray-700 dark:text-gray-300">{{ __('Driver guide') }}</p>
+                    <p><strong class="text-gray-500 dark:text-gray-400">Log</strong> — {{ __('saves full email to') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">storage/logs/mail.log</code>. {{ __('No mail sent.') }}</p>
+                    <p><strong class="text-gray-500 dark:text-gray-400">PHP mail()</strong> — {{ __('native PHP') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">mail()</code>. {{ __('Requires server sendmail / MTA.') }}</p>
+                    <p><strong class="text-indigo-600 dark:text-indigo-400">SMTP</strong> — {{ __('any SMTP server (Gmail, Mailgun, etc.).') }}</p>
+                    <p><strong class="text-purple-600 dark:text-purple-400">Resend</strong> — <a href="{{ mail_drivers.resend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">resend.com</a> API.</p>
+                    <p><strong class="text-orange-600 dark:text-orange-400">Unosend</strong> — <a href="{{ mail_drivers.unosend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">unosend.co</a> API.</p>
+                    <p><strong class="text-red-600 dark:text-red-400">Mailgun</strong> — <a href="{{ mail_drivers.mailgun.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">mailgun.com</a> API. {{ __('Requires a verified domain.') }}</p>
+                    <p><strong class="text-blue-600 dark:text-blue-400">SendGrid</strong> — <a href="{{ mail_drivers.sendgrid.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">sendgrid.com</a> API.</p>
+                </div>
+            </div>
+        </div>
+    </div>

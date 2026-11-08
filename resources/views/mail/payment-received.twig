@@ -1,0 +1,139 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Payment Received') }}{{ seo_title_separator }}#{{ order.orderNumber }}{% endblock %}
+
+{% block body %}
+{% if is_admin is defined and is_admin %}
+<h2 style="color:#059669;">&#x2714; {{ __('Payment Received') }}</h2>
+<p>{{ __('A payment has been received for order :number.', {':number': '<strong>#' ~ order.orderNumber ~ '</strong>'})|raw }}</p>
+{% else %}
+<h2 style="color:#059669;">&#x2714; {{ __('Payment Received!') }}</h2>
+<p>{{ __('Hi :name, we have received your payment. Your order is now being processed.', {':name': order.billing.first_name|default(__('there'))}) }}</p>
+{% endif %}
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Payment Status') }}</td>
+    <td style="padding:8px 0; font-weight:600; color:#059669;">{{ __('Paid') }}</td>
+  </tr>
+  {% if order.paidAt %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Paid At') }}</td>
+    <td style="padding:8px 0;">{{ order.paidAt|date('d M Y, H:i') }}</td>
+  </tr>
+  {% endif %}
+  {% if order.transactionId %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Transaction ID') }}</td>
+    <td style="padding:8px 0; font-family:monospace; font-size:13px;">{{ order.transactionId }}</td>
+  </tr>
+  {% endif %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+  {% if order.billing.email %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Email') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.email }}</td>
+  </tr>
+  {% endif %}
+  {% if order.billing.first_name %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Customer') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.first_name }} {{ order.billing.last_name }}</td>
+  </tr>
+  {% endif %}
+  {% if order.paymentMethod %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Payment Method') }}</td>
+    <td style="padding:8px 0; text-transform:capitalize;">{{ order.paymentMethod }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+{% if order.items %}
+<h3 style="margin:24px 0 12px; font-size:16px; color:{{ email_text }};">{{ __('Order Items') }}</h3>
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr style="border-bottom:2px solid {{ email_border }};">
+      <th style="padding:8px 0; text-align:left; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Product') }}</th>
+      <th style="padding:8px 0; text-align:center; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Qty') }}</th>
+      <th style="padding:8px 0; text-align:right; font-size:13px; color:{{ email_text_muted }}; font-weight:600;">{{ __('Price') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in order.items %}
+    <tr style="border-bottom:1px solid {{ email_border }};">
+      <td style="padding:8px 0; font-size:14px;">{{ item.name }}</td>
+      <td style="padding:8px 0; text-align:center; font-size:14px;">{{ item.quantity ?? item.qty }}</td>
+      <td style="padding:8px 0; text-align:right; font-size:14px;">{{ (item.price * (item.quantity ?? item.qty))|price(order.currency) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="2" style="padding:12px 0; text-align:right; font-weight:700; font-size:14px;">{{ __('Total') }}</td>
+      <td style="padding:12px 0; text-align:right; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+    </tr>
+  </tfoot>
+</table>
+{% endif %}
+
+{% if is_admin is defined and is_admin %}
+<a href="{{ site_url ~ '/admin/orders/' ~ order.id }}" class="btn">{{ __('View Order') }}</a>
+{% else %}
+{% if downloads is defined and downloads|length > 0 %}
+<h3 style="margin:28px 0 12px; font-size:16px; color:{{ email_text }};">⬇ {{ __('Downloads') }}</h3>
+<p style="margin:0 0 10px; font-size:13px; color:{{ email_text_muted }};">{{ __('You have :count downloadable file(s) in this order.', {':count': downloads|length}) }}</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin-bottom:24px;">
+  {% for dl in downloads %}
+  <tr>
+    <td style="padding:10px 0; border-bottom:1px solid {{ email_border }}; font-size:14px; color:{{ email_text }};">
+      <div style="font-weight:600;">{{ dl.product_name }}</div>
+      <div style="margin-top:3px; font-size:12px; color:{{ email_text_muted }};">
+        {% if dl.download_limit > 0 %}
+          {{ __('Remaining rights: :remaining / :limit', {':remaining': dl.download_limit - dl.download_count, ':limit': dl.download_limit}) }}
+        {% else %}
+          {{ __('Remaining rights: Unlimited') }}
+        {% endif %}
+        {% if dl.expires_at %}
+          &nbsp;•&nbsp; {{ __('Valid until: :date', {':date': dl.expires_at|date('d M Y, H:i')}) }}
+        {% else %}
+          &nbsp;•&nbsp; {{ __('No expiry date') }}
+        {% endif %}
+      </div>
+    </td>
+    <td style="padding:10px 0; border-bottom:1px solid {{ email_border }}; text-align:right;">
+      {% if not dl.revoked and (dl.download_limit == 0 or dl.download_count < dl.download_limit) %}
+      <a href="{{ site_url ~ '/downloads/' ~ dl.token }}" class="btn" style="display:inline-block; padding:6px 14px; font-size:13px;">{{ __('Download') }}</a>
+      {% else %}
+      <span style="color:{{ email_text_muted }}; font-size:13px;">{{ __('Unavailable') }}</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+<p style="margin-top:24px;">{{ __('If you have any questions about your order, please reply to this email.') }}</p>
+{% if order_status_url is defined and order_status_url %}
+<p style="margin-top:12px;">
+  <a href="{{ order_status_url }}" class="btn" style="display:inline-block; padding:10px 16px; font-size:14px;">{{ __('Track Order & Refund Status') }}</a>
+</p>
+{% endif %}
+
+{% if policy_links is defined and policy_links|length > 0 %}
+{% set _policyMailLinks = [] %}
+{% if policy_links.terms is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.terms ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
+{% if policy_links.privacy is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.privacy ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
+{% if policy_links.returns is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.returns ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+<div style="margin-top:24px; padding-top:16px; border-top:1px solid {{ email_border }}; font-size:12px; color:{{ email_text_muted }}; text-align:center;">
+    {{ _policyMailLinks|join('')|raw }}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Membership Plans') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Choose the membership plan that best fits your needs and unlock premium access.') }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="mb-2 text-3xl font-bold text-gray-900">{{ __('Membership Plans') }}</h1>
+    <p class="mb-10 text-gray-500">{{ __('Choose the plan that best fits your needs.') }}</p>
+
+    {% if active_subscription %}
+    {% set is_cancelling = active_subscription.status == 'cancelling' %}
+    <div class="account-card {{ is_cancelling ? 'account-card-warning' : 'account-card-muted' }} mb-10 rounded-lg border p-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="account-text text-lg font-semibold {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Your Subscription') }}</h2>
+                {% if active_subscription.plan %}
+                    <p class="mt-2 {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">
+                    <strong>{{ active_subscription.plan.name }}</strong>
+                    {% if active_subscription.trial_ends_at %}
+                    &mdash; {{ __('Trial ends') }}: {% include 'partials/_vtime.twig' with {value: active_subscription.trial_ends_at, style: 'short'} %}
+                    {% endif %}
+                    {% if active_subscription.expires_at %}
+                    &mdash; {{ __('Expires') }}: {% include 'partials/_vtime.twig' with {value: active_subscription.expires_at, style: 'short'} %}
+                    {% endif %}
+                </p>
+                {% endif %}
+                <p class="mt-1 text-sm {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Status') }}:
+                    {% if is_cancelling %}
+                    <span class="account-badge-warning inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        {{ __('Cancelling') }}
+                    </span>
+                    {% else %}
+                    <span class="account-badge-success inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        {{ active_subscription.status|capitalize }}
+                    </span>
+                    {% endif %}
+                </p>
+                {% if is_cancelling and active_subscription.expires_at %}
+                <p class="mt-2 text-sm account-card-warning-text">{{ __('Your access will continue until') }} <strong>{% include 'partials/_vtime.twig' with {value: active_subscription.expires_at, style: 'short'} %}</strong>.</p>
+                {% endif %}
+            </div>
+            {% if not is_cancelling %}
+            <form method="POST" action="{{ url('/membership/cancel') }}" onsubmit="return confirm('{{ __('Are you sure you want to cancel your subscription?') }}')">
+                {{ csrf_field() }}
+                <button type="submit"
+                        class="account-danger-button rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                    {{ __('Cancel Subscription') }}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="flex flex-wrap justify-center gap-8">
+        {% for plan in plans %}
+        <div class="flex flex-col w-full md:w-80 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+            <div class="flex-1">
+                <h3 class="text-xl font-bold text-gray-900">{{ plan.name }}</h3>
+                {% if plan.description %}
+                <p class="mt-2 text-sm text-gray-500">{{ plan.description }}</p>
+                {% endif %}
+
+                <p class="mt-6">
+                    <span class="text-4xl font-extrabold text-gray-900">{{ currency_symbol }}{{ plan.price|number_format(2) }}</span>
+                    <span class="text-sm text-gray-500"> / {{ plan.intervalLabel }}</span>
+                </p>
+
+                {% if plan.tag %}
+                <p class="mt-2 text-xs text-gray-400">{{ __('Includes tag') }}: <strong>{{ plan.tag }}</strong></p>
+                {% endif %}
+
+                {% if plan.trialDays > 0 %}
+                {% set _trialPrice = plan.trialPrice|default('0.00') %}
+                <p class="mt-2 text-sm account-card-muted-text">{% if _trialPrice > 0 %}{{ __(':days days — :price', {':days': plan.trialDays, ':price': currency_symbol ~ _trialPrice|number_format(2)}) }}{% else %}{{ __(':days day free trial', {':days': plan.trialDays}) }}{% endif %}</p>
+                {% endif %}
+            </div>
+
+            <a href="{{ url('/membership/checkout/' ~ plan.id) }}"
+               class="mt-auto block w-full rounded-lg btn-primary py-3 text-center text-sm font-bold transition-colors">
+                {{ __('Subscribe') }}
+            </a>
+        </div>
+        {% else %}
+        <div class="w-full text-center text-gray-400">
+            {{ __('No membership plans are available at this time.') }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if user is defined %}
+    <div class="mt-10 text-center">
+        <a href="{{ url(routing_account_prefix ~ '/orders') }}" class="account-link text-sm">{{ __('View full order history') }}</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

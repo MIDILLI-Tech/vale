@@ -1,0 +1,30 @@
+{#
+    Labels of the UTM card, shared by the panel headings (utm_body.twig) and by
+    the active-filter chips (utm_filters.twig).
+
+    They live in macros so every label stays a single statically extractable
+    translation key and the two surfaces can never drift apart.
+#}
+{% macro title(key) %}
+    {%- set titles = {
+        source: __('Top Sources'),
+        medium: __('Top Mediums'),
+        campaign: __('Top Campaigns'),
+        term: __('Top Terms'),
+        content: __('Top Content'),
+        destination: __('Top Destinations'),
+    } -%}
+    {{- titles[key]|default(key) -}}
+{% endmacro %}
+
+{% macro empty(key) %}
+    {%- set messages = {
+        source: __('No source data yet.'),
+        medium: __('No medium data yet.'),
+        campaign: __('No campaign data yet.'),
+        term: __('No term data yet.'),
+        content: __('No content data yet.'),
+        destination: __('No destination data yet.'),
+    } -%}
+    {{- messages[key]|default(__('No data yet.')) -}}
+{% endmacro %}

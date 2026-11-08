@@ -1,0 +1,84 @@
+{% extends "mail/layout.twig" %}
+
+{% set is_bt = is_bank_transfer is defined and is_bank_transfer %}
+
+{% block title %}{{ is_bt ? __('Bank Transfer Instructions') : __('Payment Link') }}{{ seo_title_separator }}{{ __('Order #:number', {':number': order.orderNumber}) }}{% endblock %}
+
+{% block body %}
+<h2 style="margin:0 0 16px; font-size:20px; color:{{ email_text }};">{{ is_bt ? __('Complete Your Payment by Bank Transfer') : __('Complete Your Payment') }}</h2>
+
+<p style="margin:0 0 12px; font-size:14px; color:{{ email_text }};">
+    {{ __('Hi :name,', {':name': order.billing.first_name|default(__('there'))}) }}
+</p>
+
+{% if is_bt %}
+<p style="margin:0 0 20px; font-size:14px; color:{{ email_text }};">
+    {{ __('To complete your order, please transfer the total amount to our bank account using the details below.', {':number': order.orderNumber}) }}
+</p>
+{% else %}
+<p style="margin:0 0 20px; font-size:14px; color:{{ email_text }};">
+    {{ __('Click the button below to complete your payment for Order #:number.', {':number': order.orderNumber}) }}
+</p>
+{% endif %}
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Total') }}</td>
+    <td style="padding:8px 0; font-weight:700;">{{ order.total|price(order.currency) }}</td>
+  </tr>
+</table>
+
+{% if is_bt and banktransfer_iban is defined and banktransfer_iban %}
+<div style="margin:20px 0; padding:16px; background:#fef3c7; border:1px solid #fde68a; border-radius:8px;">
+  <h3 style="margin:0 0 10px; font-size:15px; color:#92400e;">{{ __('Bank Transfer Details') }}</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:14px;">
+    {% if banktransfer_bank %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Bank') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_bank }}</td></tr>
+    {% endif %}
+    {% if banktransfer_holder %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Account Holder') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_holder }}</td></tr>
+    {% endif %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('IBAN / Account Number') }}</td><td style="padding:4px 0; font-weight:700; font-family:monospace; color:{{ email_text }};">{{ banktransfer_iban }}</td></tr>
+    {% if banktransfer_swift %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('SWIFT') }}</td><td style="padding:4px 0; font-weight:600; font-family:monospace; color:{{ email_text }};">{{ banktransfer_swift }}</td></tr>
+    {% endif %}
+    {% if banktransfer_routing %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Routing (ABA)') }}</td><td style="padding:4px 0; font-weight:600; font-family:monospace; color:{{ email_text }};">{{ banktransfer_routing }}</td></tr>
+    {% endif %}
+    {% if banktransfer_branch %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Branch') }}</td><td style="padding:4px 0; font-weight:600; color:{{ email_text }};">{{ banktransfer_branch }}</td></tr>
+    {% endif %}
+    <tr><td style="padding:4px 0; color:{{ email_text_muted }};">{{ __('Reference / Description') }}</td><td style="padding:4px 0; font-weight:600; font-family:monospace; color:{{ email_text }};">#{{ order.orderNumber }}</td></tr>
+  </table>
+  {% if banktransfer_desc %}
+  <p style="margin:8px 0 0; font-size:13px; color:{{ email_text_muted }};">{{ banktransfer_desc }}</p>
+  {% endif %}
+  <p style="margin:8px 0 0; font-size:12px; color:#92400e;">
+    {% set due_date = order.createdAt|date('U') + (banktransfer_max_days * 86400) %}
+    {{ __('Please complete your transfer within :days days. Your order will be cancelled if payment is not received by :date.', {':days': banktransfer_max_days, ':date': due_date|date('M j, Y')}) }}
+  </p>
+</div>
+{% endif %}
+
+<div style="text-align:center; margin:24px 0;">
+    <a href="{{ payment_link }}"
+       class="btn" style="padding:14px 32px; border-radius:8px; font-size:15px;">
+        {{ is_bt ? __('View Payment Instructions') : __('Click to Complete Payment') }}
+    </a>
+</div>
+
+{% if is_bt %}
+<p style="margin:0 0 24px; font-size:12px; color:{{ email_text_muted }};">{{ __('The button above opens your order page where you can review these details again.') }}</p>
+{% else %}
+<p style="margin:16px 0 4px; font-size:12px; color:{{ email_text_muted }};">{{ __("If the button above doesn't work, copy and paste this link into your browser:") }}</p>
+<p style="margin:0 0 24px; font-size:12px; color:{{ email_text_muted }}; word-break:break-all; line-height:1.5;">{{ payment_link }}</p>
+{% endif %}
+
+<p style="margin-top:24px; font-size:13px; color:{{ email_text_muted }};">
+    {{ __('If you have any questions about your order, please reply directly to this email.') }}
+</p>
+{% endblock %}

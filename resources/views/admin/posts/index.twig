@@ -1,0 +1,221 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ type ? type.name : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}{% endblock %}
+
+{% set contentTypes = contentTypes|default([]) %}
+{% set contentType = filters.content_type|default('post') %}
+{% set cptEnabled = cptEnabled|default(false) %}
+
+{% block content %}
+{% set allIds = posts|map(p => p.id) %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ type ? type.name : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('items total') }}</p>
+    </div>
+    <a href="{{ url('/admin/posts/create?content_type=' ~ (type.slug.value|default('post'))) }}"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        {{ __('Create') }} {{ type ? type.name : __('Post') }}
+    </a>
+</div>
+
+{# Filters #}
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {% if cptEnabled or blog_enabled|default(true) %}
+    <select onchange="window.location.href=this.value"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        {% if blog_enabled|default(true) %}
+        <option value="{{ url('/admin/posts?content_type=post') }}" {{ contentType == 'post' ? 'selected' }}>{{ __('Posts') }}</option>
+        {% endif %}
+        {% for ct in contentTypes %}
+            {% if not ct.isSystem %}
+            <option value="{{ url('/admin/posts?content_type=' ~ ct.slug.value) }}" {{ contentType == ct.slug.value ? 'selected' }}>{{ ct.name }}</option>
+            {% endif %}
+        {% endfor %}
+        <option value="{{ url('/admin/posts?content_type=all') }}" {{ contentType == 'all' ? 'selected' }}>{{ __('All') }}</option>
+    </select>
+    {% endif %}
+    <form method="get" action="{{ url('/admin/posts') }}" class="flex items-center gap-2">
+        <input type="hidden" name="content_type" value="{{ type.slug.value|default('all') }}">
+        <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">{{ __('All Statuses') }}</option>
+            {% set _sa = user.role is defined and user.role == 'super_admin' %}
+            {% set _can_publish = _sa or (user_permissions is defined and 'posts.publish' in user_permissions) %}
+            {% for s in ['draft', 'published', 'unlisted', 'scheduled', 'archived', 'expired', 'trash'] %}
+            {% if s not in ['published', 'unlisted', 'scheduled', 'archived'] or _can_publish or filters.status|default('') == s %}
+            <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
+            {% endif %}
+            {% endfor %}
+        </select>
+        {% if multi_language_content %}
+        <select name="language" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">{{ __('All Languages') }}</option>
+            {% for code, name in supported_locales %}
+                <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">{{ __('Filter') }}</button>
+    </form>
+    {{ table.search(__('Search') ~ '…') }}
+    {{ table.contentSearch() }}
+    {{ table.columnsToggle() }}
+</div>
+
+{% if filterTagName %}
+<div class="mb-4">
+    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-800 px-3 py-1 text-sm font-medium dark:bg-blue-900/40 dark:text-blue-300">
+        {{ __('Tag') }}: {{ filterTagName }}
+        <a href="{{ url('/admin/posts?content_type=' ~ (type ? type.slug.value : 'all')) }}" class="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200">&times;</a>
+    </span>
+</div>
+{% elseif filterCategoryName %}
+<div class="mb-4">
+    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 text-green-800 px-3 py-1 text-sm font-medium dark:bg-green-900/40 dark:text-green-300">
+        {{ __('Category') }}: {{ filterCategoryName }}
+        <a href="{{ url('/admin/posts?content_type=' ~ (type ? type.slug.value : 'all')) }}" class="text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200">&times;</a>
+    </span>
+</div>
+{% endif %}
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th(__('Title'), 'title') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
+                {{ table.th(__('Status'), 'status', 'center') }}
+                {{ table.th(__('Author'), 'author_id') }}
+                {{ table.th('Categories', 'categories') }}
+                {{ table.th('Tags', 'tags') }}
+                {{ table.th(__('Created'), 'created_at') }}
+                {{ table.th(__('Updated'), 'updated_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for p in posts %}
+            {% set catNames = p.categoryIds|map(cid => categoryMap[cid]|default(''))|join(', ') %}
+            {% set tagNames = p.tagIds|map(tid => tagMap[tid]|default(''))|join(', ') %}
+            <tr data-row-id="{{ p.id }}" data-sort="{{ {title: p.title, status: p.status, author_id: p.authorId, categories: catNames, tags: tagNames, created_at: p.createdAt ? p.createdAt.format('Y-m-d H:i:s') : '', updated_at: p.updatedAt ? p.updatedAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(p.id) }}
+                <td class="px-6 py-4">
+                    <a href="{{ url('/admin/posts/' ~ p.id ~ '/edit') }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ p.title }}</a>
+                    <p class="text-xs text-gray-400">/{{ p.slug }}</p>
+                </td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 text-center">
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 uppercase">
+                        {{ p.language }}
+                    </span>
+                </td>
+                {% endif %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-center">
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium
+                        {% if p.status == 'published' %}bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300
+                        {% elseif p.status == 'draft' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300
+                        {% elseif p.status == 'unlisted' %}bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300
+                        {% elseif p.status == 'expired' %}bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300
+                        {% elseif p.status == 'archived' %}bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400
+                        {% elseif p.status == 'trash' %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300
+                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                        {{ p.status|capitalize }}
+                    </span>
+                    {% if p.status in ['draft', 'unlisted'] and p.publishedAt and p.publishedAt|date('Y-m-d H:i:s') > "now"|date('Y-m-d H:i:s') %}
+                    <span class="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">({{ __('scheduled')|capitalize }})</span>
+                    {% endif %}
+                    {% if p.status == 'scheduled' and not p.publishedAt %}
+                    <span class="mt-1 block inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/40 dark:text-red-300" title="{{ __('No publish date set — this item will never publish automatically') }}">{{ __('No date') }}</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
+                    {{ userMap[p.authorId] ?? '—' }}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                    {% if p.categoryIds %}
+                    <div class="flex w-full flex-wrap justify-center gap-1">
+                        {% for cid in p.categoryIds %}
+                            {% set catName = categoryMap[cid]|default('') %}
+                            {% if catName %}
+                            <a href="{{ url('/admin/posts?content_type=' ~ (p.contentType|default('post')) ~ '&category_id=' ~ cid) }}"
+                               title="{{ __('See what else shares this category') }}"
+                               class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">{{ catName }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <span class="text-gray-300">—</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                    {% if p.tagIds %}
+                    <div class="flex w-full flex-wrap justify-center gap-1">
+                        {% set visible = p.tagIds|slice(0, 5) %}
+                        {% set remaining = p.tagIds|slice(5) %}
+                        {% for tid in visible %}
+                            {% set tagName = tagMap[tid]|default('') %}
+                            {% if tagName %}
+                            <a href="{{ url('/admin/posts?content_type=' ~ (p.contentType|default('post')) ~ '&tag_id=' ~ tid) }}"
+                               title="{{ __('See what else shares this tag') }}"
+                               class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">{{ tagName }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if remaining %}
+                            {% set moreNames = remaining|map(tid => tagMap[tid]|default(''))|filter(v => v)|join(', ') %}
+                            <span class="inline-flex items-center justify-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-400 cursor-default" title="{{ moreNames }}">+{{ remaining|length }}</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                        <span class="text-gray-300">—</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.createdAt ? p.createdAt.format('M j, Y') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {{ p.updatedAt ? p.updatedAt.format('M j, Y') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                    <div class="inline-flex items-center gap-2">
+                        {% set _view_url = view_url_map[p.id]|default('') %}
+                        {% if _view_url and p.status not in ['draft', 'archived', 'expired'] %}
+                        <a href="{{ absolute_url(_view_url) }}" target="_blank" rel="noopener"
+                           title="{{ _view_url|e }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
+                        {% endif %}
+                        <a href="{{ url('/admin/posts/' ~ p.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                        <form method="post" action="{{ url('/admin/posts/' ~ p.id ~ '/clone') }}" class="inline">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Clone') }}</button>
+                        </form>
+                        <form method="post" action="{{ url('/admin/posts/' ~ p.id) }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No posts found.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'posts', extraActions: [
+    {label: __('Publish'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+    {label: __('Unlisted'), action: 'unlisted', class: 'bg-purple-600/10 text-purple-700 dark:text-purple-400 hover:bg-purple-600/20'},
+    {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},
+]} %}
+</div>
+{% endblock %}

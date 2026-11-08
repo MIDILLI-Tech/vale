@@ -1,0 +1,46 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # composer.json requires ^8.3, which already allows 8.4/8.5 — the
+        # images ship 8.5, so 8.4 and 8.5 must also stay green to keep
+        # "minimum 8.3" an honest claim.
+        php: ['8.3', '8.4', '8.5']
+    name: tests (php ${{ matrix.php }})
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: zip, sodium, pdo, pdo_mysql
+          tools: composer:v2
+          ini-values: memory_limit=1G
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Run JS syntax check
+        run: composer lint:js
+
+      - name: Run PHPUnit
+        run: php vendor/bin/phpunit --display-deprecations --display-notices --fail-on-deprecation --fail-on-notice
+        env:
+          VL_DB_PREFIX: test_

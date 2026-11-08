@@ -1,0 +1,294 @@
+{% extends "layout.twig" %}
+
+{% block meta_description %}{{ __('Thank you for your purchase. View your order details.') }}{% endblock %}
+
+{% set is_confirmed = order and order.status in ['processing', 'completed', 'shipped'] %}
+{% set is_pending = order and order.status == 'pending' %}
+{% set is_cancelled = order and order.status in ['cancelled', 'refunded', 'failed'] %}
+
+{% block title %}{% if is_confirmed %}{{ __('Order Confirmed') }}{% elseif is_pending %}{{ __('Payment Pending') }}{% else %}{{ __('Order') }}{% endif %}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 py-16 text-center">
+    {% if is_confirmed %}
+    <div class="mb-6 flex items-center justify-center">
+        <div class="rounded-full bg-green-100 p-4">
+            <svg class="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+    </div>
+    <h1 class="mb-3 text-3xl font-bold text-gray-900">{{ __('Thank You!') }}</h1>
+    <p class="mb-8 text-gray-600">{{ __('Your order has been placed and is being processed.') }}</p>
+
+    {% elseif is_pending %}
+    <div class="mb-6 flex items-center justify-center">
+        <div class="rounded-full bg-amber-100 p-4">
+            <svg class="h-12 w-12 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+    </div>
+    <h1 class="mb-3 text-3xl font-bold text-gray-900">{{ __('Payment Pending') }}</h1>
+    <p class="mb-8 text-gray-600">{{ __('Your payment is awaiting confirmation. You will receive an email once confirmed.') }}</p>
+
+    {% if order.paymentMethod == 'banktransfer' and banktransfer_iban %}
+    <div class="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-6 text-left shadow-xs">
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-amber-700">{{ __('Bank Transfer Details') }}</h2>
+        <div class="space-y-2 text-sm">
+            {% if banktransfer_bank %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('Bank') }}:</span><span class="font-medium text-gray-800">{{ banktransfer_bank }}</span></div>
+            {% endif %}
+            {% if banktransfer_holder %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('Account Holder') }}:</span><span class="font-medium text-gray-800">{{ banktransfer_holder }}</span></div>
+            {% endif %}
+            {% if banktransfer_iban %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('IBAN / Account Number') }}:</span><span class="font-mono font-bold text-gray-900">{{ banktransfer_iban }}</span></div>
+            {% endif %}
+            {% if banktransfer_swift %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('SWIFT') }}:</span><span class="font-mono font-medium text-gray-800">{{ banktransfer_swift }}</span></div>
+            {% endif %}
+            {% if banktransfer_routing %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('Routing (ABA)') }}:</span><span class="font-mono font-medium text-gray-800">{{ banktransfer_routing }}</span></div>
+            {% endif %}
+            {% if banktransfer_branch %}
+            <div class="flex justify-between"><span class="text-gray-500">{{ __('Branch') }}:</span><span class="font-medium text-gray-800">{{ banktransfer_branch }}</span></div>
+            {% endif %}
+            {% if banktransfer_desc %}
+            <div class="pt-2 border-t border-amber-200 text-gray-600">{{ banktransfer_desc }}</div>
+            {% endif %}
+            <div class="pt-2 border-t border-amber-200 text-xs text-gray-500">
+                {% set due_date = order.createdAt|date('U') + (banktransfer_max_days * 86400) %}
+                {{ __('Please complete your transfer within :days days. Your order will be cancelled if payment is not received by :date.', {':days': banktransfer_max_days, ':date': due_date|date('M j, Y')}) }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% elseif is_cancelled %}
+    <div class="mb-6 flex items-center justify-center">
+        <div class="rounded-full bg-red-100 p-4">
+            <svg class="h-12 w-12 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </div>
+    </div>
+    <h1 class="mb-3 text-3xl font-bold text-gray-900">{{ __('Order Cancelled') }}</h1>
+    <p class="mb-8 text-gray-600">{{ __('Your order has been cancelled.') }}</p>
+    {% endif %}
+
+    {% if order and order.paymentMethod == 'banktransfer' and order.status in ['pending', 'on-hold'] and order.paymentToken %}
+    {% if already_claimed|default(false) %}
+    <div class="mb-8 rounded-lg bg-blue-50 border border-blue-200 p-4 text-blue-700 text-sm text-left">
+        {{ __('You have already notified us of your transfer. We will confirm it as soon as possible.') }}
+    </div>
+    {% else %}
+    <form method="POST" action="{{ url('/pay/' ~ order.paymentToken ~ '/claim') }}" class="mb-8 rounded-xl border bg-white p-6 text-left shadow-xs">
+        {{ csrf_field() }}
+        <p class="mb-3 text-xs text-gray-500">{{ __('Already sent the transfer? Let us know so we can verify it faster.') }}</p>
+        <button type="submit"
+                class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+            {{ __("I've Sent the Transfer") }}
+        </button>
+    </form>
+    {% endif %}
+    {% endif %}
+
+    {% if order %}
+    <div class="mb-8 rounded-xl border bg-white p-6 text-left shadow-xs">
+        <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">{{ __('Order Details') }}</h2>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+            <span class="text-gray-500">{{ __('Order number') }}</span>
+            <span class="font-mono font-medium">#{{ order.orderNumber }}</span>
+
+            <span class="text-gray-500">{{ __('Status') }}</span>
+            {% if is_confirmed %}
+            <span class="capitalize font-medium text-green-700">{{ order.status }}</span>
+            {% elseif is_pending %}
+            <span class="capitalize font-medium text-amber-700">{{ __('Pending Payment') }}</span>
+            {% elseif is_cancelled %}
+            <span class="capitalize font-medium text-red-700">{{ order.status }}</span>
+            {% else %}
+            <span class="capitalize font-medium text-gray-700">{{ order.status }}</span>
+            {% endif %}
+
+            <span class="text-gray-500">{{ __('Total') }}</span>
+<span class="font-bold">{{ order.total|price(order.currency) }}</span>
+
+            {% if order.tax > 0 %}
+            <span class="text-gray-500">{{ __('Included Tax') }}</span>
+            <span>{{ order.tax|price(order.currency) }}</span>
+            {% elseif tax_policy is defined and tax_policy.zero_reason|default('') != '' %}
+            <span class="text-gray-500">{{ __('Tax') }}</span>
+            <span>{{ 0|price(order.currency) }}</span>
+            <span class="col-span-2 text-xs text-gray-500">{{ tax_policy.zero_reason }}</span>
+            {% endif %}
+
+            {% if order.billing.email %}
+            <span class="text-gray-500">{{ __('Confirmed to') }}</span>
+            <span>{{ order.billing.email }}</span>
+            {% endif %}
+
+            {% set sa = order.shippingAddress %}
+            {% if sa is not empty and (sa.first_name|default('') != '' or sa.address|default('') != '') %}
+            <span class="text-gray-500">{{ __('Shipping') }}</span>
+            <span class="text-sm">
+                {{ sa.first_name|default('') }} {{ sa.last_name|default('') }}<br>
+                {% if sa.company|default('') %}{{ sa.company }}<br>{% endif %}
+                {{ sa.address|default('') }}<br>
+                {% if sa.address_2|default('') %}{{ sa.address_2 }}<br>{% endif %}
+                {{ sa.city|default('') }}{% if sa.state|default('') %}, {{ sa.state }}{% endif %} {{ sa.postcode|default('') }}<br>
+                {{ sa.country|default('') }}
+            </span>
+            {% endif %}
+
+            {% if order.carrier and order.trackingNumber %}
+            <span class="text-gray-500">{{ __('Tracking') }}</span>
+            <span>
+                {% if tracking_url %}
+                <a href="{{ tracking_url }}" target="_blank" rel="noopener noreferrer"
+                   class="text-blue-600 hover:text-blue-800 hover:underline">
+                    {{ order.carrier|replace({'_': ' '})|title }} — {{ order.trackingNumber }}
+                </a>
+                {% else %}
+                <span class="text-gray-700">{{ order.carrier }} — {{ order.trackingNumber }}</span>
+                {% endif %}
+            </span>
+            {% endif %}
+        </div>
+
+        {% if order.items %}
+        <div class="mt-5 border-t pt-4">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Items') }}</h3>
+            {% for item in order.items %}
+            <div class="py-2 text-sm border-b last:border-b-0">
+                <div class="flex justify-between gap-2">
+                    <span class="font-medium text-gray-800">{{ item.name }} &times; {{ item.quantity }}</span>
+                    <span class="shrink-0">{{ (item.price * item.quantity)|price(order.currency) }}</span>
+                </div>
+                {% if item.variation_data|default({})|length > 0 %}
+                <div class="mt-0.5 text-xs text-gray-500 space-y-0.5">
+                    {% for attr, val in item.variation_data %}
+                    <div>{{ attr }}: <span class="font-medium text-gray-700">{{ val }}</span></div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% set _show_refund_section = refund_request_eligible|default(false) or (refund_request is defined and refund_request and refund_request.status in ['refund_requested', 'refund_rejected', 'cancelled']) %}
+        {% if _show_refund_section %}
+        <div class="mt-5 border-t pt-4">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Cancellation / Refund Request') }}</h3>
+            {% if refund_request is defined and refund_request %}
+                {% if refund_request.status == 'refund_requested' %}
+                    <p class="text-sm text-amber-700">{{ __('Your request is pending admin review.') }}</p>
+                    {% if refund_request.requested_at %}
+                    <p class="mt-1 text-xs text-gray-500">{{ __('Requested at') }}: {{ refund_request.requested_at }}</p>
+                    {% endif %}
+                {% elseif refund_request.status == 'refund_rejected' %}
+                    <p class="text-sm text-red-700">{{ __('Your request was rejected.') }}</p>
+                    {% if refund_request.reason %}
+                    <p class="mt-1 text-xs text-gray-600">{{ __('Reason') }}: {{ refund_request.reason }}</p>
+                    {% endif %}
+                {% elseif refund_request.status == 'cancelled' %}
+                    <p class="text-sm text-green-700">{{ __('Your request was approved and order cancelled.') }}</p>
+                {% endif %}
+            {% endif %}
+
+            {% if refund_request_eligible|default(false) and (refund_request.status|default('') != 'refund_requested') and (refund_request.status|default('') != 'cancelled') %}
+            {% if refund_request.has_non_refundable|default(false) %}
+            <div class="mb-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                ⚠️ {{ __('This order contains item(s) that are non-refundable or have been downloaded. Cancellation / refund review will only apply to eligible items.') }}
+                {% if refund_request.non_refundable_reasons|default([])|length > 0 %}
+                <ul class="mt-1 list-disc list-inside text-[11px] text-amber-700">
+                    {% for r in refund_request.non_refundable_reasons %}
+                    <li>{{ r }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endif %}
+            <form method="POST" action="{{ url(routing_checkout_prefix ~ '/request-refund') }}" class="mt-3 space-y-2">
+                {{ csrf_field() }}
+                <input type="hidden" name="order_number" value="{{ order.orderNumber }}">
+                <input type="hidden" name="email" value="{{ order.billing.email|default('') }}">
+                <label class="block text-xs font-medium text-gray-600">{{ __('Reason (optional)') }}</label>
+                <textarea name="reason" rows="3"
+                          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                          placeholder="{{ __('Tell us why you want to cancel this order.') }}"></textarea>
+                <button type="submit"
+                        class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100">
+                    {{ __('Request Cancellation / Refund') }}
+                </button>
+            </form>
+            {% elseif refund_request is defined and refund_request.deadline %}
+            <p class="mt-2 text-xs text-gray-500">{{ __('Request window deadline') }}: {{ refund_request.deadline }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if downloads is defined and downloads|length > 0 %}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-5 text-left dark:border-gray-700 dark:bg-gray-800/30">
+        <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {{ __('Downloads') }}
+        </h3>
+        <p class="mb-3 text-xs text-zinc-600">{{ __('You have :count downloadable file(s) in this order.', {':count': downloads|length}) }}</p>
+        <ul class="space-y-3">
+            {% for dl in downloads %}
+            <li class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-xs dark:bg-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <span class="text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ dl.product_name }}</span>
+                    <div class="mt-0.5 text-xs text-zinc-500">
+                        {% if dl.download_limit > 0 %}
+                        {{ __('Remaining rights') }}: {{ dl.download_limit - dl.download_count }} / {{ dl.download_limit }}
+                        {% else %}
+                        {{ __('Remaining rights') }}: {{ __('Unlimited') }}
+                        {% endif %}
+                        {% if dl.expires_at %}
+                        · {{ __('Valid until') }}: {% include 'partials/_vtime.twig' with {value: dl.expires_at, style: 'medium', withTime: true} %}
+                        {% else %}
+                        · {{ __('No expiry date') }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if dl.download_limit > 0 %}
+                    <span class="text-xs text-zinc-500">
+                        {{ dl.download_count }}/{{ dl.download_limit }} {{ __('downloads used') }}
+                    </span>
+                    {% endif %}
+                    {% if dl.expires_at %}
+                    <span class="text-xs text-zinc-500">{{ __('Expires') }}: {% include 'partials/_vtime.twig' with {value: dl.expires_at, style: 'short'} %}</span>
+                    {% endif %}
+                    {% if not dl.revoked and (dl.download_limit == 0 or dl.download_count < dl.download_limit) %}
+                    <a href="{{ url('/downloads/' ~ dl.token) }}"
+                       class="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-gray-800">
+                        {{ __('Download') }}
+                    </a>
+                    {% else %}
+                    <span class="rounded-lg bg-zinc-200 px-4 py-1.5 text-xs font-semibold text-zinc-500">{{ __('Unavailable') }}</span>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <a href="{{ url(routing_shop_prefix) }}"
+           class="rounded-lg btn-primary px-6 py-3 text-sm font-medium">
+            {{ __('Continue Shopping') }}
+        </a>
+        <a href="{{ url('/') }}"
+           class="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            {{ __('Go to Homepage') }}
+        </a>
+    </div>
+</div>
+{% endblock %}

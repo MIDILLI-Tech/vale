@@ -1,0 +1,218 @@
+    {# ══ Maintenance Data sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="maintenance-tab-data" class="maintenance-tab-panel hidden space-y-6">
+    {# ── Data Export / Import ────────────────────────────────────── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-6">
+        <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100" {{ vl.attrs('maintenance', __('Data Export / Import'), 'export-import', 'data', __('Data Export / Import'), 'export import json zip download upload') }}>{{ __('Data Export / Import') }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Export your site content to a JSON file or import it from another Vale instance.') }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {# Export #}
+            <div class="flex flex-col h-full">
+                <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ __('Export Content') }}</h4>
+                {% if not zip_supported %}
+                <div class="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-800 dark:text-red-300 mb-4">
+                    <strong>{{ __('Warning:') }}</strong> {{ __('The ZIP extension is not enabled on this server. Some export/import operations might fail or be limited.') }}
+                </div>
+                {% endif %}
+                <form method="post" action="{{ url('/admin/settings/export-site-data') }}" class="flex flex-col flex-1"
+                      x-data="{ loading: false }" x-ref="exportForm">
+                    {{ csrf_field() }}
+                    <div class="flex-1 space-y-6">
+                        <div class="grid grid-cols-2 gap-2">
+                            {% for type in ['pages', 'posts', 'products', 'orders', 'users', 'categories', 'tags', 'seo_meta', 'site_settings', 'media', 'content_types', 'menus', 'comments', 'forms', 'coupons', 'redirects', 'tax_rates', 'membership_plans'] %}
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" name="types[]" value="{{ type }}" {% if type != 'orders' %}checked{% endif %}
+                                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                                <span class="text-gray-700 dark:text-gray-300">{{ type|replace({'_': ' '})|capitalize }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ __('Media export contains database rows only, not the files themselves. After import, copy the uploads directory and run Rescan Media (or php vale media:scan).') }}</p>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Export Format') }}</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="radio" name="format" value="json" checked
+                                           class="h-4 w-4 border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500">
+                                    <span class="text-gray-700 dark:text-gray-300">JSON</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer {% if not zip_supported %}opacity-50{% endif %}">
+                                    <input type="radio" name="format" value="zip" {% if not zip_supported %}disabled{% endif %}
+                                           class="h-4 w-4 border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500">
+                                    <span class="text-gray-700 dark:text-gray-300">ZIP</span>
+                                </label>
+                            </div>
+                            {% if not zip_supported %}
+                            <p class="text-[10px] text-gray-400">{{ __('ZIP format requires ext-zip extension.') }}</p>
+                            {% endif %}
+                        </div>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" name="include_secrets" value="1"
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Include secrets in export file (API keys, payment secrets)') }}</span>
+                        </label>
+                    </div>
+                    <div class="mt-auto pt-6">
+                        <button type="button" :disabled="loading"
+                                @click="
+                                    if (loading) return;
+                                    loading = true;
+                                    fetch($refs.exportForm.action, {
+                                        method: 'POST',
+                                        body: new FormData($refs.exportForm)
+                                    })
+                                    .then(r => {
+                                        if (!r.ok) throw new Error(r.statusText);
+                                        const cd = r.headers.get('content-disposition') || '';
+                                        const m = cd.match(/filename=([^;]+)/);
+                                        const name = m ? m[1].replace(/&quot;/g, '').trim() : 'export.json';
+                                        return r.blob().then(blob => ({ blob, name }));
+                                    })
+                                    .then(({ blob, name }) => {
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = name;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        a.remove();
+                                        URL.revokeObjectURL(url);
+                                    })
+                                    .catch(e => {
+                                        alert('{{ __('Export failed') }}: ' + e.message);
+                                    })
+                                    .finally(() => { loading = false; });
+                                "
+                                class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 dark:bg-gray-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-wait">
+                            <svg x-show="loading" x-cloak class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                            </svg>
+                            <span x-show="!loading">{{ __('Download Export') }}</span>
+                            <span x-show="loading" x-cloak>{{ __('Preparing export…') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {# Import #}
+            <div class="flex flex-col h-full border-t md:border-t-0 md:border-l dark:border-gray-800 pt-6 md:pt-0 md:pl-8">
+                <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ __('Import Content') }}</h4>
+                <form method="post" action="{{ url('/admin/settings/import-site-data') }}" enctype="multipart/form-data" class="flex flex-col flex-1">
+                    {{ csrf_field() }}
+                    <div class="flex-1 space-y-6">
+                        <div class="space-y-1">
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Select JSON or ZIP file') }} <span class="text-red-500">*</span></label>
+                            <input type="file" name="import_file" accept=".json,.zip" required
+                                   class="block w-full text-sm text-gray-500 dark:text-gray-400
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-lg file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-gray-100 file:text-gray-700
+                                          file:cursor-pointer
+                                          hover:file:bg-gray-200
+                                          dark:file:bg-gray-800 dark:file:text-gray-200
+                                          cursor-pointer">
+                        </div>
+                        <div class="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 text-[11px] text-amber-800 dark:text-amber-300 space-y-3">
+                            <p>{{ __('Warning: Importing data will not overwrite existing records with the same slug/email, they will be skipped.') }}</p>
+                            <div class="space-y-1">
+                                <p class="font-bold opacity-80 uppercase tracking-tight">{{ __('Large Datasets:') }}</p>
+                                <p>{{ __('Use the CLI tool to avoid web server timeouts.') }}</p>
+                                <code class="block bg-amber-100/50 dark:bg-amber-800/40 p-2 mt-1 rounded-sm font-mono text-[10px] break-all border border-amber-200/50 dark:border-amber-700/30 text-amber-900 dark:text-amber-200">php vale import --file=your-file.json</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-auto space-y-4 pt-6">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" name="dry_run" value="1"
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Dry Run (test without saving)') }}</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" name="include_secrets" value="1"
+                                   class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 dark:bg-gray-800 focus:ring-gray-500">
+                            <span class="text-gray-700 dark:text-gray-300">{{ __('Include secrets (API keys, payment secrets)') }}</span>
+                        </label>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ __('Media files are not part of the import. After import, copy the uploads directory and run Rescan Media (or php vale media:scan). Secret settings are skipped unless explicitly included.') }}</p>
+                        <button type="submit" class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                onclick="return confirm('{{ __('Are you sure you want to import data? This action cannot be undone.') }}')">
+                            {{ __('Upload & Import') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ── Media ─────────────────────────────────────────────── #}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-4"
+         x-data="{
+             doNotOrganize: false,
+             rescanning: false,
+             scanResult: null,
+             async rescanMedia() {
+                 if (this.rescanning) return;
+                 this.rescanning = true;
+                 this.scanResult = null;
+                 try {
+                     const r = await fetch('{{ url('/admin/maintenance/rescan-media') }}', {
+                         method: 'POST',
+                         headers: {
+                             'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                             'Content-Type': 'application/json',
+                         },
+                         body: JSON.stringify({ do_not_organize: this.doNotOrganize ? 1 : 0 }),
+                     });
+                     const data = await r.json().catch(() => ({}));
+                     this.scanResult = data;
+                 } catch (e) {
+                     this.scanResult = { ok: false, message: e.message };
+                 } finally {
+                     this.rescanning = false;
+                 }
+             }
+         }">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100" {{ vl.attrs('maintenance', __('Media'), 'media-rescan', 'data', __('Media'), 'rescan media library scan uploads register') }}>{{ __('Media') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Scan upload directory for unregistered files and add them to the media library.') }}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button type="button" @click="rescanMedia()" :disabled="rescanning"
+                    class="rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50">
+                <svg x-show="!rescanning" x-cloak class="-ml-0.5 mr-1.5 inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span x-show="!rescanning">{{ __('Rescan Media') }}</span>
+                <span x-show="rescanning" x-cloak>{{ __('Running…') }}</span>
+            </button>
+            <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input type="checkbox" x-model="doNotOrganize"
+                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                {{ __('Do not organize files') }}
+            </label>
+        </div>
+        <div x-show="scanResult !== null" x-cloak
+             x-transition
+             class="rounded-lg p-3 text-sm"
+             :class="scanResult?.ok ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'">
+            <template x-if="scanResult?.ok">
+                <div>
+                    <span class="font-semibold">{{ __('Media scan complete.') }}</span>
+                    <span x-text="scanResult.message"></span>
+                </div>
+            </template>
+            <template x-if="!scanResult?.ok">
+                <div>
+                    <span class="font-semibold">{{ __('Media scan failed.') }}</span>
+                    <span x-text="scanResult?.message"></span>
+                </div>
+            </template>
+        </div>
+    </div>
+    </div>

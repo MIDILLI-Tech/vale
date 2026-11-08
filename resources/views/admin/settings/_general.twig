@@ -1,0 +1,15 @@
+{# General #}
+<div id="tab-general" class="tab-panel" x-data>
+
+    {# ── General Sub-tabs ── #}
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex gap-4 overflow-x-auto" id="general-subtabs">
+            <button type="button" data-subtab="site" class="general-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors duration-150 md:hover:bg-blue-50 md:hover:text-blue-700 dark:md:hover:bg-blue-900/20 dark:md:hover:text-blue-300">{{ __('Site') }}</button>
+            <button type="button" data-subtab="features" class="general-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Features') }}</button>
+        </nav>
+    </div>
+
+    {{ include('admin/settings/_general_site.twig') }}
+    {{ include('admin/settings/_general_features.twig') }}
+
+</div>{# /tab-general #}

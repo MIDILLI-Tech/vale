@@ -1,0 +1,68 @@
+# .gitleaks.toml — Secret scanning configuration for gitleaks
+#
+# Replaces the old .githooks/pre-commit bash script.
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "ValePress secret scanning"
+
+# ── Global allowlist ────────────────────────────────────────────────────────
+# Files/patterns that are always skipped
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''\.env\.example$''',
+    '''generate-keypair\.php$''',
+    '''prepare-release\.php$''',
+    '''sign-release\.php$''',
+    '''\.gitleaks\.toml$''',
+    '''\.githooks/pre-commit$''',
+    '''vendor/''',
+    '''node_modules/''',
+    '''storage/cache/''',
+    '''storage/logs/''',
+    '''\.min\.js$''',
+    '''\.min\.css$''',
+  ]
+
+# ── Custom rules (project-specific patterns) ────────────────────────────────
+
+[[rules]]
+  id = "vale-ed25519-private-key"
+  description = "Ed25519 private key value"
+  regex = '''UPDATE_PRIVATE_KEY_ED25519=[A-Za-z0-9+/=]{10,}'''
+  tags = ["key", "ed25519"]
+
+[[rules]]
+  id = "vale-gpg-private-key"
+  description = "GPG private key value"
+  regex = '''UPDATE_PRIVATE_KEY_GPG=[A-Za-z0-9+/=]{10,}'''
+  tags = ["key", "gpg"]
+
+[[rules]]
+  id = "vale-pem-private-key"
+  description = "PEM/PKCS private key block"
+  regex = '''BEGIN .{0,20}PRIVATE KEY'''
+  tags = ["key", "pem"]
+
+[[rules]]
+  id = "vale-app-key"
+  description = "Vale APP_KEY secret value"
+  regex = '''APP_KEY=[a-zA-Z0-9+/=]{20,}'''
+  tags = ["key", "vale", "app-key"]
+
+[[rules]]
+  id = "vale-db-password"
+  description = "Database password with a value"
+  regex = '''DB_PASS=[^\s]{4,}'''
+  tags = ["password", "database"]
+
+[[rules]]
+  id = "vale-generic-secret-assignment"
+  description = "Generic secret/key/token/password assignment"
+  regex = '''(?i)(?:secret|api[_-]?key|apikey|access[_-]?token|private[_-]?key|password|passwd|pwd|auth[_-]?token)\w*\s*[:=]\s*['\"][^\s'\"]{16,}['\"]'''
+  tags = ["secret", "generic"]
+
+# ── Forbidden file extensions (from old hook) ───────────────────────────────
+# gitleaks doesn't have a built-in "forbidden files" concept, but these are
+# covered by the pre-commit hook's file-name checks. The hook below handles it.
+

@@ -1,0 +1,68 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history + tags: prepare-release.php diffs database/migrations
+          # against the previous release tag to set requires_migration.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, sodium
+          tools: composer:v2
+
+      - name: Generate release package
+        env:
+          UPDATE_PRIVATE_KEY_ED25519: ${{ secrets.UPDATE_PRIVATE_KEY_ED25519 }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          if [ -n "$UPDATE_PRIVATE_KEY_ED25519" ]; then
+            echo "Signing enabled (key loaded from secret)"
+          else
+            echo "WARNING: UPDATE_PRIVATE_KEY_ED25519 not set — release will NOT be signed"
+          fi
+          php scripts/prepare-release.php \
+            --version="$VERSION" \
+            --include-vendor \
+            --compress
+
+      - name: Update manifest download_url
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          TAG="${{ github.ref_name }}"
+          ZIP="vale-${VERSION}.zip"
+          MANIFEST="dist/manifest-${VERSION}.json"
+          STABLE_MANIFEST="dist/manifest.json"
+          DOWNLOAD_URL="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${ZIP}"
+          jq --arg url "$DOWNLOAD_URL" '.download_url = $url' "$MANIFEST" > tmp.json
+          mv tmp.json "$MANIFEST"
+          cp "$MANIFEST" "$STABLE_MANIFEST"
+          echo "download_url set to: $DOWNLOAD_URL"
+          echo "stable manifest created: $STABLE_MANIFEST"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/vale-*.zip
+            dist/manifest-*.json
+            dist/manifest.json
+          body_path: dist/changelog-${{ env.VERSION }}.md
+          generate_release_notes: true

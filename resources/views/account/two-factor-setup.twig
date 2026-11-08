@@ -1,0 +1,95 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Setup Two-Factor Authentication') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 py-3">
+    <div class="text-center mb-5">
+        <h1 class="account-text mb-2 text-3xl font-bold">{{ __('Secure Your Account') }}</h1>
+        <p class="account-table-muted text-gray-600 dark:text-gray-400">
+            {{ __('Two-factor authentication adds an extra layer of security to your account.') }}
+        </p>
+    </div>
+
+    {% if two_factor_force %}
+    <div class="rounded-lg border border-yellow-300 bg-yellow-50 p-4 mb-8">
+        <div class="flex items-start gap-3">
+            <svg class="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+                <p class="text-sm font-bold text-yellow-800">{{ __('Action Required') }}</p>
+                <p class="text-xs text-yellow-700 mt-1">
+                    {{ settings.two_factor_forced_global|default('0') == '1'
+                        ? __('An administrator requires all users to enable 2FA. Please complete the setup below to gain full access to your account.')
+                        : __('Your account has been flagged for mandatory 2FA enrollment. Please complete the setup below.')
+                    }}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="account-form-card rounded-xl border bg-white dark:bg-gray-900 p-8 shadow-xs">
+        <div class="flex flex-col items-center gap-8">
+            {# QR code MUST have a solid white background for scanners to work and for visibility in dark themes #}
+            <div class="p-4 rounded-lg border border-gray-200 shadow-inner" style="background-color: #ffffff !important;">
+                <img src="{{ two_factor_qr_code }}" alt="QR Code" class="w-full max-w-[180px] h-auto block">
+            </div>
+
+            <div class="w-full space-y-6">
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <div class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold">1</div>
+                        <div>
+                            <h3 class="account-text font-bold text-sm">{{ __('Scan the QR code') }}</h3>
+                            <p class="account-table-muted text-xs mt-1">{{ __('Use an authenticator app like Google Authenticator or Authy to scan this code.') }}</p>
+                            <details class="mt-2">
+                                <summary class="account-text text-xs cursor-pointer hover:underline">{{ __('Can\'t see the QR code?') }}</summary>
+                                <p class="account-table-muted text-xs mt-1 mb-2">{{ __('Enter the secret manually in your OTP authenticator app:') }}</p>
+                                <code class="block bg-gray-100 dark:bg-black/40 px-2 py-1 rounded-sm text-xs font-mono account-text break-all border border-gray-200 dark:border-gray-700">{{ two_factor_secret }}</code>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-900 text-white text-xs font-bold">2</div>
+                        <div class="w-full">
+                            <h3 class="account-text font-bold text-sm">{{ __('Verify the code') }}</h3>
+                            <p class="account-table-muted text-xs mt-1 mb-3">{{ __('Enter the 6-digit code from your app to complete setup.') }}</p>
+
+                            <form method="POST" action="{{ url('/account/two-factor/enable') }}" class="space-y-4">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="secret" value="{{ two_factor_secret }}">
+                                <input type="hidden" name="forced" value="1">
+
+                                <div>
+                                    <input type="text" name="code" placeholder="000000" maxlength="6" required
+                                           class="account-form-field block w-full rounded-lg border px-4 py-3 text-lg font-mono text-center tracking-[0.5em] focus:outline-hidden focus:ring-2 focus:ring-gray-900 shadow-xs">
+                                </div>
+
+                                <button type="submit" class="w-full rounded-lg bg-gray-900 px-6 py-3 text-sm font-bold text-white hover:bg-gray-800 transition-colors shadow-md">
+                                    {{ __('Verify and Enable') }}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t dark:border-gray-800 text-center">
+                    {% if two_factor_force %}
+                    <form method="POST" action="{{ url(routing_logout_prefix) }}">
+                        {{ csrf_field() }}
+                        <button type="submit" class="text-sm text-gray-500 hover:text-gray-700 underline">
+                            {{ __('Cancel and Sign Out') }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{{ url('/account/profile') }}" class="text-sm text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Cancel and Return to Profile') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

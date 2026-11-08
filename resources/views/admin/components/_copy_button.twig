@@ -1,0 +1,19 @@
+{#
+    Copy button — wraps the global copyToClipboard() helper.
+
+    Parameters:
+      text  : value to copy (escaped for JS automatically)
+      expr  : alternative raw JS expression, e.g. feedUrl(code) — overrides `text`
+      label : visible text next to the icon (omit for an icon-only button)
+      size  : icon size classes, defaults to h-4 w-4
+      title : tooltip, defaults to 'Copy to clipboard'
+      class : button classes — pass 'inline-flex items-center' when using a label
+#}
+{%- set copyTarget = (expr is defined and expr != '') ? expr : "'" ~ text|e('js') ~ "'" -%}
+<button type="button"
+        onclick="copyToClipboard({{ copyTarget }}, this)"
+        title="{{ title|default(__('Copy to clipboard')) }}"
+        class="{{ class|default('shrink-0 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300') }}">
+    <svg class="{{ size|default('h-4 w-4') }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    {%- if label %}<span class="ml-1.5 whitespace-nowrap">{{ label }}</span>{% endif %}
+</button>

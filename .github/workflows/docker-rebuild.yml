@@ -1,0 +1,65 @@
+name: Docker Security Rebuild
+
+on:
+  schedule:
+    # Weekly: Monday 04:00 UTC. Rebuilds the floating tags with patched base
+    # images (Debian security updates) without touching pinned release tags.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: docker-rebuild
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    name: Rebuild floating Docker tags
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout latest release tag
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check out the newest release tag
+        run: |
+          # Release tags are not guaranteed to be reachable from the default
+          # branch's ancestry, so describe would fail on a fresh checkout.
+          LATEST=$(git tag -l --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)
+          if [ -z "${LATEST}" ]; then
+            LATEST=$(git tag -l --sort=-version:refname | head -n 1 || true)
+          fi
+          if [ -z "${LATEST}" ]; then
+            echo "::error::No release tags found in repository history."
+            exit 1
+          fi
+          echo "Rebuilding from ${LATEST}"
+          git checkout "${LATEST}"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium, zip
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Rebuild & push floating tags only
+        run: |
+          php scripts/publish-docker.php \
+            --flavor=all \
+            --push \
+            --floating-only \
+            --smoke

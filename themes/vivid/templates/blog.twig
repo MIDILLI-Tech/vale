@@ -1,0 +1,164 @@
+{% extends "layout.twig" %}
+
+{% block title %}
+    {% if archive_type is defined and archive_type %}
+        {% if archive_type == 'category' %}{{ __('Category') }}: {{ archive_entity.name }}
+        {% elseif archive_type == 'tag' %}{{ __('Tag') }}: {{ archive_entity.name }}
+        {% elseif archive_type == 'author' %}{{ __('Author') }}: {{ archive_entity.name }}
+        {% else %}{{ archive_entity.name }}{% endif %}
+    {% elseif search is defined and search %}{{ __('Search') }}: {{ search }}
+    {% else %}{{ __('Blog') }}{% endif %}
+    {{ seo_title_separator }}{{ site_name }}
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════
+   PAGE HEADER BANNER
+   ══════════════════════════════════════════════════════════ #}
+<div class="bg-emerald-700 text-white py-12 mb-10">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {% if archive_type is defined and archive_type %}
+            <p class="text-xs font-semibold uppercase tracking-widest text-emerald-300 mb-2">
+                {{ archive_type|capitalize }}
+            </p>
+            <h1 class="font-display text-3xl font-bold text-white">{{ archive_entity.name }}</h1>
+            {% if archive_entity.description is defined and archive_entity.description %}
+            <p class="mt-3 text-emerald-200 max-w-xl text-sm">{{ archive_entity.description }}</p>
+            {% endif %}
+
+        {% elseif search is defined and search %}
+            <p class="text-xs font-semibold uppercase tracking-widest text-emerald-300 mb-2">{{ __('Search Results') }}</p>
+            <h1 class="font-display text-3xl font-bold text-white">
+                &ldquo;{{ search }}&rdquo;
+            </h1>
+            {% if total is defined %}
+            <p class="mt-2 text-emerald-200 text-sm">{{ total }} {{ total == 1 ? __('post found') : __('posts found') }}</p>
+            {% endif %}
+
+        {% else %}
+            <p class="text-xs font-semibold uppercase tracking-widest text-emerald-300 mb-2">{{ __('Latest') }}</p>
+            <h1 class="font-display text-3xl font-bold text-white">{{ __('Blog') }}</h1>
+            {% if total is defined %}
+            <p class="mt-2 text-emerald-200 text-sm">{{ total }} {{ total == 1 ? __('post') : __('posts') }}</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════
+   3-COLUMN CARD GRID — no sidebar
+   ══════════════════════════════════════════════════════════ #}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+    {% if posts is defined and posts|length > 0 %}
+
+    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {% for post in posts %}
+        <article class="card-lift group rounded-2xl bg-white shadow-xs ring-1 ring-gray-100 overflow-hidden flex flex-col">
+
+            {# Colorful header bar (gradient changes per-post via hue rotation) #}
+            <div class="h-2 w-full shrink-0 vl-dynamic-card-bg"
+                 style="--card-gradient: linear-gradient(90deg, hsl({{ loop.index * 47 % 360 }},65%,50%), hsl({{ (loop.index * 47 + 120) % 360 }},60%,55%))">
+            </div>
+
+            <div class="flex flex-col flex-1 p-6">
+                {# Meta: date + category #}
+                <div class="flex items-center gap-2 mb-3 flex-wrap">
+                    {% include 'partials/_vtime.twig' with {value: post.publishedAt, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1', cls: 'text-xs text-gray-600'} %}
+                    {% if show_modification_date_on_posts|default('0') == '1' and post.updatedAt and post.updatedAt != post.publishedAt %}
+                    <span class="text-gray-300">&middot;</span>
+                    <span class="text-xs text-gray-600">{{ __('Updated') }}: {% include 'partials/_vtime.twig' with {value: post.updatedAt, style: 'medium', withTime: show_timestamp_on_posts|default('0') == '1'} %}</span>
+                    {% endif %}
+                    {% if post.category is defined and post.category %}
+                    <span class="text-gray-300">&middot;</span>
+                    <a href="{{ url(routing_category_prefix ~ '/' ~ post.category.slug) }}"
+                       class="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors">
+                        {{ post.category.name }}
+                    </a>
+                    {% endif %}
+                </div>
+
+                {# Title #}
+                <h2 class="font-display font-semibold text-gray-900 text-lg leading-snug mb-3 group-hover:text-emerald-700 transition-colors">
+                    <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}">{{ post.title }}</a>
+                </h2>
+
+                {# Summary — excerpt → read-more break → auto summary #}
+                {% set teaser = post|post_teaser %}
+                {% include 'partials/_post_card_summary.twig' with {
+                    teaser: teaser,
+                    post: post,
+                    excerpt_class: 'text-sm text-gray-500 leading-relaxed line-clamp-3 flex-1',
+                    html_class: 'text-sm text-gray-500 leading-relaxed line-clamp-3 flex-1'
+                } %}
+
+                {# Author + Read More #}
+                {% set author = authors[post.authorId]|default(null) %}
+                <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    {% if show_author_on_posts|default('0') == '1' and author %}
+                    <span class="text-xs text-gray-400">{{ author.name }}</span>
+                    {% else %}
+                    <span></span>
+                    {% endif %}
+                    <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}"
+                       class="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+                        {{ teaser.label ?? __('Read') }}
+                        <svg class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {# ── Pagination ── #}
+    {% if total_pages is defined and total_pages > 1 %}
+    <nav class="mt-14 flex items-center justify-center gap-2" aria-label="{{ __('Pagination') }}">
+        {% if page is defined and page > 1 %}
+        <a href="?page={{ page - 1 }}{% if search is defined and search %}&search={{ search|url_encode }}{% endif %}"
+           class="flex h-9 w-9 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 text-sm text-gray-600 hover:bg-emerald-50 hover:ring-emerald-300 hover:text-emerald-700 transition-colors">
+            &larr;
+        </a>
+        {% endif %}
+
+        {% for p in 1..total_pages %}
+            {% if p == page %}
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-sm font-semibold text-white shadow-xs">{{ p }}</span>
+            {% elseif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            <a href="?page={{ p }}{% if search is defined and search %}&search={{ search|url_encode }}{% endif %}"
+               class="flex h-9 w-9 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 text-sm text-gray-600 hover:bg-emerald-50 hover:ring-emerald-300 hover:text-emerald-700 transition-colors">
+                {{ p }}
+            </a>
+            {% elseif (p == page - 3 and page > 4) or (p == page + 3 and page < total_pages - 3) %}
+            <span class="px-1 text-gray-400 text-sm">&hellip;</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page is defined and page < total_pages %}
+        <a href="?page={{ page + 1 }}{% if search is defined and search %}&search={{ search|url_encode }}{% endif %}"
+           class="flex h-9 w-9 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 text-sm text-gray-600 hover:bg-emerald-50 hover:ring-emerald-300 hover:text-emerald-700 transition-colors">
+            &rarr;
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    {# Empty state #}
+    <div class="py-24 text-center">
+        <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-400">
+            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">{{ __('No posts yet') }}</h3>
+        <p class="text-sm text-gray-400">{{ __('Check back soon — great content is on the way.') }}</p>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

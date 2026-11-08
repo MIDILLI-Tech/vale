@@ -1,0 +1,53 @@
+{% extends 'mail/layout.twig' %}
+
+{% block title %}{{ __('Invoice :number', {':number': invoice.invoice_number|default('')}) }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Your Invoice Is Ready') }}</h2>
+<p>{{ __('Invoice number: :number', {':number': '<strong>' ~ (invoice.invoice_number|default('')) ~ '</strong>'})|raw }}</p>
+<p>{{ __('Issued at: :date', {':date': invoice.issued_at|default('')}) }}</p>
+{% if is_latest is defined and not is_latest and latest_invoice is defined and latest_invoice %}
+<p><em>{{ __('Note: this version was superseded by :number (issued :date).', {':number': latest_invoice.invoice_number|default(''), ':date': latest_invoice.issued_at|default('')}) }}</em></p>
+{% endif %}
+{% if invoice.revision|default(1) > 1 %}
+<p><em>{{ __('Revision R:rev — supersedes :prev.', {':rev': invoice.revision, ':prev': prev_number|default('')}) }}</em></p>
+{% endif %}
+
+<p><strong>{{ __('Order:') }}</strong> #{{ order.orderNumber }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:16px 0;">
+  <thead>
+    <tr>
+      <th style="text-align:left; border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ __('Item') }}</th>
+      <th style="text-align:right; border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ __('Qty') }}</th>
+      <th style="text-align:right; border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ __('Price') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for item in invoice.items|default([]) %}
+    <tr>
+      <td style="border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ item.name|default(__('Item')) }}</td>
+      <td style="text-align:right; border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ item.quantity|default(1) }}</td>
+      <td style="text-align:right; border-bottom:1px solid {{ email_border }}; padding:8px 4px;">{{ (item.price|default(0))|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p><strong>{{ order.status in ['processing','completed','shipped'] ? __('Paid Total') : __('Total') }}:</strong> {{ invoice.total|number_format(2, '.', ',') }} {{ invoice.currency }}</p>
+<p>
+  <strong>{{ __('Included VAT') }}{% if invoice.tax_regime|default('normal_vat') == 'normal_vat' %} ({{ invoice.tax_rate|default(0)|number_format(2, '.', ',') }}%){% endif %}:</strong>
+  {{ invoice.tax|default(0)|number_format(2, '.', ',') }} {{ invoice.currency }}
+</p>
+{% if invoice.tax_regime|default('normal_vat') != 'normal_vat' and invoice.tax_zero_reason|default('') != '' %}
+<p><em>{{ invoice.tax_zero_reason }}</em></p>
+{% endif %}
+{% if invoice.refunds|default([])|length > 0 %}
+  {% for ref in invoice.refunds %}
+  <p><strong>{{ __('Refund') }}{% if ref.refund_id %} ({{ ref.refund_id }}){% endif %}:</strong> -{{ ref.amount|number_format(2, '.', ',') }} {{ ref.currency }}</p>
+  {% endfor %}
+  <p><strong>{{ __('Net Paid') }}:</strong> {{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</p>
+{% endif %}
+
+<p>{{ __('Thank you for your order.') }}</p>
+{% endblock %}

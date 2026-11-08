@@ -1,0 +1,161 @@
+{#
+  Reusable Captcha Test Widget
+  Variables:
+    - type: 'hcaptcha' | 'recaptcha' | 'turnstile' | 'math'
+    - site_key: string (optional)
+    - label: string (optional)
+#}
+{% set widgetId = 'captcha_test_' ~ type ~ '_' ~ random(1000, 9999) %}
+{# data-vl-noserialize: test UI embedded in settings forms; provider scripts #}
+{# inject response fields async — those must never flag the settings dirty guard. #}
+<div id="{{ widgetId }}" data-vl-noserialize="1" x-data="{
+    showTest: false,
+    loading: false,
+    result: null,
+    error: null,
+    mathAnswer: '',
+    executeRecaptcha(siteKey) {
+        this.loading = true;
+        this.error = null;
+        this.result = null;
+
+        const run = () => {
+            try {
+                if (!window.grecaptcha || typeof window.grecaptcha.execute !== 'function') {
+                    this.error = 'reCAPTCHA library not fully loaded.';
+                    this.loading = false;
+                    return;
+                }
+                window.grecaptcha.execute(siteKey, {action: 'test'})
+                    .then(token => this.verify(token))
+                    .catch(e => {
+                        this.loading = false;
+                        this.error = 'reCAPTCHA error: ' + e.message;
+                    });
+            } catch (err) {
+                this.loading = false;
+                this.error = 'Execution error: ' + err.message;
+            }
+        };
+
+        if (window.grecaptcha && typeof window.grecaptcha.ready === 'function') {
+            try {
+                window.grecaptcha.ready(run);
+            } catch (e) {
+                // Fallback if ready exists but fails
+                setTimeout(run, 500);
+            }
+        } else {
+            let attempts = 0;
+            const poll = setInterval(() => {
+                attempts++;
+                if (window.grecaptcha && typeof window.grecaptcha.ready === 'function') {
+                    clearInterval(poll);
+                    try {
+                        window.grecaptcha.ready(run);
+                    } catch (e) {
+                        run();
+                    }
+                } else if (attempts > 50) {
+                    clearInterval(poll);
+                    this.error = 'reCAPTCHA failed to load after 5 seconds.';
+                    this.loading = false;
+                }
+            }, 100);
+        }
+    },
+    async verify(token) {
+        this.loading = true;
+        this.result = null;
+        this.error = null;
+        try {
+            const resp = await fetch('{{ url('/admin/settings/verify-captcha') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    type: '{{ type }}',
+                    token: token,
+                    math_answer: this.mathAnswer
+                })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                this.result = data.message || 'Verification successful!';
+            } else {
+                this.error = data.message || 'Verification failed.';
+            }
+        } catch (e) {
+            this.error = 'Network error occurred.';
+        } finally {
+            this.loading = false;
+        }
+    }
+}" class="mt-2">
+    <button type="button" @click="showTest = !showTest" class="text-[10px] font-medium text-blue-600 hover:underline flex items-center gap-1">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+        <span x-text="showTest ? '{{ __('Hide Test') }}' : '{{ __('Test this captcha') }}'"></span>
+    </button>
+
+    <div x-show="showTest" x-cloak class="mt-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 space-y-3">
+        <p class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">{{ label|default(__('Captcha Test')) }}</p>
+
+        {% if type == 'math' %}
+            <div class="flex items-center gap-2">
+                <span class="text-sm">2 + 3 = </span>
+                <input type="number" x-model="mathAnswer" class="w-16 rounded-sm border-gray-300 text-sm" placeholder="?">
+                <button type="button" @click="verify('')" :disabled="loading" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-sm text-xs hover:bg-gray-300 disabled:opacity-50">
+                    <span x-show="!loading">{{ __('Verify') }}</span>
+                    <span x-show="loading">...</span>
+                </button>
+            </div>
+        {% elseif type == 'hcaptcha' and site_key %}
+            <div class="h-captcha max-w-full" data-sitekey="{{ site_key }}" data-callback="{{ widgetId }}_callback"></div>
+            <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+            <script>
+                window['{{ widgetId }}_callback'] = function(token) {
+                    const el = document.getElementById('{{ widgetId }}');
+                    if (el && el.__x) el.__x.$data.verify(token);
+                };
+            </script>
+        {% elseif type == 'recaptcha' and site_key %}
+            <button type="button"
+                    @click="verify('')"
+                    :disabled="loading"
+                    class="w-full px-3 py-1.5 bg-orange-600 dark:bg-orange-700 text-white rounded-sm text-xs font-medium hover:bg-orange-700 dark:hover:bg-orange-800 disabled:opacity-50">
+                <span x-show="!loading">{{ __('Test Saved Settings') }}</span>
+                <span x-show="loading">{{ __('Testing...') }}</span>
+            </button>
+        {% elseif type == 'turnstile' and site_key %}
+            <div class="cf-turnstile max-w-full" data-sitekey="{{ site_key }}" data-callback="{{ widgetId }}_callback" data-theme="auto" data-size="flexible"></div>
+            <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+            <script>
+                window['{{ widgetId }}_callback'] = function(token) {
+                    const el = document.getElementById('{{ widgetId }}');
+                    if (el && el.__x) el.__x.$data.verify(token);
+                };
+            </script>
+        {% else %}
+            <p class="flex items-start gap-1.5 text-xs text-gray-500 dark:text-gray-400 italic">
+                <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <span>{{ __('Enter your keys and save — the captcha test unlocks here.') }}</span>
+            </p>
+        {% endif %}
+
+        <template x-if="result">
+            <div class="p-2 rounded-sm bg-green-100 dark:bg-green-900/10 text-green-700 dark:text-green-400 text-xs flex items-center gap-2">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                <span x-text="result"></span>
+            </div>
+        </template>
+
+        <template x-if="error">
+            <div class="p-2 rounded-sm bg-red-100 dark:bg-red-900/10 text-red-700 dark:text-red-400 text-xs flex items-center gap-2">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                <span x-text="error"></span>
+            </div>
+        </template>
+    </div>
+</div>

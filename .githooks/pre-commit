@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+#
+# Secret scanning via gitleaks + forbidden file checks.
+# Install once per clone:
+#   git config core.hooksPath .githooks
+#
+# Bypass in emergency:
+#   git commit --no-verify
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+RESET='\033[0m'
+
+ERRORS=0
+
+err()  { echo -e "${RED}[pre-commit] ERROR: $*${RESET}" >&2; ERRORS=$((ERRORS+1)); }
+warn() { echo -e "${YELLOW}[pre-commit] WARN:  $*${RESET}" >&2; }
+info() { echo -e "${CYAN}[pre-commit] $*${RESET}" >&2; }
+
+# ── Forbidden file extensions (gitleaks doesn't check filenames) ─────────────
+FORBIDDEN_FILES=(
+    "\.env$"
+    "\.env\.local$"
+    "\.env\.production$"
+    "\.env\.staging$"
+    "\.pem$"
+    "\.key$"
+    "\.p12$"
+    "\.pfx$"
+    "id_rsa$"
+    "id_ed25519$"
+)
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
+
+if [[ -n "$STAGED" ]]; then
+    for staged_file in $STAGED; do
+        for pattern in "${FORBIDDEN_FILES[@]}"; do
+            if echo "$staged_file" | grep -qE "$pattern"; then
+                if [[ "$staged_file" == ".env.example" ]]; then
+                    continue
+                fi
+                err "Forbidden file staged: $staged_file"
+            fi
+        done
+    done
+fi
+
+# ── Gitleaks secret scan ────────────────────────────────────────────────────
+# --staged: only scan staged changes (fast)
+# --verbose: show progress
+if command -v gitleaks &>/dev/null; then
+    if ! gitleaks protect --staged --verbose 2>&1; then
+        err "Gitleaks found secrets. Fix the issues above."
+        err "Emergency bypass: git commit --no-verify"
+        ERRORS=$((ERRORS+1))
+    fi
+else
+    warn "gitleaks not found in PATH — skipping secret scan."
+    warn "Install: scoop install gitleaks"
+fi
+
+# ── Result ───────────────────────────────────────────────────────────────────
+
+if [[ $ERRORS -gt 0 ]]; then
+    echo -e "\n${RED}[pre-commit] Commit blocked: $ERRORS issue(s) found.${RESET}" >&2
+    echo -e "${YELLOW}[pre-commit] Fix the issues above, then try again.${RESET}" >&2
+    echo -e "${YELLOW}[pre-commit] Emergency bypass: git commit --no-verify${RESET}" >&2
+    exit 1
+fi
+
+info "Pre-commit checks passed."
+exit 0

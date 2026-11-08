@@ -1,0 +1,110 @@
+{% set _u_rating = comment_ratings[user_comment.id]|default(0) %}
+<div class="bg-slate-800/40 rounded-2xl p-6 mb-10 border border-slate-700/50 shadow-xs"
+     x-data='{
+       editing: false,
+       deleting: false,
+       body: {{ user_comment.body|json_encode|raw }},
+       _orig: {{ user_comment.body|json_encode|raw }},
+       rating: {{ _u_rating }},
+       _orig_rating: {{ _u_rating }},
+       hover: 0,
+       notify: {{ user_comment.notifyReplies ? 'true' : 'false' }},
+       cancelEdit() { this.editing = false; this.body = this._orig; this.rating = this._orig_rating; this.notify = {{ user_comment.notifyReplies ? 'true' : 'false' }}; }
+     }'>
+    <div x-show="!editing">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-bold text-slate-100">{{ __('Your Review') }}</h3>
+            {% set editingAllowed = allow_review_editing ?? true %}
+            {% if editingAllowed %}
+            <div class="flex gap-2">
+                <button @click="editing = true" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 px-3 py-1.5 rounded-lg bg-indigo-900/30 hover:bg-indigo-800/40 transition-colors">
+                    {{ __('Edit Review') }}
+                </button>
+                <button @click="deleting = true" class="text-xs font-semibold text-red-400 hover:text-red-300 px-2 py-1.5">
+                    {{ __('Delete') }}
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        <div class="flex gap-4">
+            <div class="shrink-0 w-10 h-10 rounded-full bg-indigo-900/40 flex items-center justify-center text-indigo-300 font-bold text-sm">
+                {{ user_comment.authorName|slice(0,1)|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="font-bold text-sm text-slate-100">{{ user_comment.authorName }}</span>
+                    {% include 'partials/_vtime.twig' with {value: user_comment.createdAt, style: 'medium', cls: 'text-xs text-slate-500'} %}
+                </div>
+                <div x-show="rating > 0" class="flex gap-0.5 mb-3">
+                    <template x-for="i in [1,2,3,4,5]">
+                        <svg class="w-4 h-4" :class="i <= rating ? 'text-yellow-400' : 'text-slate-600'" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                    </template>
+                </div>
+                <div class="text-sm text-slate-300 whitespace-pre-line leading-relaxed" x-text="body"></div>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="editing" x-cloak>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-bold text-slate-100">{{ __('Edit Your Review') }}</h3>
+            <button @click="cancelEdit()" class="text-xs text-slate-400 hover:text-slate-300 underline">{{ __('Cancel') }}</button>
+        </div>
+        <form method="POST" action="{{ url('/comments/' ~ user_comment.id ~ '/edit') }}" class="space-y-4">
+            {{ csrf_field() }}
+            {% if needs_rating %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-2">{{ __('Rating') }}</label>
+                <div class="flex gap-1.5 mb-1">
+                    <template x-for="star in [1,2,3,4,5]" :key="star">
+                        <button type="button"
+                                @click="rating = star"
+                                @mouseover="hover = star" @mouseleave="hover = 0"
+                                class="focus:outline-hidden transition-transform active:scale-95">
+                            <svg class="w-8 h-8 transition-colors"
+                                 :class="(hover || rating) >= star ? 'text-yellow-400' : 'text-slate-600'"
+                                 fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        </button>
+                    </template>
+                </div>
+                <input type="hidden" name="rating" :value="rating">
+            </div>
+            {% endif %}
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-2">{{ __('Your Experience') }}</label>
+                <textarea name="content" required rows="5" maxlength="2000" x-model="body"
+                          class="w-full rounded-xl border-slate-700 bg-slate-800/60 text-slate-200 text-sm focus:ring-indigo-500 focus:border-indigo-500 shadow-xs"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="rounded-xl btn-neon px-6 py-2.5 text-sm text-white font-bold shadow-md shadow-indigo-900/30">
+                    {{ __('Save Changes') }}
+                </button>
+                <button type="button" @click="cancelEdit()" class="rounded-xl border border-slate-600 px-6 py-2.5 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors font-semibold">
+                    {{ __('Discard') }}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div x-show="deleting" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" @click.self="deleting = false">
+        <div class="bg-slate-800 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-slate-100 mb-2">{{ __('Delete Review?') }}</h3>
+            <p class="text-sm text-slate-400 mb-6">{{ __('Are you sure? This will remove your review and your rating from the average score.') }}</p>
+            <div class="flex gap-3">
+                <button @click="deleting = false" class="flex-1 rounded-xl border border-slate-600 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors font-semibold">
+                    {{ __('Cancel') }}
+                </button>
+                <form method="POST" action="{{ url('/comments/' ~ user_comment.id ~ '/delete') }}" class="flex-1">
+                    {{ csrf_field() }}
+                    <button type="submit" class="w-full rounded-xl bg-red-600 px-4 py-3 text-sm text-white font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-900/30">
+                        {{ __('Delete') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "dockerfilePath": "./docker/Dockerfile",
+  "template": {
+    "volumes": [
+      {
+        "name": "vale-storage",
+        "mount": "/var/www/html/storage",
+        "size": "2Gi"
+      },
+      {
+        "name": "vale-themes",
+        "mount": "/var/www/html/themes",
+        "size": "500Mi"
+      }
+    ]
+  }
+}

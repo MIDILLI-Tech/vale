@@ -1,0 +1,183 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Themes') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Themes') }}</h1>
+    <a href="{{ url('/admin/themes/upload') }}"
+       class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        {{ __('Upload Theme') }}
+    </a>
+</div>
+
+<div class="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+{% for slug, theme in themes %}
+    <div class="relative flex flex-col rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-hidden {{ slug == active_theme ? 'ring-2 ring-gray-500' : '' }}">
+        {# Active badge #}
+        {% if slug == active_theme %}
+        <div class="absolute top-3 right-3 rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
+            {{ __('Active') }}
+        </div>
+        {% endif %}
+
+        {# Theme screenshot #}
+        {% set themeScreenshot = theme.screenshot ?? null %}
+
+        {# Check if theme has color_variables defined #}
+        {% set hasColorVariables = theme.color_variables is defined and theme.color_variables is iterable and theme.color_variables|length > 0 %}
+
+        {% if hasColorVariables %}
+            {# Extract theme colors from color_variables for gradient header #}
+            {% set primaryColor = theme.color_variables['--theme-primary'].default ?? '#111827' %}
+            {% set secondaryColor = theme.color_variables['--theme-secondary'].default ?? '#f3f4f6' %}
+            {% set bgColor = theme.color_variables['--theme-bg'].default ?? '#f9fafb' %}
+            {% set surfaceColor = theme.color_variables['--theme-surface'].default ?? '#ffffff' %}
+            {% set accentColor = theme.color_variables['--theme-accent'].default ?? '#2563eb' %}
+            {% set headerStyle = 'background: linear-gradient(135deg, ' ~ primaryColor ~ ' 0%, ' ~ secondaryColor ~ ' 50%, ' ~ bgColor ~ ' 100%);' %}
+        {% else %}
+            {# Fallback to old Tailwind class-based approach (respects admin dark/light mode) #}
+            {% set headerFallback = 'bg-gray-100 dark:bg-gray-800' %}
+            {% set headerDarkVariants = {
+                'gray-50': 'dark:bg-gray-800',
+                'gray-100': 'dark:bg-gray-800',
+                'gray-200': 'dark:bg-gray-700',
+                'white': 'dark:bg-gray-800',
+            } %}
+            {% set headerClasses = theme.colors.header is defined
+                ? ('bg-' ~ theme.colors.header ~ ' ' ~ (headerDarkVariants[theme.colors.header] ?? ''))
+                : headerFallback %}
+            {% if theme.colors.gradient is defined and theme.colors.gradient %}
+                {% set headerClasses = 'bg-linear-to-br from-' ~ (theme.colors.gradient_from ?? 'gray-800') ~ ' to-' ~ (theme.colors.gradient_to ?? 'gray-700') %}
+            {% endif %}
+        {% endif %}
+
+        {% if themeScreenshot %}
+        <div class="relative h-32 overflow-hidden {% if not hasColorVariables %}{{ headerClasses }}{% endif %}" {% if hasColorVariables %}style="{{ headerStyle }}"{% endif %}>
+            <img src="{{ themeScreenshot }}" alt="{{ theme.name ?? slug }}" class="w-full h-full object-contain cursor-pointer transition-opacity hover:opacity-80" onclick="document.getElementById('theme-modal-{{ slug }}').classList.remove('hidden'); document.getElementById('theme-modal-{{ slug }}').classList.add('flex')" title="{{ __('Click to enlarge') }}">
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+                <span class="bg-gray-900/80 text-white text-xs px-3 py-1.5 rounded">{{ __('Click to enlarge') }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="flex h-32 items-center justify-center {% if not hasColorVariables %}{{ headerClasses }}{% endif %}" {% if hasColorVariables %}style="{{ headerStyle }}"{% endif %}>
+            <svg class="h-12 w-12 {% if hasColorVariables %}text-white/80{% else %}text-gray-400 dark:text-gray-500{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+            </svg>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col flex-1 p-4">
+            <div class="flex flex-col flex-1">
+                <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ theme.name ?? slug }}</h3>
+                <div class="flex-1">
+                    {% if theme.description is defined %}
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __(theme.description) }}</p>
+                    {% endif %}
+                </div>
+                <dl class="mt-2 space-y-1 text-xs text-gray-400">
+                    {% if theme.version is defined %}
+                    <div><dt class="inline font-medium">v{{ theme.version }}</dt></div>
+                    {% endif %}
+                    {% if theme.author is defined %}
+                    <div><dt class="inline">By {{ theme.author }}</dt></div>
+                    {% endif %}
+                    {% if theme.license is defined %}
+                    <div><dt class="inline">License: {{ theme.license }}</dt></div>
+                    {% endif %}
+                    {% if theme.parent is defined %}
+                    <div><dt class="inline">Parent: <span class="text-gray-700 dark:text-gray-400">{{ theme.parent }}</span></dt></div>
+                    {% endif %}
+                </dl>
+            </div>
+
+            <div class="mt-auto space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{{ url('/admin/themes/' ~ slug ~ '/edit') }}"
+                       class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        {{ __('Edit Templates') }}
+                    </a>
+                    <a href="{{ url('/admin/themes/' ~ slug ~ '/colors') }}"
+                       class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                        {{ __('Edit Colors') }}
+                    </a>
+                </div>
+
+            {% if slug != active_theme %}
+            <div class="flex gap-2">
+                <form method="post" action="{{ url('/admin/themes/preview') }}" class="flex-1">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="theme" value="{{ slug }}">
+                    <button type="submit"
+                            class="w-full rounded-lg border border-gray-400 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100">
+                        {{ __('Preview') }}
+                    </button>
+                </form>
+                <form method="post" action="{{ url('/admin/themes/activate') }}" class="flex-1">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="theme" value="{{ slug }}">
+                    <button type="submit"
+                            class="w-full rounded-lg border border-gray-400 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-100">
+                        {{ __('Activate') }}
+                    </button>
+                </form>
+                <form method="post" action="{{ url('/admin/themes/delete') }}"
+                      onsubmit="return confirm('{{ __('Are you sure you want to delete this theme?') }}')"
+                      class="shrink-0">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="theme" value="{{ slug }}">
+                    <button type="submit"
+                            class="rounded-lg border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                            title="{{ __('Delete') }}">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            {% else %}
+            <div class="rounded-lg bg-gray-100 dark:bg-gray-800 px-4 py-2 text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                {{ __('Currently Active') }}
+            </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-span-full rounded-xl border-2 border-dashed border-gray-200 p-10 text-center text-gray-400">
+        {{ __('No themes found in the themes directory.') }}
+    </div>
+{% endfor %}
+</div>
+
+<script>
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('[id^="theme-modal-"]').forEach(function(modal) {
+            if (!modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        });
+    }
+});
+</script>
+{% for slug, theme in themes %}
+    {% if theme.screenshot %}
+    <div id="theme-modal-{{ slug }}" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70" onclick="this.classList.add('hidden'); this.classList.remove('flex')">
+        <img src="{{ theme.screenshot }}" alt="{{ theme.name ?? slug }}" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg cursor-zoom-out" onclick="event.stopPropagation()">
+    </div>
+    {% endif %}
+{% endfor %}
+{% endblock %}

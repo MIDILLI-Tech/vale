@@ -1,0 +1,21 @@
+{#
+    Card summary — shared by every blog listing surface so the resolution order
+    stays identical across themes:
+
+        1. manual excerpt (plain text)
+        2. content before the <!--more--> break (HTML)
+        3. auto summary of the first N words (HTML, media/embeds dropped)
+
+    Params:
+      teaser        result of `post|post_teaser` (required)
+      post          the post — needed to run shortcodes on the "more" teaser
+      excerpt_class classes for the <p> wrapper of the manual excerpt
+      html_class    classes for the <div> wrapper of the HTML teaser
+#}
+{% if teaser is defined and teaser.kind == 'excerpt' %}
+<p class="{{ excerpt_class|default('mt-3 text-gray-600 leading-relaxed') }}">{{ teaser.html }}</p>
+{% elseif teaser is defined and teaser.kind == 'more' %}
+<div class="{{ html_class|default('mt-3 text-gray-600 leading-relaxed prose prose-sm max-w-none') }}">{{ teaser.html|shortcodes(post)|raw }}</div>
+{% elseif teaser is defined and teaser.kind == 'auto' and teaser.html|trim %}
+<div class="{{ html_class|default('mt-3 text-gray-600 leading-relaxed prose prose-sm max-w-none') }}">{{ teaser.html|raw }}</div>
+{% endif %}

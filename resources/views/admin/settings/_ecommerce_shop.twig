@@ -1,0 +1,437 @@
+    {# ══ Shop sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="ec-tab-shop" class="ec-tab-panel">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="ecommerce">
+        <input type="hidden" name="_subtab" value="shop">
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Shop') }}</h3>
+
+            {# Line 1: Company Name | VAT Number | Shop Email | Shop Phone #}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div {{ vl.attrs('ecommerce', __('Company Name'), 'shop_company_name', 'shop', __('Shop'), 'business company legal') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Company Name') }}</label>
+                    <input type="text" name="shop_company_name" value="{{ settings.shop_company_name|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('VAT Number'), 'shop_vat_number', 'shop', __('Shop'), 'tax vat id') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('VAT Number') }}</label>
+                    <input type="text" name="shop_vat_number" value="{{ settings.shop_vat_number|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Shop Email'), 'shop_email', 'shop', __('Shop'), 'contact email store') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Shop Email') }}</label>
+                    <input type="email" name="shop_email" value="{{ settings.shop_email|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Shop Phone'), 'shop_phone', 'shop', __('Shop'), 'telephone contact') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Shop Phone') }}</label>
+                    <input type="text" name="shop_phone" value="{{ settings.shop_phone|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+            </div>
+
+            {# Line 2: Address Line 1 | Address Line 2 #}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div {{ vl.attrs('ecommerce', __('Address Line 1'), 'shop_address_1', 'shop', __('Shop'), 'address street') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Address Line 1') }}</label>
+                    <input type="text" name="shop_address_1" value="{{ settings.shop_address_1|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Address Line 2'), 'shop_address_2', 'shop', __('Shop'), 'address apt suite') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Address Line 2') }}</label>
+                    <input type="text" name="shop_address_2" value="{{ settings.shop_address_2|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+            </div>
+
+            {# Line 3: City | State / Region | Postcode | Country #}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div {{ vl.attrs('ecommerce', __('City'), 'shop_city', 'shop', __('Shop'), 'city town') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('City') }}</label>
+                    <input type="text" name="shop_city" value="{{ settings.shop_city|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('State / Region'), 'shop_state', 'shop', __('Shop'), 'state province region') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('State / Region') }}</label>
+                    <input type="text" name="shop_state" value="{{ settings.shop_state|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Postcode'), 'shop_postcode', 'shop', __('Shop'), 'zip postal code') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Postcode') }}</label>
+                    <input type="text" name="shop_postcode" value="{{ settings.shop_postcode|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Country'), 'shop_country', 'shop', __('Shop'), 'country region') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Country') }}</label>
+                    <div x-data="{
+                            regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                : null,
+                            init() {
+                                var sel = this.$el.querySelector('select'), val = sel.value, items = [];
+                                for (var i = 1; i < sel.options.length; i++) {
+                                    var code = sel.options[i].value;
+                                    if (!code) continue;
+                                    var name = code;
+                                    if (this.regionNames) {
+                                        try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                    }
+                                    items.push({ code: code, name: name });
+                                }
+                                if (!items.length) return;
+                                items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                while (sel.options.length > 1) { sel.remove(1); }
+                                items.forEach(function(item) {
+                                    var opt = document.createElement('option');
+                                    opt.value = item.code;
+                                    opt.textContent = item.name + ' (' + item.code + ')';
+                                    if (item.code === val) opt.selected = true;
+                                    sel.appendChild(opt);
+                                });
+                            }
+                        }">
+                        <select name="shop_country" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                            <option value="">{{ __('Select country') }}</option>
+                            {% for code in country_codes|default([]) %}
+                            <option value="{{ code }}" {{ settings.shop_country|default('') == code ? 'selected' }}>{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div {{ vl.attrs('ecommerce', __('Tax Regime'), 'tax_regime', 'shop', __('Shop'), 'vat tax regime') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tax Regime') }}</label>
+                    {% set _taxRegime = settings.tax_regime|default('normal_vat') %}
+                    {% if _taxRegime in ['kleinunternehmer', 'vat_exempt'] %}{% set _taxRegime = 'no_tax' %}{% endif %}
+                    <select name="tax_regime" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" id="tax-regime-select">
+                        <option value="normal_vat" {{ _taxRegime == 'normal_vat' ? 'selected' : '' }}>{{ __('Normal VAT') }}</option>
+                        <option value="no_tax" {{ _taxRegime == 'no_tax' ? 'selected' : '' }}>{{ __('No Tax (0%)') }}</option>
+                    </select>
+                </div>
+                <div id="tax-rate-field" {{ vl.attrs('ecommerce', __('Default VAT Rate (%)'), 'tax_default_rate', 'shop', __('Shop'), 'vat rate tax percent') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Default VAT Rate (%)') }}</label>
+                    <input type="number" step="0.01" min="0" name="tax_default_rate" value="{{ settings.tax_default_rate|default(settings.tax_rate|default('19')) }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Prices include tax. VAT is extracted from gross prices at checkout.') }}</p>
+                </div>
+                <div class="md:col-span-2" id="tax-zero-reason-field" {{ vl.attrs('ecommerce', __('Zero Tax Reason (for invoices/checkout)'), 'tax_zero_reason_default', 'shop', __('Shop'), 'zero tax exempt reason') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Zero Tax Reason (for invoices/checkout)') }}</label>
+                    <input type="text" name="tax_zero_reason_default" value="{{ settings.tax_zero_reason_default|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="{{ __('Required legal reason when VAT is 0%') }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-4">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Other Countries') }}</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Control which countries can checkout. Digital-only orders use these rules; physical orders use the shipping rules in the Shipping tab.') }}</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div {{ vl.attrs('ecommerce', __('Allowed Checkout Countries'), 'checkout_allowed_countries', 'shop', __('Other Countries'), 'allowed checkout countries digital') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Allowed Checkout Countries') }}</label>
+                    <div x-data="tokenMultiSelect({
+                            initial: '{{ settings.checkout_allowed_countries|default('')|e('js') }}',
+                            options: window.VL_COUNTRY_CODES || [],
+                            kind: 'country',
+                            placeholder: '{{ __('Select country code')|e('js') }}'
+                        })"
+                        class="space-y-2">
+                        <div class="flex gap-2 min-w-0">
+                            <select x-model="selected"
+                                    class="flex-1 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                <option value="" x-text="placeholder"></option>
+                                <template x-for="opt in availableOptions()" :key="opt">
+                                    <option :value="opt" x-text="displayLabel(opt)"></option>
+                                </template>
+                            </select>
+                            <button type="button" @click="addSelected()"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Add') }}</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="item in items" :key="item">
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1 text-xs font-medium text-gray-700">
+                                    <span x-text="displayLabel(item)"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Remove">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <input type="hidden" name="checkout_allowed_countries" :value="items.join(',')">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Leave empty to allow only the company country for checkout. Add countries to allow additional checkout destinations.') }}</p>
+                </div>
+                <div {{ vl.attrs('ecommerce', __('Blocked Checkout Countries'), 'checkout_blocked_countries', 'shop', __('Other Countries'), 'blocked checkout countries digital') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Blocked Checkout Countries') }}</label>
+                    <div x-data="tokenMultiSelect({
+                            initial: '{{ settings.checkout_blocked_countries|default('')|e('js') }}',
+                            options: window.VL_COUNTRY_CODES || [],
+                            kind: 'country',
+                            placeholder: '{{ __('Select country code')|e('js') }}'
+                        })"
+                        class="space-y-2">
+                        <div class="flex gap-2 min-w-0">
+                            <select x-model="selected"
+                                    class="flex-1 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                <option value="" x-text="placeholder"></option>
+                                <template x-for="opt in availableOptions()" :key="opt">
+                                    <option :value="opt" x-text="displayLabel(opt)"></option>
+                                </template>
+                            </select>
+                            <button type="button" @click="addSelected()"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Add') }}</button>
+                        </div>
+                        <div class="flex flex-wrap gap-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="item in items" :key="item">
+                                <span class="inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1 text-xs font-medium text-gray-700">
+                                    <span x-text="displayLabel(item)"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" aria-label="Remove">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <input type="hidden" name="checkout_blocked_countries" :value="items.join(',')">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Select countries to always block for digital checkout, even if they are in the allowed list.') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-4"
+             x-data="countryTaxRates(window.VL_COUNTRY_TAX_RATES_DATA)">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Country Tax Rates') }}</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Set per-country tax rules. Countries not listed will use the fallback rule below.') }}</p>
+
+            <template x-for="(row, idx) in rows" :key="row._key">
+                <div class="flex flex-wrap items-center gap-2 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <input type="hidden" :name="'ctr_country_code[' + idx + ']'" :value="row.country_code">
+                    <template x-if="!row.fallback">
+                        <select x-model="row.country_code"
+                                x-init="$nextTick(() => { if (row.country_code) $el.value = row.country_code; })"
+                                class="w-40 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                            <option value="">{{ __('Select country') }}</option>
+                            <template x-for="code in unusedCodes(idx)" :key="code">
+                                <option :value="code" x-text="labelFor(code)"></option>
+                            </template>
+                        </select>
+                    </template>
+                    <template x-if="row.fallback">
+                        <span class="w-40 text-sm font-medium text-gray-700">🌐 {{ __('Other Countries') }}</span>
+                    </template>
+
+                    <input type="hidden" :name="'ctr_fallback[' + idx + ']'" :value="row.fallback ? '1' : ''">
+
+                    <select :name="'ctr_regime[' + idx + ']'" x-model="row.regime"
+                            class="w-36 rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                            @change="onRegimeChange(row)">
+                        <option value="use_global" :disabled="!row.fallback">{{ __('Use Global') }}</option>
+                        <option value="normal_vat">{{ __('Normal VAT') }}</option>
+                        <option value="no_tax">{{ __('No Tax') }}</option>
+                    </select>
+
+                    <template x-if="row.regime === 'normal_vat'">
+                        <div class="flex items-center gap-1">
+                            <input type="number" step="0.01" min="0"
+                                   :name="'ctr_rate[' + idx + ']'" x-model="row.rate"
+                                   class="w-24 rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="19.00">
+                            <span class="text-xs text-gray-400">%</span>
+                        </div>
+                    </template>
+                    <template x-if="row.regime !== 'normal_vat'">
+                        <input type="hidden" :name="'ctr_rate[' + idx + ']'" value="">
+                    </template>
+
+                    <template x-if="row.regime === 'no_tax'">
+                        <input type="text" :name="'ctr_zero_reason[' + idx + ']'" x-model="row.zero_reason"
+                               class="flex-1 min-w-[200px] rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                               placeholder="{{ __('Zero tax reason') }}">
+                    </template>
+                    <template x-if="row.regime !== 'no_tax'">
+                        <input type="hidden" :name="'ctr_zero_reason[' + idx + ']'" value="">
+                    </template>
+
+                    <template x-if="row.fallback && row.regime === 'use_global'">
+                        <span class="text-xs text-gray-400">{{ __('Inherits the company country rate above.') }}</span>
+                    </template>
+
+                    <button type="button" @click="removeRow(idx)" x-show="!row.fallback"
+                            class="text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors text-lg leading-none px-1">&times;</button>
+                </div>
+            </template>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button type="button" @click="addRow()"
+                        class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-800 dark:hover:bg-gray-700 dark:hover:text-gray-100 transition-colors">+ {{ __('Add Country') }}</button>
+            </div>
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Channel Manager') }}</h3>
+
+            {% set channel_url = (site_url ?? 'http://localhost') %}
+
+            <div class="flex items-center gap-2 pb-3">
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('Quick:') }}</span>
+                <button type="button" onclick="document.querySelectorAll('.channel-checkbox').forEach(c => c.checked = true)"
+                        class="rounded-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('All') }}</button>
+                <button type="button" onclick="document.querySelectorAll('.channel-checkbox').forEach(c => c.checked = false)"
+                        class="rounded-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('None') }}</button>
+                <button type="button" onclick="document.querySelectorAll('.channel-checkbox').forEach(c => c.checked = !c.checked)"
+                        class="rounded-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">{{ __('Invert') }}</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                {# Google Merchant Center #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Google Merchant Center'), 'google_merchant_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="google_merchant_enabled" value="0">
+                        <input type="checkbox" name="google_merchant_enabled" value="1"
+                               {{ settings.google_merchant_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Google Merchant Center') }}
+                            <a href="{{ signup_urls.channels.google_merchant }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/google-merchant</p>
+                </div>
+
+                {# Bing #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Bing Merchant Center'), 'channel_bing_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_bing_enabled" value="0">
+                        <input type="checkbox" name="channel_bing_enabled" value="1"
+                               {{ settings.channel_bing_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Bing Merchant Center') }}
+                            <a href="{{ signup_urls.channels.bing }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/bing</p>
+                </div>
+
+                {# Meta (Facebook / Instagram) #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Meta (Facebook / Instagram)'), 'channel_meta_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_meta_enabled" value="0">
+                        <input type="checkbox" name="channel_meta_enabled" value="1"
+                               {{ settings.channel_meta_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Meta (Facebook / Instagram)') }}
+                            <a href="{{ signup_urls.channels.meta }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/meta</p>
+                </div>
+
+                {# Pinterest #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Pinterest'), 'channel_pinterest_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_pinterest_enabled" value="0">
+                        <input type="checkbox" name="channel_pinterest_enabled" value="1"
+                               {{ settings.channel_pinterest_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Pinterest') }}
+                            <a href="{{ signup_urls.channels.pinterest }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/pinterest</p>
+                </div>
+
+                {# Idealo #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Idealo'), 'channel_idealo_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_idealo_enabled" value="0">
+                        <input type="checkbox" name="channel_idealo_enabled" value="1"
+                               {{ settings.channel_idealo_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Idealo') }}
+                            <a href="{{ signup_urls.channels.idealo }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/idealo (CSV, comma-separated per idealo spec)</p>
+                </div>
+
+                {# TikTok Shop #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('TikTok Shop'), 'channel_tiktok_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_tiktok_enabled" value="0">
+                        <input type="checkbox" name="channel_tiktok_enabled" value="1"
+                               {{ settings.channel_tiktok_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('TikTok Shop') }}
+                            <a href="{{ signup_urls.channels.tiktok }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/tiktok</p>
+                </div>
+
+                {# Shopify RSS Feed #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Shopify RSS Feed'), 'channel_shopify_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_shopify_enabled" value="0">
+                        <input type="checkbox" name="channel_shopify_enabled" value="1"
+                               {{ settings.channel_shopify_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Shopify RSS Feed') }}
+                            <a href="{{ signup_urls.channels.shopify }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/shopify (RSS 2.0)</p>
+                </div>
+
+                {# Yandex Market #}
+                <div class="py-2" {{ vl.attrs('ecommerce', __('Yandex Market'), 'channel_yandex_enabled', 'shop', __('Channel Manager'), 'feed product channel export') }}>
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="hidden" name="channel_yandex_enabled" value="0">
+                        <input type="checkbox" name="channel_yandex_enabled" value="1"
+                               {{ settings.channel_yandex_enabled|default('0') == '1' ? 'checked' }}
+                               class="channel-checkbox rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                        <span class="font-medium">{{ __('Yandex Market') }}
+                            <a href="{{ signup_urls.channels.yandex }}" target="_blank" rel="noopener"
+                               class="ml-1 text-xs font-normal text-gray-400 hover:text-gray-600" title="{{ __('Create account') }}">
+                                ↗ {{ __('Sign up') }}
+                            </a>
+                        </span>
+                    </label>
+                    <p class="mt-0.5 text-xs text-gray-400 ml-6 break-all">{{ channel_url }}/api/v1/feed/yandex-market (YML)</p>
+                </div>
+            </div>
+
+            <div class="border-t pt-4" {{ vl.attrs('ecommerce', __('Default Google Product Category'), 'google_merchant_default_category', 'shop', __('Channel Manager'), 'google merchant category gmc') }}>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Default Google Product Category') }}</label>
+                <div class="flex gap-2">
+                    <input type="text" name="google_merchant_default_category" id="gmc-default-category"
+                           value="{{ settings.google_merchant_default_category|default('') }}"
+                           class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="{{ __('e.g. Electronics > Audio') }}" readonly>
+                    <button type="button" onclick="openGmcCategoryBrowser('gmc-default-category')"
+                            class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center gap-2">
+                        <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+                        </svg>
+                        {{ __('Browse') }}
+                    </button>
+                    <button type="button" onclick="document.getElementById('gmc-default-category').value=''"
+                            class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        ✕
+                    </button>
+                </div>
+                <p class="mt-1 text-xs text-gray-400">{{ __('Products will use this category by default when "Use global" is selected.') }}</p>
+            </div>
+
+        </div>
+
+    </form>
+    </div>{# /ec-tab-shop #}

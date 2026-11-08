@@ -1,0 +1,127 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════
+   HERO — full-viewport gradient banner
+   ══════════════════════════════════════════════════════════ #}
+<section class="relative overflow-hidden vl-hero-gradient">
+    {# decorative blobs #}
+    <div class="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full opacity-20 vl-radial-glow"></div>
+    <div class="pointer-events-none absolute -bottom-10 -right-10 h-72 w-72 rounded-full opacity-10 vl-radial-glow"></div>
+
+    <div class="relative mx-auto max-w-4xl px-6 py-24 text-center">
+        <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-xs ring-1 ring-white/30">
+            <span class="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
+            {{ __('Welcome') }}
+        </div>
+        <h1 class="font-display text-3xl sm:text-6xl lg:text-7xl font-bold text-white drop-shadow-sm leading-tight break-words">
+            {{ site_name }}
+        </h1>
+        {% if site_tagline is defined and site_tagline %}
+        <p class="mx-auto mt-6 max-w-xl text-lg text-white/80">{{ site_tagline }}</p>
+        {% endif %}
+        <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <a href="{{ url(routing_blog_prefix) }}"
+               class="rounded-full bg-white px-8 py-3 text-sm font-semibold text-emerald-700 shadow-md hover:bg-emerald-50 transition-colors">
+                {{ __('Read the Blog') }} &rarr;
+            </a>
+            {% if shop_enabled|default('1') == '1' %}
+                <a href="{{ url(routing_shop_prefix) }}"
+                   class="rounded-full bg-white/20 px-8 py-3 text-sm font-semibold text-white ring-1 ring-white/40 hover:bg-white/30 transition-colors backdrop-blur-xs">
+                    {{ __('Explore Shop') }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{# ══════════════════════════════════════════════════════════
+   FEATURE CARDS
+   ══════════════════════════════════════════════════════════ #}
+<section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20">
+    <div class="text-center mb-14">
+        <p class="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-2">{{ __('Why Vale') }}</p>
+        <h2 class="font-display text-3xl font-bold text-gray-900 sm:text-4xl">{{ __('Everything you need') }}</h2>
+        <p class="mt-4 text-gray-500 max-w-xl mx-auto">{{ __('Fast, flexible, and developer-friendly. Build anything.') }}</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {# Card 1 #}
+        <div class="card-lift rounded-2xl bg-white p-8 shadow-xs ring-1 ring-gray-100">
+            <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('Blazing Fast') }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ __('Lightweight core, no bloat. Every millisecond counts for your visitors.') }}</p>
+        </div>
+
+        {# Card 2 #}
+        <div class="card-lift rounded-2xl bg-white p-8 shadow-xs ring-1 ring-gray-100">
+            <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('Fully Themeable') }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ __('Swap themes in seconds. Each theme can override any template with its own design.') }}</p>
+        </div>
+
+        {% if shop_enabled|default('1') == '1' %}
+        {# Card 3 #}
+        <div class="card-lift rounded-2xl bg-white p-8 shadow-xs ring-1 ring-gray-100">
+            <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100-4 2 2 0 000-4z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ __('Built-in Shop') }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ __('Products, categories, carts, and orders — all built right in. No plugins required.') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{# ══════════════════════════════════════════════════════════
+   RECENT POSTS PREVIEW (if available via globals)
+   ══════════════════════════════════════════════════════════ #}
+{% if sidebar_recent_posts is defined and sidebar_recent_posts|length > 0 %}
+<section class="border-t border-gray-100 bg-white py-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between mb-10">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-widest text-emerald-600 mb-1">{{ __('Latest') }}</p>
+                <h2 class="font-display text-2xl font-bold text-gray-900">{{ __('From the Blog') }}</h2>
+            </div>
+            <a href="{{ url(routing_blog_prefix) }}" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700">
+                {{ __('All posts') }} &rarr;
+            </a>
+        </div>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {% for post in sidebar_recent_posts|slice(0,3) %}
+            <article class="card-lift rounded-2xl bg-gray-50 overflow-hidden ring-1 ring-gray-100">
+                <div class="h-2 w-full vl-gradient-divider"></div>
+                <div class="p-6">
+                    <p class="text-xs text-gray-400 mb-2">{% include 'partials/_vtime.twig' with {value: post.publishedAt, style: 'medium'} %}</p>
+                    <h3 class="font-semibold text-gray-900 leading-snug mb-3">
+                        <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}" class="hover:text-emerald-600 transition-colors">{{ post.title }}</a>
+
+                    <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}" class="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+                        {{ __('Read') }} &rarr;
+                    </a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="mt-8 text-center sm:hidden">
+            <a href="{{ url(routing_blog_prefix) }}" class="text-sm font-medium text-emerald-600 hover:text-emerald-700">{{ __('All posts') }} &rarr;</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

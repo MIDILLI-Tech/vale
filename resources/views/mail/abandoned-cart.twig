@@ -1,0 +1,27 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('You left something in your cart!') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('You forgot your cart!') }}</h2>
+<p>{{ __("We noticed you didn't complete your purchase. Your cart is still waiting for you.") }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Items in cart') }}</td>
+    <td style="padding:8px 0; font-weight:600; text-align:right;">{{ item_count }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Subtotal') }}</td>
+    <td style="padding:8px 0; font-weight:700; text-align:right;">{{ subtotal|price(current_currency) }}</td>
+  </tr>
+</table>
+
+<p style="margin:24px 0;">
+  <a href="{{ checkout_url }}" class="btn">{{ __('Complete your order') }}</a>
+</p>
+
+<p style="margin-top:24px; font-size:13px; color:{{ email_text_muted }};">
+  {{ __('If you have any questions or need help, just reply to this email.') }}
+</p>
+{% endblock %}

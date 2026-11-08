@@ -1,0 +1,50 @@
+{#
+  Reusable vote (star rating) widget.
+  Required variables:
+    product   — Product entity (has .slug, .id, .voteEnabled)
+    vote      — {avg: float, count: int}  (null if no votes yet)
+    user_vote — ProductVote entity or null
+#}
+
+{% set avg = vote ? vote.avg|default(0) : 0 %}
+{% set count = vote ? vote.count|default(0) : 0 %}
+{% set user_rating = user_vote ? user_vote.rating : 0 %}
+
+<div class="mb-4">
+
+    {# Static average display #}
+    <div class="flex items-center gap-2 mb-2">
+        <div class="flex gap-0.5">
+            {% for i in 1..5 %}
+            <svg class="w-5 h-5 {{ avg >= i ? 'text-yellow-400' : (avg >= i - 0.5 ? 'text-yellow-300' : 'text-gray-200 dark:text-gray-600') }}"
+                 fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+            {% endfor %}
+        </div>
+        {% if count > 0 %}
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ avg|number_format(1) }} <a href="#comments" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">({{ count }} {{ count == 1 ? 'rating' : 'ratings' }})</a></span>
+        {% else %}
+        <span class="text-sm">
+            <a href="#comments"
+               onclick="event.preventDefault(); document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' }); return false;"
+               class="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
+                No ratings yet
+            </a>
+        </span>
+        {% endif %}
+    </div>
+
+    {# User's existing rating hint #}
+    {% if user_vote %}
+    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Your rating') }}: {{ user_vote.rating }}/5</p>
+    {% else %}
+    <p class="text-xs">
+        <a href="#comments"
+           onclick="event.preventDefault(); document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' }); return false;"
+           class="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
+            {{ __('Leave a comment below to rate this product.') }}
+        </a>
+    </p>
+    {% endif %}
+</div>

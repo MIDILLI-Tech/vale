@@ -1,0 +1,187 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}Campaigns{% endblock %}
+
+{% block content %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+{% if cron_mode == 'none' %}
+<div class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+    <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+    <span>{{ __('Cron is currently disabled. Campaigns will not send emails until a cron job is configured. Enable it in') }} <a href="{{ url('/admin/settings') }}#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+</div>
+{% endif %}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Email Campaigns</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> campaigns</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <a href="{{ url('/admin/newsletter/subscribers') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">Subscribers</a>
+        <a href="{{ url('/admin/newsletter/campaigns/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ New Campaign</a>
+    </div>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search('Search…') }}
+    {{ table.contentSearch() }}
+    {{ table.columnsToggle() }}
+    {% if filterSubscriber %}
+    <div class="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+        <span>Filtered: <strong>{{ filterSubscriber.email }}</strong></span>
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="ml-1 text-blue-500 hover:text-blue-700 font-medium">&times;</a>
+    </div>
+    {% endif %}
+    {% if filters.filter is defined and filters.filter %}
+    <div class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-900">
+        <span>{% if filters.filter == 'opened' %}Opened campaigns{% elseif filters.filter == 'clicked' %}Clicked campaigns{% endif %}</span>
+        <a href="{{ url('/admin/newsletter/campaigns') }}{{ filterSubscriber ? '?subscriber_id=' ~ filterSubscriber.id : '' }}" class="text-amber-700 hover:text-amber-900">&times;</a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th('Subject', 'subject') }}
+                {{ table.th('Status', 'status') }}
+                {{ table.th('Recipients', 'recipients_count') }}
+                {{ table.th('Opens', 'opens_count') }}
+                {{ table.th('Clicks', 'clicks_count') }}
+                {{ table.th_static('Tracking', 'center') }}
+                {{ table.th('Sent', 'sent_at') }}
+                {{ table.th_static('Actions', 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for c in campaigns %}
+            {% set opens_pct = c.recipientsCount > 0 ? min(((c.opensCount / c.recipientsCount) * 100)|round(1), 100) : 0 %}
+            {% set clicks_pct = c.recipientsCount > 0 ? min(((c.clicksCount / c.recipientsCount) * 100)|round(1), 100) : 0 %}
+            <tr data-row-id="{{ c.id }}" data-sort="{{ {subject: c.subject, status: c.status, recipients_count: c.recipientsCount, opens_count: c.opensCount, clicks_count: c.clicksCount, sent_at: c.sentAt ? c.sentAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {% if c.status == 'draft' or c.status == 'scheduled' %}
+                    <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/edit') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ c.subject }}</a>
+                    {% else %}
+                    <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id) }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ c.subject }}</a>
+                    {% endif %}
+                    {% if c.abTestEnabled %}
+                        <div class="mt-1 flex items-center gap-1.5">
+                            <span class="inline-flex items-center rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 border border-indigo-100">A/B TEST</span>
+                        </div>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% set sc = {draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', sent: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', sending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300', queued: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[c.status]|default('bg-gray-100') }}">{{ c.status|capitalize }}</span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% if c.recipientsCount %}
+                    <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ c.recipientsCount }}</a>
+                    {% elseif audienceEstimates[c.id] is defined %}
+                    <span class="text-gray-400 dark:text-gray-500" title="{{ __('Estimated audience — active subscribers matching the campaign filters') }}">~{{ audienceEstimates[c.id] }}</span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% if c.abTestEnabled %}
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500">A:</span>
+                                <div>{{ c.opensCount }} <span class="text-[10px] opacity-70 dark:opacity-90">({{ c.recipientsCountA > 0 ? ((c.opensCount / c.recipientsCountA) * 100)|round(1) : 0 }}%)</span></div>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-[10px] font-bold text-indigo-400 dark:text-indigo-300">B:</span>
+                                <div>{{ c.opensCountB }} <span class="text-[10px] opacity-70 dark:opacity-90">({{ c.recipientsCountB > 0 ? ((c.opensCountB / c.recipientsCountB) * 100)|round(1) : 0 }}%)</span></div>
+                            </div>
+                        </div>
+                    {% else %}
+                        {% if c.opensCount %}
+                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients?filter=opened') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ c.opensCount }}</a> <span class="text-xs text-gray-400">({{ opens_pct }}%)</span>
+                        {% else %}
+                        0
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% if c.abTestEnabled %}
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500">A:</span>
+                                <div>{{ c.clicksCount }} <span class="text-[10px] opacity-70 dark:opacity-90">({{ c.recipientsCountA > 0 ? ((c.clicksCount / c.recipientsCountA) * 100)|round(1) : 0 }}%)</span></div>
+                            </div>
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="text-[10px] font-bold text-indigo-400 dark:text-indigo-300">B:</span>
+                                <div>{{ c.clicksCountB }} <span class="text-[10px] opacity-70 dark:opacity-90">({{ c.recipientsCountB > 0 ? ((c.clicksCountB / c.recipientsCountB) * 100)|round(1) : 0 }}%)</span></div>
+                            </div>
+                        </div>
+                    {% else %}
+                        {% if c.clicksCount %}
+                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients?filter=clicked') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ c.clicksCount }}</a> <span class="text-xs text-gray-400">({{ clicks_pct }}%)</span>
+                        {% else %}
+                        0
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-center">
+                    {% set t = c.trackingEnabled|default(3) %}
+                    <div class="flex items-center justify-center gap-1">
+                        {% if t == 0 %}
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">—</span>
+                        {% else %}
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 1 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 1 ? 'Open tracking on' : 'Open tracking off' }}">O</span>
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 2 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 2 ? 'Click tracking on' : 'Click tracking off' }}">C</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ c.sentAt ? c.sentAt|date('Y-m-d') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        {% if c.status == 'draft' or c.status == 'scheduled' %}
+                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/edit') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
+                              onsubmit="return confirm('{{ __('Send this campaign now to all matching subscribers?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">Send Now</button>
+                        </form>
+                        {% elseif c.status == 'sent' %}
+                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">Reports</a>
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/resend') }}"
+                              onsubmit="return confirm('{{ __('Resend this campaign to all matching subscribers? Previous tracking data will be reset.')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">Resend</button>
+                        </form>
+                        {% elseif c.status == 'queued' or c.status == 'processing' %}
+                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">Reports</a>
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
+                              onsubmit="return confirm('{{ __('Send the next batch of this campaign now? The rest will continue automatically by cron.')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-amber-300 dark:ring-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20">{{ __('Resume') }}</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/clone') }}">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">Clone</button>
+                        </form>
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Delete campaign?')|e('js') }}')">
+                            {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="px-6 py-12 text-center text-gray-400">{{ __('No campaigns yet.') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+</div>
+{% endblock %}

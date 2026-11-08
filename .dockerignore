@@ -1,0 +1,60 @@
+# Version control and CI
+.git
+.github
+.githooks
+.gitignore
+.gitattributes
+.gitleaks.toml
+captain-definition
+
+# Secrets — never bake into images (provide via environment / mounted .env)
+.env
+.env.*
+!.env.example
+
+# Dependencies are installed inside dedicated build stages.
+# Excluding them also prevents COPY . . from overwriting stage outputs.
+vendor
+node_modules
+
+# Runtime data (logs, cache, sessions, uploads, sqlite, backups) is
+# created at container start; baking it in leaks data and bloats layers.
+storage
+
+# Media is runtime data: it belongs to the storage volume and is served from
+# there via the web server alias. A local public/uploads must never be baked
+# into an image (privacy, layer size, stale content).
+public/uploads
+
+# Stale frontend artifacts must not overwrite the assets-builder output.
+public/assets/build
+
+# User-owned plugin code is runtime data: it belongs to the content volume
+# (or the host bind-mount in dev), never in a published image.
+content/plugins/*
+content/mu-plugins/*
+
+# Tests and docs are not needed inside images.
+tests
+vale-docs
+
+# Build files themselves
+.dockerignore
+Dockerfile*
+docker-compose.yml
+docker-compose.prod.yml
+phpunit.xml
+.phpunit.result.cache
+.php-cs-fixer.cache
+npm-debug.log
+yarn-error.log
+dist
+
+# Developer and editor noise
+.idea
+.agents
+AGENTS.MD
+.vscode
+*.log
+.DS_Store
+Thumbs.db

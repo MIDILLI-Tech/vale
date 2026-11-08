@@ -1,0 +1,23 @@
+{#
+    Sortable column label for an analytics card.
+
+    The label *is* the control — clicking a column header sorts by it (and
+    clicking it again flips the direction), exactly like a table header. The
+    server renders the card's default column as active so the ↓ arrow is
+    visible before any interaction; the script in admin/analytics/index.twig
+    re-applies a persisted choice on top.
+
+    `card` ties the button to the list bodies carrying the same
+    `data-vl-sort-card`, so one header row drives every list of the card (the
+    UTM card has six panels).
+#}
+{% macro th(card, col, label, defaultDir, active) %}
+<button type="button"
+        data-vl-sort-col="{{ col }}"
+        data-vl-sort-card="{{ card }}"
+        data-vl-sort-default="{{ defaultDir|default('desc') }}"
+        data-vl-sort-active="{{ active ? '1' : '0' }}"
+        aria-pressed="{{ active ? 'true' : 'false' }}"
+        class="vl-sort-th flex w-full items-center justify-end gap-1 whitespace-nowrap uppercase tracking-wider cursor-pointer transition-colors hover:text-gray-600 dark:hover:text-gray-200{{ active ? ' text-gray-600 dark:text-gray-200 font-semibold' : '' }}"
+        title="{{ __('Sort by :column', {':column': label}) }}">{{ label }}<span class="vl-sort-icon" aria-hidden="true">{{ active ? (defaultDir == 'asc' ? '↑' : '↓') : '' }}</span></button>
+{% endmacro %}

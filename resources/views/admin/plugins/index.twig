@@ -1,0 +1,615 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Plugins') }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Plugins') }}</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 self-start">
+        <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+            {{ __('Vale Version: :version', {':version': vale_version}) }}
+        </span>
+        <form method="POST" action="{{ url('/admin/plugins/check-updates') }}">
+            {{ csrf_field() }}
+            <button type="submit"
+                    class="rounded-md px-3 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:ring-blue-700 dark:hover:bg-blue-950/40">
+                {{ __('Check for plugin updates') }}
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if operator_disabled %}
+<div class="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-300">
+    <p class="font-semibold">{{ __('All plugins are disabled by the operator.') }}</p>
+    <p class="mt-1">
+        {{ __('Remove the disable marker or environment variable to load them again. Activation state is kept.') }}
+    </p>
+</div>
+{% endif %}
+
+<div class="mb-6 grid gap-4 lg:grid-cols-2">
+    <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ __('Global switch') }}</h2>
+            <div class="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3">
+                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ plugins_enabled
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                    : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                    {{ plugins_enabled ? __('On') : __('Off') }}
+                </span>
+                <form method="POST" action="{{ url('/admin/plugins/global') }}">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="enabled" value="{{ plugins_enabled ? '0' : '1' }}">
+                    <button type="submit"
+                            class="rounded-md px-3 py-1.5 text-xs font-medium ring-1 {{ plugins_enabled
+                                ? 'text-red-700 ring-red-300 hover:bg-red-50 dark:text-red-400 dark:ring-red-700 dark:hover:bg-red-950/40'
+                                : 'text-green-700 ring-green-300 hover:bg-green-50 dark:text-green-400 dark:ring-green-700 dark:hover:bg-green-950/40' }}">
+                        {{ plugins_enabled ? __('Disable plugin system') : __('Enable plugin system') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+        <p class="mt-1 max-w-2xl text-xs text-gray-500 dark:text-gray-400">
+            {{ __('Turning this off stops all plugins and always-on drop-ins. Their individual on/off states are remembered when you turn it back on.') }}
+        </p>
+        <p class="mt-1 max-w-2xl text-xs leading-5 text-gray-500 dark:text-gray-400">
+            {{ __('Plugins can also be managed from the CLI:') }}
+            <code class="whitespace-nowrap rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-gray-700 dark:bg-gray-800 dark:text-gray-300">php vale plugin:* &lt;slug&gt;</code>,
+        </p>
+    </div>
+
+    <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ __('Install plugin') }}</h2>
+            <form method="POST" action="{{ url('/admin/plugins/install') }}" enctype="multipart/form-data"
+                  class="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                {{ csrf_field() }}
+                <input type="file" name="plugin_zip" accept=".zip,application/zip" required
+                       class="vl-plugin-file-input block w-full min-w-0 text-xs sm:w-56">
+                <button type="submit"
+                        class="shrink-0 rounded-md px-3 py-1.5 text-xs font-medium text-green-700 ring-1 ring-green-300 hover:bg-green-50 dark:text-green-400 dark:ring-green-700 dark:hover:bg-green-950/40">
+                    {{ __('Install') }}
+                </button>
+            </form>
+        </div>
+        <p class="mt-1 max-w-2xl text-xs text-gray-500 dark:text-gray-400">
+            {{ __('Upload a regular plugin ZIP containing plugin.php. The package is validated and installed disabled, so you can review it before enabling.') }}
+        </p>
+        <p class="mt-1 max-w-2xl text-xs text-gray-500 dark:text-gray-400">
+            {{ __('Must-use (mu) plugins are single files and cannot be installed from this uploader.') }}
+        </p>
+    </div>
+</div>
+
+{% if not plugins_enabled and not operator_disabled %}
+<div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+    <p class="font-semibold">{{ __('All plugins are switched off globally.') }}</p>
+    <p class="mt-1">{{ __('No plugin code runs and plugin assets answer 404. The activation list is unchanged.') }}</p>
+</div>
+{% endif %}
+
+{% if total_plugins == 0 %}
+<div class="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-700 dark:bg-gray-900">
+    <svg class="mx-auto h-10 w-10 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
+    </svg>
+    <h2 class="mt-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{{ __('No plugins installed') }}</h2>
+</div>
+{% else %}
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}, search: '{{ (filters.search|default(''))|e('js') }}'{% if not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}'{% endif %}})">
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search(__('Search plugin name, slug or description…')) }}
+    <form method="get" action="{{ url('/admin/plugins') }}" class="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="search" :value="search">
+        <select name="status" aria-label="{{ __('Status') }}"
+                class="rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-200">
+            <option value="">{{ __('All Statuses') }}</option>
+            <option value="enabled" {{ filters.status|default('') == 'enabled' ? 'selected' }}>{{ __('Enabled') }}</option>
+            <option value="disabled" {{ filters.status|default('') == 'disabled' ? 'selected' }}>{{ __('Disabled') }}</option>
+            <option value="must_use" {{ filters.status|default('') == 'must_use' ? 'selected' }}>{{ __('Must-Use') }}</option>
+        </select>
+        <button type="submit"
+                class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+            {{ __('Filter') }}
+        </button>
+    </form>
+    {{ table.columnsToggle() }}
+</div>
+<div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">
+    <table class="min-w-full divide-y divide-gray-200 text-left text-sm dark:divide-gray-700">
+        <thead class="bg-gray-50 text-xs font-semibold uppercase text-gray-500 dark:bg-gray-800/50 dark:text-gray-400">
+            <tr>
+                {{ table.th_checkbox([]) }}
+                <th class="px-6 py-3">{{ __('Plugin') }}</th>
+                <th class="px-6 py-3">{{ __('Version') }}</th>
+                <th class="px-6 py-3" data-default-hidden="1">{{ __('Requires') }}</th>
+                <th class="px-6 py-3">{{ __('Status') }}</th>
+                <th class="px-6 py-3" data-default-hidden="1">{{ __('Capabilities') }}</th>
+                <th class="px-6 py-3">{{ __('Installed') }}</th>
+                <th class="px-6 py-3">{{ __('Last Update') }}</th>
+                <th class="px-6 py-3 text-right">{{ __('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for plugin in plugins %}
+            <tr data-row-id="{{ plugin.must_use|default(false) ? 'mu-' ~ plugin.slug : plugin.slug }}"
+                data-sort="{{ {name: plugin.name, slug: plugin.slug, version: plugin.version, status: plugin.must_use|default(false) ? 'Must-Use' : (plugin.error ? 'Invalid' : (plugin.enabled ? 'Enabled' : 'Disabled'))}|json_encode|e('html_attr') }}"
+                class="align-top hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                {% if not plugin.error and not plugin.must_use|default(false) %}
+                    {{ table.td_checkbox(plugin.slug) }}
+                {% else %}
+                    <td class="w-10 px-4 py-3"></td>
+                {% endif %}
+                <td class="px-6 py-4">
+                    {% if plugin.settings %}
+                    <a href="{{ url(plugin.settings) }}"
+                       class="font-medium text-gray-900 hover:text-gray-700 hover:underline dark:text-gray-100 dark:hover:text-gray-300">{{ plugin.name }}</a>
+                    {% else %}
+                    <div class="font-medium text-gray-900 dark:text-gray-100">{{ plugin.name }}</div>
+                    {% endif %}
+                    {% if plugin.description %}
+                        {% if plugin.description|length > 140 %}
+                        <div x-data="{ open: false }" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                            <div class="line-clamp-2 break-words" x-show="!open" title="{{ plugin.description }}">{{ plugin.description }}</div>
+                            <div class="break-words" x-show="open" x-cloak>{{ plugin.description }}</div>
+                            <button type="button" @click="open = !open" :aria-expanded="open"
+                                    class="mt-1 text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                                <span x-show="!open">{{ __('Show more') }}</span>
+                                <span x-show="open" x-cloak>{{ __('Show less') }}</span>
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="mt-1 break-words text-xs text-gray-600 dark:text-gray-300">{{ plugin.description }}</div>
+                        {% endif %}
+                    {% elseif plugin.must_use|default(false) %}
+                    <div class="mt-1 break-words text-xs text-gray-600 dark:text-gray-300">{{ __('Single PHP file in content/mu-plugins/.') }}</div>
+                    {% endif %}
+                    {% if plugin.dependency_problem %}
+                    <div class="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                        {{ plugin.dependency_problem }}
+                    </div>
+                    {% endif %}
+
+                    {% if plugin.error %}
+                    <div class="mt-2 rounded-md bg-red-50 px-2 py-1 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                        {{ plugin.error }}
+                    </div>
+                    {% elseif plugin.failure %}
+                    <div class="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                        <span class="font-semibold">{{ __('Last error:') }}</span> {{ plugin.failure.message }}
+                    </div>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                    <div>{{ plugin.version }}</div>
+                    {% if plugin.license %}
+                    <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        <span class="whitespace-nowrap rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono dark:bg-gray-800 dark:text-gray-300">{{ __('License') }}: {{ plugin.license }}</span>
+                    </div>
+                    {% endif %}
+                    {% if plugin.update %}
+                        {% if plugin.update.error %}
+                            <div class="mt-1 max-w-xs break-words text-[11px] text-red-600 dark:text-red-400">
+                                {{ __('Update check failed: :error', {':error': plugin.update.error}) }}
+                            </div>
+                        {% elseif plugin.update.available %}
+                            <div class="mt-1 whitespace-nowrap text-[11px] font-semibold text-green-700 dark:text-green-400">
+                                {{ __('Update available: v:version', {':version': plugin.update.version}) }}
+                            </div>
+                        {% elseif plugin.update.checked_at %}
+                            <div class="mt-1 whitespace-nowrap text-[11px]">
+                                {{ __('Up to date (checked :time)', {':time': plugin.update.checked_at}) }}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                    {% set _requires = [] %}
+                    {% if plugin.requires_vale %}{% set _requires = _requires|merge(['Vale ' ~ plugin.requires_vale]) %}{% endif %}
+                    {% if plugin.requires_php %}{% set _requires = _requires|merge(['PHP ' ~ plugin.requires_php]) %}{% endif %}
+                    {% if plugin.requires_ext %}{% set _requires = _requires|merge(['ext: ' ~ plugin.requires_ext|join(', ')]) %}{% endif %}
+                    {% if _requires is empty %}
+                        —
+                    {% else %}
+                        <span class="font-mono text-xs">{{ _requires|join(' · ') }}</span>
+                    {% endif %}
+                    {% if plugin.requires_plugin %}
+                    <div class="mt-1 font-mono text-[11px]">
+                        {% for dep, constraint in plugin.requires_plugin %}
+                            plugin: {{ dep }}{% if constraint %} {{ constraint }}{% endif %}{% if not loop.last %} · {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4">
+                    {% if plugin.must_use|default(false) %}
+                        <span class="whitespace-nowrap rounded-sm bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('Must-Use') }}</span>
+                    {% elseif plugin.error %}
+                        <span class="rounded-sm bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700 dark:bg-red-900/40 dark:text-red-300">{{ __('Invalid') }}</span>
+                    {% elseif plugin.enabled %}
+                        <span class="rounded-sm bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-900/40 dark:text-green-300">{{ __('Enabled') }}</span>
+                    {% else %}
+                        <span class="rounded-sm bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Disabled') }}</span>
+                    {% endif %}
+
+                    {% if plugin.migrations.pending_error %}
+                        <div class="mt-2 max-w-xs text-[11px] text-red-600 dark:text-red-400">
+                            <span class="font-semibold">{{ __('Migration files are invalid') }}</span>
+                            <div class="mt-0.5 break-words">{{ plugin.migrations.pending_error }}</div>
+                        </div>
+                    {% elseif plugin.migrations.pending is not null %}
+                        <div class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                            {% if plugin.migrations.pending > 0 %}
+                                <span class="rounded-sm bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                    {{ __(':count pending', {':count': plugin.migrations.pending}) }}
+                                </span>
+                            {% else %}
+                                {{ __('Up to date') }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if plugin.migrations.last %}
+                        {% if plugin.migrations.last.status == 'error' %}
+                            <div class="mt-1 max-w-xs break-words text-[11px] text-red-600 dark:text-red-400">
+                                <span class="font-semibold">{{ __('Last run failed') }}</span>
+                                · {{ plugin.migrations.last.at }}
+                                {% if plugin.migrations.last.message %}
+                                    <div class="mt-0.5">{{ plugin.migrations.last.message }}</div>
+                                {% endif %}
+                            </div>
+                        {% elseif plugin.migrations.last.action == 'rollback' %}
+                            <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                {{ __('Last run: :count reverted', {':count': plugin.migrations.last.count}) }}
+                                · {{ plugin.migrations.last.at }}
+                            </div>
+                        {% else %}
+                            <div class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                {{ __('Last run: :count applied', {':count': plugin.migrations.last.count}) }}
+                                · {{ plugin.migrations.last.at }}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="px-6 py-4 align-top">
+                    {% if plugin.capabilities %}
+                    <div class="flex max-w-72 flex-wrap gap-1">
+                        {% for cap in plugin.capabilities %}
+                            <span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950/30 dark:text-amber-400 dark:ring-amber-500/30">
+                                {{ cap }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <span class="text-xs text-gray-400 dark:text-gray-500">—</span>
+                    {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
+                    {{ plugin.installed_at|default(null) ? plugin.installed_at|date('Y-m-d H:i') : '—' }}
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-xs text-gray-500 dark:text-gray-400">
+                    {{ plugin.updated_at|default(null) ? plugin.updated_at|date('Y-m-d H:i') : '—' }}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex flex-wrap items-center justify-end gap-1.5">
+                        {% if plugin.must_use|default(false) %}
+                        <button type="button" disabled
+                                title="{{ __('Must-use plugins are managed on the server.') }}"
+                                aria-label="{{ __('Delete') }}"
+                                class="inline-flex cursor-not-allowed rounded-sm p-1.5 text-gray-400 ring-1 ring-gray-200 dark:text-gray-500 dark:ring-gray-700">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                        {% else %}
+                        {% if plugin.update and plugin.update.available and not plugin.update.error %}
+                        <form method="POST" action="{{ url('/admin/plugins/update') }}" class="inline-flex shrink-0">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="slug" value="{{ plugin.slug }}">
+                            <button type="submit"
+                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 ring-1 ring-green-300 hover:bg-green-50 dark:text-green-400 dark:ring-green-700 dark:hover:bg-green-950/40">
+                                {{ __('Update') }}
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if not plugin.error %}
+                        <form method="POST" action="{{ url('/admin/plugins/toggle') }}" class="inline-flex shrink-0"
+                              {% if not plugin.enabled and plugin.capabilities %}
+                              onsubmit="return confirm('{{ __('This plugin requests the following sensitive capabilities: :caps. Are you sure you want to approve and enable it?', {':caps': plugin.capabilities|join(', ')})|e('js') }}');"
+                              {% endif %}>
+                            {{ csrf_field() }}
+                            <input type="hidden" name="slug" value="{{ plugin.slug }}">
+                            <input type="hidden" name="action" value="{{ plugin.enabled ? 'disable' : 'enable' }}">
+                            <button type="submit"
+                                    {% if not plugin.enabled %}
+                                    @click.prevent="$dispatch('vl:plugin-enable', {slug: {{ plugin.slug|json_encode|e('html_attr') }}, name: {{ plugin.name|json_encode|e('html_attr') }}})"
+                                    {% endif %}
+                                    title="{{ plugin.enabled ? __('Disable') : __('Enable') }}"
+                                    aria-label="{{ plugin.enabled ? __('Disable') : __('Enable') }}"
+                                    class="inline-flex shrink-0 items-center justify-center rounded-sm p-1.5 ring-1 {{ plugin.enabled
+                                        ? 'text-yellow-700 ring-yellow-300 hover:bg-yellow-50 dark:text-yellow-400 dark:ring-yellow-700 dark:hover:bg-yellow-950/40'
+                                        : 'text-green-700 ring-green-300 hover:bg-green-50 dark:text-green-400 dark:ring-green-700 dark:hover:bg-green-950/40' }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v9m6.364-6.364a9 9 0 11-12.728 0"/>
+                                </svg>
+                            </button>
+                        </form>
+                        {% else %}
+                            <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">{{ __('Fix the manifest first') }}</span>
+                        {% endif %}
+                        {% if plugin.settings %}
+                        <a href="{{ url(plugin.settings) }}"
+                           title="{{ __('Settings') }}" aria-label="{{ __('Settings') }}"
+                           class="inline-flex shrink-0 items-center justify-center rounded-sm p-1.5 text-blue-700 ring-1 ring-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:ring-blue-700 dark:hover:bg-blue-950/40">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </a>
+                        {% endif %}
+                        {% if plugin.admin and plugin.enabled and not plugin.failure %}
+                        <form method="POST" action="{{ url('/admin/plugins/nav-visibility') }}" class="inline-flex shrink-0">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="slug" value="{{ plugin.slug }}">
+                            <input type="hidden" name="hidden" value="{{ plugin.nav_hidden ? '0' : '1' }}">
+                            <button type="submit"
+                                    title="{{ plugin.nav_hidden ? __('Show in navigation') : __('Hide from navigation') }}"
+                                    aria-label="{{ plugin.nav_hidden ? __('Show in navigation') : __('Hide from navigation') }}"
+                                    class="rounded-sm p-1.5 text-gray-500 ring-1 ring-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:ring-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200">
+                                {% if plugin.nav_hidden %}
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/>
+                                </svg>
+                                {% else %}
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                {% endif %}
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if plugin.homepage %}
+                        <a href="{{ plugin.homepage }}" target="_blank" rel="noopener noreferrer"
+                           title="{{ __('Website') }}" aria-label="{{ __('Website') }}"
+                           class="inline-flex shrink-0 items-center justify-center rounded-sm p-1.5 text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-800">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 21a9 9 0 100-18 9 9 0 000 18z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.6 9h16.8M3.6 15h16.8M12 3c2.4 2.4 3.6 5.4 3.6 9s-1.2 6.6-3.6 9c-2.4-2.4-3.6-5.4-3.6-9S9.6 5.4 12 3z"/>
+                            </svg>
+                        </a>
+                        {% endif %}
+                        <form method="POST" action="{{ url('/admin/plugins/delete') }}"
+                              class="inline-flex shrink-0 items-center gap-1.5 border-l border-gray-200 pl-3 dark:border-gray-700"
+                              onsubmit="return confirm(this.querySelector('input[name=delete_data]').checked ? '{{ __('Delete this plugin, its settings and all data? Applied migrations will be rolled back. This cannot be undone.')|e('js') }}' : '{{ __('Delete this plugin? Only its files will be deleted; settings and data are kept.')|e('js') }}');">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="slug" value="{{ plugin.slug }}">
+                            <button type="submit"
+                                    title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}"
+                                    class="inline-flex rounded-sm p-1.5 text-red-700 ring-1 ring-red-300 hover:bg-red-50 dark:text-red-400 dark:ring-red-700 dark:hover:bg-red-950/40">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                            <label class="flex max-w-32 items-start gap-1 text-[11px] leading-tight text-gray-500 dark:text-gray-400">
+                                <input type="checkbox" name="delete_data" value="1" class="h-3.5 w-3.5 shrink-0 rounded-sm border-gray-300 dark:border-gray-700">
+                                <span class="whitespace-normal break-words">{{ __('All data') }}</span>
+                            </label>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No matching results.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{{ table.pagination() }}
+</div>
+
+<div x-data="{
+        open: false, loading: false, slug: '', name: '', capabilities: [], error: '',
+        check(detail) {
+            this.open = true;
+            this.loading = true;
+            this.error = '';
+            this.slug = detail.slug;
+            this.name = detail.name;
+            this.capabilities = [];
+            const token = document.querySelector('meta[name=csrf-token]')?.content ?? '';
+            fetch('{{ url('/admin/plugins/scan') }}', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': token },
+                body: new URLSearchParams({ slugs: this.slug }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    this.capabilities = data.capabilities || [];
+                    this.error = data.error || '';
+                })
+                .catch(() => { this.error = '{{ __('Could not check the plugin. Try again.')|e('js') }}'; })
+                .finally(() => { this.loading = false; });
+        },
+        close() { this.open = false; }
+    }"
+    @vl:plugin-enable.window="check($event.detail)"
+    @keydown.escape.window="close()">
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4" @click.self="close()">
+        <div class="w-full max-w-lg overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900"
+             role="dialog" aria-modal="true">
+            <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Enable plugin') }}</h2>
+                <p class="mt-0.5 break-words text-sm text-gray-500 dark:text-gray-400" x-text="name"></p>
+            </div>
+            <div class="px-5 py-4">
+                <div x-show="loading" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <svg class="h-4 w-4 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ __('Checking the plugin for requested capabilities…') }}
+                </div>
+
+                <div x-show="!loading" x-cloak>
+                    <p x-show="error" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300" x-text="error"></p>
+
+                    <div x-show="!error && capabilities.length">
+                        <p class="text-sm text-gray-700 dark:text-gray-200">{{ __('This plugin requests the following capabilities:') }}</p>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            <template x-for="cap in capabilities" :key="cap">
+                                <span class="inline-flex items-center whitespace-nowrap rounded bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-500/30" x-text="cap"></span>
+                            </template>
+                        </div>
+                        <p class="mt-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                            {{ __('Capabilities let a plugin read environment values, run processes, execute code, touch files or open network connections. Approve only updates from a source you trust.') }}
+                        </p>
+                    </div>
+
+                    <p x-show="!error && !capabilities.length" class="text-sm text-gray-600 dark:text-gray-300">
+                        {{ __('This plugin requests no sensitive capabilities.') }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3 dark:border-gray-700">
+                <button type="button" @click="close()"
+                        class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-800">
+                    {{ __('Cancel') }}
+                </button>
+                <form method="POST" action="{{ url('/admin/plugins/toggle') }}">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="slug" :value="slug">
+                    <input type="hidden" name="action" value="enable">
+                    <button type="submit" :disabled="loading || error !== ''"
+                            class="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600">
+                        {{ __('Enable') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div x-data="{
+        open: false, loading: false, error: '', plugins: [], form: null,
+        check(detail) {
+            const slugs = Array.isArray(detail.slugs) ? detail.slugs.filter(slug => slug !== '') : [];
+            if (slugs.length === 0) return;
+            this.open = true;
+            this.loading = true;
+            this.error = '';
+            this.plugins = [];
+            this.form = detail.form || null;
+            const token = document.querySelector('meta[name=csrf-token]')?.content ?? '';
+            fetch('{{ url('/admin/plugins/scan') }}', {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': token },
+                body: new URLSearchParams({ slugs: slugs.join(',') }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    this.plugins = data.plugins || [];
+                    this.error = data.error || '';
+                })
+                .catch(() => {
+                    this.plugins = [];
+                    this.error = '{{ __('Could not check the plugins. Try again.')|e('js') }}';
+                })
+                .finally(() => { this.loading = false; });
+        },
+        close() { this.open = false; this.form = null; },
+        confirm() {
+            if (!this.form || this.loading || this.error !== '') return;
+            const action = document.createElement('input');
+            action.type = 'hidden';
+            action.name = 'action';
+            action.value = 'enable';
+            this.form.appendChild(action);
+            this.form.submit();
+        },
+    }"
+    @vl:plugin-enable-bulk.window="check($event.detail)"
+    @keydown.escape.window="close()">
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4" @click.self="close()">
+        <div class="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900"
+             role="dialog" aria-modal="true">
+            <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Enable selected plugins') }}</h2>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ __('Each plugin is checked for the capabilities it requests before any of them is activated.') }}</p>
+            </div>
+            <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                <div x-show="loading" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <svg class="h-4 w-4 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    {{ __('Checking the selected plugins for requested capabilities…') }}
+                </div>
+
+                <div x-show="!loading" x-cloak class="space-y-3">
+                    <p x-show="error" class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300" x-text="error"></p>
+
+                    <template x-for="plugin in plugins" :key="plugin.slug">
+                        <div class="rounded-lg border border-gray-200 px-3 py-2.5 dark:border-gray-700">
+                            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                <span class="break-words text-sm font-semibold text-gray-900 dark:text-gray-100" x-text="plugin.name"></span>
+                                <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400" x-text="plugin.slug"></span>
+                            </div>
+                            <div class="mt-1.5 flex flex-wrap gap-1.5" x-show="plugin.capabilities.length">
+                                <template x-for="cap in plugin.capabilities" :key="cap">
+                                    <span class="inline-flex items-center whitespace-nowrap rounded bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-500/30" x-text="cap"></span>
+                                </template>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-show="!plugin.capabilities.length">
+                                {{ __('No sensitive capabilities requested.') }}
+                            </p>
+                            <p class="mt-1.5 break-words text-xs text-red-600 dark:text-red-400" x-show="plugin.error" x-text="plugin.error"></p>
+                        </div>
+                    </template>
+
+                    <p class="text-xs leading-5 text-gray-500 dark:text-gray-400">
+                        {{ __('Capabilities let a plugin read environment values, run processes, execute code, touch files or open network connections. Approve only plugins from a source you trust.') }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3 dark:border-gray-700">
+                <button type="button" @click="close()"
+                        class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-800">
+                    {{ __('Cancel') }}
+                </button>
+                <button type="button" @click="confirm()"
+                        :disabled="loading || error !== ''"
+                        class="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600">
+                    {{ __('Enable') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'admin/partials/_bulk_bar.twig' with {
+    action: 'plugins',
+    formAction: url('/admin/plugins/bulk'),
+    showDelete: false,
+    extraActions: [
+        {label: __('Enable'), action: 'enable', click: 'window.vlPluginBulkEnable($event, $store.bulk.selected)', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+        {label: __('Disable'), action: 'disable', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+    ],
+} %}
+<script>
+    window.vlPluginBulkEnable = function (event, slugs) {
+        if (!Array.isArray(slugs) || slugs.length === 0) return;
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent('vl:plugin-enable-bulk', {
+            detail: { slugs: slugs, form: event.target.form },
+        }));
+    };
+</script>
+{% endif %}
+{% endblock %}

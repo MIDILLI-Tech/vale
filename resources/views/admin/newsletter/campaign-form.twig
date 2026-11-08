@@ -1,0 +1,565 @@
+{% extends "admin/layout.twig" %}
+
+{% set panel_rail = true %}
+
+{% block title %}{{ readonly ? 'View' : (is_edit ? 'Edit' : 'New') }} Campaign{% endblock %}
+
+{% block content %}
+<div x-data="{
+    abTest: {{ campaign.abTestEnabled|default(false) ? 'true' : 'false' }},
+    weightB: {{ campaign.variationBWeight|default(50) }},
+    variantTab: 'a',
+    isRecurring: {{ campaign.isRecurring|default(false) ? 'true' : 'false' }},
+    recurringInterval: '{{ campaign.recurringInterval|default('weekly') }}'
+}">
+<div class="mb-6 flex items-center gap-3">
+    <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Campaigns</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ readonly ? 'View Campaign' : (is_edit ? 'Edit Campaign' : 'New Campaign') }}</h1>
+    {% if not readonly %}
+    {% if is_edit %}<span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
+    <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% endif %}
+    {% if readonly and campaign %}
+    {% set sc = {draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', sent: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', sending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'} %}
+    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[campaign.status]|default('bg-gray-100') }}">{{ campaign.status|capitalize }}</span>
+    {% if campaign.sentAt %}<span class="text-sm text-gray-400">Sent {{ campaign.sentAt|date('M j, Y H:i') }}</span>{% endif %}
+    {% endif %}
+    {% include 'admin/components/rail-toggle.twig' %}
+</div>
+
+{% if not readonly %}
+<form method="POST" action="{{ url(is_edit ? '/admin/newsletter/campaigns/' ~ campaign.id : '/admin/newsletter/campaigns') }}" data-panel-reorder-key="campaign" class="space-y-6">
+    {{ csrf_field() }}
+    {% if is_edit %}<input type="hidden" name="_METHOD" value="PUT">{% endif %}
+{% else %}
+<div class="space-y-6" data-panel-reorder-key="campaign">
+{% endif %}
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="lg:col-span-2 space-y-6" data-panel-container="left">
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="content_card">
+                <div class="mb-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Content') }}</h3>
+                        {% if readonly and campaign.abTestEnabled %}
+                        <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">A/B Test Enabled</span>
+                        {% endif %}
+                    </div>
+                    {# A/B controls live below the title row — the panel reorder
+                       arrows sit at the top-right corner and would overlap them. #}
+                    {% if not readonly %}
+                    <div class="mt-3 flex flex-col items-start gap-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="ab_test_enabled" x-model="abTest" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                            <span class="text-sm font-medium text-gray-700">Enable A/B Test</span>
+                        </label>
+                        <div x-show="abTest" class="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">Weight:</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-500">A: <span x-text="100 - (weightB || 50)"></span>%</span>
+                                <input type="range" name="variation_b_weight" min="1" max="99" x-model="weightB" class="w-24 accent-indigo-600">
+                                <span class="text-xs text-indigo-600 font-bold">B: <span x-text="weightB || 50"></span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Tab bar #}
+                <template x-if="abTest">
+                    <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-4">
+                        <button type="button" @click="variantTab = 'a'"
+                                :class="variantTab === 'a' ? 'border-b-2 border-gray-900 dark:border-white text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600'"
+                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant A</button>
+                        <button type="button" @click="variantTab = 'b'"
+                                :class="variantTab === 'b' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
+                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant B</button>
+                    </div>
+                </template>
+
+                {# Variant A #}
+                <div :class="abTest && variantTab !== 'a' ? 'hidden' : ''">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject Line {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
+                        <input type="text" name="subject" {% if not readonly %}required{% endif %} value="{{ campaign.subject|default('') }}"
+                               {{ readonly ? 'disabled' : '' }}
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-default' : '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                        {% if not readonly %}
+                        {% include 'admin/newsletter/_template_vars.twig' %}
+                        {% endif %}
+                        {% if readonly %}
+                        <div class="w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 p-4 text-sm prose max-w-none overflow-auto" style="min-height:24rem">
+                            {{ campaign.bodyHtml|default('')|raw }}
+                        </div>
+                        {% else %}
+                        <textarea name="body_html" rows="16" data-editor
+                                  class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">{{ campaign.bodyHtml|default('') }}</textarea>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Variant B #}
+                <div :class="!abTest || variantTab !== 'b' ? 'hidden' : ''" x-cloak>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject Line {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
+                        <input type="text" name="subject_b" value="{{ campaign.subjectB|default('') }}"
+                               {{ readonly ? 'disabled' : '' }}
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-default' : '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                        {% if not readonly %}
+                        {% include 'admin/newsletter/_template_vars.twig' %}
+                        {% endif %}
+                        {% if readonly %}
+                        <div class="w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 p-4 text-sm prose max-w-none overflow-auto" style="min-height:24rem">
+                            {{ campaign.bodyHtmlB|default('')|raw }}
+                        </div>
+                        {% else %}
+                        <textarea name="body_html_b" rows="16" data-editor
+                                  class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">{{ campaign.bodyHtmlB|default('') }}</textarea>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6" data-panel-container="right">
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="settings_card">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Send Settings') }}</h3>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+                    <input type="text" name="from_name" value="{{ campaign.fromName|default('') }}"
+                           {{ readonly ? 'disabled' : '' }}
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">From Email</label>
+                    <input type="email" name="from_email" value="{{ campaign.fromEmail|default('') }}"
+                           {{ readonly ? 'disabled' : '' }}
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tag Filter (optional)</label>
+                    {% if readonly %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for tag in (campaign.tagFilter|default('')|split(',')) %}
+                        {% set t = tag|trim %}
+                        {% if t %}
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200">{{ t }}</span>
+                        {% endif %}
+                        {% endfor %}
+                        {% if not campaign.tagFilter %}<span class="text-sm text-gray-400">—</span>{% endif %}
+                    </div>
+                    {% else %}
+                    <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '{{ campaign.tagFilter|default('')|e('js') }}' })">
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="(item, i) in items" :key="i">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200">
+                                    <span x-text="item"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="relative">
+                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                   placeholder="Type tag name..."
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                         :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                         x-text="s"></div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="tag_filter" :value="items.join(',')">
+                        <p class="text-xs text-gray-400 mt-1">Only send to subscribers matching any of the given tags. Leave blank to send to all.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Source Form Filter</label>
+                    <select name="source_form_filter" {{ readonly ? 'disabled' : '' }} class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        <option value="">All subscribers</option>
+                        {% for f in forms|default([]) %}
+                        <option value="{{ f.id }}" {{ campaign and campaign.sourceFormFilter == f.id ? 'selected' : '' }}>{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Only send to subscribers who signed up via this form.</p>{% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 italic opacity-80 border-b pb-1">Segmentation Filters</label>
+                </div>
+                {% if shop_enabled %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Order Count</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Orders</span>
+                            <input type="number" name="min_orders_filter" min="0" value="{{ campaign.minOrdersFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Orders</span>
+                            <input type="number" name="max_orders_filter" min="0" value="{{ campaign.maxOrdersFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                    </div>
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Filter by completed order count.</p>{% endif %}
+                </div>
+                {% endif %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Engagement Rates</label>
+                    <div class="grid grid-cols-2 gap-x-2 gap-y-4">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Open %</span>
+                            <input type="number" name="min_open_rate_filter" min="0" max="100" value="{{ campaign.minOpenRateFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Open %</span>
+                            <input type="number" name="max_open_rate_filter" min="0" max="100" value="{{ campaign.maxOpenRateFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Click %</span>
+                            <input type="number" name="min_click_rate_filter" min="0" max="100" value="{{ campaign.minClickRateFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Click %</span>
+                            <input type="number" name="max_click_rate_filter" min="0" max="100" value="{{ campaign.maxClickRateFilter }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                        </div>
+                    </div>
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Target subscribers based on engagement (e.g., set Max Click 0% for inactive users).</p>{% endif %}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tracking</label>
+                    {% if readonly %}
+                    <div class="flex flex-wrap gap-1.5">
+                        {% set t = campaign.trackingEnabled|default(3) %}
+                        {% if t == 0 %}
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Disabled') }}</span>
+                        {% else %}
+                        {% if t b-and 1 %}<span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">Open ✓</span>{% endif %}
+                        {% if t b-and 2 %}<span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Click ✓</span>{% endif %}
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="space-y-2" x-data="{ tracking: {{ campaign.trackingEnabled|default(3) }} }">
+                        <input type="hidden" name="tracking_enabled" :value="tracking">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" :checked="tracking &amp; 1" @change="tracking ^= 1"
+                                   class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-sm text-gray-700">Track opens</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" :checked="tracking &amp; 2" @change="tracking ^= 2"
+                                   class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                            <span class="text-sm text-gray-700">Track clicks</span>
+                        </label>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Select one or both options, or leave both unchecked to disable tracking.</p>
+                        <p x-show="tracking &amp; 1" x-cloak class="text-xs text-amber-600 dark:text-amber-400">
+                            ℹ️ Place <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code> before <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code> for open tracking to work.
+                        </p>
+                        <p x-show="tracking &amp; 2" x-cloak class="text-xs text-amber-600 dark:text-amber-400">
+                            ℹ️ Click tracking is applied automatically to all links in your email body.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-6 border-t dark:border-gray-800 pt-4">
+                    <label class="flex items-center gap-2 cursor-pointer mb-4">
+                        <input type="checkbox" name="is_recurring" x-model="isRecurring" {{ readonly ? 'disabled' : '' }}
+                               class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                        <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Recurring Campaign (Automation)</span>
+                    </label>
+
+                    <div x-show="isRecurring" x-cloak class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Repeat Every</label>
+                                <select name="recurring_interval" x-model="recurringInterval" {{ readonly ? 'disabled' : '' }}
+                                        class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">At Time</label>
+                                <input type="time" name="recurring_time" value="{{ campaign.recurringTime|default('09:00') }}"
+                                       {{ readonly ? 'disabled' : '' }}
+                                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            </div>
+                        </div>
+
+                        <div x-show="recurringInterval === 'weekly'">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">On Day(s)</label>
+                            <div class="flex flex-wrap gap-x-4 gap-y-2 mt-2">
+                                {% set days = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'} %}
+                                {% set selectedDays = (campaign and campaign.recurringDay ? campaign.recurringDay|split(',') : []) %}
+                                {% for val, label in days %}
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" name="recurring_day_weekly[]" value="{{ val }}"
+                                           {{ val in selectedDays ? 'checked' : '' }} {{ readonly ? 'disabled' : '' }}
+                                           class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
+                                    <span class="text-xs text-gray-700 dark:text-gray-300">{{ label }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div x-show="recurringInterval === 'monthly'">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">On Day of Month</label>
+                            <input type="number" name="recurring_day_monthly" min="1" max="31" value="{{ campaign.recurringDay|default(1) }}"
+                                   {{ readonly ? 'disabled' : '' }}
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                        </div>
+
+                        <div class="border-t dark:border-gray-700 pt-4">
+                            <h4 class="text-xs font-bold text-gray-500 uppercase mb-3">Trigger & Filter Settings</h4>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Min New Posts to Trigger</label>
+                                    <input type="number" name="recurring_post_count" min="0" value="{{ campaign.recurringPostCount|default(0) }}"
+                                           {{ readonly ? 'disabled' : '' }}
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                    <p class="text-[10px] text-gray-400 mt-1">Set to 0 to send every time (ignoring new post count).</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Post Types</label>
+                                    <div class="relative" data-multi data-name="recurring_post_types" data-array="0" data-mode="client" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringPostTypes|default('') }}">
+                                        <input data-search type="text" placeholder="Search post types..." {{ readonly ? 'disabled' : '' }}
+                                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
+                                        <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
+                                        <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
+                                        <div data-hidden class="hidden"></div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Posts of ANY selected type are counted (OR).</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Category</label>
+                                    <div class="relative" data-multi data-name="recurring_category_ids" data-array="1" data-mode="fetch" data-fetch="/admin/categories/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringCategoryIds|default('') }}">
+                                        <script type="application/json" data-labelmap>[{% for c in allCategories|default([]) %}{"value":{{ c.id }},"label":{{ c.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                                        <input data-search type="text" placeholder="Search categories..." {{ readonly ? 'disabled' : '' }}
+                                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
+                                        <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
+                                        <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
+                                        <div data-hidden class="hidden"></div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Match posts in ANY selected category (OR).</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tag</label>
+                                    <div class="relative" data-multi data-name="recurring_tag_ids" data-array="1" data-mode="fetch" data-fetch="/admin/tags/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringTagIds|default('') }}">
+                                        <script type="application/json" data-labelmap>[{% for t in allContentTags|default([]) %}{"value":{{ t.id }},"label":{{ t.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                                        <input data-search type="text" placeholder="Search tags..." {{ readonly ? 'disabled' : '' }}
+                                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
+                                        <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
+                                        <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
+                                        <div data-hidden class="hidden"></div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Match posts with ANY selected tag (OR).</p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Selected groups are combined with AND — a post must match at least one item from every group you choose.</p>
+                                </div>
+
+                                <script>
+                                (function(){
+                                    'use strict';
+                                    function _t(x){ return (typeof tjs==='function') ? tjs(x) : x; }
+                                    var bp = window.APP_BASE_PATH || '';
+                                    var lang = window._VL_CONTENT_LANG || '';
+                                    var RO = {{ readonly ? 'true' : 'false' }};
+                                    function buildClientTypes(){
+                                        var out=[];
+                                        if(window._VL_BLOG_ENABLED !== '0') out.push({value:'post',label:_t('Posts')});
+                                        if(window._VL_PAGES_ENABLED === '1') out.push({value:'page',label:_t('Pages')});
+                                        var cpts=window._VL_ACTIVE_CPTS||[]; var have={}; out.forEach(function(o){have[o.value]=1;});
+                                        cpts.forEach(function(ct){ var slug=(ct.slug && typeof ct.slug==='object')?ct.slug.value:ct.slug; if(slug && !have[slug]){ have[slug]=1; out.push({value:slug,label:ct.name||slug}); } });
+                                        return out;
+                                    }
+                                    function init(el){
+                                        var mode=el.getAttribute('data-mode');
+                                        var name=el.getAttribute('data-name');
+                                        var isArray=el.getAttribute('data-array')==='1';
+                                        var ro=RO || el.getAttribute('data-readonly')==='1';
+                                        var fetchUrl=el.getAttribute('data-fetch')||'';
+                                        var search=el.querySelector('[data-search]');
+                                        var chips=el.querySelector('[data-chips]');
+                                        var drop=el.querySelector('[data-drop]');
+                                        var hiddenWrap=el.querySelector('[data-hidden]');
+                                        var lmEl=el.querySelector('script[data-labelmap]');
+                                        var labelMap={};
+                                        if(lmEl){ try{ JSON.parse(lmEl.textContent).forEach(function(o){ labelMap[o.value]=o.label; }); }catch(e){} }
+                                        var labels={};
+                                        var selected=[];
+                                        var options=[];
+                                        var serverSearch=false;
+                                        var seed=(el.getAttribute('data-selected')||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+                                        seed.forEach(function(v){ var l=labelMap[v]||labels[v]||v; selected.push({value:v,label:l}); });
+                                        function renderHidden(){
+                                            hiddenWrap.innerHTML='';
+                                            if(!selected.length) return;
+                                            if(isArray){ selected.forEach(function(o){ var h=document.createElement('input'); h.type='hidden'; h.name=name+'[]'; h.value=o.value; hiddenWrap.appendChild(h); }); }
+                                            else { var h=document.createElement('input'); h.type='hidden'; h.name=name; h.value=selected.map(function(o){return o.value;}).join(','); hiddenWrap.appendChild(h); }
+                                        }
+                                        function renderChips(){
+                                            chips.innerHTML='';
+                                            chips.classList.toggle('hidden', !selected.length);
+                                            selected.forEach(function(o){
+                                                var c=document.createElement('span');
+                                                c.className='inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-xs font-medium px-2.5 py-1';
+                                                var t=document.createElement('span'); t.textContent=o.label; c.appendChild(t);
+                                                if(!ro){ var x=document.createElement('button'); x.type='button'; x.innerHTML='&times;'; x.className='text-gray-400 hover:text-red-500 font-bold focus:outline-none ml-1'; x.addEventListener('click',function(){ var i=selected.indexOf(o); if(i>-1) selected.splice(i,1); renderChips(); }); c.appendChild(x); }
+                                                chips.appendChild(c);
+                                            });
+                                            renderHidden();
+                                        }
+                                        function renderDrop(items){
+                                            drop.innerHTML='';
+                                            var shown=items.filter(function(o){ return !selected.some(function(s){ return s.value===o.value; }); });
+                                            if(!shown.length){ var e=document.createElement('div'); e.className='px-3 py-2 text-sm text-gray-400 dark:text-gray-500 italic'; e.textContent=_t('None'); drop.appendChild(e); }
+                                            else { shown.forEach(function(o){
+                                                var it=document.createElement('div'); it.className='px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'; it.textContent=o.label;
+                                                it.addEventListener('mousedown',function(ev){ ev.preventDefault(); selected.push(o); renderChips(); renderDrop(options); }); drop.appendChild(it);
+                                            }); }
+                                            drop.classList.remove('hidden');
+                                        }
+                                        function local(q){
+                                            var ql=(q||'').toLowerCase();
+                                            return options.filter(function(o){ return !ql || o.label.toLowerCase().indexOf(ql)>-1 || String(o.value.toLowerCase()).indexOf(ql)>-1; });
+                                        }
+                                        function openDrop(){
+                                            if(mode==='fetch' && !options.length){ return; }
+                                            renderDrop(mode==='client' ? local('') : (serverSearch ? options : options));
+                                        }
+                                        search.addEventListener('focus', function(){ openDrop(); });
+                                        search.addEventListener('blur', function(){ setTimeout(function(){ drop.classList.add('hidden'); },200); });
+                                        search.addEventListener('input', function(){
+                                            if(mode==='client'){ renderDrop(local(search.value)); return; }
+                                            if(serverSearch){
+                                                var q=search.value.trim();
+                                                clearTimeout(search._db);
+                                                search._db=setTimeout(function(){
+                                                    if(!q){ drop.classList.add('hidden'); return; }
+                                                    fetch(bp+fetchUrl+'?q='+encodeURIComponent(q)+'&language='+encodeURIComponent(lang))
+                                                        .then(function(r){return r.json();})
+                                                        .then(function(res){ var d=(res&&res.data)||[]; options=d.map(function(it){ labels[it.id]=it.name; return {value:String(it.id),label:it.name}; }); renderDrop(options); })
+                                                        .catch(function(){});
+                                                },250);
+                                            } else { renderDrop(local(search.value)); }
+                                        });
+                                        if(mode==='client'){
+                                            options=buildClientTypes();
+                                            seed.forEach(function(v){ var oo=options.filter(function(o){return o.value===v;})[0]; if(oo){
+                                                var idx=selected.findIndex(function(s){return s.value===v;}); if(idx>-1) selected[idx].label=oo.label; } });
+                                            renderChips();
+                                            if(ro){ search.style.display='none'; }
+                                        } else {
+                                            fetch(bp+fetchUrl+'?language='+encodeURIComponent(lang))
+                                                .then(function(r){return r.json();})
+                                                .then(function(res){
+                                                    var d=(res&&res.data)||[];
+                                                    serverSearch=!!(res && res.truncated);
+                                                    options=d.map(function(it){ labels[it.id]=it.name; return {value:String(it.id),label:it.name}; });
+                                                    selected.forEach(function(o){ if(labels[o.value]) o.label=labels[o.value]; });
+                                                    renderChips();
+                                                    if(ro){ search.style.display='none'; }
+                                                })
+                                                .catch(function(){ renderChips(); });
+                                            renderChips();
+                                        }
+                                    }
+                                    var els=document.querySelectorAll('[data-multi]');
+                                    for(var i=0;i<els.length;i++){ init(els[i]); }
+                                })();
+                                </script>
+
+                                {% if multi_language_content %}
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Language</label>
+                                    <select name="recurring_language" {{ readonly ? 'disabled' : '' }}
+                                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                        <option value="">All Languages</option>
+                                        {% for code in supported_locales|default([]) %}
+                                        <option value="{{ code }}" {{ campaign and campaign.recurringLanguage == code ? 'selected' : '' }}>{{ locale_name(code) }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4" x-show="!isRecurring">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ readonly ? 'Scheduled At' : 'Schedule (optional)' }}</label>
+                    <input type="datetime-local" name="scheduled_at"
+                           value="{{ campaign.scheduledAt ? campaign.scheduledAt|date('Y-m-d\\TH:i') : '' }}"
+                           {{ readonly ? 'disabled' : '' }}
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
+                </div>
+                {% if not readonly %}
+                <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    {{ is_edit ? 'Update' : 'Save' }} Campaign
+                </button>
+                {% if is_edit and campaign and (campaign.isDraft or campaign.status == 'scheduled') %}
+                <a href="#" onclick="event.preventDefault(); if(confirm('Send this campaign now?')) document.getElementById('send-form').submit();"
+                   class="block w-full mt-2 text-center rounded-lg bg-green-600 dark:bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 dark:hover:bg-green-800">
+                    ▶ Send Now
+                </a>
+                {% endif %}
+                {% if is_edit and campaign %}
+                <button type="submit" formaction="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/clone') }}"
+                        class="w-full mt-2 rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 cursor-pointer">
+                    ⧉ Clone as Draft
+                </button>
+                {% endif %}
+                {% else %}
+                <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/clone') }}" class="mb-2">
+                    {{ csrf_field() }}
+                    <button type="submit" class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                        ⧉ Clone as Draft
+                    </button>
+                </form>
+                <a href="{{ url('/admin/newsletter/campaigns') }}" class="block w-full text-center rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                    ← Back to Campaigns
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% if not readonly %}
+</form>
+{% else %}
+</div>
+{% endif %}
+</div>
+{% if is_edit and campaign and (campaign.isDraft or campaign.status == 'scheduled') %}
+<form id="send-form" method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/send') }}">
+    {{ csrf_field() }}
+</form>
+{% endif %}
+{% if not readonly %}
+<script>vlDirtyGuard();</script>
+{% endif %}
+{% endblock %}

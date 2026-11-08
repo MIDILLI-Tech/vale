@@ -1,0 +1,78 @@
+{# ── Media Browser Modal (Multi-select) ── #}
+{# Bound to an Alpine scope that exposes: showModal, loading, mediaQuery,
+   onSearchInput, loadMediaPage, refreshMedia, mediaItems, mediaPage,
+   mediaTotalPages, prevMediaPage, nextMediaPage, selected, selectedCount,
+   isSelected(item), toggleSelect(item), clearSelection(), confirmSelection() #}
+<template x-teleport="body">
+<div x-show="showModal" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50" @keydown.escape.window="showModal = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+         data-vl-media-drop data-vl-media-filter="image/,video/"
+         @vl:media-uploaded="typeof handleDroppedFiles === 'function' && handleDroppedFiles($event.detail)">
+        <div class="flex items-center justify-between border-b dark:border-gray-700 px-6 py-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Select Gallery Media') }}</h3>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="refreshMedia()" title="{{ __('Refresh') }}" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                    <span class="vl-icon-refresh" :class="loading ? 'vl-icon-spin' : ''"></span>
+                </button>
+                <button type="button" @click="showModal = false" class="text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+            </div>
+        </div>
+        {% set _sa = user.role is defined and user.role == 'super_admin' %}
+        {% set _can_upload = _sa or (user_permissions is defined and 'media.upload' in user_permissions) %}
+        {% if _can_upload %}
+        <div class="px-6 py-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400">
+            <p>{{ __('Tip: You can upload new files by dragging and dropping them here.') }}</p>
+        </div>
+        {% endif %}
+        <div class="border-b dark:border-gray-700 px-6 py-3 flex items-center gap-2">
+            <input type="text" x-model="mediaQuery" @input="onSearchInput()" @keydown.enter.prevent="loadMediaPage(1)"
+                   placeholder="{{ __('Search media...') }}"
+                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        </div>
+        <div class="flex-1 min-h-0 overflow-y-auto p-6">
+            <div x-show="loading" class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                <span class="vl-icon-refresh vl-icon-spin mr-2"></span> {{ __('Loading media...') }}
+            </div>
+            <div class="vl-media-grid" x-show="!loading">
+                <template x-for="item in mediaItems" :key="item.id">
+                    <div class="vl-media-card relative" :class="isSelected(item) ? 'is-selected' : ''" @click="toggleSelect(item)">
+                        <template x-if="item.mime && item.mime.indexOf('video/') === 0">
+                            <div class="vl-media-facade" data-vl-media-facade
+                                 :data-vl-media-src="item.url" :data-vl-media-mime="item.mime">
+                                <button type="button" class="vl-media-facade-play"
+                                        title="{{ __('Preview') }}" aria-label="{{ __('Preview') }}">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <template x-if="!(item.mime && item.mime.indexOf('video/') === 0)">
+                            <img :src="item.thumbnail || item.url" :alt="item.name" :title="item.description || item.name">
+                        </template>
+                        <div class="vl-media-card-label" x-text="item.name" :title="item.name"></div>
+                        <div class="vl-media-card-check">✓</div>
+                    </div>
+                </template>
+                <div x-show="!loading && mediaItems.length === 0" class="vl-empty">{{ __('No media found.') }}</div>
+            </div>
+        </div>
+        <div class="vl-modal-footer border-t dark:border-gray-700 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5">
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="selectedCount + ' ' + '{{ __('selected') }}'"></span>
+                <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'{{ __('Page') }} ' + mediaPage + ' / ' + mediaTotalPages"></span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button type="button" @click="prevMediaPage()" :disabled="loading || mediaPage <= 1"
+                        class="rounded-sm border dark:border-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800/50 disabled:opacity-50 disabled:cursor-not-allowed">{{ __('Previous') }}</button>
+                <button type="button" @click="nextMediaPage()" :disabled="loading || mediaPage >= mediaTotalPages"
+                        class="rounded-sm border dark:border-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800/50 disabled:opacity-50 disabled:cursor-not-allowed">{{ __('Next') }}</button>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 dark:border-gray-700">
+                <button type="button" @click="clearSelection()" class="rounded-sm border dark:border-gray-700 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800/50">{{ __('Clear') }}</button>
+                <button type="button" @click="confirmSelection()"
+                        class="rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="selectedCount === 0 && (!images || images.length === 0)">{{ __('Insert Selected') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+</template>

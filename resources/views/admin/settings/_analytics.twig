@@ -1,0 +1,284 @@
+{# Analytics #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="tab-analytics" class="tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="analytics">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Geolocation') }}</p>
+
+        <div {{ vl.attrs('analytics', __('IP Geolocation'), 'analytics_geolocation', '', __('Geolocation'), 'geoip country city ip2location cloudflare maxmind dbip') }}>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('IP Geolocation') }}</label>
+            <select name="analytics_geolocation" id="geo-mode-select" class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                <option value="none" {{ settings.analytics_geolocation|default('none') == 'none' ? 'selected' }}>{{ __('None') }}</option>
+                <option value="cloudflare" {{ settings.analytics_geolocation|default('none') == 'cloudflare' ? 'selected' }}>{{ __('Cloudflare headers (CF-IPCountry, CF-IPCity)') }}</option>
+                <option value="ip2location_country" {{ settings.analytics_geolocation|default('none') == 'ip2location_country' ? 'selected' }}>{{ __('IP2Location LITE DB1 (Country)') }}</option>
+                <option value="ip2location_city" {{ settings.analytics_geolocation|default('none') == 'ip2location_city' ? 'selected' }}>{{ __('IP2Location LITE DB3 (Country + City)') }}</option>
+                <option value="maxmind_city" {{ settings.analytics_geolocation|default('none') == 'maxmind_city' ? 'selected' }}>{{ __('MaxMind GeoLite2 City (Country + City)') }}</option>
+                <option value="dbip_city" {{ settings.analytics_geolocation|default('none') == 'dbip_city' ? 'selected' }}>{{ __('DB-IP Lite City (Country + City)') }}</option>
+            </select>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Choose how to resolve visitor country and city from IP address.') }}</p>
+        </div>
+
+        {# Cloudflare check / warning area #}
+        <div id="geo-cf-area" class="hidden rounded-lg border p-4 space-y-2 transition-colors">
+            <div id="geo-cf-status" class="flex items-center gap-2 text-sm"></div>
+            <p id="geo-cf-hint" class="text-xs text-gray-600 dark:text-gray-400"></p>
+        </div>
+
+        {# Database download / manual placement helper #}
+        <div id="geo-download-area" class="hidden rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3">
+            <div class="flex items-center gap-3">
+                <span id="geo-db-status" class="text-sm"></span>
+            </div>
+            {# IP2Location DB3 City info #}
+            <div id="geo-city-info" class="hidden text-xs text-amber-700 dark:text-amber-400">
+                {{ __('City database requires a free IP2Location account.') }}
+                <a href="{{ geo_config.ip2location.city.signup_url|default('#') }}" target="_blank" class="underline font-medium">{{ __('Sign up') }}</a>,
+                {{ __('then download the LITE DB3 BIN file from') }}
+                <a href="{{ geo_config.ip2location.city.download_page|default('#') }}" target="_blank" class="underline font-medium">{{ __('the City Multilingual page') }}</a>.
+                {{ __('Place the .BIN file in') }} <code class="bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-1 rounded-sm">storage/geo/ip2location-db3.bin</code>.
+            </div>
+            {# MaxMind GeoLite2 City info #}
+            <div id="geo-maxmind-info" class="hidden text-xs text-amber-700 dark:text-amber-400">
+                {{ __('MaxMind GeoLite2 City database requires a free MaxMind account.') }}
+                <a href="{{ geo_config.maxmind.city.signup_url|default('https://www.maxmind.com/en/geolite2/signup') }}" target="_blank" class="underline font-medium">{{ __('Sign up') }}</a>,
+                {{ __('then download GeoLite2-City.mmdb from') }}
+                <a href="{{ geo_config.maxmind.city.download_page|default('https://dev.maxmind.com/geoip/geolite2-free-geolocation-data') }}" target="_blank" class="underline font-medium">{{ __('the GeoLite2 page') }}</a>.
+                {{ __('Place the .mmdb file in') }} <code class="bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-1 rounded-sm">storage/geo/GeoLite2-City.mmdb</code>.
+            </div>
+            {# DB-IP Lite City info #}
+            <div id="geo-dbip-info" class="hidden text-xs text-gray-600 dark:text-gray-400">
+                {{ __('DB-IP Lite City is free and does not require an account.') }}
+                {{ __('You can download it automatically below or download manually from') }}
+                <a href="{{ geo_config.dbip.city.download_page|default('https://db-ip.com/db/lite.php') }}" target="_blank" class="underline font-medium text-amber-700 dark:text-amber-400">{{ __('the DB-IP Lite page') }}</a>.
+            </div>
+            <div id="geo-download-actions" class="flex items-center gap-3">
+                <button type="button" id="geo-download-btn"
+                        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                    {{ __('Download Database') }}
+                </button>
+                <span id="geo-download-progress" class="text-sm text-gray-500 dark:text-gray-400 hidden">{{ __('Downloading...') }}</span>
+            </div>
+            <p id="geo-download-desc" class="text-xs text-gray-400">{{ __('Downloads the free IP2Location LITE database to storage/. File will be ~2-60 MB depending on the selected type.') }}</p>
+        </div>
+
+        <hr class="border-gray-200">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Exclusions') }}</p>
+
+        <div {{ vl.attrs('analytics', __('Exclude admin users'), 'analytics_exclude_admins', '', __('Exclusions'), 'exclude admins tracking') }} class="rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-4">
+            <label class="flex items-center gap-3">
+                <input type="hidden" name="analytics_exclude_admins" value="0">
+                <input type="checkbox" name="analytics_exclude_admins" value="1"
+                       {{ settings.analytics_exclude_admins|default('1') == '1' ? 'checked' }}
+                       class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">{{ __('Exclude admin users') }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Do not track pageviews from logged-in admin/superadmin users.') }}</span>
+                </span>
+            </label>
+        </div>
+
+        <div {{ vl.attrs('analytics', __('Exclude Paths'), 'analytics_exclude_paths', '', __('Exclusions'), 'exclude paths wildcard urls') }}>
+            <label class="block text-sm font-medium text-gray-700">{{ __('Exclude Paths') }}</label>
+            <textarea name="analytics_exclude_paths" rows="4"
+                      class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono"
+                      placeholder="{{ analytics_default_excludes|join('&#10;')|raw }}">{% if settings.analytics_exclude_paths is defined %}{{ settings.analytics_exclude_paths }}{% endif %}</textarea>
+            <p class="mt-1 text-xs text-gray-400">{{ __('One path per line. Use * as wildcard. e.g. /admin/* excludes all admin pages.') }} {{ __('Leave empty to use the default system excludes.') }}</p>
+        </div>
+
+        <hr class="border-gray-200">
+
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Data Retention') }}</p>
+        <div {{ vl.attrs('analytics', __('Data Retention (days)'), 'analytics_retention_days', '', __('Data Retention'), 'retention purge pageviews days') }}>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <label for="analytics_retention_days" class="text-sm font-medium text-gray-700">{{ __('Data Retention (days)') }}</label>
+                <input id="analytics_retention_days" type="number" name="analytics_retention_days" value="{{ settings.analytics_retention_days|default('90') }}" min="1" max="3650"
+                       class="w-32 rounded-lg border-gray-300 dark:border-gray-700">
+            </div>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Pageview logs older than this many days will be automatically deleted by cron.') }}</p>
+        </div>
+
+        {% if settings.analytics_enabled|default('1') == '1' and cronConfig.cron_mode|default('none') == 'none' %}
+        <div class="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <span>{{ __('Cron is currently disabled. Old pageview logs will not be automatically purged. Enable a cron mode in') }} <a href="#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+        </div>
+        {% endif %}
+
+    </form>
+</div>
+
+<script>
+(function () {
+    var sel = document.getElementById('geo-mode-select');
+    var area = document.getElementById('geo-download-area');
+    var status = document.getElementById('geo-db-status');
+    var btn = document.getElementById('geo-download-btn');
+    var progress = document.getElementById('geo-download-progress');
+    var cityInfo = document.getElementById('geo-city-info');
+    var maxmindInfo = document.getElementById('geo-maxmind-info');
+    var dbipInfo = document.getElementById('geo-dbip-info');
+    var downloadDesc = document.getElementById('geo-download-desc');
+
+    var cfArea = document.getElementById('geo-cf-area');
+    var cfStatus = document.getElementById('geo-cf-status');
+    var cfHint = document.getElementById('geo-cf-hint');
+
+    if (!sel) return;
+
+    var dbStatus = {{ geo_db_status|default(null)|json_encode|raw }};
+    var cfChecked = false;
+    var cfResult = null;
+
+    function checkCloudflareStatus() {
+        cfArea.classList.remove('hidden');
+        cfArea.className = 'rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-2 transition-colors';
+        cfStatus.innerHTML = '<span class="animate-pulse text-gray-600 dark:text-gray-300">⏳ {{ __('Checking Cloudflare status...') }}</span>';
+        cfHint.textContent = '';
+
+        fetch('{{ url('/admin/analytics/check-cloudflare') }}', {
+            headers: {
+                'Accept': 'application/json',
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            cfChecked = true;
+            cfResult = data;
+            renderCloudflareStatus();
+        })
+        .catch(function () {
+            cfArea.className = 'rounded-lg border border-amber-300 dark:border-amber-700/80 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-2 transition-colors';
+            cfStatus.innerHTML = '⚠️ <span class="font-medium text-amber-800 dark:text-amber-300">{{ __('Could not check Cloudflare status.') }}</span>';
+            cfHint.textContent = '{{ __('Ensure this server is accessible or behind Cloudflare proxy.') }}';
+        });
+    }
+
+    function renderCloudflareStatus() {
+        if (!cfResult) return;
+
+        if (cfResult.is_cloudflare) {
+            cfArea.className = 'rounded-lg border border-green-200 dark:border-green-800/80 bg-green-50 dark:bg-green-950/40 p-4 space-y-2 transition-colors';
+            var detail = cfResult.detected_via === 'site_ping'
+                ? '{{ __('Cloudflare detected on site URL (Server / CF-Ray headers found).') }}'
+                : '{{ __('Cloudflare request headers detected from your connection.') }}';
+            cfStatus.innerHTML = '✅ <span class="font-medium text-green-800 dark:text-green-300">{{ __('Cloudflare is active.') }}</span>';
+            cfHint.textContent = detail + ' ' + '{{ __('CF-IPCountry and CF-IPCity headers will be used to resolve visitor country and city.') }}';
+        } else {
+            cfArea.className = 'rounded-lg border border-amber-300 dark:border-amber-700/80 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-2 transition-colors';
+            var reason = cfResult.is_localhost
+                ? '{{ __('Your environment is set to localhost / local network.') }}'
+                : '{{ __('No Cloudflare headers or proxy detected for this domain.') }}';
+            cfStatus.innerHTML = '⚠️ <span class="font-medium text-amber-800 dark:text-amber-300">{{ __('Warning: Cloudflare was not detected on this site.') }}</span>';
+            cfHint.textContent = reason + ' ' + '{{ __('Because Cloudflare headers (CF-IPCountry, CF-IPCity) will not be present, visitor geolocation may not work.') }}';
+        }
+    }
+
+    function updateGeoUI() {
+        var val = sel.value;
+        var isFileMode = val === 'ip2location_country' || val === 'ip2location_city' || val === 'maxmind_city' || val === 'dbip_city';
+        var isCf = val === 'cloudflare';
+
+        if (isCf) {
+            if (!cfChecked) {
+                checkCloudflareStatus();
+            } else {
+                cfArea.classList.remove('hidden');
+                renderCloudflareStatus();
+            }
+        } else {
+            if (cfArea) cfArea.classList.add('hidden');
+        }
+
+        if (isFileMode) {
+            area.classList.remove('hidden');
+            cityInfo.classList.toggle('hidden', val !== 'ip2location_city');
+            maxmindInfo.classList.toggle('hidden', val !== 'maxmind_city');
+            dbipInfo.classList.toggle('hidden', val !== 'dbip_city');
+
+            var size = dbStatus && dbStatus[val] ? dbStatus[val].size_formatted : null;
+            var exists = dbStatus && dbStatus[val] ? dbStatus[val].exists : false;
+
+            if (val === 'ip2location_country' || val === 'dbip_city') {
+                // Auto-download supported for IP2Location DB1 Country and DB-IP Lite City
+                btn.classList.remove('hidden');
+                progress.classList.add('hidden');
+                downloadDesc.classList.remove('hidden');
+                downloadDesc.textContent = val === 'dbip_city'
+                    ? '{{ __('Downloads the free DB-IP Lite City database (~60 MB compressed) to storage/geo/.') }}'
+                    : '{{ __('Downloads the free IP2Location LITE database to storage/geo/.') }}';
+
+                if (exists) {
+                    status.innerHTML = '✅ <span class="text-green-700 dark:text-green-400 font-medium">{{ __('Database file found') }}' + (size ? ' (' + size + ')' : '') + '</span>';
+                    btn.textContent = '{{ __('Re-download') }}';
+                } else {
+                    status.innerHTML = '⚠️ <span class="text-amber-700 dark:text-amber-400 font-medium">{{ __('Database file not found. Click to download.') }}</span>';
+                    btn.textContent = '{{ __('Download Now') }}';
+                }
+            } else {
+                // Manual placement modes (ip2location_city, maxmind_city)
+                btn.classList.add('hidden');
+                progress.classList.add('hidden');
+                downloadDesc.classList.add('hidden');
+
+                if (exists) {
+                    status.innerHTML = '✅ <span class="text-green-700 dark:text-green-400 font-medium">{{ __('Database file found') }}' + (size ? ' (' + size + ')' : '') + '</span>';
+                } else {
+                    status.innerHTML = '⚠️ <span class="text-amber-700 dark:text-amber-400 font-medium">{{ __('Database file not found. Follow instructions above.') }}</span>';
+                }
+            }
+        } else {
+            area.classList.add('hidden');
+            cityInfo.classList.add('hidden');
+            maxmindInfo.classList.add('hidden');
+            dbipInfo.classList.add('hidden');
+        }
+    }
+
+    function doDownload() {
+        btn.classList.add('hidden');
+        progress.classList.remove('hidden');
+
+        fetch('{{ url('/admin/analytics/download-geo-db') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+            },
+            body: JSON.stringify({ mode: sel.value }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                status.innerHTML = '✅ <span class="text-green-700 dark:text-green-400 font-medium">{{ __('Database downloaded successfully!') }}</span>';
+                btn.textContent = '{{ __('Re-download') }}';
+                if (data.size_formatted) {
+                    status.innerHTML = '✅ <span class="text-green-700 dark:text-green-400 font-medium">{{ __('Database downloaded') }} (' + data.size_formatted + ')</span>';
+                }
+                if (dbStatus && sel.value) {
+                    dbStatus[sel.value] = { exists: true, size_formatted: data.size_formatted || null };
+                }
+            } else {
+                status.innerHTML = '❌ <span class="text-red-700 dark:text-red-400 font-medium">' + (data.message || '{{ __('Download failed.') }}') + '</span>';
+                btn.classList.remove('hidden');
+            }
+            progress.classList.add('hidden');
+        })
+        .catch(function () {
+            status.innerHTML = '❌ <span class="text-red-700 dark:text-red-400 font-medium">{{ __('Network error.') }}</span>';
+            btn.classList.remove('hidden');
+            progress.classList.add('hidden');
+        });
+    }
+
+    sel.addEventListener('change', updateGeoUI);
+    if (btn) btn.addEventListener('click', doDownload);
+
+    updateGeoUI();
+})();
+</script>

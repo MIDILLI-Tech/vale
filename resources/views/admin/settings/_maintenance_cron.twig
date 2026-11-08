@@ -1,0 +1,214 @@
+    {# ══ Maintenance Scheduled Tasks sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="maintenance-tab-cron" class="maintenance-tab-panel hidden">
+    {# ── Scheduled Tasks (Cron) ──────────────────────────────── #}
+    <div x-data="{
+            cronMode: '{{ cronConfig.cron_mode|default('none') }}',
+            lastRan: '{{ cronConfig.cron_last_ran_formatted|default('') != '' ? cronConfig.cron_last_ran_formatted|escape('js') : __('Never')|escape('js') }}',
+            runResult: null,
+            running: false,
+            async runNow() {
+                this.running = true;
+                this.runResult = null;
+                try {
+                    const r = await fetch('{{ url('/admin/cron/run-now') }}', {
+                        method: 'POST',
+                        headers: {'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content ?? ''},
+                    });
+                    this.runResult = await r.json();
+                    if (this.runResult.ok && this.runResult.last_ran) {
+                        this.lastRan = this.runResult.last_ran;
+                    }
+                } catch (e) {
+                    this.runResult = {ok: false, error: e.message};
+                } finally {
+                    this.running = false;
+                }
+            }
+         }"
+         class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-6">
+
+        <div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100" {{ vl.attrs('maintenance', __('Scheduled Tasks'), 'cron', 'cron', __('Scheduled Tasks (Cron)'), 'cron scheduled tasks run') }}>{{ __('Scheduled Tasks (Cron)') }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Vale can run scheduled campaigns, automation emails, post and product publishing, and exchange-rate refreshes automatically. Choose how cron jobs are triggered.') }}</p>
+        </div>
+
+        <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" value="PUT">
+            <input type="hidden" name="_group" value="cron">
+            <input type="hidden" name="_subtab" value="cron">
+
+            {# ── Mode selection ─────────────────── #}
+            <fieldset class="space-y-3">
+                <legend class="text-sm font-medium text-gray-700" {{ vl.attrs('maintenance', __('Cron Mode'), 'cron_mode', 'cron', __('Scheduled Tasks (Cron)'), 'cron page-load http disabled') }}>{{ __('Cron Mode') }}</legend>
+
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="radio" name="cron_mode" value="none" x-model="cronMode"
+                           class="mt-0.5 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-800">{{ __('Disabled') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('No automatic scheduling. Run jobs manually or via CLI.') }}</span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="radio" name="cron_mode" value="page_load" x-model="cronMode"
+                           class="mt-0.5 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-800">{{ __('Page-load (pseudo-cron)') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Jobs run after a visitor page request, at most once per interval. No server configuration needed. Not suitable for time-critical tasks.') }}</span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="radio" name="cron_mode" value="http" x-model="cronMode"
+                           class="mt-0.5 text-gray-900 dark:text-gray-100">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-800">{{ __('HTTP endpoint') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('An external cron service calls a secure URL to trigger jobs.') }}</span>
+                    </span>
+                </label>
+            </fieldset>
+
+            {# ── CLI info (always visible) ──────── #}
+            <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 p-4">
+                <p class="text-xs font-medium text-gray-600 mb-1">{{ __('CLI / SSH (always available)') }}</p>
+                <code class="text-xs text-gray-800 select-all">php vale cron:run</code>
+                <p class="mt-1 text-xs text-gray-400">{{ __('Add to system crontab to run every minute:') }} <code>* * * * * php /var/www/php vale cron:run 
+            >> /var/log/vl-cron.log 2>&1</code></p>
+            </div>
+
+            {# ── Page-load options ──────────────── #}
+            <div x-show="cronMode === 'page_load'" x-cloak class="space-y-3 pl-1">
+                <label class="block text-sm font-medium text-gray-700" {{ vl.attrs('maintenance', __('Run interval'), 'cron_interval', 'cron', __('Scheduled Tasks (Cron)'), 'cron interval minutes') }}>{{ __('Run interval') }}</label>
+                <select name="cron_interval"
+                        class="min-w-[200px] rounded-md border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm shadow-xs">
+                    {% for mins in [1, 5, 15, 30, 60] %}
+                        <option value="{{ mins }}" {{ cronConfig.cron_interval|default('5') == mins ? 'selected' }}>
+                            {% if mins == 1 %}{{ __('Every minute') }}{% elseif mins == 60 %}{{ __('Every hour') }}{% else %}{{ __('Every %d minutes')|format(mins) }}{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {# ── HTTP endpoint options ──────────── #}
+            <div x-show="cronMode === 'http'" x-cloak class="space-y-4 pl-1">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Cron URL') }}</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly
+                               value="{{ site_url }}/cron/run?token={{ cronConfig.cron_secret|default('') }}"
+                               class="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-xs font-mono text-gray-700 focus:outline-hidden select-all">
+                        <button type="button"
+                                onclick="copyToClipboard(this.previousElementSibling.value, this)"
+                                class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            {{ __('Copy') }}
+                        </button>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Schedule this URL to be called every minute. Free services:') }}
+                        {% for svc in services_list.cron %}
+                            <a href="{{ svc.url }}" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-900 dark:text-gray-100 hover:underline">{{ svc.name }}</a>{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Secret token') }}</label>
+                    <div class="flex items-center gap-2">
+                        <code class="flex-1 rounded-md border border-gray-200 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-xs text-gray-700 select-all">{{ cronConfig.cron_secret|default('') }}</code>
+                        <button type="submit" name="_regenerate_cron_secret" value="1"
+                                class="rounded-md border border-yellow-300 dark:border-yellow-800 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-yellow-700 dark:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/40 transition-colors"
+                                onclick="return confirm('{{ __('Regenerate the secret? The old cron URL will stop working.') }}')">
+                            {{ __('Regenerate') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {# Exchange rate refresh interval is taken from E-Commerce → Exchange Rates (fx_cache_hours). #}
+            {# If a provider is configured there, cron refreshes it automatically — no separate toggle needed. #}
+        </form>
+
+        {# ── Last run + manual trigger ──────────────────────────── #}
+        <div class="border-t pt-4 flex items-center justify-between gap-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ __('Last run:') }}
+                <span x-text="lastRan" class="font-medium text-gray-700">
+                    {{ cronConfig.cron_last_ran_formatted|default('') != '' ? cronConfig.cron_last_ran_formatted : __('Never') }}
+                </span>
+            </p>
+            <div class="flex items-center gap-3">
+                <span x-show="runResult !== null" class="text-xs"
+                      :class="runResult?.ok ? 'text-green-600' : 'text-red-600'"
+                      x-text="runResult?.ok
+                          ? '✓ ' + runResult.campaigns_sent + ' campaigns, ' + runResult.automations_sent + ' automations, ' + runResult.posts_published + ' posts, ' + runResult.products_published + ' products'
+                            + ', ' + (runResult.posts_expired || 0) + ' expired, ' + (runResult.swaps_processed || 0) + ' swaps'
+                            + ', ' + runResult.subscriptions_reconciled + ' subscriptions reconciled'
+                            + ', ' + runResult.trials_expired + ' trials expired'
+                            + ', ' + runResult.abandoned_carts_sent + ' abandoned cart emails'
+                            + (runResult.rates_updated ? ', rates updated' : ', rates not due')
+                            + (runResult.update_checked
+                                ? (runResult.update_available ? ', update available v' + runResult.update_version : ', up to date')
+                                : ', update not due')
+                            + (runResult.plugin_updates_checked
+                                ? ', ' + runResult.plugin_updates_checked + ' plugin update check(s), '
+                                    + runResult.plugin_updates_available + ' available'
+                                : ', plugin updates not due')
+                          : '✗ ' + (runResult?.error ?? 'Error')">
+                </span>
+                <button type="button" @click="runNow()" :disabled="running"
+                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-hidden disabled:opacity-50">
+                    <span x-show="!running">{{ __('Run Now') }}</span>
+                    <span x-show="running" x-cloak>{{ __('Running…') }}</span>
+                </button>
+            </div>
+        </div>
+
+        {# ── External health check ──────────────────────────────── #}
+        <div class="border-t pt-4 space-y-3" x-data="{ healthStatus: null, healthChecking: false, healthError: null,
+            async checkHealth() {
+                this.healthChecking = true;
+                this.healthStatus = null;
+                this.healthError = null;
+                try {
+                    const r = await fetch('{{ absolute_url('/api/v1/health?deep=1') }}');
+                    const data = await r.json().catch(() => ({}));
+                    this.healthStatus = r.ok ? (data.status ?? 'ok') : 'degraded';
+                } catch (e) {
+                    this.healthError = e.message;
+                } finally {
+                    this.healthChecking = false;
+                }
+            } }">
+            <div>
+                <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200" {{ vl.attrs('maintenance', __('External health check'), 'health', 'cron', __('Scheduled Tasks (Cron)'), 'health uptime monitor kuma deep external') }}>{{ __('External health check') }}</h4>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Point an uptime monitor (Uptime Kuma, Better Stack, UptimeRobot) at this URL. It answers :ok when the database and storage are healthy, :degraded otherwise — with no per-check details exposed.', {':ok': 'ok', ':degraded': 'degraded'}) }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="text" readonly
+                       value="{{ absolute_url('/api/v1/health?deep=1') }}"
+                       class="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-xs font-mono text-gray-700 focus:outline-hidden select-all">
+                {% include 'admin/components/_copy_button.twig' with {
+                    expr: 'this.previousElementSibling.value',
+                    size: 'h-4 w-4',
+                    class: 'shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
+                } %}
+                <button type="button" @click="checkHealth()" :disabled="healthChecking"
+                        class="rounded-md border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50">
+                    <span x-show="!healthChecking">{{ __('Check now') }}</span>
+                    <span x-show="healthChecking" x-cloak>{{ __('Checking…') }}</span>
+                </button>
+            </div>
+            <div x-show="healthStatus !== null || healthError !== null" x-cloak class="text-xs">
+                <span x-show="healthStatus === 'ok'" class="font-medium text-green-600">✓ {{ __('Healthy — database and storage are reachable.') }}</span>
+                <span x-show="healthStatus !== null && healthStatus !== 'ok'" class="font-medium text-red-600">✗ {{ __('Degraded — check the server logs.') }}</span>
+                <span x-show="healthError !== null" class="font-medium text-red-600">✗ <span x-text="healthError"></span></span>
+            </div>
+            <p class="text-xs text-gray-400">{{ __('Free services:') }}
+                {% for svc in services_list.uptime|default([]) %}
+                    <a href="{{ svc.url }}" target="_blank" rel="noopener noreferrer" class="text-gray-600 hover:text-gray-900 dark:text-gray-100 hover:underline">{{ svc.name }}</a>{% if not loop.last %},{% endif %}
+                {% endfor %}
+            </p>
+        </div>
+    </div>
+    </div>

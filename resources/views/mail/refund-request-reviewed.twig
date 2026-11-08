@@ -1,0 +1,39 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Refund Request Update') }}{% endblock %}
+
+{% block body %}
+{% if approved %}
+<h2>{{ __('Refund Request Approved') }}</h2>
+<p>{{ __('Your request for order :number has been approved.', {':number': '<strong>#' ~ order.orderNumber ~ '</strong>'})|raw }}</p>
+<p>{{ __('The order has been cancelled.') }}</p>
+{% else %}
+<h2>{{ __('Refund Request Rejected') }}</h2>
+<p>{{ __('Your request for order :number has been rejected.', {':number': '<strong>#' ~ order.orderNumber ~ '</strong>'})|raw }}</p>
+{% endif %}
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Status') }}</td>
+    <td style="padding:8px 0; font-weight:700; text-transform:capitalize;">{{ order.status ? __(order.status) : '—' }}</td>
+  </tr>
+</table>
+
+{% if note %}
+<p style="margin-top:14px; padding:10px 12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text }};">
+  <strong>{{ approved ? __('Note:') : __('Reason:') }}</strong> {{ note }}
+</p>
+{% endif %}
+
+{% if order_status_url is defined and order_status_url %}
+<p style="margin-top:16px;">
+  <a href="{{ order_status_url }}" class="btn" style="display:inline-block; padding:10px 16px; font-size:14px;">{{ __('View Latest Order & Refund Status') }}</a>
+</p>
+{% endif %}
+
+<p style="margin-top:20px;">{{ __('If you have any questions, please reply to this email.') }}</p>
+{% endblock %}

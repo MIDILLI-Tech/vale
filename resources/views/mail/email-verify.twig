@@ -1,0 +1,14 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Verify your email address') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Welcome, :name!', {':name': name}) }}</h2>
+<p>{{ __('Thanks for creating an account. Please verify your email address by clicking the button below. This link expires in 24 hours.') }}</p>
+<a href="{{ verify_url }}" class="btn">{{ __('Verify Email') }}</a>
+<p style="word-break:break-all; color:{{ email_text_muted }}; font-size:13px;">
+    {{ __('If the button does not work, copy and paste this link into your browser:') }}<br>
+    <a href="{{ verify_url }}">{{ verify_url }}</a>
+</p>
+<p style="color:{{ email_text_muted }}; font-size:13px;">{{ __('If you did not create an account, you can safely ignore this email.') }}</p>
+{% endblock %}

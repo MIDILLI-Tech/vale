@@ -1,0 +1,1169 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Analytics') }}{% endblock %}
+
+{% block content %}
+{% import 'admin/analytics/rows/more.twig' as more %}
+{% import 'admin/analytics/partials/sort_control.twig' as sort %}
+<style>
+    .analytics-row { grid-template-columns: minmax(0, 1fr); }
+    .analytics-row > [data-card-id] {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        padding-left: 2.25rem;
+        padding-top: 0.5rem;
+    }
+    .analytics-row > [data-card-id] h3.text-sm { overflow-wrap: anywhere; }
+    .analytics-row .drag-handle { opacity: 0; }
+    .analytics-row .group:hover .drag-handle,
+    .analytics-row .drag-handle:focus-visible { opacity: 1; }
+    @media (hover: none) {
+        .analytics-row .drag-handle { opacity: 1; }
+    }
+    .analytics-row canvas { display: block; width: 100% !important; max-width: 100%; }
+    .analytics-card-size-wrap { display: none; align-items: center; gap: 0.375rem; font-size: 11px; font-weight: 400; color: #9ca3af; }
+    @media (min-width: 1024px) {
+        .analytics-card-size-wrap { display: flex; }
+    }
+    .analytics-card-size-caption { display: none; }
+    @media (min-width: 1280px) {
+        .analytics-card-size-caption { display: inline; }
+    }
+    .analytics-card-size-select {
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 0.375rem;
+        border: 1px solid #e5e7eb;
+        background-color: #fff;
+        background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.4rem center;
+        background-size: 0.7rem;
+        color: #6b7280;
+        color-scheme: light;
+        font-size: 11px;
+        padding: 0.125rem 1.5rem 0.125rem 0.375rem;
+        cursor: pointer;
+    }
+    .analytics-card-size-select:hover { border-color: #d1d5db; }
+    .analytics-card-size-select:focus { outline: none; border-color: #93c5fd; }
+    .dark .analytics-card-size-wrap { color: #6b7280; }
+    .dark .analytics-card-size-select {
+        border-color: #374151;
+        background-color: #1f2937;
+        background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        color: #9ca3af;
+        color-scheme: dark;
+    }
+    .dark .analytics-card-size-select:hover { border-color: #4b5563; }
+    .analytics-chart-wrap { position: relative; height: 200px; flex: 0 0 auto; }
+    /* Sortable column label — the arrow keeps its slot so the label never
+       shifts when the direction toggles. */
+    .vl-sort-icon { display: inline-block; width: 0.7rem; text-align: center; }
+    .analytics-resize-handle {
+        position: absolute;
+        left: 0.75rem;
+        right: 0.75rem;
+        bottom: 0.3rem;
+        height: 0.7rem;
+        cursor: ns-resize;
+        touch-action: none;
+        border-radius: 9999px;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+    .analytics-resize-handle::after {
+        content: '';
+        display: block;
+        width: 3rem;
+        height: 4px;
+        margin: 0.2rem auto 0;
+        border-radius: 9999px;
+        background: #cbd5e1;
+    }
+    .dark .analytics-resize-handle::after { background: #4b5563; }
+    .analytics-row > [data-card-id]:hover .analytics-resize-handle { opacity: 1; }
+    .analytics-row:empty { min-height: 5rem; }
+    /* Top Products tile grid: uniform 9rem rows on desktop, compact auto height
+       on mobile so tiles fit tightly without vertical whitespace. */
+    .analytics-product-grid {
+        grid-auto-rows: auto;
+        max-height: 22rem;
+    }
+    @media (min-width: 640px) {
+        .analytics-product-grid {
+            grid-auto-rows: 9rem;
+            max-height: 19rem;
+        }
+    }
+    .analytics-dropzone {
+        min-height: 2rem;
+        border: 2px dashed transparent;
+        border-radius: 0.75rem;
+        transition: border-color 0.15s, background-color 0.15s;
+    }
+    .analytics-dropzone.analytics-drag-over {
+        border-color: #93c5fd;
+        background: rgba(147, 197, 253, 0.08);
+    }
+    .analytics-row.analytics-drag-over {
+        outline: 2px dashed #93c5fd;
+        outline-offset: 4px;
+        border-radius: 0.75rem;
+    }
+    .analytics-ghost {
+        opacity: 0.45 !important;
+        outline: 2px dashed #60a5fa;
+        outline-offset: 2px;
+    }
+    .analytics-chosen { cursor: grabbing !important; }
+    .sortable-fallback { cursor: grabbing !important; }
+    body.sortable-drag * { cursor: grabbing !important; }
+    .analytics-inter-drop {
+        height: 8px;
+        margin: 4px 0;
+        border: 2px dashed transparent;
+        border-radius: 0.5rem;
+        transition: border-color 0.15s, background-color 0.15s;
+    }
+    .analytics-inter-drop.analytics-drag-over {
+        border-color: #93c5fd;
+        background: rgba(147, 197, 253, 0.08);
+    }
+    @media (min-width: 1024px) {
+        .analytics-row { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+        .analytics-row > [data-card-id] { grid-column: span var(--card-span, 4); }
+    }
+</style>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Analytics') }}</h1>
+    <form method="get" action="" class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400" x-data="analyticsDatePresets()">
+        <div class="flex flex-wrap items-center gap-2">
+            <label class="flex items-center gap-1 text-xs">
+                <span>{{ __('From') }}</span>
+                <input type="date" name="from" x-ref="fromInput" value="{{ range_from ?? '' }}" min="{{ range_min }}" max="{{ range_max }}" class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 text-xs">
+            </label>
+            <label class="flex items-center gap-1 text-xs">
+                <span>{{ __('To') }}</span>
+                <input type="date" name="to" x-ref="toInput" value="{{ range_to ?? '' }}" min="{{ range_min }}" max="{{ range_max }}" class="rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 text-xs">
+            </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-1 w-full sm:w-auto mt-1 sm:mt-0" @click.prevent.stop>
+            <span class="text-xs text-gray-500 dark:text-gray-400">Presets:</span>
+            <button type="button" @click="setPreset('7d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
+            <button type="button" @click="setPreset('90d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">90d</button>
+            <button type="button" @click="setPreset('thisMonth')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This month') }}</button>
+            <button type="button" @click="setPreset('lastMonth')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last month') }}</button>
+        </div>
+        <div class="w-full sm:w-auto mt-1 sm:mt-0">
+            <button type="submit" class="text-xs px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-gray-700 text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">{{ __('Apply') }}</button>
+        </div>
+    </form>
+</div>
+
+{% if analytics_enabled != '1' %}
+<div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
+    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    </svg>
+    <span>{{ __('Analytics tracking is currently disabled.') }} <a href="{{ url('/admin/settings?tab=analytics') }}" class="underline font-medium">{{ __('Enable it in Settings.') }}</a></span>
+</div>
+{% endif %}
+
+{# ── Stats cards ── #}
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Online Now') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ online }}</p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ __('unique visitors in last 15 min') }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Today Pageviews') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ today_views }}</p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ today_unique }} {{ __('unique visitors') }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Total Pageviews') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ total_views }}</p>
+        <p class="mt-0.5 text-xs text-gray-400">{% if range_from %}{{ range_from }} – {{ range_to }}{% else %}{{ __('in the last') }} {{ days }} {{ __('days') }}{% endif %}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Pages / Session') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ avg_pages|num(1) }}</p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ __('pages viewed on average') }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Bounce Rate') }}</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ bounce_rate|num(1) }}%</p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ __('sessions with 1 view') }}</p>
+    </div>
+    <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Avg. Stay Time') }}</p>
+        {% set dur = avg_duration|round(0) %}
+        {% set mins = (dur // 60)|round(0, 'floor') %}
+        {% set secs = dur % 60 %}
+        <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+            {{ __(':minutes m :seconds s', {':minutes': mins, ':seconds': '%02d'|format(secs)}) }}
+        </p>
+        <p class="mt-0.5 text-xs text-gray-400">{{ __('per session on average') }}</p>
+    </div>
+</div>
+
+<div id="analytics-grid" class="mt-6">
+    {# ── Card: Traffic & Referrers ── #}
+    <div data-card-id="traffic-over-time" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Traffic Over Time') }}</h3>
+            </div>
+            <div class="analytics-chart-wrap"><canvas id="traffic-chart"></canvas></div>
+        </div>
+
+        <div data-card-id="top-referrers" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Referrers') }}</h3>
+            </div>
+            {% if top_referrers is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('top-referrers', 'views', __('Views'), 'desc', true) }}</div>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="top-referrers" data-vl-sort-card="top-referrers">
+                {% for ref in top_referrers %}
+                {{ include('admin/analytics/rows/referrer.twig', {row: ref}) }}
+                {% endfor %}
+                {{ more.button('top-referrers', top_referrers|length, top_referrers|length >= list_limit) }}
+            </div>
+            {% endif %}
+        </div>
+
+    {# ── Card: Browser + Device + Country ── #}
+    <div data-card-id="browsers" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Browsers') }}</h3>
+            </div>
+            <div class="analytics-chart-wrap"><canvas id="browser-chart"></canvas></div>
+        </div>
+        <div data-card-id="devices" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Devices') }}</h3>
+            </div>
+            <div class="analytics-chart-wrap"><canvas id="device-chart"></canvas></div>
+        </div>
+        <div data-card-id="countries" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Countries') }}</h3>
+            </div>
+            {% if countries is empty %}
+            <p class="text-sm text-gray-400">{{ __('Geolocation is disabled or no data yet.') }}</p>
+            {% else %}
+            <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('countries', 'views', __('Views'), 'desc', true) }}</div>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="countries" data-vl-sort-card="countries">
+                {% for c in countries %}
+                {{ include('admin/analytics/rows/geo.twig', {row: c, mode: 'country'}) }}
+                {% endfor %}
+                {{ more.button('countries', countries|length, countries|length >= list_limit) }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div data-card-id="cities" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Cities') }}</h3>
+            </div>
+            {% if cities is empty %}
+            <p class="text-sm text-gray-400">{{ geo_mode == 'none' ? __('Geolocation is disabled. Enable it in Settings to collect city data.') : __('No data yet.') }}</p>
+            {% else %}
+            <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('cities', 'views', __('Views'), 'desc', true) }}</div>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="cities" data-vl-sort-card="cities">
+                {% for c in cities %}
+                {{ include('admin/analytics/rows/geo.twig', {row: c, mode: 'city'}) }}
+                {% endfor %}
+                {{ more.button('cities', cities|length, cities|length >= list_limit) }}
+            </div>
+            {% endif %}
+        </div>
+        <div data-card-id="languages" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs group relative">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Languages') }}</h3>
+            </div>
+            {% if languages is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('languages', 'views', __('Views'), 'desc', true) }}</div>
+            <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="languages" data-vl-sort-card="languages">
+                {% for l in languages %}
+                {{ include('admin/analytics/rows/geo.twig', {row: l, mode: 'language'}) }}
+                {% endfor %}
+                {{ more.button('languages', languages|length, languages|length >= list_limit) }}
+            </div>
+            {% endif %}
+        </div>
+
+    {# ── Card: HTTP Status Codes (3xx, 4xx, 5xx) ── #}
+    <div data-card-id="status-codes" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+        <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('HTTP Response Status Pages') }}</h3>
+        </div>
+        {% set seriesList = [
+            { key: '3xx', label: '3xx ' ~ __('Redirects'), badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' },
+            { key: '4xx', label: '4xx ' ~ __('Client Errors'), badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' },
+            { key: '5xx', label: '5xx ' ~ __('Server Errors'), badgeClass: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' }
+        ] %}
+        {# Tabs header — client-side switching, no page reload #}
+        <div class="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-2 mb-4 overflow-x-auto" role="tablist">
+            {% for item in seriesList %}
+                {% set active = item.key == '4xx' %}
+                <button type="button" data-status-tab="{{ item.key }}" aria-selected="{{ active ? 'true' : 'false' }}"
+                   class="px-3 py-1.5 text-xs flex items-center gap-2 rounded-t-md transition-colors whitespace-nowrap cursor-pointer border-b-2 {{ active ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200' }}">
+                    <span>{{ item.label }}</span>
+                    <span class="rounded-full px-2 py-0.5 text-[10px] font-mono {{ item.badgeClass }}">
+                        {{ status_code_counts[item.key]|default(0) }}
+                    </span>
+                </button>
+            {% endfor %}
+        </div>
+
+        {# All panels rendered; visibility toggled client-side #}
+        {% for item in seriesList %}
+        {% set items = status_code_stats[item.key]|default([]) %}
+        <div data-status-panel="{{ item.key }}" {{ item.key != '4xx' ? 'hidden' }}>
+            {% if items is empty %}
+                <p class="text-xs text-gray-400 py-4 text-center">{{ __('No pageviews recorded for :series status codes in the selected period.', {':series': item.key}) }}</p>
+            {% else %}
+                <div class="space-y-1.5 max-h-60 overflow-y-auto">
+                    <div class="grid grid-cols-[3rem_minmax(0,1fr)_3.5rem] md:grid-cols-[4rem_minmax(0,1fr)_6rem_11rem] items-center gap-2 px-2 pb-1 text-xs font-medium uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                        <span>{{ __('Code') }}</span>
+                        <span>{{ __('Page URL') }}</span>
+                        <span class="text-right">{{ sort.th('status-codes', 'views', __('Views'), 'desc', true) }}</span>
+                        <span class="hidden md:block">{{ sort.th('status-codes', 'last_seen', __('Last Occurred'), 'desc', false) }}</span>
+                    </div>
+                    <div data-vl-list-body="status-codes" data-vl-sort-card="status-codes" data-vl-list-series="{{ item.key }}">
+                    {% for row in items %}
+                    {{ include('admin/analytics/rows/status.twig', {row: row}) }}
+                    {% endfor %}
+                    {{ more.button('status-codes', items|length, items|length < (status_code_counts[item.key]|default(0)), item.key) }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {# ── Card: Entry & Exit Pages ── #}
+    <div data-card-id="top-landing-pages" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Landing Pages (Entry)') }}</h3>
+            </div>
+            {% if entry_pages is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div>
+                <div class="grid grid-cols-[minmax(0,1fr)_auto_3rem] items-center gap-2 px-1 pb-1 text-xs font-medium uppercase tracking-wider text-gray-400">
+                    <span>{{ __('Page') }}</span>
+                    <span>{{ sort.th('entry-pages', 'duration', __('Duration'), 'desc', false) }}</span>
+                    <span>{{ sort.th('entry-pages', 'views', __('Views'), 'desc', true) }}</span>
+                </div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto pr-2" data-vl-list-body="entry-pages" data-vl-sort-card="entry-pages">
+                {% for p in entry_pages %}
+                {{ include('admin/analytics/rows/page.twig', {row: p, mode: 'duration'}) }}
+                {% endfor %}
+                {{ more.button('entry-pages', entry_pages|length, entry_pages|length >= list_limit) }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    <div data-card-id="top-exit-pages" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Exit Pages') }}</h3>
+            </div>
+            {% if exit_pages is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div>
+                <div class="grid grid-cols-[minmax(0,1fr)_auto_3rem] items-center gap-2 px-1 pb-1 text-xs font-medium uppercase tracking-wider text-gray-400">
+                    <span>{{ __('Page') }}</span>
+                    <span>{{ sort.th('exit-pages', 'session_duration', __('Avg. Sess. Dur.'), 'desc', false) }}</span>
+                    <span>{{ sort.th('exit-pages', 'views', __('Views'), 'desc', true) }}</span>
+                </div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto pr-2" data-vl-list-body="exit-pages" data-vl-sort-card="exit-pages">
+                {% for p in exit_pages %}
+                {{ include('admin/analytics/rows/page.twig', {row: p, mode: 'session'}) }}
+                {% endfor %}
+                {{ more.button('exit-pages', exit_pages|length, exit_pages|length >= list_limit) }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    {# ── Card: UTM Campaign Tracking ── #}
+    <div data-card-id="utm-tracking" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+        <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+        <div class="flex items-center justify-between gap-2 mb-3">
+            <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('UTM Campaign Tracking') }}</h3>
+                {# Active facets sit next to the title, not above the panels. #}
+                <div class="flex min-w-0 flex-wrap items-center" data-vl-utm-filters>
+                    {{ include('admin/analytics/rows/utm_filters.twig') }}
+                </div>
+            </div>
+        </div>
+        <div data-vl-utm-body>
+            {{ include('admin/analytics/rows/utm_body.twig') }}
+        </div>
+    </div>
+
+    {# ── Card: Top Pages & Posts ── #}
+    <div data-card-id="top-pages" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Pages') }}</h3>
+            </div>
+            {% if top_pages is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div>
+                <div class="grid grid-cols-[minmax(0,1fr)_auto_3rem] items-center gap-2 px-1 pb-1 text-xs font-medium uppercase tracking-wider text-gray-400">
+                    <span>{{ __('Page') }}</span>
+                    <span>{{ sort.th('top-pages', 'duration', __('Duration'), 'desc', false) }}</span>
+                    <span>{{ sort.th('top-pages', 'views', __('Views'), 'desc', true) }}</span>
+                </div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto pr-2" data-vl-list-body="top-pages" data-vl-sort-card="top-pages">
+                {% for p in top_pages %}
+                {{ include('admin/analytics/rows/page.twig', {row: p, mode: 'duration'}) }}
+                {% endfor %}
+                {{ more.button('top-pages', top_pages|length, top_pages|length >= list_limit) }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if blog_enabled == '1' %}
+        <div data-card-id="top-posts" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+            <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+            <div class="flex items-center justify-between mb-2 gap-2">
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Posts') }}</h3>
+            </div>
+            {% if top_posts is empty %}
+            <p class="text-sm text-gray-400">{{ __('No data yet.') }}</p>
+            {% else %}
+            <div>
+                <div class="grid grid-cols-[minmax(0,1fr)_auto_3rem] items-center gap-2 px-1 pb-1 text-xs font-medium uppercase tracking-wider text-gray-400">
+                    <span>{{ __('Post') }}</span>
+                    <span>{{ sort.th('top-posts', 'duration', __('Duration'), 'desc', false) }}</span>
+                    <span>{{ sort.th('top-posts', 'views', __('Views'), 'desc', true) }}</span>
+                </div>
+                <div class="space-y-1.5 max-h-44 overflow-y-auto pr-2" data-vl-list-body="top-posts" data-vl-sort-card="top-posts">
+                {% for p in top_posts %}
+                {{ include('admin/analytics/rows/content.twig', {row: p, mode: 'post'}) }}
+                {% endfor %}
+                {{ more.button('top-posts', top_posts|length, top_posts|length >= list_limit) }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    {% if shop_enabled == '1' %}
+    {# ── Card: Top Products ── #}
+    <div data-card-id="top-products" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+        <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top Products') }}</h3>
+        </div>
+        {% if top_products is empty %}
+        <p class="text-sm text-gray-400">{{ __('No products yet.') }}</p>
+        {% else %}
+        <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('top-products', 'views', __('Views'), 'desc', true) }}</div>
+        <div class="analytics-product-grid grid gap-2.5 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 overflow-y-auto pr-2" data-vl-list-body="top-products" data-vl-sort-card="top-products" data-vl-list-limit="{{ products_preview }}" data-vl-fit>
+            {% for p in top_products %}
+            {{ include('admin/analytics/rows/content.twig', {row: p, mode: 'product'}) }}
+            {% endfor %}
+            {{ more.button('top-products', top_products|length, top_products_more) }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% for ct in top_custom %}
+    <div data-card-id="top-cpt-{{ ct.type.slug }}" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
+        <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top') }} {{ ct.type.name }}</h3>
+        </div>
+        <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('top-cpt-' ~ ct.type.slug, 'views', __('Views'), 'desc', true) }}</div>
+        <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="top-cpt" data-vl-sort-card="{{ 'top-cpt-' ~ ct.type.slug }}" data-vl-list-type="{{ ct.type.slug }}">
+            {% for p in ct.items %}
+            {{ include('admin/analytics/rows/content.twig', {row: p, mode: 'custom'}) }}
+            {% endfor %}
+            {{ more.button('top-cpt', ct.items|length, ct.items|length >= list_limit, null, ct.type.slug) }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url('/assets/build/charts.js') }}"></script>
+<script>
+document.addEventListener('alpine:init', function () {
+    Alpine.data('analyticsDatePresets', function () {
+        function fmt(d) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
+        }
+        return {
+            setPreset(key) {
+                var today = new Date();
+                var from, to = new Date(today);
+
+                switch (key) {
+                    case '7d':
+                        from = new Date(today); from.setDate(from.getDate() - 7);
+                        break;
+                    case '30d':
+                        from = new Date(today); from.setDate(from.getDate() - 30);
+                        break;
+                    case '90d':
+                        from = new Date(today); from.setDate(from.getDate() - 90);
+                        break;
+                    case 'thisMonth':
+                        from = new Date(today.getFullYear(), today.getMonth(), 1);
+                        break;
+                    case 'lastMonth':
+                        from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        to = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                    default:
+                        return;
+                }
+
+                this.$refs.fromInput.value = fmt(from);
+                this.$refs.toInput.value = fmt(to);
+            }
+        };
+    });
+});
+</script>
+<script>
+(function () {
+    const statusCard = document.querySelector('[data-card-id="status-codes"]');
+    if (!statusCard) return;
+
+    const tabs = statusCard.querySelectorAll('[data-status-tab]');
+    const panels = statusCard.querySelectorAll('[data-status-panel]');
+    const activeCls = ['border-blue-600', 'text-blue-600', 'dark:text-blue-400', 'font-semibold'];
+    const inactiveCls = ['border-transparent', 'text-gray-500', 'hover:text-gray-700', 'dark:text-gray-400', 'dark:hover:text-gray-200'];
+
+    tabs.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.statusTab;
+            tabs.forEach((tab) => {
+                const on = tab === btn;
+                tab.classList.remove(...activeCls, ...inactiveCls);
+                tab.classList.add(...(on ? activeCls : inactiveCls));
+                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panels.forEach((panel) => {
+                panel.hidden = panel.dataset.statusPanel !== key;
+            });
+        });
+    });
+})();
+
+// JS strings + date range for the AJAX "load more" lists
+window.VL_ANALYTICS_LIST = {
+    days: {{ range_days }},
+    from: {{ (range_query_from ?? '')|json_encode|raw }},
+    to: {{ (range_query_to ?? '')|json_encode|raw }},
+    limit: {{ list_limit }}
+};
+
+(function () {
+    const config = window.VL_ANALYTICS_LIST || {};
+
+    const SORT_KEY = 'vl_analytics_sort';
+
+    let sortState = readSortState();
+    let utmFilters = {};
+
+    function readSortState() {
+        try {
+            return JSON.parse(window.localStorage.getItem(SORT_KEY) || '{}') || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveSortState() {
+        try {
+            window.localStorage.setItem(SORT_KEY, JSON.stringify(sortState));
+        } catch (e) {
+            /* storage unavailable (private mode) — sorting still works, just not persisted */
+        }
+    }
+
+    /** Date range shared by every request. */
+    function addSharedParams(params) {
+        if (config.days) params.set('days', String(config.days));
+        if (config.from) params.set('from', config.from);
+        if (config.to) params.set('to', config.to);
+    }
+
+    /** The sort/facet state of the card a list body belongs to. */
+    function sortCardOf(el) {
+        const holder = el ? el.closest('[data-vl-sort-card]') : null;
+        return holder ? holder.dataset.vlSortCard : null;
+    }
+
+    /**
+     * Page size for a list. Cards that open with a deliberately small window
+     * (the Top Products tile grid) declare it on the list body so the first
+     * sort refresh and every "load more" batch keep the same window.
+     */
+    function listLimit(el) {
+        const body = el ? el.closest('[data-vl-list-body]') : null;
+        const own  = body ? Number(body.dataset.vlListLimit || 0) : 0;
+
+        return own > 0 ? own : (config.limit || 100);
+    }
+
+    function addCardParams(params, card) {
+        const state = sortState[card];
+        if (state) {
+            params.set('sort', state.col);
+            params.set('dir', state.dir);
+        }
+        if (card === 'utm') {
+            Object.keys(utmFilters).forEach(function (key) {
+                params.set(key, utmFilters[key]);
+            });
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-vl-analytics-more]');
+        if (!btn || btn.disabled) return;
+        e.preventDefault();
+        loadMore(btn);
+    });
+
+    function isElementVisible(el) {
+        if (!el || !el.isConnected) return false;
+        if (typeof el.checkVisibility === 'function') {
+            return el.checkVisibility();
+        }
+        return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none';
+    }
+
+    const observersMap = new WeakMap();
+
+    function setupObserver(btn) {
+        if (!('IntersectionObserver' in window)) return;
+
+        const scrollContainer = btn.parentElement;
+        if (!scrollContainer) return;
+
+        btn.dataset.vlArmed = '1';
+
+        let observer = observersMap.get(scrollContainer);
+        if (!observer) {
+            observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    const targetBtn = entry.target;
+                    if (entry.isIntersecting) {
+                        if (targetBtn.dataset.vlArmed === '1' && isElementVisible(targetBtn)) {
+                            loadMore(targetBtn);
+                        }
+                    } else {
+                        targetBtn.dataset.vlArmed = '1';
+                    }
+                });
+            }, {
+                root: scrollContainer,
+                rootMargin: '100px 0px'
+            });
+            observersMap.set(scrollContainer, observer);
+        }
+
+        observer.observe(btn);
+    }
+
+    document.querySelectorAll('[data-vl-analytics-more]').forEach(function (btn) {
+        setupObserver(btn);
+    });
+
+    // Also observe tab switches so when a hidden tab becomes visible,
+    // its sentinel gets checked if already near bottom
+    document.querySelectorAll('[data-status-tab]').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            setTimeout(function () {
+                const activePanel = document.querySelector('[data-status-panel]:not([hidden])');
+                if (!activePanel) return;
+                const btn = activePanel.querySelector('[data-vl-analytics-more]');
+                if (btn && isElementVisible(btn) && btn.dataset.vlArmed === '1') {
+                    const container = btn.parentElement;
+                    if (container) {
+                        const rect = btn.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        if (rect.top <= containerRect.bottom + 100) {
+                            loadMore(btn);
+                        }
+                    }
+                }
+            }, 50);
+        });
+    });
+
+    function loadMore(btn) {
+        if (!isElementVisible(btn) || btn.disabled) return;
+
+        btn.dataset.vlArmed = '0';
+
+        const params = new URLSearchParams({
+            list: btn.dataset.vlList,
+            offset: btn.dataset.vlOffset || '0',
+            limit: String(listLimit(btn)),
+        });
+        if (btn.dataset.vlSeries) params.set('series', btn.dataset.vlSeries);
+        if (btn.dataset.vlType) params.set('type', btn.dataset.vlType);
+        addSharedParams(params);
+        addCardParams(params, sortCardOf(btn));
+
+        const label = btn.querySelector('.vl-analytics-more-label');
+        btn.disabled = true;
+        btn.classList.add('is-loading');
+        if (label) {
+            const dark = document.documentElement.classList.contains('dark');
+            const color = dark ? '#d1d5db' : '#4b5563';
+            label.style.color = color;
+            label.innerHTML = '<span class="vl-icon-refresh vl-icon-spin inline-block align-middle" style="color:inherit;"></span> '
+                + (btn.dataset.vlLabel || '');
+        }
+
+        fetch((window.APP_BASE_PATH || '') + '/admin/analytics/list-rows?' + params.toString(), {
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.html) {
+                    btn.insertAdjacentHTML('beforebegin', res.html);
+                }
+                btn.dataset.vlOffset = String(res.offset ?? btn.dataset.vlOffset ?? '0');
+                btn.disabled = false;
+                btn.classList.remove('is-loading');
+                if (label) {
+                    label.innerHTML = '';
+                    label.style.color = '';
+                }
+                if (res.has_more) {
+                    continueOnScroll(btn);
+                } else {
+                    btn.remove();
+                }
+            })
+            .catch(function () {
+                btn.disabled = false;
+                btn.classList.remove('is-loading');
+                if (label) {
+                    label.innerHTML = '';
+                    label.style.color = '';
+                }
+                continueOnScroll(btn);
+            });
+    }
+
+    function continueOnScroll(btn) {
+        const container = btn.parentElement;
+        if (!container) return;
+
+        function onScroll() {
+            container.removeEventListener('scroll', onScroll);
+            if (!btn.isConnected) return;
+
+            const rect = btn.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const inView = rect.top <= containerRect.bottom + 100 && isElementVisible(btn);
+
+            if (inView) {
+                loadMore(btn);
+            } else {
+                btn.dataset.vlArmed = '1';
+            }
+        }
+
+        container.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    // ── Column sorting (AJAX, no page reload) ───────────────────────────────
+
+    function rearmSentinels(root) {
+        (root || document).querySelectorAll('[data-vl-analytics-more]').forEach(function (btn) {
+            setupObserver(btn);
+        });
+    }
+
+    function fetchList(body, offset) {
+        const params = new URLSearchParams({
+            list: body.dataset.vlListBody,
+            offset: String(offset),
+            limit: String(listLimit(body)),
+        });
+        if (body.dataset.vlListSeries) params.set('series', body.dataset.vlListSeries);
+        if (body.dataset.vlListType) params.set('type', body.dataset.vlListType);
+        addSharedParams(params);
+        addCardParams(params, body.dataset.vlSortCard);
+
+        return fetch((window.APP_BASE_PATH || '') + '/admin/analytics/list-rows?' + params.toString(), {
+            headers: { 'Accept': 'application/json' },
+        }).then(function (r) { return r.json(); });
+    }
+
+    /**
+     * Covers a card with the loading spinner while its list is being
+     * re-fetched. A card can fire several requests at once (the status-code
+     * card refreshes three panels), so the calls are reference-counted and the
+     * overlay only leaves when the last one settles.
+     */
+    function cardLoading(el, on) {
+        const card = (el && el.closest('[data-card-id]')) || el;
+        if (!card) return;
+
+        const pending = Math.max(0, Number(card.dataset.vlLoading || 0) + (on ? 1 : -1));
+        card.dataset.vlLoading = String(pending);
+
+        const overlay = card.querySelector(':scope > .vl-card-loading');
+
+        if (pending === 0) {
+            if (overlay) overlay.remove();
+            return;
+        }
+
+        if (overlay) return;
+
+        if (window.getComputedStyle(card).position === 'static') {
+            card.style.position = 'relative';
+        }
+
+        const spinner = document.createElement('span');
+        spinner.className = 'vl-icon-refresh vl-icon-spin';
+
+        const label = document.createElement('span');
+        label.className = 'vl-card-loading-label';
+        label.appendChild(spinner);
+        label.appendChild(document.createTextNode(tjs('Loading...')));
+
+        const box = document.createElement('div');
+        box.className = 'vl-card-loading';
+        box.appendChild(label);
+        card.appendChild(box);
+    }
+
+    /** Replaces one list body with its re-sorted page-one rows. */
+    function refreshListBody(body) {
+        cardLoading(body, true);
+        fetchList(body, 0)
+            .then(function (res) {
+                if (typeof res.html !== 'string') return;
+                body.innerHTML = res.html + (res.more_html || '');
+                rearmSentinels(body);
+            })
+            .catch(function () { /* keep the previous rows on failure */ })
+            .then(function () { cardLoading(body, false); });
+    }
+
+    /**
+     * Re-sorts a whole card. The UTM card is re-rendered in one request (its
+     * six panels share the facet state); other cards refresh each list body.
+     */
+    function refreshCard(card) {
+        if (card === 'utm') {
+            refreshUtm();
+            return;
+        }
+        document.querySelectorAll('[data-vl-list-body]').forEach(function (body) {
+            if (body.dataset.vlSortCard === card) {
+                refreshListBody(body);
+            }
+        });
+    }
+
+    function utmParams() {
+        const params = new URLSearchParams();
+        Object.keys(utmFilters).forEach(function (key) {
+            params.set(key, utmFilters[key]);
+        });
+        addCardParams(params, 'utm');
+        addSharedParams(params);
+
+        return params;
+    }
+
+    function refreshUtm() {
+        const box = document.querySelector('[data-vl-utm-body]');
+        if (!box) return;
+
+        cardLoading(box, true);
+        fetch((window.APP_BASE_PATH || '') + '/admin/analytics/utm-panel?' + utmParams().toString(), {
+            headers: { 'Accept': 'application/json' },
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (typeof res.html !== 'string') return;
+                box.innerHTML = res.html;
+                // The chips live in the card header, outside the swapped body.
+                const chips = document.querySelector('[data-vl-utm-filters]');
+                if (chips && typeof res.filters_html === 'string') {
+                    chips.innerHTML = res.filters_html;
+                }
+                // The header row is part of this body, so the freshly injected
+                // button must be re-registered before the state is mirrored.
+                box.querySelectorAll('[data-vl-sort-col]').forEach(function (btn) {
+                    btn.dataset.vlSortBaseTitle = btn.title;
+                });
+                applySortUi('utm');
+                rearmSentinels(box);
+            })
+            .catch(function () { /* keep the previous panels on failure */ })
+            .then(function () { cardLoading(box, false); });
+    }
+
+    /** Mirrors a card's sort state onto its column labels. */
+    function applySortUi(card) {
+        const state = sortState[card];
+
+        document.querySelectorAll('[data-vl-sort-col]').forEach(function (btn) {
+            if (btn.dataset.vlSortCard !== card) return;
+
+            const active = !!state && state.col === btn.dataset.vlSortCol;
+            const icon = btn.querySelector('.vl-sort-icon');
+            if (icon) icon.textContent = active ? (state.dir === 'asc' ? '↑' : '↓') : '';
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            btn.title = active
+                ? btn.dataset.vlSortBaseTitle + ' — ' + tjs(state.dir === 'asc' ? 'Sort ascending' : 'Sort descending')
+                : btn.dataset.vlSortBaseTitle;
+            ['text-gray-600', 'dark:text-gray-200', 'font-semibold'].forEach(function (cls) {
+                btn.classList.toggle(cls, active);
+            });
+        });
+    }
+
+    // The server marks each card's default column, so its ↓ arrow is visible
+    // before any interaction; a stored choice is layered on top of it.
+    const domDefaultSort = {};
+    document.querySelectorAll('[data-vl-sort-col]').forEach(function (btn) {
+        btn.dataset.vlSortBaseTitle = btn.title;
+        if (btn.dataset.vlSortActive === '1') {
+            domDefaultSort[btn.dataset.vlSortCard] = {
+                col: btn.dataset.vlSortCol,
+                dir: btn.dataset.vlSortDefault || 'desc',
+            };
+        }
+    });
+
+    const storedSortState = sortState;
+    sortState = Object.assign({}, domDefaultSort, storedSortState);
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-vl-sort-col]');
+        if (!btn || !btn.dataset.vlSortCard) return;
+
+        const card    = btn.dataset.vlSortCard;
+        const col     = btn.dataset.vlSortCol;
+        const current = sortState[card];
+
+        // Clicking the active column flips the direction; a new column starts
+        // at its own default (views → descending).
+        const dir = current && current.col === col
+            ? (current.dir === 'asc' ? 'desc' : 'asc')
+            : (btn.dataset.vlSortDefault || 'desc');
+
+        sortState[card] = { col: col, dir: dir };
+
+        saveSortState();
+        applySortUi(card);
+        refreshCard(card);
+    });
+
+    // ── UTM facets (filters apply to every panel of the card) ──────────────
+
+    document.addEventListener('click', function (e) {
+        const facet = e.target.closest('[data-vl-utm-facet]');
+        if (facet) {
+            const key = facet.dataset.vlUtmFacet;
+            const value = facet.dataset.vlUtmValue;
+            if (utmFilters[key] === value) {
+                delete utmFilters[key];
+            } else {
+                utmFilters[key] = value;
+            }
+            refreshUtm();
+            return;
+        }
+
+        const clear = e.target.closest('[data-vl-utm-clear]');
+        if (clear) {
+            if (clear.dataset.vlUtmClear === 'all') {
+                utmFilters = {};
+            } else {
+                delete utmFilters[clear.dataset.vlUtmClear];
+            }
+            refreshUtm();
+        }
+    });
+
+    // Restore persisted sort state. Lists whose stored direction already
+    // matches the server-rendered default need no refetch.
+    document.addEventListener('DOMContentLoaded', function () {
+        Object.keys(sortState).forEach(applySortUi);
+
+        Object.keys(storedSortState).forEach(function (card) {
+            const stored = storedSortState[card];
+            const def    = domDefaultSort[card];
+            if (def && def.col === stored.col && def.dir === stored.dir) return;
+            refreshCard(card);
+        });
+    });
+})();
+
+const isDark = document.documentElement.classList.contains('dark');
+
+const textColor = isDark ? '#e5e7eb' : '#374151';
+const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+const dailyStats = {{ daily_stats|json_encode|raw }};
+if (document.getElementById('traffic-chart')) {
+    new Chart(document.getElementById('traffic-chart'), {
+        type: 'line',
+        data: {
+            labels: dailyStats.map(d => d.date.slice(5)),
+            datasets: [
+                {
+                    label: '{{ __('Pageviews') }}',
+                    data: dailyStats.map(d => d.views),
+                    borderColor: isDark ? '#60a5fa' : '#1f2937',
+                    backgroundColor: isDark ? 'rgba(96,165,250,0.15)' : 'rgba(31,41,55,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                },
+                {
+                    label: '{{ __('Unique') }}',
+                    data: dailyStats.map(d => d.unique),
+                    borderColor: isDark ? '#34d399' : '#6b7280',
+                    backgroundColor: isDark ? 'rgba(52,211,153,0.15)' : 'rgba(107,114,128,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            color: textColor,
+            plugins: { legend: { position: 'top', labels: { color: textColor } } },
+            scales: {
+                x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                y: { beginAtZero: true, ticks: { precision: 0, color: textColor }, grid: { color: gridColor } },
+            },
+        },
+    });
+}
+
+const browserData = {{ browsers|json_encode|raw }};
+if (document.getElementById('browser-chart') && browserData.length > 0) {
+    new Chart(document.getElementById('browser-chart'), {
+        type: 'doughnut',
+        data: {
+            labels: browserData.map(b => b.browser),
+            datasets: [{
+                data: browserData.map(b => b.views),
+                backgroundColor: isDark
+                    ? ['#60a5fa','#34d399','#fbbf24','#f472b6','#a78bfa','#fb923c']
+                    : ['#1f2937','#6b7280','#9ca3af','#d1d5db','#e5e7eb','#f3f4f6'],
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            color: textColor,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, color: textColor } } },
+        },
+    });
+}
+
+const deviceData = {{ devices|json_encode|raw }};
+if (document.getElementById('device-chart') && deviceData.length > 0) {
+    new Chart(document.getElementById('device-chart'), {
+        type: 'doughnut',
+        data: {
+            labels: deviceData.map(d => d.device_type),
+            datasets: [{
+                data: deviceData.map(d => d.views),
+                backgroundColor: isDark
+                    ? ['#60a5fa','#34d399','#fbbf24']
+                    : ['#1f2937','#6b7280','#9ca3af'],
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            color: textColor,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, color: textColor } } },
+        },
+    });
+}
+
+// Initialize reusable GridLayoutManager for analytics dashboard
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.GridLayoutManager === 'undefined') return;
+
+    new window.GridLayoutManager({
+        container: '#analytics-grid',
+        storageKey: 'vl_analytics_card_order',
+        cardSelector: '[data-card-id]',
+        cardIdAttr: 'data-card-id',
+        handleSelector: '.drag-handle',
+        groupName: 'analytics-rows',
+        rowClass: 'analytics-row grid gap-4',
+        cardSpans: {
+            'traffic-over-time': 8,
+            'top-referrers': 4,
+            'browsers': 3,
+            'devices': 3,
+            'countries': 3,
+            'cities': 3,
+            'languages': 4,
+            'status-codes': 8,
+            'top-landing-pages': 6,
+            'top-exit-pages': 6,
+            'utm-tracking': 12,
+            'top-pages': 6,
+            'top-posts': 6,
+            'top-products': 12,
+        },
+        rowDefinitions: [
+            { id: 'traffic', cards: ['traffic-over-time', 'top-referrers'] },
+            { id: 'technology', cards: ['browsers', 'devices', 'countries', 'cities'] },
+            { id: 'language-status', cards: ['languages', 'status-codes'] },
+            { id: 'entry-exit', cards: ['top-landing-pages', 'top-exit-pages'] },
+            { id: 'utm', cards: ['utm-tracking'] },
+            { id: 'pages-posts', cards: ['top-pages', 'top-posts'] },
+            { id: 'products', cards: ['top-products'] },
+        ]
+    });
+});
+</script>
+{% endblock %}

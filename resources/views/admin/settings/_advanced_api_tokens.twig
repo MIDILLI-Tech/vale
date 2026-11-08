@@ -1,0 +1,309 @@
+    {# ── API Tokens sub-panel ── #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+    <div id="advanced-tab-api-tokens" class="advanced-tab-panel">
+    {% if newApiToken %}
+    <div class="mb-6 mx-auto w-fit rounded-xl border border-green-300 bg-green-50 dark:bg-green-900/20 dark:border-green-700 p-4 text-center">
+        <p class="mb-2 text-sm font-semibold text-green-800 dark:text-green-300">&#10004; {{ __('Token created. Copy it now — it will not be shown again.') }}</p>
+        <div class="inline-flex items-center gap-3">
+            <code class="rounded-sm bg-white dark:bg-gray-900 border border-green-200 dark:border-green-700 px-3 py-1.5 font-mono text-xs text-gray-800 dark:text-gray-200 break-all select-all">{{ newApiToken }}</code>
+            {% include 'admin/components/_copy_button.twig' with {
+                text: newApiToken,
+                label: __('Copy'),
+                title: __('Copy to clipboard'),
+                size: 'h-3.5 w-3.5',
+                class: 'inline-flex items-center rounded-lg bg-green-600 dark:bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 dark:hover:bg-green-800'
+            } %}
+        </div>
+    </div>
+    {% endif %}
+
+<div x-data="{ modalOpen: false }">
+    <div class="mb-4 flex items-start justify-between gap-4">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('API Tokens') }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Let external applications read and write Vale content, products, orders, media and subscribers over the REST API.') }}</p>
+        </div>
+        <button @click="modalOpen = true"
+                class="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+            {{ __('Create New Token') }}
+        </button>
+    </div>
+
+        {# Modal overlay #}
+        <div x-show="modalOpen"
+             x-cloak
+             class="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
+            <div class="fixed inset-0 bg-black/50" @click="modalOpen = false"></div>
+            <div class="relative z-10 flex max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Create New Token') }}</h2>
+                    <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">&times;</button>
+                </div>
+                <form method="post" action="{{ url('/admin/api-tokens') }}" class="flex min-h-0 flex-1 flex-col">
+                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+                    {{ csrf_field() }}
+                    <div>
+                        <div {{ vl.attrs('advanced', __('Token Name'), 'name', 'api-tokens', __('API Tokens'), 'api token create name') }}>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Token Name') }} <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" placeholder="{{ __('e.g. My Mobile App') }}" required
+                               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs sm:text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <div {{ vl.attrs('advanced', __('Abilities'), 'abilities', 'api-tokens', __('API Tokens'), 'permissions scopes read write') }}>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Abilities') }}</label>
+                        <input type="text" id="st_abilities" name="abilities" value="*" placeholder="* or read:posts,read:products"
+                               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Use * for full access, or comma-separated abilities.') }}</p>
+                        <p class="mt-1 text-xs text-amber-600 dark:text-amber-400">{{ __('API endpoints are always accessible regardless of feature settings. Revoke or restrict token abilities to disable API access.') }}</p>
+                        <div class="mt-2 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 p-3 text-xs text-gray-600 space-y-1">
+                            <p class="font-semibold text-gray-900 mb-1">{{ __('Available abilities:') }}</p>
+                            <div class="grid grid-cols-1 gap-1">
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stSetAbility('*')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">*</button>
+                                    <span class="text-gray-500 dark:text-gray-400">{{ __('Full access (all endpoints)') }}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('read:posts')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">read:posts</button>
+                                    <span class="text-gray-500 dark:text-gray-400">GET /api/v1/posts, /api/v1/posts/{slug}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('read:pages')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">read:pages</button>
+                                    <span class="text-gray-500 dark:text-gray-400">GET /api/v1/pages, /api/v1/pages/{slug}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('read:products')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">read:products</button>
+                                    <span class="text-gray-500 dark:text-gray-400">GET /api/v1/products, /api/v1/products/{slug}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('write:products')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">write:products</button>
+                                    <span class="text-gray-500 dark:text-gray-400">POST /api/v1/products, PUT /api/v1/products/{id}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('delete:products')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">delete:products</button>
+                                    <span class="text-gray-500 dark:text-gray-400">DELETE /api/v1/products/{id}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('read:orders')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">read:orders</button>
+                                    <span class="text-gray-500 dark:text-gray-400">GET /api/v1/orders, /api/v1/orders/{id}, /api/v1/orders/{id}/notes</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('write:orders')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">write:orders</button>
+                                    <span class="text-gray-500 dark:text-gray-400">POST /api/v1/orders, PUT /api/v1/orders/{id}, POST|DELETE /api/v1/orders/{id}/notes[/{noteId}]</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('submit:forms')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">submit:forms</button>
+                                    <span class="text-gray-500 dark:text-gray-400">POST /api/v1/form/{slug}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('read:subscribers')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">read:subscribers</button>
+                                    <span class="text-gray-500 dark:text-gray-400">GET /api/v1/subscribers, /api/v1/subscribers/{id}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('write:subscribers')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">write:subscribers</button>
+                                    <span class="text-gray-500 dark:text-gray-400">POST /api/v1/subscribers, PUT /api/v1/subscribers/{id}</span>
+                                </div>
+                                <div class="flex gap-2 items-start">
+                                    <button type="button" onclick="stAppendAbility('delete:subscribers')" class="shrink-0 font-mono bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-1.5 py-0.5 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">delete:subscribers</button>
+                                    <span class="text-gray-500 dark:text-gray-400">DELETE /api/v1/subscribers/{id}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                        function stSetAbility(a){document.getElementById('st_abilities').value=a;}
+                        function stAppendAbility(a){var f=document.getElementById('st_abilities'),v=f.value.trim();if(v===''||v==='*'){f.value=a;}else if(!v.split(',').map(s=>s.trim()).includes(a)){f.value=v+','+a;}}
+                        </script>
+                        </div>
+                    </div>
+                    <div>
+                        <div {{ vl.attrs('advanced', __('Expires At'), 'expires_at', 'api-tokens', __('API Tokens'), 'expiry expiration date') }}>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('Expires At') }}</label>
+                        <input type="date" name="expires_at"
+                               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs sm:text-sm">
+                        <p class="mt-1 text-xs text-gray-400">{{ __('Leave blank for no expiry.') }}</p>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="vl-modal-actions">
+                        <button type="button" @click="modalOpen = false"
+                                class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            {{ __('Cancel') }}
+                        </button>
+                        <button type="submit"
+                                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                            {{ __('Generate Token') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-800/50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Name') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Abilities') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Last Used') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Expires') }}</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Created') }}</th>
+                    <th class="px-6 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                {% for token in apiTokens %}
+                <tr>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">{{ token.name }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        <div class="flex flex-wrap gap-1">
+                            {% for ability in (token.abilities ?? '*')|split(',') %}
+                                <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-200">{{ ability|trim }}</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.last_used_at ? token.last_used_at|date('M j, Y') : '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.expires_at ? token.expires_at|date('M j, Y') : '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.created_at|date('M j, Y') }}</td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="inline-flex items-center justify-end gap-2">
+                            <form method="post" action="{{ url('/admin/api-tokens/' ~ token.id ~ '') }}"
+                                  onsubmit="return confirm('{{ __('Revoke this token?')|e('js') }}')">
+                                {{ csrf_field() }}
+                                <input type="hidden" name="_METHOD" value="DELETE">
+                                <button type="submit" class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">{{ __('Revoke') }}</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400">{{ __('No tokens yet.') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# API Reference #}
+    <div class="mt-6 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 shadow-xs text-sm">
+        <div class="border-b border-gray-200 dark:border-gray-700 px-5 py-3 font-semibold text-gray-900 dark:text-gray-100">{{ __('API Reference') }}</div>
+        <div class="p-5 space-y-4">
+            {# ── Collapsible: Available Abilities ── #}
+            <div x-data="{ open: false }">
+                <div @click="open = !open" class="flex cursor-pointer select-none items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <svg :class="open ? 'rotate-90' : ''" class="h-3 w-3 shrink-0 text-gray-400 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/></svg>
+                    {{ __('Available Abilities') }}
+                </div>
+                <div x-show="open" x-collapse class="mt-2">
+                    <table class="w-full text-xs border-collapse">
+                        <thead><tr class="bg-gray-50 dark:bg-gray-800/50 text-left text-gray-600 dark:text-gray-300">
+                            <th class="border border-gray-200 dark:border-gray-700 px-3 py-2">{{ __('Ability') }}</th>
+                            <th class="border border-gray-200 dark:border-gray-700 px-3 py-2">{{ __('Endpoints') }}</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>*</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">{{ __('Full access') }}</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>read:posts</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">GET /api/v1/posts, /api/v1/posts/{slug}</td></tr>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>read:pages</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">GET /api/v1/pages, /api/v1/pages/{slug}</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>read:products</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">GET /api/v1/products, /api/v1/products/{slug}</td></tr>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>write:products</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">POST /api/v1/products, PUT /api/v1/products/{id}</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>delete:products</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">DELETE /api/v1/products/{id}</td></tr>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>read:orders</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">GET /api/v1/orders, /api/v1/orders/{id}, /api/v1/orders/{id}/notes</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>write:orders</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">POST /api/v1/orders, PUT /api/v1/orders/{id}, POST|DELETE /api/v1/orders/{id}/notes[/{noteId}]</td></tr>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>submit:forms</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">POST /api/v1/form/{slug}</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>read:subscribers</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">GET /api/v1/subscribers, /api/v1/subscribers/{id}</td></tr>
+                            <tr><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>write:subscribers</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">POST /api/v1/subscribers, PUT /api/v1/subscribers/{id}</td></tr>
+                            <tr class="bg-gray-50 dark:bg-gray-800/50"><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"><code>delete:subscribers</code></td><td class="border border-gray-200 dark:border-gray-700 px-3 py-2 text-gray-500 dark:text-gray-400">DELETE /api/v1/subscribers/{id}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# ── Collapsible: Example curl requests ── #}
+            <div x-data="{ open: false }">
+                <div @click="open = !open" class="flex cursor-pointer select-none items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <svg :class="open ? 'rotate-90' : ''" class="h-3 w-3 shrink-0 text-gray-400 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd"/></svg>
+                    {{ __('Example curl requests') }}
+                </div>
+                <div x-show="open" x-collapse class="mt-2 space-y-2">
+                    <div>
+                        <p class="mb-1 text-xs font-semibold text-gray-600">{{ __('Authentication') }}</p>
+                        <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">Authorization: Bearer &lt;your-token&gt;</pre>
+                    </div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('List posts') }} <code class="text-gray-400">(read:posts)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -H "Authorization: Bearer &lt;token&gt;" {{ site_url ?? 'http://localhost' }}/api/v1/posts</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('List pages') }} <code class="text-gray-400">(read:pages)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -H "Authorization: Bearer &lt;token&gt;" {{ site_url ?? 'http://localhost' }}/api/v1/pages</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('List products') }} <code class="text-gray-400">(read:products)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -H "Authorization: Bearer &lt;token&gt;" {{ site_url ?? 'http://localhost' }}/api/v1/products</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Create product (Full Example)') }} <code class="text-gray-400">(write:products)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X POST {{ site_url ?? 'http://localhost' }}/api/v1/products \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Luxury Watch",
+    "sku": "WATCH-001",
+    "price": 199.99,
+    "status": "published",
+    "short_description": "Elegant timepiece",
+    "categories": ["accessories", "watches"],
+    "featured_image": "https://example.com/watch.jpg",
+    "gallery": ["https://example.com/watch-side.jpg", "https://example.com/watch-box.jpg"],
+    "variations": [
+      {
+        "attributes": {"Color": "Gold"},
+        "price": 249.99,
+        "stock_quantity": 5,
+        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+      },
+      {
+        "attributes": {"Color": "Silver"},
+        "price": 199.99,
+        "stock_quantity": 10
+      }
+    ],
+    "gtin": "1234567890123",
+    "brand": "Vale",
+    "download_source": "external",
+    "download_url": "https://example.com/manual.pdf"
+  }'</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Update product') }} <code class="text-gray-400">(write:products)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X PUT {{ site_url ?? 'http://localhost' }}/api/v1/products/123 \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"price": 24.99}'</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Delete product') }} <code class="text-gray-400">(delete:products)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X DELETE {{ site_url ?? 'http://localhost' }}/api/v1/products/123 -H "Authorization: Bearer &lt;token&gt;"</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Submit form') }} <code class="text-gray-400">(submit:forms)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X POST {{ site_url ?? 'http://localhost' }}/api/v1/form/my-form-slug -H "Content-Type: application/json" -d '{"fields":{"name":"John","email":"john@example.com"}}'</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('List subscribers') }} <code class="text-gray-400">(read:subscribers)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -H "Authorization: Bearer &lt;token&gt;" {{ site_url ?? 'http://localhost' }}/api/v1/subscribers</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Add subscriber') }} <code class="text-gray-400">(write:subscribers)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X POST {{ site_url ?? 'http://localhost' }}/api/v1/subscribers -H "Authorization: Bearer &lt;token&gt;" -H "Content-Type: application/json" -d '{"email":"john@example.com","name":"John","skip_optin":true}'</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Delete subscriber') }} <code class="text-gray-400">(delete:subscribers)</code></p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -X DELETE {{ site_url ?? 'http://localhost' }}/api/v1/subscribers/123 -H "Authorization: Bearer &lt;token&gt;"</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Health check (no auth)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/health</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Google Merchant Center feed (no auth, XML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/google-merchant</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Bing feed (no auth, XML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/bing</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Meta feed (no auth, XML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/meta</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Pinterest feed (no auth, XML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/pinterest</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Idealo feed (no auth, CSV)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/idealo</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('TikTok Shop feed (no auth, Google Shopping XML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/tiktok</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Shopify RSS feed (no auth, RSS 2.0)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/shopify</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Yandex Market feed (no auth, YML)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl {{ site_url ?? 'http://localhost' }}/api/v1/feed/yandex-market</pre></div>
+                    <div><p class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Browse Google taxonomy (JSON)') }}</p>
+                    <pre class="overflow-auto rounded-sm bg-gray-900 p-2 text-xs text-green-300">curl -H "Authorization: Bearer &lt;token&gt;" {{ site_url ?? 'http://localhost' }}/api/v1/feed/google-taxonomy?q=Electronics</pre></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>{# /api-tab-api-tokens #}

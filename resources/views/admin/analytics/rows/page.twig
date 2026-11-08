@@ -1,0 +1,23 @@
+{#
+    One Top Pages / Entry Pages / Exit Pages row.
+
+    mode:
+      - null      → page + views
+      - duration  → page + average time on page + views
+      - session   → page + average session duration of sessions ending here + views
+#}
+{% set showDuration = mode == 'duration' or mode == 'session' %}
+{% set durationValue = mode == 'session' ? row.avg_session_duration : row.avg_duration %}
+<a href="{{ site_url }}{{ row.page_url }}" target="_blank"
+   class="grid items-center gap-2 text-sm rounded-sm px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors {{ showDuration ? 'grid-cols-[minmax(0,1fr)_auto_3rem]' : 'grid-cols-[minmax(0,1fr)_3rem]' }}">
+    <span class="truncate text-gray-700 dark:text-gray-300" title="{{ row.page_title ?: row.page_url }}">{{ row.page_title ?: row.page_url }}</span>
+    {% if showDuration %}
+    <span class="tabular-nums text-xs text-gray-400 text-right whitespace-nowrap">
+        {% set pdur = durationValue|round(0) %}
+        {% set pmins = (pdur // 60)|round(0, 'floor') %}
+        {% set psecs = pdur % 60 %}
+        {{ __(':minutes m :seconds s', {':minutes': pmins, ':seconds': '%02d'|format(psecs)}) }}
+    </span>
+    {% endif %}
+    <span class="tabular-nums font-medium text-gray-900 dark:text-gray-100 text-right">{{ row.views }}</span>
+</a>

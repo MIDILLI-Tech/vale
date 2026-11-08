@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Order Report {{ from }} to {{ to }}</title>
+    {% if assets_use_cdn %}
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    {% else %}
+    {% include 'partials/_build_assets.twig' with { include_js: false, load_alt_fonts: false, load_display_fonts: false } %}
+    {% endif %}
+    <style>
+        @page { margin: 20mm 15mm; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10px; color: #1f2937; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f3f4f6; font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+        td { font-size: 10px; }
+        .text-right { text-align: right; }
+        .text-green { color: #15803d; }
+        .text-red { color: #b91c1c; }
+        .text-amber { color: #b45309; }
+        .text-gray { color: #6b7280; }
+        .font-bold { font-weight: 700; }
+        .mb-4 { margin-bottom: 16px; }
+        .mb-8 { margin-bottom: 32px; }
+        .mt-8 { margin-top: 32px; }
+        .text-lg { font-size: 14px; }
+        .text-xl { font-size: 18px; }
+        .border-b { border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px; }
+        .summary-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .summary-card { border: 1px solid #e5e7eb; padding: 10px 14px; flex: 1; min-width: 100px; }
+        .summary-card p { margin: 0; }
+        .summary-card .label { font-size: 8px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+        .summary-card .value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <table style="width:100%;margin-bottom:16px;">
+        <tr>
+            <td style="vertical-align:top;width:50%;">
+                <h1 class="text-xl font-bold">Order Report</h1>
+                <p class="text-gray" style="margin-top:4px;">Period: <strong>{{ from }}</strong> to <strong>{{ to }}</strong></p>
+            </td>
+            <td style="vertical-align:top;width:50%;text-align:right;font-size:9px;color:#6b7280;">
+                {% if shop.company_name %}<p style="margin:0 0 2px;font-weight:700;color:#1f2937;">{{ shop.company_name }}</p>{% endif %}
+                {% if shop.address_1 %}<p style="margin:0 0 1px;">{{ shop.address_1 }}</p>{% endif %}
+                {% if shop.address_2 %}<p style="margin:0 0 1px;">{{ shop.address_2 }}</p>{% endif %}
+                {% if shop.city or shop.postcode %}<p style="margin:0 0 1px;">{{ shop.city }} {{ shop.postcode }}</p>{% endif %}
+                {% if shop.state or shop.country %}<p style="margin:0 0 1px;">{{ shop.state }} {{ shop.country }}</p>{% endif %}
+                {% if shop.phone %}<p style="margin:0 0 1px;">{{ shop.phone }}</p>{% endif %}
+                {% if shop.email %}<p style="margin:0 0 1px;">{{ shop.email }}</p>{% endif %}
+                {% if shop.vat_number %}<p style="margin:0 0 1px;">VAT: {{ shop.vat_number }}</p>{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    {% set s = data.summary %}
+    {% set totalActive = s.total_orders - s.cancelled_count - s.refunded_count %}
+
+    <div class="summary-grid">
+        <div class="summary-card">
+            <p class="label">Orders</p>
+            <p class="value">{{ totalActive }}</p>
+            <p style="font-size:8px;color:#9ca3af;">cancelled: {{ s.cancelled_count }}, refunded: {{ s.refunded_count }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Revenue</p>
+            <p class="value text-green">{{ s.total_revenue|price(current_currency) }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Avg Order</p>
+            <p class="value">{{ s.avg_order_value|price(current_currency) }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Tax</p>
+            <p class="value">{{ s.total_tax|price(current_currency) }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Shipping</p>
+            <p class="value">{{ s.total_shipping|price(current_currency) }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Discount</p>
+            <p class="value text-amber">{{ s.total_discount|price(current_currency) }}</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">Refunded</p>
+            <p class="value text-red">{{ s.total_refunded|price(current_currency) }}</p>
+        </div>
+    </div>
+
+    {% if data.monthly %}
+    <h2 class="text-lg font-bold border-b">Monthly Breakdown</h2>
+    <div style="margin-bottom: 20px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th class="text-right">Orders</th>
+                    <th class="text-right">Revenue</th>
+                    <th class="text-right">Refunds</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in data.monthly %}
+                <tr>
+                    <td>{{ m.month }}</td>
+                    <td class="text-right">{{ m.orders }}</td>
+                    <td class="text-right text-green">{{ m.revenue|price(current_currency) }}</td>
+                    <td class="text-right text-red">{{ m.refunds|price(current_currency) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if data.payment_methods %}
+    <h2 class="text-lg font-bold border-b">Payment Methods</h2>
+    <div style="margin-bottom: 20px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th class="text-right">Orders</th>
+                    <th class="text-right">Revenue</th>
+                    <th class="text-right">Refunded</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pm in data.payment_methods %}
+                <tr>
+                    <td>{{ pm.method|capitalize }}</td>
+                    <td class="text-right">{{ pm.orders }}</td>
+                    <td class="text-right text-green">{{ pm.revenue|price(current_currency) }}</td>
+                    <td class="text-right text-red">{{ pm.refunded_orders }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if data.top_products %}
+    <h2 class="text-lg font-bold border-b">Top Selling Products</h2>
+    <div style="margin-bottom: 20px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-right">Sold</th>
+                    <th class="text-right">Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in data.top_products %}
+                <tr>
+                    <td>{{ p.product_name }}</td>
+                    <td class="text-right">{{ p.qty }}</td>
+                    <td class="text-right text-green">{{ p.revenue|price(current_currency) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if data.status_breakdown %}
+    <h2 class="text-lg font-bold border-b">Orders by Status</h2>
+    <div>
+        <table>
+            <thead>
+                <tr>
+                    <th>{{ __('Status') }}</th>
+                    <th class="text-right">Orders</th>
+                    <th class="text-right">{{ __('Total') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set statusLabels = {
+                    'pending': 'Pending Payment',
+                    'processing': 'Processing',
+                    'on-hold': 'On Hold',
+                    'shipped': 'Shipped',
+                    'completed': 'Completed',
+                    'refunded': 'Refunded',
+                    'refund_requested': 'Refund Requested',
+                    'refund_rejected': 'Refund Rejected',
+                    'cancelled': 'Cancelled',
+                } %}
+                {% for st in data.status_breakdown %}
+                <tr>
+                    <td>{{ statusLabels[st.status]|default(st.status) }}</td>
+                    <td class="text-right">{{ st.orders }}</td>
+                    <td class="text-right">{{ st.total|price(current_currency) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <p class="text-gray" style="margin-top: 32px; font-size: 8px; text-align: center;">
+        Generated on {{ "now"|date('Y-m-d H:i:s') }}
+    </p>
+</body>
+</html>

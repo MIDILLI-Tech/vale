@@ -1,0 +1,106 @@
+﻿<aside class="space-y-8">
+    {# ── Advertisement: Sidebar ── #}
+    {% if advertisement_enabled == '1' and advertisement_placement == 'sidebar' and advertisement_code %}
+    <div class="vl-ad-sidebar rounded-lg border bg-white p-5 flex justify-center">
+        {{ advertisement_code|raw }}
+    </div>
+    {% endif %}
+
+    {# ── Search ─────────────────────────────────────── #}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Search') }}</p>
+        <form action="{{ url(routing_blog_prefix) }}" method="get" class="flex w-full overflow-hidden">
+            <input type="text" name="search" value="{{ search|default('') }}"
+                   placeholder="{{ __('Search posts...') }}"
+                   class="w-full min-w-0 flex-1 rounded-l-md border-gray-300 text-sm focus:border-gray-600 focus:ring-gray-500">
+            <select name="content_type" onchange="this.form.submit()"
+                    class="max-w-[100px] border-gray-300 text-sm focus:border-gray-600 focus:ring-gray-500{% if search_content_types|default([])|length == 0 %} hidden{% endif %}">
+                <option value="all" {{ search_content_type|default('post') == 'all' ? 'selected' }}>{{ __('All') }}</option>
+                <option value="post" {{ search_content_type|default('post') == 'post' ? 'selected' }}>{{ __('Blog') }}</option>
+                {% for ct in search_content_types|default([]) %}
+                <option value="{{ ct.slug }}" {{ search_content_type|default('') == ct.slug ? 'selected' }}>{{ ct.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit"
+                    aria-label="{{ __('Search') }}"
+                    class="rounded-r-md btn-primary px-3 text-white">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    {# ── Categories ─────────────────────────────────── #}
+    {% if sidebar_categories is defined and sidebar_categories|length > 0 %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Categories') }}</p>
+        <ul class="space-y-2">
+            {% for cat in sidebar_categories %}
+            <li style="padding-left:{{ cat.depth|default(0) * 1 }}rem">
+                <a href="{{ url('category.archive', {slug: cat.slug}) }}"
+                   class="flex items-center justify-between text-sm text-gray-700 hover:text-gray-900">
+                    <span>{% if cat.depth|default(0) > 0 %}<span class="text-gray-400">└ </span>{% endif %}{{ cat.name }}</span>
+                    {% if cat.post_count is defined %}
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{{ cat.post_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {# ── Tags ───────────────────────────────────────── #}
+    {% if sidebar_tags is defined and sidebar_tags|length > 0 %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Tags') }}</p>
+        <div class="flex flex-wrap gap-2">
+            {% for tag in sidebar_tags %}
+            <a href="{{ url('tag.archive', {slug: tag.slug}) }}"
+               class="inline-block rounded-full border px-3 py-1 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900">
+                {{ tag.name }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Sidebar Menu ───────────────────────────────── #}
+    {% if menu_sidebar is defined and menu_sidebar|length > 0 %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Links') }}</p>
+        <ul class="space-y-2">
+            {% for item in menu_sidebar %}
+            {% if item.parentId is null %}
+            <li>
+                <a href="{{ item.url }}" target="{{ item.target }}"
+                   class="text-sm text-gray-700 hover:text-gray-900{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                    {{ item.label }}
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {# ── Recent Posts ───────────────────────────────── #}
+    {% if sidebar_recent_posts is defined and sidebar_recent_posts|length > 0 %}
+    <div class="rounded-lg border bg-white p-5">
+        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Recent Posts') }}</p>
+        <ul class="space-y-3">
+            {% for rp in sidebar_recent_posts %}
+            <li>
+                <a href="{{ url(routing_blog_prefix ~ '/' ~ rp.slug ~ '') }}" class="group">
+                    <span class="text-sm font-medium text-gray-700 group-hover:text-gray-900">{{ rp.title }}</span>
+                    {% if rp.publishedAt %}
+                    {% include 'partials/_vtime.twig' with {value: rp.publishedAt, style: 'medium', cls: 'block text-xs text-gray-600'} %}
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</aside>

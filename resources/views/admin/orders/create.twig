@@ -1,0 +1,645 @@
+{% extends "admin/layout.twig" %}
+{% block title %}New Order{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-center gap-3">
+    <a href="{{ url('/admin/orders') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Orders</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">New Order</h1>
+    <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+</div>
+
+{% if flash_error %}
+<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>
+{% endif %}
+
+<form method="POST" action="{{ url('/admin/orders') }}"
+      x-data="manualOrder()"
+      class="space-y-6">
+    {{ csrf_field() }}
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        {# LEFT COLUMN: Billing + Items #}
+        <div class="xl:col-span-2 space-y-6">
+
+            {# Billing Details #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Customer / Billing</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">First Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="first_name" required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Anna">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="last_name"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Müller">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                        <input type="email" name="email" required
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="anna@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="text" name="phone"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="+49 …">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Address line 1</label>
+                        <input type="text" name="address_1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Musterstraße 1">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Address line 2</label>
+                        <input type="text" name="address_2"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Apt / Floor">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">City</label>
+                        <input type="text" name="city"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Berlin">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">State / Region</label>
+                        <input type="text" name="state"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="BE">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Postcode</label>
+                        <input type="text" name="postcode"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10115">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+                        <select name="country"
+                                x-data="{
+                                    regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                        ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                        : null,
+                                    init() {
+                                        var sel = this.$el, val = sel.value, items = [];
+                                        for (var i = 1; i < sel.options.length; i++) {
+                                            var code = sel.options[i].value;
+                                            if (!code) continue;
+                                            var name = code;
+                                            if (this.regionNames) {
+                                                try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                            }
+                                            items.push({ code: code, name: name });
+                                        }
+                                        if (!items.length) return;
+                                        items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                        while (sel.options.length > 1) { sel.remove(1); }
+                                        items.forEach(function(item) {
+                                            var opt = document.createElement('option');
+                                            opt.value = item.code;
+                                            opt.textContent = item.name + ' (' + item.code + ')';
+                                            if (item.code === val) opt.selected = true;
+                                            sel.appendChild(opt);
+                                        });
+                                    }
+                                }"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            <option value="">— {{ __('Select') }} —</option>
+                            {% for code in country_codes|default([]) %}
+                            <option value="{{ code }}">{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {# Shipping Address #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Shipping Address</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" name="shipping_first_name"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Anna">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="shipping_last_name"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Müller">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Company</label>
+                        <input type="text" name="shipping_company"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Acme GmbH">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Address line 1</label>
+                        <input type="text" name="shipping_address_1"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Musterstraße 1">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Address line 2</label>
+                        <input type="text" name="shipping_address_2"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Apt / Floor">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">City</label>
+                        <input type="text" name="shipping_city"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Berlin">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">State / Region</label>
+                        <input type="text" name="shipping_state"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="BE">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Postcode</label>
+                        <input type="text" name="shipping_postcode"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10115">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+                        <select name="shipping_country"
+                                x-data="{
+                                    regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                        ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                        : null,
+                                    init() {
+                                        var sel = this.$el, val = sel.value, items = [];
+                                        for (var i = 1; i < sel.options.length; i++) {
+                                            var code = sel.options[i].value;
+                                            if (!code) continue;
+                                            var name = code;
+                                            if (this.regionNames) {
+                                                try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                            }
+                                            items.push({ code: code, name: name });
+                                        }
+                                        if (!items.length) return;
+                                        items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                        while (sel.options.length > 1) { sel.remove(1); }
+                                        items.forEach(function(item) {
+                                            var opt = document.createElement('option');
+                                            opt.value = item.code;
+                                            opt.textContent = item.name + ' (' + item.code + ')';
+                                            if (item.code === val) opt.selected = true;
+                                            sel.appendChild(opt);
+                                        });
+                                    }
+                                }"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            <option value="">— {{ __('Select') }} —</option>
+                            {% for code in country_codes|default([]) %}
+                            <option value="{{ code }}">{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                        <input type="text" name="shipping_phone"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="+49 …">
+                    </div>
+                </div>
+            </div>
+
+            {# Line Items #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Line Items</h2>
+                    <button type="button" @click="addRow()"
+                            class="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800">
+                        + Add Product
+                    </button>
+                </div>
+
+                <div>
+                    <table class="w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead>
+                            <tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                <th class="pb-2 pr-3 w-48">Product</th>
+                                <th class="pb-2 pr-3">Name / Description</th>
+                                <th class="pb-2 pr-3 w-20 text-right">{{ __('Price') }}</th>
+                                <th class="pb-2 pr-3 w-16 text-center">Qty</th>
+                                <th class="pb-2 w-20 text-right">Subtotal</th>
+                                <th class="pb-2 w-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <template x-for="(row, idx) in rows" :key="row._key">
+                                <tr>
+                                    <td class="py-2 pr-3 relative" @click.outside="row._open = false">
+                                        <input type="text"
+                                               x-model="row._search"
+                                               @focus="onSearchFocus(row)"
+                                               @input.debounce.300ms="onSearchInput(row)"
+                                               class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs"
+                                               placeholder="{{ __('Search products…') }}">
+                                        <input type="hidden" :name="'items[' + idx + '][product_id]'"
+                                               x-model="row.product_id">
+                                        <input type="hidden" :name="'items[' + idx + '][variation_id]'"
+                                               x-model="row.variation_id">
+                                        <div x-show="row._open"
+                                             class="absolute z-10 mt-1 min-w-[20rem] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-96 overflow-y-auto text-xs">
+                                            <button type="button" @click="selectFreeForm(row)"
+                                                    class="order-dd-btn w-full text-left px-3 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 border-b border-gray-100 dark:border-gray-700">
+                                                — {{ __('Enter your own') }} —
+                                            </button>
+                                            <template x-for="p in _products" :key="p.id">
+                                                <button type="button"
+                                                        @click="selectProduct(row, p)"
+                                                        class="order-dd-btn w-full text-left px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                                                        x-text="p.name + (p.sku ? ' (' + p.sku + ')' : '')">
+                                                </button>
+                                            </template>
+                                            <div x-show="_products.length === 0" class="px-3 py-2 text-gray-400">
+                                                {{ __('No products found') }}
+                                            </div>
+                                        </div>
+                                        <select x-show="row._vars.length > 0"
+                                                x-model="row.variation_id"
+                                                @change="onVariationChange(row)"
+                                                class="mt-1 w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs">
+                                            <option value="">{{ __('Select a variation') }}</option>
+                                            <template x-for="v in row._vars" :key="v.id">
+                                                <option :value="v.id" x-text="variationLabel(v)"></option>
+                                            </template>
+                                        </select>
+                                        <template x-for="attrName in freeTextAttrs(row)" :key="row._key + '-' + attrName">
+                                            <input type="text"
+                                                   :name="'items[' + idx + '][variation_selected][' + attrName + ']'"
+                                                   :placeholder="attrName"
+                                                   class="mt-1 w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs">
+                                        </template>
+                                    </td>
+                                    <td class="py-2 pr-3">
+                                        <input type="text" :name="'items[' + idx + '][name]'"
+                                               x-model="row.name"
+                                               class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs"
+                                                placeholder="{{ __('Item name or free-form product name') }}">
+                                    </td>
+                                    <td class="py-2 pr-3">
+                                        <input type="number" :name="'items[' + idx + '][price]'"
+                                               x-model="row.price" min="0" step="0.01"
+                                               @input="recalc()"
+                                               class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs text-right"
+                                               placeholder="0.00">
+                                    </td>
+                                    <td class="py-2 pr-3">
+                                        <input type="number" :name="'items[' + idx + '][qty]'"
+                                               x-model="row.qty" min="1" step="1"
+                                               @input="recalc()"
+                                               class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs text-center"
+                                               placeholder="1">
+                                    </td>
+                                    <td class="py-2 text-right font-medium text-gray-900 dark:text-gray-100" x-text="fmt(row.price * row.qty)"></td>
+                                    <td class="py-2 pl-2">
+                                        <button type="button" @click="removeRow(idx)"
+                                                class="text-red-400 hover:text-red-700 text-lg leading-none">&times;</button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <tr x-show="rows.length === 0">
+                                <td colspan="6" class="py-6 text-center text-sm text-gray-400">
+                                    Click "Add Item" to add line items.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                {# Totals summary #}
+                <div class="mt-4 border-t pt-4 space-y-1 text-sm text-right">
+                    <div class="text-gray-500 dark:text-gray-400">Subtotal: <span class="font-medium text-gray-900 dark:text-gray-100" x-text="fmt(subtotal)"></span></div>
+                </div>
+            </div>
+
+            {# Customer Note #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Customer Note / Internal Note</h2>
+                <textarea name="customer_note" rows="3"
+                          class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                          placeholder="Optional note visible in the order…"></textarea>
+            </div>
+        </div>
+
+        {# RIGHT COLUMN: Order Settings #}
+        <div class="space-y-6">
+
+            {# Payment & Status #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Payment & Status</h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select name="payment_method" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            {% for value, label in payment_methods %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Order Status</label>
+                        <select name="status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            {% for value, label in statuses %}
+                            <option value="{{ value }}" {{ value == 'pending' ? 'selected' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Currency</label>
+                        <select name="currency"
+                                x-data="{
+                                    currencyNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                        ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'currency' })
+                                        : null,
+                                    init() {
+                                        var sel = this.$el, val = sel.value, items = [];
+                                        for (var i = 0; i < sel.options.length; i++) {
+                                            var code = sel.options[i].value;
+                                            if (!code) continue;
+                                            var name = code;
+                                            var symbol = sel.options[i].getAttribute('data-symbol') || '';
+                                            if (this.currencyNames) {
+                                                try { name = this.currencyNames.of(code) || code; } catch(e) {}
+                                            }
+                                            items.push({ code: code, name: name, symbol: symbol });
+                                        }
+                                        if (!items.length) return;
+                                        items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                        while (sel.options.length > 0) { sel.remove(0); }
+                                        items.forEach(function(item) {
+                                            var opt = document.createElement('option');
+                                            opt.value = item.code;
+                                            opt.textContent = item.name + ' (' + item.symbol + ' — ' + item.code + ')';
+                                            if (item.code === val) opt.selected = true;
+                                            sel.appendChild(opt);
+                                        });
+                                    }
+                                }"
+                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            {% for c in currency_catalog|default([]) %}
+                            <option value="{{ c.code }}" data-symbol="{{ c.symbol|e('html_attr') }}" {{ c.code == (default_currency ?? 'USD') ? 'selected' }}>{{ c.code }} {{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Transaction / Reference ID</label>
+                        <input type="text" name="transaction_id"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
+                               placeholder="Optional reference number">
+                    </div>
+                </div>
+            </div>
+
+            {# Shipping & Discounts #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Shipping & Discounts</h2>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Shipping Cost</label>
+                        <input type="number" name="shipping" min="0" step="0.01" value="0"
+                               x-model="shippingCost" @input="recalc()"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                               placeholder="0.00">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Manual Discount</label>
+                        <input type="number" name="discount" min="0" step="0.01" value="0"
+                               x-model="manualDiscount" @input="recalc()"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                               placeholder="0.00">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Coupon Code</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="coupon_code" x-model="couponCode"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono uppercase"
+                                   placeholder="SUMMER20">
+                            <button type="button" @click="applyCoupon()" :disabled="_couponBusy"
+                                    class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+                                {{ __('Apply') }}
+                            </button>
+                        </div>
+                        <p class="mt-1 text-xs"
+                           :class="couponValid === true ? 'text-green-600' : (couponValid === false ? 'text-red-600' : 'text-gray-400')"
+                           x-show="couponMessage" x-text="couponMessage"></p>
+                    </div>
+                </div>
+
+                {# Order Total #}
+                <div class="mt-4 border-t pt-4 space-y-1 text-sm">
+                    <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                        <span>Items subtotal</span>
+                        <span x-text="fmt(subtotal)"></span>
+                    </div>
+                    <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                        <span>Shipping</span>
+                        <span x-text="fmt(effShipping())"></span>
+                    </div>
+                    <div class="flex justify-between text-gray-500 dark:text-gray-400">
+                        <span>Discount</span>
+                        <span x-text="'– ' + fmt(effDiscount())"></span>
+                    </div>
+                    <div class="flex justify-between font-semibold text-gray-900 dark:text-gray-100 text-base border-t pt-2 mt-2">
+                        <span>Estimated Total</span>
+                        <span x-text="fmt(Math.max(0, subtotal + effShipping() - effDiscount()))"></span>
+                    </div>
+                </div>
+            </div>
+
+            {# Actions #}
+            <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs">
+                <button type="submit"
+                        class="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">
+                    Create Order
+                </button>
+                <a href="{{ url('/admin/orders') }}"
+                   class="mt-2 block w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-center text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
+                    Cancel
+                </a>
+            </div>
+        </div>{# end right column #}
+    </div>
+</form>
+
+<style>
+    .dark .order-dd-btn:hover {
+        background-color: #374151 !important;
+        color: #e5e7eb !important;
+    }
+</style>
+<script>
+function manualOrder() {
+    return {
+        rows: [],
+        subtotal: 0,
+        shippingCost: 0,
+        manualDiscount: 0,
+        couponCode: '',
+        couponDiscount: 0,
+        couponFreeShipping: false,
+        couponMessage: '',
+        couponValid: null,
+        _couponBusy: false,
+        _couponTimer: null,
+        _nextKey: 1,
+        _products: [],
+
+        init() {
+            this._fetchProducts('');
+        },
+
+        _fetchProducts(q) {
+            const params = new URLSearchParams({ per_page: 50, with_variations: 1 });
+            if (q) params.set('q', q);
+            const bp = window.APP_BASE_PATH || '';
+            fetch(bp + '/admin/products/list-json?' + params.toString())
+                .then(r => r.json())
+                .then(res => {
+                    this._products = Array.isArray(res) ? res : (res.data || []);
+                })
+                .catch(() => { this._products = []; });
+        },
+
+        addRow() {
+            this.rows.push({ _key: this._nextKey++, product_id: '', variation_id: '', name: '', price: 0, qty: 1, _search: '', _open: false, _vars: [] });
+        },
+
+        removeRow(idx) {
+            this.rows.splice(idx, 1);
+            this.recalc();
+        },
+
+        onSearchFocus(row) {
+            row._open = true;
+            if (!this._products.length) {
+                this._fetchProducts('');
+            }
+        },
+
+        onSearchInput(row) {
+            row._open = true;
+            this._fetchProducts(row._search);
+        },
+
+        selectProduct(row, p) {
+            row.product_id   = p.id;
+            row.name         = p.name;
+            row.price        = parseFloat(p.price) || 0;
+            row._search      = p.name;
+            row._open        = false;
+            row._vars        = Array.isArray(p.variations) ? p.variations : [];
+            row.variation_id = '';
+            this.recalc();
+        },
+
+        selectFreeForm(row) {
+            row.product_id   = '';
+            row.variation_id = '';
+            row.name         = '';
+            row.price        = 0;
+            row._search      = '';
+            row._open        = false;
+            row._vars        = [];
+            this.recalc();
+        },
+
+        onVariationChange(row) {
+            const v = row._vars.find(v => String(v.id) === String(row.variation_id));
+            if (v) {
+                row.price = parseFloat(v.price) || 0;
+            }
+            this.recalc();
+        },
+
+        variationLabel(v) {
+            const attrs = v.attributes || {};
+            const parts = Object.entries(attrs)
+                .filter(([, val]) => val !== '' && val !== null && val !== undefined)
+                .map(([key, val]) => key + ': ' + val);
+            return parts.length ? parts.join(', ') : (v.sku || ('#' + v.id));
+        },
+
+        selectedVariation(row) {
+            return row._vars.find(v => String(v.id) === String(row.variation_id)) || null;
+        },
+
+        freeTextAttrs(row) {
+            const v = this.selectedVariation(row);
+            if (!v) return [];
+            return Object.entries(v.attributes || {})
+                .filter(([, val]) => val === '' || val === null)
+                .map(([key]) => key);
+        },
+
+        effShipping() {
+            return this.couponFreeShipping ? 0 : (parseFloat(this.shippingCost) || 0);
+        },
+
+        effDiscount() {
+            return (parseFloat(this.manualDiscount) || 0) + (this.couponDiscount || 0);
+        },
+
+        async applyCoupon() {
+            const code = (this.couponCode || '').trim();
+            if (!code) {
+                this.couponValid = false;
+                this.couponDiscount = 0;
+                this.couponFreeShipping = false;
+                this.couponMessage = '{{ __('Please enter a coupon code.')|e('js') }}';
+                return;
+            }
+            this._couponBusy = true;
+            try {
+                const bp = window.APP_BASE_PATH || '';
+                const token = document.querySelector('input[name="_csrf_token"]')?.value || '';
+                const body = new URLSearchParams({ code: code, subtotal: String(this.subtotal) });
+                const res = await fetch(bp + '/admin/orders/coupon-preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': token },
+                    body: body.toString()
+                });
+                const data = await res.json();
+                this.couponValid = !!data.valid;
+                this.couponDiscount = data.valid ? (parseFloat(data.discount) || 0) : 0;
+                this.couponFreeShipping = !!(data.valid && data.free_shipping);
+                if (data.valid) {
+                    let msg = '{{ __('Coupon applied — :amount off!')|e('js') }}'.replace(':amount', this.fmt(this.couponDiscount));
+                    if (this.couponFreeShipping) msg += ' + {{ __('Free shipping')|e('js') }}';
+                    this.couponMessage = msg;
+                } else {
+                    this.couponMessage = '{{ __('Invalid or expired coupon code.')|e('js') }}';
+                }
+            } catch (e) {
+                this.couponValid = false;
+                this.couponDiscount = 0;
+                this.couponFreeShipping = false;
+                this.couponMessage = '{{ __('Invalid or expired coupon code.')|e('js') }}';
+            } finally {
+                this._couponBusy = false;
+            }
+        },
+
+        queueCouponRefresh() {
+            if (!this.couponValid) return;
+            clearTimeout(this._couponTimer);
+            this._couponTimer = setTimeout(() => this.applyCoupon(), 400);
+        },
+
+        recalc() {
+            this.subtotal = this.rows.reduce((sum, r) => sum + (parseFloat(r.price) || 0) * (parseInt(r.qty) || 1), 0);
+            this.queueCouponRefresh();
+        },
+
+        fmt(n) {
+            return (parseFloat(n) || 0).toFixed(2);
+        },
+    };
+}
+</script>
+<script>vlDirtyGuard({ clicks: true });</script>
+{% endblock %}

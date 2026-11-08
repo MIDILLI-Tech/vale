@@ -1,0 +1,72 @@
+{
+  "name": "vale",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./resources/css/app.css -o ./public/assets/build/app.css --minify",
+    "build:fonts-css": "npx @tailwindcss/cli -i ./resources/css/fonts.css -o ./public/assets/build/fonts.css --minify && npx @tailwindcss/cli -i ./resources/css/fonts-display.css -o ./public/assets/build/fonts-display.css --minify",
+    "build:js": "esbuild ./resources/js/app.js --bundle --minify --outfile=./public/assets/build/app.js",
+    "build:app-vendor": "esbuild ./resources/js/app-vendor.js --bundle --minify --outfile=./public/assets/build/app-vendor.js",
+    "build:admin": "esbuild ./resources/js/admin.js --bundle --minify --outfile=./public/assets/build/admin.js",
+    "build:admin-vendor": "esbuild ./resources/js/admin-vendor.js --bundle --minify --outfile=./public/assets/build/admin-vendor.js",
+    "build:editor": "esbuild ./resources/js/editor/index.js --bundle --minify --outfile=./public/assets/build/editor.js",
+    "build:editor:dev": "esbuild ./resources/js/editor/index.js --bundle --outfile=./public/assets/js/editor.js",
+    "build:charts": "esbuild ./resources/js/charts.js --bundle --minify --outfile=./public/assets/build/charts.js",
+    "build:fonts": "node scripts/copy-fonts.js",
+    "build": "npm run build:css && npm run build:fonts-css && npm run build:app-vendor && npm run build:js && npm run build:admin-vendor && npm run build:admin && npm run build:editor && npm run build:charts && npm run build:fonts",
+    "watch:css": "npx @tailwindcss/cli -i ./resources/css/app.css -o ./public/assets/build/app.css --watch",
+    "watch:js": "esbuild ./resources/js/app.js --bundle --outfile=./public/assets/build/app.js --watch",
+    "watch:editor": "esbuild ./resources/js/editor/index.js --bundle --outfile=./public/assets/js/editor.js --watch",
+    "watch": "concurrently -n css,js,editor \"npm run watch:css\" \"npm run watch:js\" \"npm run watch:editor\""
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "concurrently": "^10.0.5",
+    "esbuild": "^0.28.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "dependencies": {
+    "@alpinejs/collapse": "^3.14.8",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/montserrat": "^5.2.8",
+    "@fontsource/open-sans": "^5.2.7",
+    "@fontsource/playfair-display": "^5.2.5",
+    "@fontsource/roboto": "^5.2.10",
+    "@tiptap/core": "^3.27.1",
+    "@tiptap/extension-bubble-menu": "^3.27.1",
+    "@tiptap/extension-highlight": "^3.27.1",
+    "@tiptap/extension-image": "^3.27.1",
+    "@tiptap/extension-link": "^3.27.1",
+    "@tiptap/extension-placeholder": "^3.27.1",
+    "@tiptap/extension-subscript": "^3.27.1",
+    "@tiptap/extension-superscript": "^3.27.1",
+    "@tiptap/extension-table": "^3.27.1",
+    "@tiptap/extension-table-cell": "^3.27.1",
+    "@tiptap/extension-table-header": "^3.27.1",
+    "@tiptap/extension-table-row": "^3.27.1",
+    "@tiptap/extension-text-align": "^3.27.1",
+    "@tiptap/extension-underline": "^3.27.1",
+    "@tiptap/markdown": "^3.27.1",
+    "@tiptap/pm": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
+    "@tiptap/suggestion": "^3.27.1",
+    "alpinejs": "^3.14.8",
+    "chart.js": "^4.4.8",
+    "codejar": "^4.3.0",
+    "prismjs": "^1.30.0",
+    "prosemirror-tables": "^1.8.5",
+    "sortablejs": "^1.15.6",
+    "tippy.js": "^6.3.7"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@parcel/watcher@2.6.0": true
+  },
+  "overrides": {
+    "@parcel/watcher": "^2.6.0",
+    "postcss-selector-parser": "^7.1.6",
+    "shell-quote": "^1.12.0"
+  }
+}

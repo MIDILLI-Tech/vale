@@ -1,0 +1,232 @@
+{# ══ Templates sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+<div id="mail-tab-templates" class="mail-tab-panel hidden">
+    <div x-data="mailTemplates()">
+
+        {# ── Email Colors ── #}
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs mb-6">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ __('Email Colors') }}</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Emails inherit your active theme colors by default. Disable to pick custom email-only colors.') }}</p>
+
+            <form method="post" action="{{ url('/admin/mail') }}" class="space-y-4">
+                {{ csrf_field() }}
+                <input type="hidden" name="_METHOD" value="PUT">
+                <input type="hidden" name="_subtab" value="templates">
+                <input type="hidden" name="_colors_form" value="1">
+
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" name="mail_use_theme_colors" value="1"
+                           {% if mailConfig.mail_use_theme_colors != '0' %}checked{% endif %}
+                           x-model="useThemeColors"
+                           class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Use theme colors for emails') }}</span>
+                </label>
+
+                <div x-show="!useThemeColors" x-cloak>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for varName, spec in mailSchema %}
+                        {% set settingKey = 'mail_color_' ~ (varName|replace({'--theme-': ''})) %}
+                        {% set themeDefault = spec.default ?? '#000000' %}
+                        {% set savedValue = mailConfig[settingKey] ?? themeDefault %}
+                        <div class="space-y-2"
+                             @click.outside="showSwatchesFor === '{{ settingKey }}' && (showSwatchesFor = '')">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ spec.label ?? varName }}
+                                <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">({{ varName }})</span>
+                            </label>
+
+                            <div class="relative flex items-center gap-2">
+                                <input type="text" name="{{ settingKey }}" value="{{ savedValue }}"
+                                       data-color-default="{{ themeDefault }}"
+                                       class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-lg font-mono text-sm">
+                                {# Swatch: opens the theme palette window in place of the native picker #}
+                                <input type="color" value="{{ savedValue }}"
+                                       @click.prevent="showSwatchesFor = showSwatchesFor === '{{ settingKey }}' ? '' : '{{ settingKey }}'"
+                                       oninput="this.previousElementSibling.value = this.value"
+                                       onchange="this.previousElementSibling.value = this.value"
+                                       class="w-10 h-9 p-1 border border-gray-300 dark:border-gray-700 rounded cursor-pointer shrink-0">
+
+                                {# Theme palette — anchored to the swatch, exactly where the native picker window opens #}
+                                <div x-show="showSwatchesFor === '{{ settingKey }}'" x-cloak
+                                     class="absolute right-0 top-full z-50 mt-1 max-w-full flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2 shadow-lg">
+                                    <span class="w-full mb-0.5 text-xs text-gray-500 dark:text-gray-400">{{ __('Theme palette:') }}</span>
+                                    {% for tcName, tcSpec in vl_theme_colors %}
+                                        {% if tcSpec.value is defined %}
+                                        <button type="button"
+                                                @click="pickThemeColor('{{ settingKey }}', '{{ tcSpec.value }}')"
+                                                class="w-6 h-6 rounded border-2 flex items-center justify-center transition-transform cursor-pointer shrink-0 hover:scale-110"
+                                                :class="emailColorValue('{{ settingKey }}') === '{{ tcSpec.value }}' ? 'border-blue-500' : 'border-gray-300 dark:border-gray-700'"
+                                                style="background: {{ tcSpec.value }};"
+                                                title="{{ tcSpec.label ?? tcName }}">
+                                        </button>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <button type="button" @click="openNativePicker('{{ settingKey }}')"
+                                            class="h-6 shrink-0 rounded border border-gray-300 dark:border-gray-700 px-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        {{ __('Custom') }}
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button"
+                                    @click="resetEmailColor('{{ settingKey }}', '{{ themeDefault }}')"
+                                    class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                                {{ __('Reset to theme default') }}
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 pt-2">
+                        <button type="button" @click="resetAllEmailColors()"
+                                class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                            {{ __('Reset to Theme Defaults') }}
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        {# ── Email Templates ── #}
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __('Email Templates') }}</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ __('Customise the HTML content of transactional emails. Placeholders like <code>{{ site_name }}</code> will be filled automatically when sending.') }}</p>
+
+            {% if cronConfig.cron_mode|default('none') == 'none' %}
+            <div class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-4">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                <span>{{ __('Cron is currently disabled. Scheduled emails and automations will not be sent until a cron job is configured.') }}</span>
+            </div>
+            {% endif %}
+
+            <div class="space-y-4">
+                <div {{ vl.attrs('mail', __('Select Template'), 'template_name', 'templates', __('Email Templates'), 'email template transactional') }}>
+                    <label class="block text-sm font-medium text-gray-700">{{ __('Select Template') }}</label>
+                    <div class="relative mt-1">
+                        <select x-model="selected" @change="loadTemplate($event.target.value)"
+                                class="block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                                :disabled="loading">
+                            <option value="">{{ __('— Choose —') }}</option>
+                            {% for tpl in mailTemplates %}
+                            <option value="{{ tpl.name }}">{{ tpl.label }} ({{ tpl.name }}.twig)</option>
+                            {% endfor %}
+                        </select>
+                        <div x-show="loading" x-cloak
+                             class="absolute inset-y-0 right-0 flex items-center pr-10 pointer-events-none">
+                            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="selected" x-cloak>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-medium text-gray-700">
+                            <span x-text="selectedLabel"></span> <code class="text-xs text-gray-400" x-text="'(' + selected + '.twig)'"></code>
+                        </label>
+                        <span class="text-xs" :class="isCustom ? 'text-amber-600 font-medium' : 'text-gray-400'">
+                            <span x-show="isCustom">{{ __('(customised)') }}</span>
+                            <span x-show="!isCustom">{{ __('(default)') }}</span>
+                        </span>
+                    </div>
+                    <template x-if="currentPlaceholders">
+                        <div class="mb-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs">
+                            <div class="font-medium text-blue-700 mb-1">{{ __('Available Placeholders') }}</div>
+                            <div class="flex flex-wrap gap-1">
+                                <template x-for="ph in currentPlaceholders.common" :key="ph">
+                                    <code class="cursor-pointer rounded-sm bg-white dark:bg-gray-900 border border-blue-200 px-1.5 py-0.5 text-blue-600 hover:bg-blue-100" x-text="phDisplay(ph)" @mousedown.prevent @click="insertPlaceholder(ph)"></code>
+                                </template>
+                                <template x-for="ph in currentPlaceholders.template" :key="ph">
+                                    <code class="cursor-pointer rounded-sm bg-white dark:bg-gray-900 border border-blue-200 px-1.5 py-0.5 text-blue-600 hover:bg-blue-100" x-text="phDisplay(ph)" @mousedown.prevent @click="insertPlaceholder(ph)"></code>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                    <form method="post" action="{{ url('/admin/mail/template/save') }}" @submit="syncContent(); saveTimer = setTimeout(() => { showSaved = true; setTimeout(() => showSaved = false, 2000) }, 100)">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="_subtab" value="templates">
+                        <input type="hidden" name="template_name" x-model="selected">
+                        <input type="hidden" name="template_content" x-model="content">
+
+                        <div class="flex flex-col gap-2" :class="isFullscreen ? 'fixed inset-0 z-[9999] bg-white dark:bg-gray-900 p-6 flex flex-col gap-3' : 'relative'">
+                            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                <span class="font-mono text-xs flex items-center gap-2">
+                                    <span>Twig & HTML Syntax Highlighting</span>
+                                    <span class="text-gray-400 dark:text-gray-500">(Ctrl+S / Cmd+S to save)</span>
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click="openPreview()"
+                                            class="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-xs">">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        {{ __('Preview Template') }}
+                                    </button>
+                                    <button type="button" @click="toggleFullscreen()"
+                                            class="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-xs">">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                                        </svg>
+                                        <span x-text="isFullscreen ? '{{ __('Exit Fullscreen')|e('js') }}' : '{{ __('Fullscreen')|e('js') }}'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div :class="{'flex-1 !max-h-none': isFullscreen, 'min-h-[400px] max-h-[600px]': !isFullscreen}"
+                                 class="codejar-wrapper">
+                                <div class="codejar-gutter"></div>
+                                <div x-ref="editor" class="codejar-editor" spellcheck="false"
+                                     @keydown.window="onKeyDown($event)"></div>
+                            </div>
+                            <div x-show="loading" x-cloak
+                                 class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 rounded-lg z-10">
+                                <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>{{ __('Loading…') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex items-center gap-3">
+                            <button type="submit"
+                                    class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
+                                {{ __('Save Template') }}
+                            </button>
+                            <span x-show="showSaved" x-cloak class="text-sm text-green-600 font-medium">{{ __('Saved!') }}</span>
+                            <button type="button" @click="resetToDefault(selected)"
+                                    class="rounded-lg border border-red-300 dark:border-red-800 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                {{ __('Reset to Default') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# ── Preview Modal ── #}
+        <div x-show="previewOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="display: none;">
+            <div class="absolute inset-0 bg-black/50" @click="previewOpen = false"></div>
+            <div class="relative bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="font-semibold text-gray-900 dark:text-gray-100">{{ __('Preview:') }} <span x-text="previewName"></span></h3>
+                    <button type="button" @click="previewOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors text-xl leading-none">&times;</button>
+                </div>
+                <div class="relative flex-1 min-h-[60vh]">
+                    <div x-show="previewLoading" x-cloak class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-10">
+                        <svg class="animate-spin h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+                    <iframe :src="previewUrl" @load="previewLoading = false" class="w-full h-full min-h-[60vh] bg-white dark:bg-gray-900" title="Email preview"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

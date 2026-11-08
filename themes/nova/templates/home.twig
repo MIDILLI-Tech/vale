@@ -1,0 +1,135 @@
+{% extends 'layout.twig' %}
+
+{% block content %}
+{# Hero Section #}
+<section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-widest mb-8 animate-fade-in">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                {{ __('Premium Marketing Agency') }}
+            </div>
+            <h1 class="text-3xl sm:text-5xl lg:text-8xl font-display font-extrabold tracking-tight text-white mb-8 leading-[1.1] break-words">
+                {{ __('Innovating Digital') }} <br>
+                <span class="text-neon-gradient">{{ __('Brand Experiences') }}</span>
+            </h1>
+            <p class="text-lg lg:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                {{ __('We combine data-driven strategy with world-class design to help scale-ups and enterprises dominate their digital niche.') }}
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="{{ url(routing_blog_prefix) }}" class="btn-neon w-full sm:w-auto px-8 py-4 rounded-full font-bold text-white text-lg">
+                    {{ __('View Portfolio') }}
+                </a>
+                <a href="#services" class="glass w-full sm:w-auto px-8 py-4 rounded-full font-bold text-white text-lg hover:bg-slate-800 transition-colors">
+                    {{ __('Our Services') }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# Abstract Background shapes #}
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full pointer-events-none -z-10">
+        <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[120px]"></div>
+    </div>
+</section>
+
+{# Stats / Trusted By #}
+<section class="py-12 border-y border-slate-900 bg-slate-950/50">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div class="text-center">
+                <div class="text-3xl font-display font-bold text-white mb-1">150+</div>
+                <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">{{ __('Projects Done') }}</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-display font-bold text-white mb-1">98%</div>
+                <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">{{ __('Client Success') }}</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-display font-bold text-white mb-1">12M+</div>
+                <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">{{ __('User Reach') }}</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-display font-bold text-white mb-1">25+</div>
+                <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">{{ __('Global Awards') }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Services Section #}
+<section id="services" class="py-24 lg:py-32">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-16">
+            <h2 class="text-sm font-bold text-blue-500 uppercase tracking-[0.2em] mb-4">{{ __('Expertise') }}</h2>
+            <h3 class="text-4xl lg:text-5xl font-display font-bold text-white">{{ __('Strategic solutions for modern brands.') }}</h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {# Service 1 #}
+            <div class="glass-card p-8 rounded-3xl group">
+                <div class="h-14 w-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 mb-6 group-hover:bg-blue-500 group-hover:text-white transition-all duration-300">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+                <h4 class="text-xl font-bold text-white mb-4">{{ __('UI/UX Design') }}</h4>
+                <p class="text-slate-400 leading-relaxed mb-6">{{ __('Crafting intuitive digital interfaces that delight users and drive conversion rates through human-centered design.') }}</p>
+                <a href="#" class="text-blue-400 font-bold flex items-center gap-2 group-hover:gap-3 transition-all">
+                    {{ __('Learn More') }}
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+
+            {# Service 2 #}
+            <div class="glass-card p-8 rounded-3xl group">
+                <div class="h-14 w-14 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 mb-6 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                </div>
+                <h4 class="text-xl font-bold text-white mb-4">{{ __('Growth Marketing') }}</h4>
+                <p class="text-slate-400 leading-relaxed mb-6">{{ __('Accelerating your business growth with data-backed marketing strategies, SEO, and targeted ad campaigns.') }}</p>
+                <a href="#" class="text-indigo-400 font-bold flex items-center gap-2 group-hover:gap-3 transition-all">
+                    {{ __('Learn More') }}
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+
+            {# Service 3 #}
+            <div class="glass-card p-8 rounded-3xl group">
+                <div class="h-14 w-14 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-400 mb-6 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300">
+                    <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                </div>
+                <h4 class="text-xl font-bold text-white mb-4">{{ __('Brand Identity') }}</h4>
+                <p class="text-slate-400 leading-relaxed mb-6">{{ __('Defining your unique story and visual language to build lasting emotional connections with your target audience.') }}</p>
+                <a href="#" class="text-cyan-400 font-bold flex items-center gap-2 group-hover:gap-3 transition-all">
+                    {{ __('Learn More') }}
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# CTA Section #}
+<section class="py-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="relative overflow-hidden rounded-[3rem] vl-nova-hero px-8 py-20 lg:p-24 text-center">
+            <div class="relative z-10">
+                <h2 class="text-4xl lg:text-6xl font-display font-bold text-white mb-8">{{ __('Ready to transform your brand?') }}</h2>
+                <p class="text-xl text-blue-100 max-w-2xl mx-auto mb-10">
+                    {{ __('Join 100+ successful companies that have elevated their digital presence with our expert team.') }}
+                </p>
+                <a href="{{ url('/register') }}" class="inline-block bg-white text-blue-700 px-10 py-5 rounded-full font-bold text-lg hover:bg-blue-50 transition-colors shadow-xl">
+                    {{ __('Start Your Project') }}
+                </a>
+            </div>
+
+            {# Background Accents #}
+            <div class="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[600px] h-[600px] bg-white/10 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[400px] h-[400px] bg-indigo-900/30 rounded-full blur-[80px]"></div>
+        </div>
+    </div>
+</section>
+{% endblock %}

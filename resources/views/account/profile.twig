@@ -1,0 +1,162 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('My Profile') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Manage your account profile details, security, and preferences.') }}{% endblock %}
+
+{% set showShopAccountLinks = shop_enabled == true %}
+{% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+{% set active_tab = 'profile' %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="account-text mb-8 text-3xl font-bold">{{ __('My Profile') }}</h1>
+
+    {% include "account/_nav.twig" %}
+
+    {% if errors is defined and errors|length > 0 %}
+    <div class="account-danger-card mb-6 rounded-lg border p-4 text-sm">
+        <ul class="list-inside list-disc account-danger-text">
+            {% for error in errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" id="profile-form">
+        {{ csrf_field() }}
+
+        <div class="grid gap-8 lg:grid-cols-2">
+            <div class="space-y-5">
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Name') }}</label>
+                    <input type="text" name="name" value="{{ user.name }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Email') }}</label>
+                    {% if settings.enable_email_change|default('1') == '1' %}
+                    <input type="email" name="email" value="{{ user.email }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                    {% else %}
+                    <input type="email" name="email" value="{{ user.email }}" readonly disabled
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+                    <p class="mt-1 text-xs text-gray-500">{{ __('Email changes are disabled by the administrator.') }}</p>
+                    {% endif %}
+                    {% if user.emailVerifiedAt is null %}
+                    <p class="mt-1 text-xs text-yellow-600">
+                        {{ __('Email not verified.') }}
+                        <a href="{{ url('/account/verify-email/resend') }}" class="underline hover:text-yellow-800">{{ __('Resend verification email') }}</a>
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Language') }}</label>
+                    <select name="locale"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                        {% for code, name in all_locales %}
+                        <option value="{{ code }}" {{ user.locale == code ? 'selected' : '' }}>{{ locale_name(code) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <p class="account-table-muted text-sm">{{ __('Leave blank to keep current password.') }}</p>
+
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Current Password') }}</label>
+                    <input type="password" name="current_password" autocomplete="current-password"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('New Password') }}</label>
+                    <input type="password" name="new_password" autocomplete="new-password"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+            </div>
+        </div>
+    </form>
+
+        {% if settings.two_factor_enabled_global|default('0') == '1' %}
+        <div class="mt-12 pt-8 border-t dark:border-gray-800">
+            <h2 class="account-text mb-4 text-xl font-bold">{{ __('Two-Factor Authentication (2FA)') }}</h2>
+
+        {% if user.twoFactorEnabled %}
+            <div class="account-success-card rounded-lg border p-4 mb-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-full">
+                        <svg class="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">{{ __('Two-factor authentication is enabled.') }}</p>
+                        <p class="text-xs opacity-75">{{ __('Your account is protected with an extra security layer.') }}</p>
+                    </div>
+                </div>
+                {% if settings.two_factor_forced_global|default('0') != '1' %}
+                <form method="POST" action="{{ url('/account/two-factor/disable') }}" x-data="{ showConfirm: false, useRecovery: false }" @submit.prevent="if(showConfirm) $el.submit(); else showConfirm = true" novalidate>
+                    {{ csrf_field() }}
+                    <div x-show="showConfirm" x-cloak class="flex flex-col items-end gap-2">
+                        <input x-show="!useRecovery" type="text" name="code" placeholder="{{ __('Authenticator Code') }}" maxlength="6" required
+                               class="account-form-field rounded-lg border px-3 py-1 text-xs w-32 focus:outline-hidden focus:ring-1">
+                        <input x-show="useRecovery" type="text" name="recovery_code" placeholder="{{ __('Recovery Code') }}" required
+                               class="account-form-field rounded-lg border px-3 py-1 text-xs w-48 focus:outline-hidden focus:ring-1">
+                        <div class="flex items-center gap-2">
+                            <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-700">
+                                {{ __('Confirm Disable') }}
+                            </button>
+                            <button type="button" @click="showConfirm = false; useRecovery = false" class="text-xs text-gray-500">
+                                {{ __('Cancel') }}
+                            </button>
+                        </div>
+                        <button type="button" @click="useRecovery = !useRecovery" class="text-xs text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+                            <span x-show="!useRecovery">{{ __('Use recovery code instead') }}</span>
+                            <span x-show="useRecovery">{{ __('Use authenticator code instead') }}</span>
+                        </button>
+                    </div>
+                    <button x-show="!showConfirm" type="submit" class="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                        {{ __('Disable 2FA') }}
+                    </button>
+                </form>
+                {% else %}
+                <p class="text-xs text-yellow-700 font-medium">{{ __('2FA cannot be disabled because it is required by the administrator.') }}</p>
+                {% endif %}
+            </div>
+
+            {% if two_factor_new_codes is defined %}
+            <div class="account-danger-card rounded-lg border p-6 mb-8 shadow-xs">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="h-5 w-5 account-danger-text" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    <h3 class="font-bold text-base account-danger-text">{{ __('Action Required: Save Your Recovery Codes') }}</h3>
+                </div>
+                <p class="text-sm account-text opacity-90 mb-4">{{ __('These codes will only be shown once. Store them immediately in a secure password manager. If you lose access to your authenticator app, these codes are the ONLY way to regain access to your account.') }}</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white dark:bg-black/20 p-4 rounded-lg font-mono text-sm border dark:border-red-900/30">
+                    {% for code in two_factor_new_codes %}
+                        <div class="account-danger-text font-bold text-center py-1 bg-red-50 dark:bg-red-900/20 rounded-sm">{{ code }}</div>
+                    {% endfor %}
+                </div>
+                <p class="text-xs account-text opacity-60 mt-4">{{ __('Each code can only be used once. After using a code, it will be invalidated.') }}</p>
+            </div>
+            {% endif %}
+        {% else %}
+            <form method="GET" action="{{ url('/account/two-factor/setup') }}">
+                <button type="submit" class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-bold text-white hover:bg-gray-800 transition-colors">
+                    {{ __('Setup 2FA') }}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="flex items-center justify-between border-t pt-6 mt-12">
+        <a href="{{ url('/') }}" class="account-link text-sm">{{ __('Back to Home') }}</a>
+        <button type="submit" form="profile-form"
+                class="rounded-lg btn-primary px-6 py-2 text-sm font-bold transition-colors">
+            {{ __('Save Changes') }}
+        </button>
+    </div>
+</div>
+{% endblock %}

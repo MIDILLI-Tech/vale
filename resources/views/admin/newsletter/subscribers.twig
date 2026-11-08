@@ -1,0 +1,460 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}Newsletter Subscribers{% endblock %}
+
+{% set allIds = subscribers|map(s => s.id) %}
+
+{% block content %}
+<div x-data="{ addOpen: false, editOpen: false, importOpen: false, exportOpen: false, exportScope: 'all', editSub: { id: '', email: '', name: '', status: '', tags: '', source_form_id: '' } }" x-init="vlAutoOpenModal('add', () => { addOpen = true; })">
+<div x-data="dataTable({perPage: {{ per_page|default(20) }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Newsletter Subscribers</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ counts.active }} active · {{ counts.pending }} pending · {{ counts.unsubscribed }} unsubscribed</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <button type="button" @click="importOpen = true"
+                class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center gap-1.5">
+            <svg width="16" height="16" style="width: 1rem; height: 1rem;" class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            Import CSV
+        </button>
+        <button type="button" @click="exportScope = $store.bulk.count > 0 ? 'selected' : ('{{ filters.search|default('') or filters.status|default('') }}' ? 'filtered' : 'all'); exportOpen = true"
+                class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center gap-1.5">
+            <svg width="16" height="16" style="width: 1rem; height: 1rem;" class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Export CSV
+        </button>
+        <button type="button" @click="addOpen = true"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ Add Subscriber</button>
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-800/50">Campaigns →</a>
+    </div>
+</div>
+
+{# ── Import CSV Modal ────────────────────────────────────────── #}
+<div x-show="importOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @click="importOpen = false"
+     @keydown.escape.window="importOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md p-6" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Import Subscribers (CSV)</h2>
+            <button type="button" @click="importOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="POST" action="{{ url('/admin/newsletter/subscribers/import') }}" enctype="multipart/form-data">
+            {{ csrf_field() }}
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CSV File <span class="text-red-500">*</span></label>
+                    <input type="file" name="csv_file" accept=".csv,text/csv" required
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-gray-600 focus:ring-gray-500">
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        Supports <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">email</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">name</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">tags</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">status</code> columns or a plain list of emails. Existing emails will be skipped.
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Status</label>
+                    <select name="default_status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500 dark:bg-gray-800 dark:text-gray-100">
+                        <option value="active">Active (confirmed — no confirmation email)</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input type="checkbox" name="enroll_automations" value="1" checked
+                               class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                        Enroll new active subscribers in automations
+                    </label>
+                </div>
+            </div>
+            <div class="mt-6 flex items-center gap-3 justify-end">
+                <button type="button" @click="importOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">Start Import</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Export CSV Modal ────────────────────────────────────────── #}
+<div x-show="exportOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @click="exportOpen = false"
+     @keydown.escape.window="exportOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md p-6" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Export Subscribers (CSV)</h2>
+            <button type="button" @click="exportOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="POST" action="{{ url('/admin/newsletter/subscribers/export') }}" data-no-disable="true">
+            {{ csrf_field() }}
+            <input type="hidden" name="ids" :value="$store.bulk.selected.join(',')">
+            <input type="hidden" name="search" value="{{ (filters.search|default(''))|e('html_attr') }}">
+            <input type="hidden" name="status" value="{{ (filters.status|default(''))|e('html_attr') }}">
+
+            <div class="space-y-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Export Scope</label>
+                <div class="flex items-center gap-3" x-show="$store.bulk.count > 0">
+                    <input type="radio" id="scope_selected" name="export_scope" value="selected" x-model="exportScope"
+                           class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                    <label for="scope_selected" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                        Selected subscribers (<span x-text="$store.bulk.count" class="font-semibold"></span>)
+                    </label>
+                </div>
+                {% if filters.search|default('') or filters.status|default('') %}
+                <div class="flex items-center gap-3">
+                    <input type="radio" id="scope_filtered" name="export_scope" value="filtered" x-model="exportScope"
+                           class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                    <label for="scope_filtered" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                        Current filtered view
+                    </label>
+                </div>
+                {% endif %}
+                <div class="flex items-center gap-3">
+                    <input type="radio" id="scope_all" name="export_scope" value="all" x-model="exportScope"
+                           class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                    <label for="scope_all" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                        All subscribers ({{ counts.all }})
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-6 flex items-center gap-3 justify-end">
+                <button type="button" @click="exportOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" @click="setTimeout(() => exportOpen = false, 500)" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">Download CSV</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Add Subscriber Modal ────────────────────────────────────── #}
+<div x-show="addOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+     @click="addOpen = false"
+     @keydown.escape.window="addOpen = false">
+    <div class="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl" @click.stop>
+        <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Add Subscriber</h2>
+            <button type="button" @click="addOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="POST" action="{{ url('/admin/newsletter/subscribers') }}" class="flex min-h-0 flex-1 flex-col">
+            <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
+            {{ csrf_field() }}
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                    <input type="email" name="email" required placeholder="subscriber@example.com"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Name') }}</label>
+                    <input type="text" name="name" placeholder="Optional display name"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
+                    <select name="status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                        <option value="active">Active (confirmed — no email sent)</option>
+                        <option value="pending">Pending (send confirmation email)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Source Form</label>
+                    <select name="source_form_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                        <option value="">— None —</option>
+                        {% for f in forms|default([]) %}
+                        <option value="{{ f.id }}">{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tags') }}</label>
+                    <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '' })">
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                            <template x-for="(item, i) in items" :key="i">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                    <span x-text="item"></span>
+                                    <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                </span>
+                            </template>
+                        </div>
+                        <div class="relative">
+                            <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                   placeholder="Type tag name..."
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                            <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                 class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                    <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                         :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                         class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                         x-text="s"></div>
+                                </template>
+                            </div>
+                        </div>
+                        <input type="hidden" name="tags" :value="items.join(',')">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-4">
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" name="enroll_automations" value="1" checked
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                    Enroll in automations
+                </label>
+            </div>
+            </div>
+            <div class="vl-modal-actions">
+                <button type="button" @click="addOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">Add Subscriber</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Status tabs #}
+<div class="mb-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+    {% set tabs = [['', 'All', counts.all], ['active', 'Active', counts.active], ['pending', 'Pending', counts.pending], ['unsubscribed', 'Unsubscribed', counts.unsubscribed]] %}
+    {% for tab in tabs %}
+    <a href="{{ url('/admin/newsletter/subscribers') }}{{ tab[0] ? '?status=' ~ tab[0] : '' }}"
+       class="text-sm font-medium pb-2 -mb-2 border-b-2 {{ filters.status|default('') == tab[0] ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' }}">
+        {{ tab[1] }} <span class="ml-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs dark:text-gray-300">{{ tab[2] }}</span>
+    </a>
+    {% endfor %}
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search('Search…') }}
+    {% if filters.search is defined and filters.search %}
+    <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
+        <span>Filtered: {{ filters.search }}</span>
+        <a href="{{ url('/admin/newsletter/subscribers') }}{{ filters.status is defined and filters.status ? '?status=' ~ filters.status : '' }}" class="text-blue-500 hover:text-blue-700">&times;</a>
+    </div>
+    {% endif %}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th_checkbox(allIds) }}
+                {{ table.th('Email', 'email') }}
+                {{ table.th('Status', 'status') }}
+                {{ table.th('Tags', 'tags') }}
+                {% if subscriptions_enabled %}{{ table.th_static('Membership Status', 'left') }}{% endif %}
+                {{ table.th('Subscribed', 'created_at') }}
+                {{ table.th_static('Actions', 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for s in subscribers %}
+            <tr data-row-id="{{ s.id }}" data-sort="{{ {email: s.email, status: s.status, tags: s.tags|join(', '), created_at: s.createdAt ? s.createdAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
+                {{ table.td_checkbox(s.id) }}
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    <span class="cursor-pointer hover:underline"
+                          @click="editSub = JSON.parse($el.dataset.sub); editOpen = true"
+                                   {% set st = subscriberStats[s.id]|default({campaigns_count:0,opens_count:0,clicks_count:0}) %}
+                           data-sub="{{ {id: s.id, email: s.email, name: s.name|default(''), status: s.status, tags: s.tags|join(','), source_form_id: s.sourceFormId|default(''), campaigns_count: st.campaigns_count, opens_count: st.opens_count, clicks_count: st.clicks_count}|json_encode|e('html_attr') }}">{{ s.email }}</span>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4">
+                    {% set sc = {active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', unsubscribed: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[s.status]|default('bg-gray-100') }}">{{ s.status|capitalize }}</span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {% for tag in s.tags %}
+                    <span class="inline-flex rounded-full bg-gray-100 text-gray-800 px-2 py-0.5 text-xs mr-1 dark:bg-gray-700 dark:text-gray-300">{{ tag }}</span>
+                    {% else %}—{% endfor %}
+                </td>
+                {% if subscriptions_enabled %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    {%- if s.subscriptionPlanName is defined and s.subscriptionPlanName -%}
+                        <span class="font-medium">{{ s.subscriptionPlanName }}</span>
+                        {%- if s.subscriptionStatus == 'active' -%}
+                            {%- if s.subscriptionExpiresAt -%}
+                                <span class="text-xs text-gray-400"> — {{ __('Ends') }} {{ s.subscriptionExpiresAt|local_date('medium') }}</span>
+                            {%- else -%}
+                                <span class="text-xs text-green-500"> — {{ __('Never') }}</span>
+                            {%- endif -%}
+                        {%- elseif s.subscriptionStatus == 'cancelling' -%}
+                            <span class="text-xs text-yellow-500"> — {{ __('Cancelling') }}</span>
+                        {%- elseif s.subscriptionStatus == 'cancelled' -%}
+                            <span class="text-xs text-red-400"> — {{ __('Cancelled') }}</span>
+                        {%- else -%}
+                            <span class="text-xs text-red-400"> — {{ __('Ended') }}</span>
+                        {%- endif -%}
+                    {%- else -%}
+                        —
+                    {%- endif -%}
+                </td>
+                {% endif %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ s.createdAt|date('Y-m-d') }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800"
+                                @click="editSub = JSON.parse($el.closest('tr').querySelector('[data-sub]').dataset.sub); editOpen = true">{{ __('Edit') }}</button>
+                        {% if subscriptions_enabled and s.subscriptionStatus in ['active', 'cancelling'] %}
+                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '/terminate') }}" id="term-{{ s.id }}">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="message" id="term-msg-{{ s.id }}" value="">
+                        </form>
+                        <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                onclick="if(confirm('{{ __('Terminate subscription for :email? This will IMMEDIATELY cancel the payment agreement.', {':email': s.email})|e('js') }}')){var m=prompt('{{ __('Optional message to send to the subscriber (or leave empty):')|e('js') }}')||'';document.getElementById('term-msg-{{ s.id }}').value=m;document.getElementById('term-{{ s.id }}').submit()}">{{ __('Terminate') }}</button>
+                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '/cancel') }}"
+                              onsubmit="return confirm('{{ __('Cancel subscription for :email? The subscription will remain active until the end of the billing period.', {':email': s.email})|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 ring-1 ring-orange-300 dark:ring-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20">{{ __('Cancel') }}</button>
+                        </form>
+                        {% endif %}
+                        {% if s.subscriptionStatus is not defined or s.subscriptionStatus not in ['active', 'cancelling'] %}
+                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Remove subscriber?')|e('js') }}')">
+                            {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Remove') }}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="px-6 py-12 text-center text-gray-400">No subscribers yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'subscribers', deleteMsg: 'Remove selected subscribers?', extraActions: [
+    {label: __('Activate'), action: 'activate', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Pending'), action: 'pending', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
+    {label: __('Unsubscribe'), action: 'unsubscribe', class: 'bg-red-600/10 text-red-700 dark:text-red-400 hover:bg-red-600/20'},
+    {label: __('Export'), name: 'export_scope', value: 'selected', formaction: url('/admin/newsletter/subscribers/export'), class: 'bg-blue-600/10 text-blue-700 dark:text-blue-400 hover:bg-blue-600/20', attributes: 'data-no-disable="true"'},
+]} %}
+</div>{# /dataTable #}
+
+{# ── Edit Subscriber Modal ───────────────────────────────────── #}
+<div x-show="editOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @click="editOpen = false"
+     @keydown.escape.window="editOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md p-6" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Edit Subscriber</h2>
+            <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-5" x-text="editSub.email"></p>
+        <form method="POST" :action="`{{ url('/admin/newsletter/subscribers') }}/` + editSub.id">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" value="PUT">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Name') }}</label>
+                    <input type="text" name="name" :value="editSub.name" placeholder="Display name"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
+                    <select name="status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                        <option value="active"  :selected="editSub.status === 'active'">{{ __('Active') }}</option>
+                        <option value="pending" :selected="editSub.status === 'pending'">Pending</option>
+                        <option value="unsubscribed" :selected="editSub.status === 'unsubscribed'">Unsubscribed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Source Form</label>
+                    <select name="source_form_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                        <option value="">— None —</option>
+                        {% for f in forms|default([]) %}
+                        <option value="{{ f.id }}" :selected="String(editSub.source_form_id) === '{{ f.id }}'">{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tags') }}</label>
+                    <template x-if="editOpen">
+                        <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: editSub.tags })">
+                            <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
+                                <template x-for="(item, i) in items" :key="i">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
+                                        <span x-text="item"></span>
+                                        <button type="button" @click="remove(item)" class="text-gray-400 hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="relative">
+                                <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
+                                       placeholder="Type tag name..."
+                                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
+                                <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
+                                     class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
+                                    <template x-for="(s, i) in filteredSuggestions" :key="s">
+                                        <div @click="selectSuggestion(s)" @mouseenter="focusedIndex = i"
+                                             :class="i === focusedIndex ? 'bg-gray-100' : ''"
+                                             class="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                             x-text="s"></div>
+                                    </template>
+                                </div>
+                            </div>
+                            <input type="hidden" name="tags" :value="items.join(',')">
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" name="enroll_automations" value="1" checked
+                           class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:ring-gray-500">
+                    Enroll in automations
+                </label>
+            </div>
+            <div class="mt-3 flex items-center gap-3 justify-end">
+                <button type="button" @click="editOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">{{ __('Save') }}</button>
+            </div>
+
+            {# ── Campaign Stats ──────────────────────────────────── #}
+            <div class="mt-5 border-t pt-4" x-show="editSub.campaigns_count > 0" x-cloak>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Campaign Performance</h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-center">
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            <a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id" class="hover:underline" x-text="editSub.campaigns_count"></a>
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400"><a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id" class="hover:underline">Campaigns</a></p>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-center">
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            <a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id + '&filter=opened'"
+                               class="text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100"
+                               x-text="editSub.opens_count"></a>
+                            <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="editSub.campaigns_count > 0"
+                                  x-text="' (' + Math.round(editSub.opens_count / editSub.campaigns_count * 100) + '%)'"></span>
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id + '&filter=opened'"
+                               class="hover:underline text-gray-500 dark:text-gray-400">Opened campaigns</a>
+                        </p>
+                    </div>
+                    <div class="rounded-lg bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-center">
+                        <p class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            <a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id + '&filter=clicked'"
+                               class="text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100"
+                               x-text="editSub.clicks_count"></a>
+                            <span class="text-sm font-normal text-gray-500 dark:text-gray-400" x-show="editSub.campaigns_count > 0"
+                                  x-text="' (' + Math.round(editSub.clicks_count / editSub.campaigns_count * 100) + '%)'"></span>
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <a :href="'{{ url('/admin/newsletter/campaigns') }}?subscriber_id=' + editSub.id + '&filter=clicked'"
+                               class="hover:underline text-gray-500 dark:text-gray-400">Clicked campaigns</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 border-t pt-4" x-show="editSub.campaigns_count === 0" x-cloak>
+                <p class="text-center text-sm text-gray-400 py-2">No statistics yet.</p>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>{# /outer alpine scope #}
+{% endblock %}

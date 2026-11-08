@@ -1,0 +1,512 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% set catsJson = allCategories|map(c => {id: c.id, name: c.name, parentId: c.parentId, sortOrder: c.sortOrder, contentType: c.contentType})|json_encode %}
+{% set originalsList = [] %}
+{% set pickerOptions = [] %}
+{% for o in potential_originals|default([]) %}
+    {% set originalsList = originalsList|merge([{id: o.id, name: o.name, language: o.language, langs: o.translatedLanguages}]) %}
+    {% set pickerOptions = pickerOptions|merge([{
+        value: o.id,
+        label: '[' ~ (o.language|default(''))|upper ~ '] ' ~ o.name,
+        language: o.language|default(''),
+        translatedLanguages: o.translatedLanguages
+    }]) %}
+{% endfor %}
+{% set allCts = allContentTypes|default([]) %}
+{% set ctNames = {} %}
+{% for ct in allCts %}
+    {% set slugStr = ct.slug ~ '' %}
+    {% set ctNames = ctNames|merge({(slugStr): ct.name}) %}
+{% endfor %}
+{% set selectableTypes = [] %}
+{% if blog_enabled|default(true) %}
+    {% set selectableTypes = selectableTypes|merge([{value: 'post', label: __('Posts')}]) %}
+{% endif %}
+{% for ct in contentTypes|default([]) %}
+    {% set selectableTypes = selectableTypes|merge([{value: ct.slug.value, label: ct.name}]) %}
+{% endfor %}
+{% set selectableValues = selectableTypes|column('value') %}
+{% set defaultCt = content_type in selectableValues ? content_type : (selectableTypes|first|default({value: 'post'})).value %}
+
+{% block title %}{{ __('Categories') }}{% endblock %}
+
+{% block content %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyBtn = document.getElementById('copy-cat-original-btn');
+    copyBtn?.addEventListener('click', async function() {
+        const id = document.getElementById('edit-translation-of').value;
+        if (!id) return;
+        if (!confirm('{{ __('Overwrite current content with original?')|e('js') }}')) return;
+
+        const origHtml = this.innerHTML;
+        this.innerHTML = '<svg class="h-3.5 w-3.5 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+        this.disabled = true;
+
+        try {
+            const r = await fetch('{{ url('/admin/categories/')|e('js') }}' + id + '/json');
+            const data = await r.json();
+            const form = copyBtn.closest('form');
+            form.querySelector('input[name="name"]').value = data.name;
+            form.querySelector('textarea[name="description"]').value = data.description || '';
+
+            form.querySelector('input[name="name"]').dispatchEvent(new Event('input'));
+            form.querySelector('textarea[name="description"]').dispatchEvent(new Event('input'));
+
+            this.innerHTML = '✓';
+        } catch (e) {
+            this.innerHTML = '✗';
+            alert('Failed to copy content.');
+        } finally {
+            setTimeout(() => { this.innerHTML = origHtml; this.disabled = false; }, 1500);
+        }
+    });
+});
+</script>
+<div x-data="{
+    addOpen: false, addName: '', addSlug: '', addDescription: '', addParentId: '', addSortOrder: 0, addSlugManually: false,
+    addContentType: '{{ defaultCt }}',
+    editOpen: false, editId: null, editName: '', editSlug: '', editDescription: '', editParentId: '', editSortOrder: 0, editSlugManually: false,
+    editContentType: 'post',
+    addLanguage: '{{ current_locale() }}',
+    addTranslationOf: '',
+    addTranslationOfName: '',
+    editLanguage: '{{ current_locale() }}',
+    editTranslationOf: '',
+    allCats: {{ catsJson|e('html_attr') }},
+    allOriginals: {{ originalsList|json_encode|e('html_attr') }},
+    translationsMap: {{ translations_map|json_encode|e('html_attr') }},
+
+    openAdd() {
+        this.addName = ''; this.addSlug = ''; this.addDescription = ''; this.addParentId = ''; this.addSortOrder = 0; this.addSlugManually = false;
+        this.addContentType = '{{ defaultCt }}';
+        this.addLanguage = '{{ current_locale() }}';
+        this.addTranslationOf = '';
+        this.addTranslationOfName = '';
+        this.addOpen = true;
+        this.syncTranslationPicker('add');
+        this.$nextTick(() => this.$refs.addNameInput?.focus());
+    },
+    editTranslations: [],
+    openEdit(id, name, slug, parentId, sortOrder, contentType, language, translationOf, description) {
+        this.editId = id; this.editName = name; this.editSlug = slug;
+        this.editDescription = description || '';
+        this.editParentId = parentId != null ? String(parentId) : '';
+        this.editSortOrder = sortOrder || 0;
+        this.editSlugManually = slug !== '';
+        this.editContentType = contentType || 'post';
+        this.editLanguage = language || 'en';
+        this.editTranslationOf = translationOf || '';
+
+        const rootId = String(this.editTranslationOf || this.editId);
+        this.editTranslations = Array.isArray(this.translationsMap[rootId]) ? this.translationsMap[rootId] : [];
+        this.ensureTranslationSource(this.editTranslations, rootId);
+        this.refreshOriginalLanguages(this.editTranslations, rootId);
+
+        this.editOpen = true;
+        this.syncTranslationPicker('edit');
+        this.$nextTick(() => this.$refs.editNameInput?.focus());
+    },
+    // The Translation Of field is the shared entityPicker, built once per page.
+    // Modals reuse it, so its options and value are pushed in on every open.
+    pickerOf(refName) {
+        const wrapper = this.$refs[refName];
+        if (!wrapper) return null;
+        const host = wrapper.hasAttribute('x-data') ? wrapper : wrapper.querySelector('[x-data]');
+        if (!host) return null;
+        if (window.Alpine && typeof window.Alpine.$data === 'function') {
+            try { return window.Alpine.$data(host); } catch (e) { return null; }
+        }
+        return (host._x_dataStack && host._x_dataStack[0]) || null;
+    },
+    translationPickerOptions(excludeOwn) {
+        return this.allOriginals
+            .filter(o => !(excludeOwn && String(o.id) === String(this.editId)))
+            .map(o => ({
+                value: String(o.id),
+                label: '[' + String(o.language || '').toUpperCase() + '] ' + o.name,
+                language: o.language || '',
+                translatedLanguages: o.langs || [],
+            }));
+    },
+    syncTranslationPicker(which) {
+        const isEdit = which === 'edit';
+        const picker = this.pickerOf(isEdit ? 'editTranslationPicker' : 'addTranslationPicker');
+        if (!picker) return;
+        const value = isEdit ? this.editTranslationOf : this.addTranslationOf;
+        picker.targetLanguage = isEdit ? this.editLanguage : this.addLanguage;
+        picker.setOptions(this.translationPickerOptions(isEdit && !value));
+        picker.setValue(value || '');
+    },
+    setTranslationOf(which, value) {
+        if (which === 'edit') this.editTranslationOf = value ? String(value) : '';
+        else this.addTranslationOf = value ? String(value) : '';
+        this.syncTranslationPicker(which);
+    },
+    ensureTranslationSource(rows, rootId) {
+        if (!this.editTranslationOf || !Array.isArray(rows)) return;
+        if (this.allOriginals.some(o => String(o.id) === String(this.editTranslationOf))) return;
+        const source = rows.find(r => String(r.id) === String(this.editTranslationOf));
+        this.allOriginals.push({
+            id: this.editTranslationOf,
+            name: source ? source.name : ('#' + this.editTranslationOf),
+            language: source ? (source.language || '') : '',
+            langs: [],
+        });
+    },
+    // Keeps the Translation Of dropdown in sync with the freshly loaded
+    // translations: an original is marked (Translated) — and disabled — only
+    // for languages that really have a translation right now, so the labels
+    // never go stale between page load and saving.
+    refreshOriginalLanguages(rows, rootId) {
+        if (!Array.isArray(rows) || !rootId) return;
+        const entry = this.allOriginals.find(o => String(o.id) === String(rootId));
+        if (!entry) return;
+        entry.langs = rows
+            .filter(r => String(r.id) !== String(rootId))
+            .map(r => String(r.language || ''))
+            .filter(Boolean);
+    },
+    syncTranslationOf(key, language) {
+        const isEdit = key === 'editTranslationOf';
+        const picker = this.pickerOf(isEdit ? 'editTranslationPicker' : 'addTranslationPicker');
+        if (picker) picker.targetLanguage = language || '';
+        if (!this[key]) return;
+        const match = this.allOriginals.find(o => String(o.id) === String(this[key]));
+        if (match && match.language === language) this.setTranslationOf(isEdit ? 'edit' : 'add', '');
+    },
+    addAutoSlug() {
+        if (this.addSlugManually) return;
+        this.addSlug = this.addName.toLowerCase().replace(/[ıİ]/g,'i').replace(/[şŞ]/g,'s').replace(/[çÇ]/g,'c').replace(/[üÜ]/g,'u').replace(/[öÖ]/g,'o').replace(/[ğĞ]/g,'g').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    },
+    editAutoSlug() {
+        if (this.editSlugManually) return;
+        this.editSlug = this.editName.toLowerCase().replace(/[ıİ]/g,'i').replace(/[şŞ]/g,'s').replace(/[çÇ]/g,'c').replace(/[üÜ]/g,'u').replace(/[öÖ]/g,'o').replace(/[ğĞ]/g,'g').replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    }
+}">
+<div x-data="dataTable({perPage: 50})">
+{% if flash_success %}<div class="mb-4 rounded-lg bg-green-50 border border-green-200 p-4 text-green-700 text-sm">{{ flash_success }}</div>{% endif %}
+{% if flash_error %}<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>{% endif %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Categories') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('category(s) total') }}</p>
+    </div>
+    <button type="button" @click="openAdd()"
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+        + {{ __('Add Category') }}
+    </button>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    <select onchange="window.location.href=this.value"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="{{ url('/admin/categories?content_type=all') }}" {{ content_type == 'all' ? 'selected' }}>{{ __('All') }}</option>
+        {% if blog_enabled|default(true) %}
+        <option value="{{ url('/admin/categories?content_type=post') }}" {{ content_type == 'post' ? 'selected' }}>{{ __('Posts') }}</option>
+        {% endif %}
+        {% for ct in contentTypes|default([]) %}
+        <option value="{{ url('/admin/categories?content_type=' ~ ct.slug.value) }}" {{ content_type == ct.slug.value ? 'selected' }}>{{ ct.name }}</option>
+        {% endfor %}
+    </select>
+    {{ table.search(__('Search') ~ '…') }}
+    {% if multi_language_content %}
+    <select onchange="var u=new window.URL(window.location.href);u.searchParams.set('language',this.value);window.location.href=u.toString()"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="">{{ __('All Languages') }}</option>
+        {% for code, name in supported_locales %}
+            <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th(__('Name'), 'name') }}
+                {% if multi_language_content %}{{ table.th(__('Lang'), 'language') }}{% endif %}
+                {{ table.th(__('Slug'), 'slug') }}
+                {{ table.th(__('Usage'), 'usage_count') }}
+                {{ table.th(__('Available in'), 'content_type') }}
+                {{ table.th_static(__('Actions'), 'right') }}
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for cat in categories %}
+            {% set usageCount = usageCounts[cat.id]|default(0) %}
+            <tr data-row-id="{{ cat.id }}" data-sort="{{ {name: cat.name, language: cat.language, slug: cat.slug, usage_count: usageCount, content_type: ctNames[cat.contentType]|default(cat.contentType)}|json_encode|e('html_attr') }}">
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {% if cat.depth|default(0) > 0 %}
+                        <span class="text-gray-400 mr-1" style="padding-left:{{ (cat.depth - 1) * 1.5 }}rem">└─</span>
+                    {% endif %}
+                    <button type="button" @click="openEdit({{ cat.id }}, '{{ cat.name|e('js') }}', '{{ cat.slug|e('js') }}', {{ cat.parentId|default('null') }}, {{ cat.sortOrder|default(0) }}, '{{ cat.contentType|e('js') }}', '{{ cat.language }}', '{{ cat.translationOf }}', '{{ cat.description|default('')|e('js') }}')" class="text-gray-900 dark:text-gray-100 hover:underline text-left">{{ cat.name }}</button>
+                </td>
+                {% if multi_language_content %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10 uppercase">
+                        {{ cat.language }}
+                    </span>
+                </td>
+                {% endif %}
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ cat.slug }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <a href="{{ url('/admin/posts?content_type=' ~ cat.contentType ~ '&category_id=' ~ cat.id) }}"
+                       title="{{ __('See what uses this category') }}"
+                       class="text-gray-700 hover:text-gray-900 dark:text-gray-100 hover:underline">{{ usageCount }}</a>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ ctNames[cat.contentType]|default(cat.contentType) }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        {% set _view_url = view_url_map[cat.id]|default('') %}
+                        {% if _view_url %}
+                        <a href="{{ absolute_url(_view_url) }}" target="_blank" rel="noopener"
+                           title="{{ _view_url|e }}"
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
+                        {% endif %}
+                        <button type="button" @click="openEdit({{ cat.id }}, '{{ cat.name|e('js') }}', '{{ cat.slug|e('js') }}', {{ cat.parentId|default('null') }}, {{ cat.sortOrder|default(0) }}, '{{ cat.contentType|e('js') }}', '{{ cat.language }}', '{{ cat.translationOf }}', '{{ cat.description|default('')|e('js') }}')"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
+                        <form method="post" action="{{ url('/admin/categories/' ~ cat.id ~ '') }}"
+                              onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <input type="hidden" name="_METHOD" value="DELETE">
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No categories yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+</div>
+
+{# Create Modal #}
+<div x-show="addOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="addOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Create') }} {{ __('Category') }}</h3>
+            <button type="button" @click="addOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="post" action="{{ url('/admin/categories') }}" class="flex min-h-0 flex-1 flex-col">
+            {{ csrf_field() }}
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            {% if selectableTypes|length > 1 %}
+            <div>
+                <label for="add-content-type" class="block text-sm font-medium text-gray-700">{{ __('Content Type') }}</label>
+                <select id="add-content-type" name="content_type" x-model="addContentType"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
+                    {% for t in selectableTypes %}
+                    <option value="{{ t.value }}" {{ t.value == defaultCt ? 'selected' }}>{{ t.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="content_type" value="{{ defaultCt }}">
+            {% endif %}
+            {% if multi_language_content %}
+            <div class="flex items-end gap-3">
+                <div class="shrink-0">
+                    <label class="block text-sm font-medium text-gray-700">{{ __('Language') }}</label>
+                    <select id="add-language" name="language" x-model="addLanguage" x-effect="syncTranslationOf('addTranslationOf', addLanguage)" class="mt-1 inline-block w-auto max-w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
+                        {% for code, name in supported_locales %}
+                            <option value="{{ code }}">{{ locale_name(code) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="min-w-0 flex-1" x-ref="addTranslationPicker" @vl-record-picked="addTranslationOf = $event.detail.value">
+                    <label class="block text-sm font-medium text-gray-700">{{ __('Translation Of') }}</label>
+                    {% include 'admin/components/entity-select.twig' with {
+                        mode: 'static',
+                        name: 'translation_of',
+                        hidden_id: 'add-translation-of',
+                        options: pickerOptions,
+                        placeholder: '— ' ~ __('None (Original)') ~ ' —',
+                        empty_label: '— ' ~ __('None (Original)') ~ ' —',
+                        show_empty_row: true,
+                        empty_hint: __('No results'),
+                        target_selector: '#add-language',
+                        wrapper_class: 'mt-1 w-full',
+                    } %}
+                </div>
+            </div>
+            {% else %}
+            <input type="hidden" name="translation_of" value="">
+            {% endif %}
+
+            <div>
+                <label for="add-name" class="block text-sm font-medium text-gray-700">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="add-name" name="name" required x-ref="addNameInput" x-model="addName" @input="addAutoSlug()"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="add-slug" class="block text-sm font-medium text-gray-700">{{ __('Slug') }}</label>
+                <input type="text" id="add-slug" name="slug" x-model="addSlug" @input="addSlugManually = true"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="{{ __('Auto-generated from name') }}">
+            </div>
+            <div>
+                <label for="add-description" class="block text-sm font-medium text-gray-700">{{ __('Description') }}</label>
+                <textarea id="add-description" name="description" rows="3" x-model="addDescription"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"></textarea>
+            </div>
+            <div>
+                <label for="add-parent" class="block text-sm font-medium text-gray-700">{{ __('Parent Category') }}</label>
+                <select id="add-parent" name="parent_id" x-model="addParentId"
+                        x-effect="if (addParentId && !allCats.some(c => c.id == addParentId && c.contentType === addContentType)) addParentId = ''"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="">{{ __('None') }}</option>
+                    <template x-for="pc in allCats.filter(c => c.contentType === addContentType)" :key="pc.id">
+                        <option :value="pc.id" x-text="pc.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label for="add-sort" class="block text-sm font-medium text-gray-700">{{ __('Sort Order') }}</label>
+                <input type="number" id="add-sort" name="sort_order" x-model.number="addSortOrder"
+                       class="mt-1 block w-24 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            </div>
+            </div>
+            <div class="shrink-0 flex items-center gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="addOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">{{ __('Create') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Edit Modal #}
+<div x-show="editOpen" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="editOpen = false">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit') }} {{ __('Category') }}</h3>
+            <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <form method="post" :action="'{{ url('/admin/categories')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col" id="editCategoryForm">
+            {{ csrf_field() }}
+            <input type="hidden" name="_METHOD" value="PUT">
+            <input type="hidden" name="content_type" x-model="editContentType">
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+            {% if multi_language_content %}
+            <div class="rounded-lg border dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 p-3 space-y-3">
+                <div class="flex items-end gap-3">
+                    <div class="shrink-0">
+                        <label class="block text-xs font-medium text-gray-500">{{ __('Language') }}</label>
+                        <select id="edit-language" name="language" x-model="editLanguage" x-effect="syncTranslationOf('editTranslationOf', editLanguage)" class="mt-1 inline-block w-auto max-w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
+                            {% for code, name in supported_locales %}
+                                <option value="{{ code }}">{{ locale_name(code) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <label class="block text-xs font-medium text-gray-500">{{ __('Translation Of') }}</label>
+                        <div class="flex gap-2">
+                            <div class="min-w-0 flex-1" x-ref="editTranslationPicker" @vl-record-picked="editTranslationOf = $event.detail.value">
+                                {% include 'admin/components/entity-select.twig' with {
+                                    mode: 'static',
+                                    name: 'translation_of',
+                                    hidden_id: 'edit-translation-of',
+                                    options: pickerOptions,
+                                    placeholder: '— ' ~ __('None (Original)') ~ ' —',
+                                    empty_label: '— ' ~ __('None (Original)') ~ ' —',
+                                    show_empty_row: true,
+                                    empty_hint: __('No results'),
+                                    target_selector: '#edit-language',
+                                    wrapper_class: 'mt-1 w-full',
+                                } %}
+                            </div>
+                            <button type="button" id="copy-cat-original-btn"
+                                    class="mt-1 inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                    title="{{ __('Copy content from original') }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Translations') }}</h4>
+                    <div class="space-y-1.5">
+                        {% for code, name in supported_locales %}
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="flex items-center gap-1.5">
+                                <span class="w-4 text-[9px] font-medium text-gray-400">{{ code|upper }}</span>
+                                <span class="text-gray-600 dark:text-gray-400" x-text="'{{ locale_name(code)|e('js') }}'"></span>
+                            </span>
+                            <template x-if="editTranslations.find(t => t.language === '{{ code }}')">
+                                <span class="flex gap-2">
+                                    <template x-if="editTranslations.find(t => t.language === '{{ code }}').id === editId">
+                                        <span class="font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-1 py-0.5 rounded-sm">{{ __('Current') }}</span>
+                                    </template>
+                                    <template x-if="editTranslations.find(t => t.language === '{{ code }}').id !== editId">
+                                        <button type="button" @click="editOpen = false; const t = editTranslations.find(x => x.language === '{{ code }}'); openEdit(t.id, t.name, t.slug, t.parentId, t.sortOrder, t.contentType, t.language, t.translationOf, t.description)" class="text-blue-600 hover:underline">{{ __('Edit') }}</button>
+                                    </template>
+                                </span>
+                            </template>
+                            <template x-if="!editTranslations.find(t => t.language === '{{ code }}')">
+                                <button type="button" @click="editOpen = false; openAdd(); addContentType = editContentType; addLanguage = '{{ code }}'; addName = editName; setTranslationOf('add', editTranslationOf || editId);" class="text-gray-400 hover:text-gray-600">+ {{ __('Add') }}</button>
+                            </template>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div>
+                <label for="edit-name" class="block text-sm font-medium text-gray-700">{{ __('Name') }} <span class="text-red-500">*</span></label>
+                <input type="text" id="edit-name" name="name" required x-ref="editNameInput" x-model="editName" @input="editAutoSlug()"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="edit-slug" class="block text-sm font-medium text-gray-700">{{ __('Slug') }}</label>
+                <input type="text" id="edit-slug" name="slug" x-model="editSlug" @input="editSlugManually = true"
+                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"
+                       placeholder="{{ __('Auto-generated from name') }}">
+            </div>
+            <div>
+                <label for="edit-description" class="block text-sm font-medium text-gray-700">{{ __('Description') }}</label>
+                <textarea id="edit-description" name="description" rows="3" x-model="editDescription"
+                          class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm"></textarea>
+            </div>
+            <div>
+                <label for="edit-parent" class="block text-sm font-medium text-gray-700">{{ __('Parent Category') }}</label>
+                <select id="edit-parent" name="parent_id" x-model="editParentId"
+                        x-effect="if (editParentId && editParentId != editId && !allCats.some(c => c.id == editParentId && c.contentType === editContentType)) editParentId = ''"
+                        class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <option value="">{{ __('None') }}</option>
+                    <template x-for="pc in allCats.filter(c => c.contentType === editContentType && c.id !== editId)" :key="pc.id">
+                        <option :value="pc.id" x-text="pc.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label for="edit-sort" class="block text-sm font-medium text-gray-700">{{ __('Sort Order') }}</label>
+                <input type="number" id="edit-sort" name="sort_order" x-model.number="editSortOrder"
+                       class="mt-1 block w-24 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            </div>
+            </div>
+            <div class="shrink-0 flex items-center gap-3 justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <button type="button" @click="editOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">{{ __('Cancel') }}</button>
+                <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">{{ __('Update') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
+{% endblock %}

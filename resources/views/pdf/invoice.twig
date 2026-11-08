@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Invoice {{ invoice.invoice_number|default('') }}</title>
+<style>
+  @page { margin: 20mm; }
+  body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #1f2937; line-height: 1.5; margin: 0; padding: 0; }
+  .header { border-bottom: 2px solid #1f2937; padding-bottom: 8pt; margin-bottom: 20pt; }
+  .header h1 { font-size: 18pt; margin: 0 0 4pt; }
+  .header p { margin: 0; font-size: 9pt; color: #6b7280; }
+  .addresses { margin-bottom: 20pt; font-size: 9pt; }
+  .addresses table { width: 100%; border-collapse: collapse; }
+  .addresses td { vertical-align: top; width: 50%; padding: 0; }
+  .addresses h2 { font-size: 10pt; margin: 0 0 4pt; color: #374151; }
+  .addresses p { margin: 1pt 0; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 16pt; font-size: 9pt; }
+  table.items th { text-align: left; border-bottom: 1px solid #d1d5db; padding: 6pt 4pt; font-size: 9pt; color: #6b7280; }
+  table.items td { border-bottom: 1px solid #f3f4f6; padding: 6pt 4pt; }
+  table.items td.text-right { text-align: right; }
+  table.totals { width: 260pt; border-collapse: collapse; margin-left: auto; font-size: 9pt; }
+  table.totals td { padding: 3pt 0; }
+  table.totals td.label { text-align: left; }
+  table.totals td.value { text-align: right; }
+  table.totals .total td { font-weight: bold; border-top: 1px solid #1f2937; padding-top: 6pt; font-size: 10pt; }
+  .refunds { margin-top: 12pt; padding-top: 8pt; border-top: 1px solid #d1d5db; font-size: 9pt; color: #d97706; }
+  .footer { margin-top: 30pt; padding-top: 8pt; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; text-align: center; }
+  .notice { border: 1px solid #d1d5db; padding: 6pt 8pt; margin-bottom: 12pt; font-size: 8pt; color: #374151; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}Invoice{% endif %}</h1>
+  <p>Invoice #{{ invoice.invoice_number|default('') }}</p>
+  <p>Issued: {{ invoice.issued_at|default('') }}</p>
+</div>
+
+{% if is_latest is defined and not is_latest and latest_invoice is defined and latest_invoice %}
+<div class="notice">Note: this version was superseded by {{ latest_invoice.invoice_number|default('') }} (issued {{ latest_invoice.issued_at|default('') }}).</div>
+{% endif %}
+{% if invoice.revision|default(1) > 1 %}
+<div class="notice">Revision R{{ invoice.revision }} — supersedes {{ prev_number|default('') }}.</div>
+{% endif %}
+
+<div class="addresses">
+<table>
+  <tr>
+  <td>
+    <h2>From</h2>
+    <p>{{ invoice.shop.company_name|default('') }}</p>
+    <p>{{ invoice.shop.address_1|default('') }}</p>
+    {% if invoice.shop.address_2 %}<p>{{ invoice.shop.address_2 }}</p>{% endif %}
+    <p>{{ invoice.shop.city|default('') }} {{ invoice.shop.postcode|default('') }}</p>
+    <p>{{ invoice.shop.state|default('') }} {{ invoice.shop.country|default('') }}</p>
+    {% if invoice.shop.phone %}<p>Phone: {{ invoice.shop.phone }}</p>{% endif %}
+    {% if invoice.shop.email %}<p>{{ invoice.shop.email }}</p>{% endif %}
+    {% if invoice.shop.vat_number %}<p>VAT: {{ invoice.shop.vat_number }}</p>{% endif %}
+  </td>
+  <td>
+    <h2>Bill To</h2>
+    <p>{{ invoice.billing.first_name|default('') }} {{ invoice.billing.last_name|default('') }}</p>
+    <p>{{ invoice.billing.address_1|default(invoice.billing.address|default('')) }}</p>
+    {% if invoice.billing.address_2 %}<p>{{ invoice.billing.address_2 }}</p>{% endif %}
+    <p>{{ invoice.billing.city|default('') }} {{ invoice.billing.postcode|default('') }}</p>
+    <p>{{ invoice.billing.state|default('') }} {{ invoice.billing.country|default('') }}</p>
+    <p>{{ invoice.billing.email|default('') }}</p>
+    {% if invoice.billing.phone %}<p>{{ invoice.billing.phone }}</p>{% endif %}
+  </td>
+  </tr>
+</table>
+</div>
+
+<table class="items">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th class="text-right">Qty</th>
+      <th class="text-right">Price</th>
+      <th class="text-right">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in invoice.items|default([]) %}
+    {% set qty = item.quantity|default(1) %}
+    {% set unit = item.price|default(0) %}
+    <tr>
+      <td>{{ item.name|default('Item') }}</td>
+      <td class="text-right">{{ qty }}</td>
+      <td class="text-right">{{ unit|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+      <td class="text-right">{{ (unit * qty)|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<table class="totals">
+  <tr><td class="label">Subtotal</td><td class="value">{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr><td class="label">Shipping</td><td class="value">{{ invoice.shipping|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr>
+    <td class="label">
+      Included VAT
+      {% if invoice.tax_regime|default('normal_vat') == 'normal_vat' %}
+      ({{ invoice.tax_rate|default(0)|number_format(2, '.', ',') }}%)
+      {% endif %}
+    </td>
+    <td class="value">{{ invoice.tax|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+  </tr>
+  {% if invoice.tax_regime|default('normal_vat') != 'normal_vat' and invoice.tax_zero_reason|default('') != '' %}
+  <tr><td class="label" colspan="2" style="font-size:8pt;color:#6b7280;text-align:right;">{{ invoice.tax_zero_reason }}</td></tr>
+  {% endif %}
+  {% if invoice.discount|default(0) > 0 %}
+  <tr style="color:#16a34a;"><td class="label">Discount</td><td class="value">-{{ invoice.discount|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  {% endif %}
+  <tr class="total"><td class="label">{{ order.status in ['processing','completed','shipped'] ? 'Paid Total' : 'Total' }}</td><td class="value">{{ invoice.total|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+</table>
+
+{% if invoice.refunds|default([])|length > 0 %}
+<div class="refunds">
+  {% for ref in invoice.refunds %}
+  <div>Refund{% if ref.refund_id %} ({{ ref.refund_id }}){% endif %}: -{{ ref.amount|number_format(2, '.', ',') }} {{ ref.currency }}</div>
+  {% endfor %}
+  <div style="font-weight:bold;margin-top:4pt;">Net Paid: {{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</div>
+</div>
+{% endif %}
+
+<div class="footer">
+  {{ invoice.shop.company_name|default('') }} &mdash; Thank you for your business.
+</div>
+
+</body>
+</html>

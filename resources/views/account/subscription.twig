@@ -1,0 +1,94 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('My Subscription') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('View and manage your active membership subscription.') }}{% endblock %}
+
+{% set showShopAccountLinks = (shop_enabled|default(true)) == true %}
+{% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+{% set active_tab = 'subscription' %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="account-text mb-8 text-3xl font-bold">{{ __('My Subscription') }}</h1>
+
+    {% include "account/_nav.twig" %}
+
+    {% if active_subscription %}
+    {% set sub = active_subscription %}
+    {% set is_cancelling = sub.status == 'cancelling' %}
+    <div class="{{ is_cancelling ? 'account-card-warning' : 'account-card-muted' }} rounded-lg border p-6">
+        {% if sub.plan %}
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ sub.plan.name }}</h2>
+            <p class="mt-1 text-sm {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">
+                {{ sub.plan.price|price(current_currency) }} / {{ sub.plan.intervalLabel }}
+            </p>
+        </div>
+        {% endif %}
+
+        <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Status') }}</span>
+                <span>
+                    {% if is_cancelling %}
+                    <span class="account-badge-warning inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        {{ __('Cancelling') }}
+                    </span>
+                    {% else %}
+                    <span class="account-badge-success inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        {{ sub.status|capitalize }}
+                    </span>
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if sub.trial_ends_at %}
+            <div class="flex justify-between">
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Trial ends') }}</span>
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{% include 'partials/_vtime.twig' with {value: sub.trial_ends_at, style: 'short'} %}</span>
+            </div>
+            {% endif %}
+
+            {% if sub.expires_at %}
+            <div class="flex justify-between">
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Expires') }}</span>
+                <span class="font-medium {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{% include 'partials/_vtime.twig' with {value: sub.expires_at, style: 'short'} %}</span>
+            </div>
+            {% endif %}
+
+            <div class="flex justify-between">
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ __('Gateway') }}</span>
+                <span class="{{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ sub.gateway|capitalize }}</span>
+            </div>
+        </div>
+
+        {% if is_cancelling and sub.expires_at %}
+        <p class="mt-4 text-sm account-card-warning-text">{{ __('Your access will continue until') }} <strong>{% include 'partials/_vtime.twig' with {value: sub.expires_at, style: 'short'} %}</strong>.</p>
+        {% endif %}
+
+        {% if not is_cancelling %}
+        <div class="mt-6">
+            <form method="POST" action="{{ url(routing_account_prefix ~ '/subscription/cancel') }}" onsubmit="return confirm('{{ __('Are you sure you want to cancel your subscription?') }}')">
+                {{ csrf_field() }}
+                <button type="submit"
+                        class="account-danger-button rounded-lg px-4 py-2 text-sm font-medium transition-colors">
+                    {{ __('Cancel Subscription') }}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-6">
+        <a href="{{ url(routing_membership_prefix) }}" class="account-link text-sm">{{ __('View all plans') }}</a>
+    </div>
+    {% else %}
+    <div class="account-card account-empty-card mx-auto w-full max-w-3xl rounded-lg border px-12 py-20 text-center">
+        <p class="account-table-muted">{{ __('You do not have an active subscription.') }}</p>
+        <a href="{{ url(routing_membership_prefix) }}" class="mt-6 inline-block rounded-lg btn-primary px-6 py-2 text-sm font-bold transition-colors">
+            {{ __('View Plans') }}
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

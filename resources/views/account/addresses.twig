@@ -1,0 +1,212 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('My Addresses') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ __('Manage your saved billing and shipping addresses.') }}{% endblock %}
+
+{% set showShopAccountLinks = (shop_enabled|default(true)) == true %}
+{% set showSubscriptionAccountLink = subscriptions_enabled == true %}
+{% set active_tab = 'addresses' %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-14">
+    <h1 class="account-text mb-8 text-3xl font-bold">{{ __('My Addresses') }}</h1>
+
+    {% include "account/_nav.twig" %}
+
+    {% set sameAsBilling = shipping is empty or same_as_billing|default(false) ? 'true' : 'false' %}
+    <form method="POST" x-data="{ sameAsBilling: {{ sameAsBilling }} }">
+        {{ csrf_field() }}
+
+        <div class="account-card mb-8 rounded-lg border p-6">
+            <h2 class="account-text mb-4 text-lg font-semibold">{{ __('Billing Address') }}</h2>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('First Name') }}</label>
+                    <input type="text" name="billing_first_name" value="{{ billing.first_name ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Last Name') }}</label>
+                    <input type="text" name="billing_last_name" value="{{ billing.last_name ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Company') }}</label>
+                    <input type="text" name="billing_company" value="{{ billing.company ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Address Line 1') }}</label>
+                    <input type="text" name="billing_address_1" value="{{ billing.address_1 ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Address Line 2') }}</label>
+                    <input type="text" name="billing_address_2" value="{{ billing.address_2 ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('City') }}</label>
+                    <input type="text" name="billing_city" value="{{ billing.city ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('State / Province') }}</label>
+                    <input type="text" name="billing_state" value="{{ billing.state ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Postcode / ZIP') }}</label>
+                    <input type="text" name="billing_postcode" value="{{ billing.postcode ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Country') }}</label>
+                    <select name="billing_country"
+                            x-data="{
+                                regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                    ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                    : null,
+                                init() {
+                                    var sel = this.$el, val = sel.value, items = [];
+                                    for (var i = 1; i < sel.options.length; i++) {
+                                        var code = sel.options[i].value;
+                                        if (!code) continue;
+                                        var name = code;
+                                        if (this.regionNames) {
+                                            try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                        }
+                                        items.push({ code: code, name: name });
+                                    }
+                                    if (!items.length) return;
+                                    items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                    while (sel.options.length > 1) { sel.remove(1); }
+                                    items.forEach(function(item) {
+                                        var opt = document.createElement('option');
+                                        opt.value = item.code;
+                                        opt.textContent = item.name + ' (' + item.code + ')';
+                                        if (item.code === val) opt.selected = true;
+                                        sel.appendChild(opt);
+                                    });
+                                }
+                            }"
+                            class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                        <option value="">{{ __('— Select —') }}</option>
+                        {% for code, name in countries %}
+                        <option value="{{ code }}" {{ (billing.country ?? '') == code ? 'selected' }}>{{ code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Phone') }}</label>
+                    <input type="text" name="billing_phone" value="{{ billing.phone ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="same_as_billing" x-model="sameAsBilling" class="account-checkbox h-4 w-4 rounded-sm">
+                <span class="account-form-label text-sm">{{ __('Shipping same as billing') }}</span>
+            </label>
+        </div>
+
+        <div class="account-card mb-8 rounded-lg border p-6" x-show="!sameAsBilling">
+            <h2 class="account-text mb-4 text-lg font-semibold">{{ __('Shipping Address') }}</h2>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('First Name') }}</label>
+                    <input type="text" name="shipping_first_name" value="{{ shipping.first_name ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Last Name') }}</label>
+                    <input type="text" name="shipping_last_name" value="{{ shipping.last_name ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Company') }}</label>
+                    <input type="text" name="shipping_company" value="{{ shipping.company ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Address Line 1') }}</label>
+                    <input type="text" name="shipping_address_1" value="{{ shipping.address_1 ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="account-form-label block text-sm font-medium">{{ __('Address Line 2') }}</label>
+                    <input type="text" name="shipping_address_2" value="{{ shipping.address_2 ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('City') }}</label>
+                    <input type="text" name="shipping_city" value="{{ shipping.city ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('State / Province') }}</label>
+                    <input type="text" name="shipping_state" value="{{ shipping.state ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Postcode / ZIP') }}</label>
+                    <input type="text" name="shipping_postcode" value="{{ shipping.postcode ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Country') }}</label>
+                    <select name="shipping_country"
+                            x-data="{
+                                regionNames: (typeof Intl !== 'undefined' && typeof Intl.DisplayNames !== 'undefined')
+                                    ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' })
+                                    : null,
+                                init() {
+                                    var sel = this.$el, val = sel.value, items = [];
+                                    for (var i = 1; i < sel.options.length; i++) {
+                                        var code = sel.options[i].value;
+                                        if (!code) continue;
+                                        var name = code;
+                                        if (this.regionNames) {
+                                            try { name = this.regionNames.of(code) || code; } catch(e) {}
+                                        }
+                                        items.push({ code: code, name: name });
+                                    }
+                                    if (!items.length) return;
+                                    items.sort(function(a, b) { return a.name.localeCompare(b.name, navigator.language || 'en'); });
+                                    while (sel.options.length > 1) { sel.remove(1); }
+                                    items.forEach(function(item) {
+                                        var opt = document.createElement('option');
+                                        opt.value = item.code;
+                                        opt.textContent = item.name + ' (' + item.code + ')';
+                                        if (item.code === val) opt.selected = true;
+                                        sel.appendChild(opt);
+                                    });
+                                }
+                            }"
+                            class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                        <option value="">{{ __('— Select —') }}</option>
+                        {% for code, name in countries %}
+                        <option value="{{ code }}" {{ (shipping.country ?? '') == code ? 'selected' }}>{{ code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="account-form-label block text-sm font-medium">{{ __('Phone') }}</label>
+                    <input type="text" name="shipping_phone" value="{{ shipping.phone ?? '' }}"
+                           class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="account-link text-sm">{{ __('Back to Profile') }}</a>
+            <button type="submit"
+                    class="rounded-lg btn-primary px-6 py-2 text-sm font-bold transition-colors">
+                {{ __('Save Addresses') }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

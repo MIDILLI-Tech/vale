@@ -1,0 +1,88 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Verify Order') }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-md px-4 py-16">
+    <div class="rounded-xl border border-gray-200 bg-white p-8 shadow-xs dark:border-gray-700 dark:bg-gray-800">
+        <div class="mb-6 flex items-center justify-center">
+            <div class="rounded-full bg-blue-100 p-4 dark:bg-blue-900/50">
+                <svg class="h-10 w-10 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+        </div>
+
+        <h1 class="mb-2 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Verify Your Order') }}</h1>
+        <p class="mb-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            {{ __('To view your order, please enter the email address you used during checkout.') }}
+        </p>
+
+        {% if error is defined %}
+        <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/50 dark:text-red-300">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url('checkout.success', {}, {order: order_number}) }}" class="space-y-5">
+            {{ csrf_field() }}
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Email') }}</label>
+                <input type="email" id="email" name="email" required autocomplete="email"
+                       value="{{ old_email ?? '' }}"
+                       placeholder="{{ __('you@example.com') }}"
+                       class="mt-1 block w-full rounded-lg border-gray-300 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:focus:border-gray-400">
+            </div>
+
+            {% if captcha is defined and captcha.captcha_type != 'none' %}
+            <div class="flex flex-col items-center justify-center py-2 max-w-full overflow-x-auto w-full">
+                {% if captcha.captcha_type == 'math' and captcha.captcha_question %}
+                <div class="w-full text-center">
+                    <label class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                        {{ __('Spam protection') }}: <strong>{{ captcha.captcha_question }}</strong> = ?
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" name="captcha_answer" required min="1" max="18"
+                           class="w-24 rounded-lg border-gray-300 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm mx-auto dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                </div>
+                {% elseif captcha.captcha_type == 'hcaptcha' and captcha.captcha_site_key %}
+                <div class="h-captcha max-w-full" data-sitekey="{{ captcha.captcha_site_key }}"></div>
+                <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+                {% elseif captcha.captcha_type == 'recaptcha' and captcha.captcha_site_key %}
+                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
+                <script src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha.captcha_site_key }}"></script>
+                <script>
+                    grecaptcha.ready(function() {
+                        try {
+                            grecaptcha.execute('{{ captcha.captcha_site_key }}', {action: 'order_verify'}).then(function(token) {
+                                document.getElementById('g-recaptcha-response').value = token;
+                            }).catch(function(e) {
+                                console.warn('reCAPTCHA execute failed:', e);
+                            });
+                        } catch (e) {
+                            console.warn('reCAPTCHA execute failed:', e);
+                        }
+                    });
+                </script>
+                {% elseif captcha.captcha_type == 'turnstile' and captcha.captcha_site_key %}
+                <div class="cf-turnstile max-w-full" data-sitekey="{{ captcha.captcha_site_key }}" data-theme="auto" data-size="flexible"></div>
+                <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+                {% elseif captcha.captcha_type == 'honeypot' %}
+                <div style="display:none"><input type="text" name="_hp_name" tabindex="-1" autocomplete="off"></div>
+                {% elseif captcha.captcha_type != 'none' and not captcha.captcha_site_key %}
+                <p class="text-xs text-red-500 italic">{{ __('Captcha not configured by administrator.') }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <button type="submit"
+                    class="w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium">
+                {{ __('View Order') }}
+            </button>
+        </form>
+
+        <p class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
+            {{ __('A confirmation email with your order details has been sent to your email address.') }}
+        </p>
+    </div>
+</div>
+{% endblock %}

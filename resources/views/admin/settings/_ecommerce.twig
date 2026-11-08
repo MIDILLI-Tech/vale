@@ -1,0 +1,28 @@
+{# E-Commerce #}
+<div id="tab-ecommerce" class="tab-panel hidden">
+
+    {# ── E-Commerce Sub-tabs ── #}
+    <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+        <nav class="-mb-px flex gap-4 overflow-x-auto" id="ecommerce-subtabs">
+            <button type="button" data-subtab="shop" class="ec-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors duration-150 md:hover:bg-blue-50 md:hover:text-blue-700 dark:md:hover:bg-blue-900/20 dark:md:hover:text-blue-300">{{ __('Shop') }}</button>
+            <button type="button" data-subtab="product" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Product') }}</button>
+            <button type="button" data-subtab="currency" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Currency') }}</button>
+            <button type="button" data-subtab="shipping" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Shipping') }}</button>
+            <button type="button" data-subtab="payment" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Payment') }}</button>
+            <button type="button" data-subtab="checkout" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Checkout') }}</button>
+            <button type="button" data-subtab="legal" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Legal') }}</button>
+            <button type="button" data-subtab="import" class="ec-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Import') }}</button>
+        </nav>
+    </div>
+
+    {{ include('admin/settings/_ecommerce_currency.twig') }}
+    {{ include('admin/settings/_ecommerce_shipping.twig') }}
+    {{ include('admin/settings/_ecommerce_payment.twig') }}
+    {{ include('admin/settings/_ecommerce_checkout.twig') }}
+    {{ include('admin/settings/_ecommerce_legal.twig') }}
+    {{ include('admin/settings/_ecommerce_shop.twig') }}
+    {{ include('admin/settings/_ecommerce_product.twig') }}
+    {{ include('admin/settings/_ecommerce_import.twig') }}
+
+
+</div>{# /tab-ecommerce #}

@@ -1,0 +1,141 @@
+{% extends "admin/layout.twig" %}
+{% import "admin/partials/_table.twig" as table %}
+
+{% block title %}{{ __('Mail Logs') }}{% endblock %}
+
+{% block content %}
+<div x-data="dataTable({
+    perPage: {{ per_page|default(20) }},
+    {% if client_side is defined and not client_side %}
+    serverSide: true,
+    page: {{ page }},
+    totalItems: {{ total }},
+    baseUrl: '{{ base_url|e('js') }}',
+    search: '{{ (search|default(''))|e('js') }}'
+    {% endif %}
+})">
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Mail Logs') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('logs') }}</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="{{ url('/admin/mail/logs') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            {{ __('Refresh') }}
+        </a>
+        {% if total > 0 %}
+        <form method="post" action="{{ url('/admin/mail/logs/clear') }}"
+              onsubmit="return confirm('{{ __('Clear all mail logs?') }}')">
+            {{ csrf_field() }}
+            <button type="submit"
+                    class="rounded-lg border border-red-300 dark:border-red-700 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                {{ __('Clear Logs') }}
+            </button>
+        </form>
+        {% endif %}
+        <a href="{{ url('/admin/mail') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            &larr; {{ __('Settings') }}
+        </a>
+    </div>
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+    {{ table.search(__('Search recipient, date, subject, and more…')) }}
+    {{ table.columnsToggle() }}
+</div>
+
+<div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800/50">
+            <tr>
+                {{ table.th(__('Date'), 'created_at') }}
+                {{ table.th_static(__('To'), 'left') }}
+                {{ table.th(__('Subject'), 'subject') }}
+                {{ table.th_static(__('Driver'), 'left') }}
+                {{ table.th_static(__('Status'), 'left') }}
+                {{ table.th_static(__('Error'), 'left') }}
+                <th class="px-4 py-3"></th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody x-ref="items" class="divide-y divide-gray-100 bg-white dark:bg-gray-900">
+            {% for log in logs %}
+            <tr data-sort="{{ {subject: log.subject, to_address: log.to_address, driver: log.driver, status: log.status, created_at: log.created_at}|json_encode|e('html_attr') }}"
+                data-row-id="{{ log.id }}" class="hover:bg-gray-50 dark:bg-gray-800/50">
+                <td class="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{{ log.created_at }}</td>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[180px] truncate" title="{{ log.to_address }}">{{ log.to_address }}</td>
+                <td class="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[240px] truncate" title="{{ log.subject }}">{{ log.subject }}</td>
+                <td class="px-4 py-3">
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ log.driver }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    {% if log.status == 'sent' %}
+                    <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">{{ __('sent') }}</span>
+                    {% else %}
+                    <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">{{ __('failed') }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[200px] truncate text-xs" title="{{ log.error_message ?? '' }}">
+                    {{ log.error_message ?? '—' }}
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <div class="inline-flex items-center justify-end gap-2">
+                        {% if log.html_body %}
+                        <button type="button"
+                                onclick="var d=this.closest('tbody').querySelector('[data-detail-for=&quot;'+this.closest('tr').dataset.rowId+'&quot;]');if(d)d.style.display=d.style.display==='none'?'':'none'"
+                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
+                            {{ __('Preview') }}
+                        </button>
+                        {% endif %}
+                        <form method="POST" action="{{ url('/admin/mail/logs/' ~ log.id ~ '/delete') }}"
+                              onsubmit="return confirm('{{ __('Delete this log entry?')|e('js') }}')">
+                            {{ csrf_field() }}
+                            <button type="submit" class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% if log.html_body %}
+            <tr data-detail-for="{{ log.id }}" style="display:none" class="bg-yellow-50 dark:bg-amber-950/20">
+                <td colspan="8" class="px-4 py-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Email body') }}</span>
+                        <div class="flex gap-2">
+                            <button type="button"
+                                    onclick="this.closest('tr').style.display='none'"
+                                    class="rounded-sm border border-gray-300 dark:border-gray-700 px-2 py-0.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                                {{ __('Close') }}
+                            </button>
+                            <button type="button"
+                                    onclick="(function(btn){ var tr = btn.closest('tr'); var iframe = tr.querySelector('iframe'); var tab = window.open(); tab.document.write(iframe.srcdoc); tab.document.close(); })(this)"
+                                    class="rounded-sm border border-gray-300 dark:border-gray-700 px-2 py-0.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                                {{ __('Open in new tab') }}
+                            </button>
+                        </div>
+                    </div>
+                    {# Preview canvas follows the OS color scheme (sandboxed iframe
+                       cannot see the admin theme toggle). Unstyled bodies get a
+                       readable default in both modes; explicit email styles win. #}
+                    {% set preview_src = '<style>body{margin:0;background:#ffffff;color:#111827;}@media (prefers-color-scheme: dark){body{background:#111827;color:#f3f4f6;}}</style>'
+                        ~ (log.html_body matches '/<[a-z][^>]*>/i'
+                            ? log.html_body
+                            : '<div style="padding:12px;font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap;">' ~ log.html_body|e ~ '</div>') %}
+                    <iframe srcdoc="{{ preview_src|e('html_attr') }}"
+                            sandbox=""
+                            class="w-full rounded-sm border border-gray-200 bg-white dark:bg-gray-900"
+                            style="min-height:400px; resize:vertical; overflow:auto;"></iframe>
+                </td>
+            </tr>
+            {% endif %}
+            {% else %}
+            <tr>
+                <td colspan="8" class="px-4 py-8 text-center text-gray-400">{{ __('No mail logs yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{{ table.pagination() }}
+</div>
+{% endblock %}

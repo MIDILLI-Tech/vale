@@ -1,0 +1,70 @@
+{
+    "name": "Nova",
+    "version": "1.0.0",
+    "description": "Premium 'Elegant Tech' theme for marketing agencies and high-end portfolios. Features glassmorphism, neon accents, and high-impact typography.",
+    "author": "Vale",
+    "license": "MIT",
+    "menus": {
+        "primary": "Primary Navigation",
+        "footer": "Footer Links"
+    },
+    "colors": {
+        "header": "slate-950",
+        "primary": "blue-500",
+        "accent": "indigo-400"
+    },
+    "tables": {
+        "border": "#374151",
+        "header_background": "#1f2937"
+    },
+    "color_variables": {
+        "--theme-primary": {
+            "label": "Primary Color",
+            "default": "#3b82f6"
+        },
+        "--theme-primary-hover": {
+            "label": "Primary Hover",
+            "default": "#2563eb"
+        },
+        "--theme-secondary": {
+            "label": "Secondary Color",
+            "default": "#818cf8"
+        },
+        "--theme-cyan": {
+            "label": "Accent Cyan",
+            "default": "#22d3ee"
+        },
+        "--theme-bg": {
+            "label": "Background Color",
+            "default": "#020617"
+        },
+        "--theme-surface": {
+            "label": "Card / Container Background",
+            "default": "#0f172a"
+        },
+        "--theme-text": {
+            "label": "Text Color",
+            "default": "#f8fafc"
+        },
+        "--theme-text-muted": {
+            "label": "Muted Text Color",
+            "default": "#94a3b8"
+        },
+        "--theme-nav-bg": {
+            "label": "Navigation Bar Background",
+            "default": "#0f172a"
+        },
+        "--theme-hero-bg": {
+            "label": "Hero Gradient / Background",
+            "default": "linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%)"
+        },
+        "--theme-accent": {
+            "label": "Accent / Highlight Color",
+            "default": "#22d3ee"
+        },
+        "--theme-border": {
+            "label": "Border / Divider Color",
+            "default": "rgba(255, 255, 255, 0.1)"
+        }
+    }
+}
