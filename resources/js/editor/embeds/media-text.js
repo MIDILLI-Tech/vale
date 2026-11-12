@@ -357,13 +357,23 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
 
       const renderBubble = () => {
         bubbleMenu.innerHTML = '';
+        // queryCommandState('createLink') is unreliable in Chrome (returns
+        // false for selections inside <a>), so detect the enclosing anchor
+        // straight from the DOM selection.
+        const selectionInLink = () => {
+          const sel = window.getSelection();
+          if (!sel || !sel.rangeCount) return false;
+          const node = sel.getRangeAt(0).commonAncestorContainer;
+          const el = node.nodeType === 1 ? node : node.parentElement;
+          return !!(el && el.closest && el.closest('a'));
+        };
         const items = [
           { icon: 'B', title: tjs('Bold'), action: () => document.execCommand('bold', false, null), active: () => document.queryCommandState('bold') },
           { icon: 'I', title: tjs('Italic'), action: () => document.execCommand('italic', false, null), active: () => document.queryCommandState('italic') },
           { icon: 'U', title: tjs('Underline'), action: () => document.execCommand('underline', false, null), active: () => document.queryCommandState('underline') },
           { icon: '•', title: tjs('Bullet List'), action: () => document.execCommand('insertUnorderedList', false, null), active: () => document.queryCommandState('insertUnorderedList') },
           { icon: '1.', title: tjs('Numbered List'), action: () => document.execCommand('insertOrderedList', false, null), active: () => document.queryCommandState('insertOrderedList') },
-          { icon: '🔗', title: tjs('Link'), action: () => openLinkDialog(editor), active: () => false },
+          { icon: '🔗', title: tjs('Link'), action: () => openLinkDialog(editor), active: () => selectionInLink() },
         ];
         items.forEach(item => {
           const btn = document.createElement('button');

@@ -10,22 +10,41 @@
 import { internalLinkField } from './internal-link-field.js';
 
 function openLinkDialog(editor) {
-  const existingAttrs = editor.getAttributes('link') || {};
-  const existingHref = existingAttrs.href || '';
-  const existingTarget = existingAttrs.target || '';
-  const existingType = existingAttrs['data-vl-type'] || '';
-  const existingId = existingAttrs['data-vl-id'] || '';
+  const editorAttrs = editor.getAttributes('link') || {};
+  let existingHref = editorAttrs.href || '';
+  let existingTarget = editorAttrs.target || '';
+  let existingType = editorAttrs['data-vl-type'] || '';
+  let existingId = editorAttrs['data-vl-id'] || '';
   const { from, to } = editor.state.selection;
   const selectedText = from !== to ? editor.state.doc.textBetween(from, to, '') : '';
 
   // When the dialog was opened from inside a Media+Text content column the
-  // selection is not part of the ProseMirror doc — capture it before the
-  // dialog inputs steal focus, and apply the link via execCommand instead.
+  // selection is not part of the ProseMirror doc — capture the exact DOM range
+  // (and any anchor around it) before the dialog inputs steal focus, and apply
+  // the link via execCommand instead.
   const activeEl = document.activeElement;
   const mediaTextCol = (activeEl && activeEl.closest && activeEl.closest('[data-media-text]') && activeEl.isContentEditable)
     ? activeEl
     : null;
-  const mediaTextSelected = mediaTextCol && from === to ? String(window.getSelection() || '') : '';
+
+  let savedRange = null;
+  let mediaAnchor = null;
+  let mediaTextSelected = '';
+  if (mediaTextCol) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) {
+      savedRange = sel.getRangeAt(0).cloneRange();
+      mediaTextSelected = savedRange.toString();
+      const node = savedRange.commonAncestorContainer;
+      mediaAnchor = (node.nodeType === 1 ? node : node.parentElement)?.closest?.('a') || null;
+      if (mediaAnchor) {
+        existingHref = mediaAnchor.getAttribute('href') || '';
+        existingTarget = mediaAnchor.getAttribute('target') || '';
+        existingType = mediaAnchor.getAttribute('data-vl-type') || '';
+        existingId = mediaAnchor.getAttribute('data-vl-id') || '';
+      }
+    }
+  }
 
   const overlay = document.createElement('div');
   overlay.className = 'vl-overlay';
@@ -43,7 +62,7 @@ function openLinkDialog(editor) {
     <div class="vl-editor-modal-body">
       <div class="vl-link-url-section"></div>
       <label class="vl-label mt-3">${tjs('Link text')}</label>
-      <input type="text" class="vl-input vl-link-text" placeholder="${tjs('Selected text will appear here')}" value="${(selectedText || mediaTextSelected).replace(/"/g, '&quot;')}">
+      <input type="text" class="vl-input vl-link-text" placeholder="${tjs('Selected text will appear here')}" value="${(selectedText || (mediaAnchor ? mediaAnchor.textContent.trim() : '') || mediaTextSelected).replace(/"/g, '&quot;')}">
       <label class="vl-link-blank-label flex items-center gap-1.5 text-xs mt-3 cursor-pointer">
         <input type="checkbox" class="vl-link-blank"${existingTarget === '_blank' ? ' checked' : ''}> ${tjs('Open in new tab')}
       </label>
@@ -70,7 +89,12 @@ function openLinkDialog(editor) {
   modal.querySelector('.vl-link-cancel').addEventListener('click', () => overlay.remove());
   modal.querySelector('.vl-link-remove')?.addEventListener('click', () => {
     if (mediaTextCol) {
-      mediaTextCol.focus();
+      mediaTextCol.focus({ preventScroll: true });
+      if (savedRange && savedRange.startContainer.isConnected) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
       document.execCommand('unlink', false, null);
       overlay.remove();
       return;
@@ -96,7 +120,43 @@ function openLinkDialog(editor) {
     };
 
     if (mediaTextCol) {
-      mediaTextCol.focus();
+      mediaTextCol.focus({ preventScroll: true });
+      // Restore the exact selection captured at dialog open — blur and the
+      // dialog inputs may have collapsed it, which would make insertHTML
+      // insert the link next to the text instead of replacing it (duplicates).
+      if (savedRange && savedRange.startContainer.isConnected) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
+
+      if (mediaAnchor) {
+        // Editing an existing link: update the anchor in place instead of
+        // inserting a nested <a> inside it.
+        mediaAnchor.setAttribute('href', href);
+        if (blank) {
+          mediaAnchor.setAttribute('target', '_blank');
+          mediaAnchor.setAttribute('rel', 'noopener');
+        } else {
+          mediaAnchor.removeAttribute('target');
+          mediaAnchor.removeAttribute('rel');
+        }
+        if (linkAttrs['data-vl-type'] && linkAttrs['data-vl-id']) {
+          mediaAnchor.setAttribute('data-vl-type', linkAttrs['data-vl-type']);
+          mediaAnchor.setAttribute('data-vl-id', linkAttrs['data-vl-id']);
+        } else {
+          mediaAnchor.removeAttribute('data-vl-type');
+          mediaAnchor.removeAttribute('data-vl-id');
+        }
+        const finalText = linkText || mediaAnchor.textContent.trim();
+        if (finalText && finalText !== mediaAnchor.textContent) {
+          mediaAnchor.textContent = finalText;
+        }
+        mediaTextCol.dispatchEvent(new Event('input', { bubbles: true }));
+        overlay.remove();
+        return;
+      }
+
       const text = escapeHtml(linkText || mediaTextSelected || href);
       let attrsHtml = `href="${safeHref(href)}"${blank ? ' target="_blank" rel="noopener"' : ''}`;
       if (linkAttrs['data-vl-type'] && linkAttrs['data-vl-id']) {
