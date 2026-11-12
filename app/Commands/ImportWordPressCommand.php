@@ -100,6 +100,39 @@ final class ImportWordPressCommand extends Command
     /** Uploads larger than this are refused instead of streamed to disk. */
     private const MAX_MEDIA_DOWNLOAD_BYTES = 104857600; // 100MB
 
+    /**
+     * Tables the importer cannot work without. A missing one is a hard failure.
+     *
+     * @var list<string>
+     */
+    private const REQUIRED_WP_TABLES = [
+        'users',
+        'posts',
+        'postmeta',
+        'terms',
+        'term_taxonomy',
+        'term_relationships',
+    ];
+
+    /**
+     * Tables only some import steps read. A missing one warns and skips the
+     * affected step instead of failing the whole import. Values describe what
+     * the table is used for, so the warning can name the skipped step.
+     *
+     * @var array<string, string> table name => purpose
+     */
+    private const OPTIONAL_WP_TABLES = [
+        'options'                    => 'WooCommerce settings/currency, Polylang, site options',
+        'comments'                   => 'comment import',
+        'mailpoet_subscribers'       => 'MailPoet newsletter subscriber import',
+        'wc_orders'                  => 'HPOS order table',
+        'wc_order_addresses'         => 'HPOS order addresses',
+        'wc_orders_meta'             => 'HPOS order meta',
+        'wc_order_items'             => 'HPOS order items',
+        'woocommerce_order_items'    => 'order line items',
+        'woocommerce_order_itemmeta' => 'order item meta',
+    ];
+
     // WXR namespace URIs
     private const NS_WP      = 'http://wordpress.org/export/1.2/';
     private const NS_DC      = 'http://purl.org/dc/elements/1.1/';
@@ -455,6 +488,7 @@ final class ImportWordPressCommand extends Command
                         'password' => $wpPass,
                         'charset'  => 'utf8mb4',
                     ]);
+                    $this->wpDb->connect();
                 } catch (\Exception $e) {
                     $this->io->error('Could not connect to WordPress database: ' . $e->getMessage());
                     return Command::FAILURE;
@@ -465,6 +499,8 @@ final class ImportWordPressCommand extends Command
             if (!$this->validateWpTables()) {
                 return Command::FAILURE;
             }
+
+            $this->warnMissingOptionalTables();
 
             $importMedia = (bool) $input->getOption('import-media')
                 || ($this->interactive && $this->importMediaSelected);
@@ -522,7 +558,7 @@ final class ImportWordPressCommand extends Command
                 $this->importComments();
             }
 
-            if ($this->importAll || $this->importPostsOnly) {
+            if ($this->importAll || $this->importPostsOnly || $this->importWooOnly) {
                 $this->importMenusDb();
             }
 
@@ -2876,18 +2912,17 @@ final class ImportWordPressCommand extends Command
 
     private function validateWpTables(): bool
     {
-        $requiredTables = ['users', 'posts', 'postmeta', 'terms', 'term_taxonomy', 'term_relationships'];
-        $missing        = [];
+        $missing = [];
 
-        foreach ($requiredTables as $table) {
+        foreach (self::REQUIRED_WP_TABLES as $table) {
             $tableName = $this->wpPrefix . $table;
             try {
-                $exists = $this->tableExists($this->wpDb, $tableName);
-                if (!$exists) {
+                if (!$this->tableExists($this->wpDb, $tableName)) {
                     $missing[] = $tableName;
                 }
-            } catch (\Exception) {
-                $missing[] = $tableName;
+            } catch (\Exception $e) {
+                $this->io->error('Could not inspect WordPress table ' . $tableName . ': ' . $e->getMessage());
+                return false;
             }
         }
 
@@ -2898,6 +2933,64 @@ final class ImportWordPressCommand extends Command
         }
 
         return true;
+    }
+
+    /**
+     * Warn about optional tables the selected modules need, so the user knows
+     * which steps are skipped. Modules that were not selected never trigger a
+     * warning — a WooCommerce-less import stays quiet about WooCommerce tables.
+     */
+    private function warnMissingOptionalTables(): void
+    {
+        $missing = [];
+
+        foreach (self::OPTIONAL_WP_TABLES as $table => $purpose) {
+            if (!$this->isOptionalTableRelevant($table)) {
+                continue;
+            }
+
+            $tableName = $this->wpPrefix . $table;
+            try {
+                $exists = $this->tableExists($this->wpDb, $tableName);
+            } catch (\Exception $e) {
+                $missing[] = '  ' . $tableName . ' → ' . $purpose . ' (could not inspect: ' . $e->getMessage() . ')';
+                continue;
+            }
+
+            if (!$exists) {
+                $missing[] = '  ' . $tableName . ' → ' . $purpose;
+            }
+        }
+
+        if ($missing === []) {
+            return;
+        }
+
+        $this->io->warning('Optional WordPress tables are missing — related steps will be skipped:');
+        $this->io->listing($missing);
+    }
+
+    private function isOptionalTableRelevant(string $table): bool
+    {
+        $wooOrderTables = [
+            'wc_orders',
+            'wc_order_addresses',
+            'wc_orders_meta',
+            'wc_order_items',
+            'woocommerce_order_items',
+            'woocommerce_order_itemmeta',
+        ];
+
+        if (in_array($table, $wooOrderTables, true)) {
+            return $this->importAll || $this->importWooOnly;
+        }
+
+        return match ($table) {
+            'options'              => $this->importAll || $this->importWooOnly || $this->importPostsOnly,
+            'comments'             => $this->importAll || $this->importPostsOnly || $this->importWooOnly,
+            'mailpoet_subscribers' => $this->importAll || $this->importPostsOnly || $this->importSubscribersOnly,
+            default                => false,
+        };
     }
 
     private function ensureContentTypeExists(string $slug, string $name): void
