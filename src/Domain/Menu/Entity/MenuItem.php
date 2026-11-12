@@ -10,7 +10,7 @@ class MenuItem extends BaseEntity
 {
     private int $menuId;
     private ?int $parentId = null;
-    private string $type   = 'custom'; // custom, home, blog, post, page, category, tag, shop, product
+    private string $type   = 'custom'; // custom, home, blog, post, page, category, tag, shop, shop_category, product
     private string $label;
     private ?string $url      = null;
     private string $target    = '_self';

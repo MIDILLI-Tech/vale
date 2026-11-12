@@ -17,6 +17,7 @@ use ValeApp\Domain\Menu\Repository\MenuRepositoryInterface;
 use ValeApp\Domain\Shared\Exception\ValidationException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -35,6 +36,7 @@ final class MenuController
         private readonly PostRepositoryInterface $posts,
         private readonly CategoryRepositoryInterface $categories,
         private readonly ProductRepositoryInterface $products,
+        private readonly ProductCategoryRepositoryInterface $productCategories,
         private readonly SlugService $slugs,
         private readonly ThemeManager $themes,
         private readonly ContentTypeRepositoryInterface $contentTypes,
@@ -236,6 +238,33 @@ final class MenuController
                         continue;
                     }
                     $items[] = ['id' => $p->getId(), 'label' => $name, 'url' => site_url($shopPrefix . '/') . $p->getSlug()];
+                }
+                break;
+            case 'shop_category':
+                if (($this->settings->get('shop_enabled', '1') ?? '1') !== '1') {
+                    break;
+                }
+                $shopPrefix = '/' . ltrim($this->settings->get('routing_shop_prefix', '/shop'), '/');
+                $all        = $this->productCategories->findAll();
+                $all        = array_values(array_filter(
+                    $all,
+                    fn ($c) => trim((string) $c->getName()) !== ''
+                ));
+                if ($q !== '') {
+                    $qLower = mb_strtolower($q);
+                    $all    = array_filter(
+                        $all,
+                        fn ($c) => mb_stripos($c->getName(), $qLower)      !== false
+                            || mb_stripos((string) $c->getSlug(), $qLower) !== false
+                    );
+                }
+                $all = array_slice($all, 0, $limit);
+                foreach ($all as $c) {
+                    $items[] = [
+                        'id'    => $c->getId(),
+                        'label' => $c->getName(),
+                        'url'   => site_url($shopPrefix, [], ['category' => (string) $c->getSlug()]),
+                    ];
                 }
                 break;
             case 'category':
