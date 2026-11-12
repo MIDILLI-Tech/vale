@@ -2764,7 +2764,7 @@ final class ImportWordPressCommand extends Command
         foreach ($targets as $target) {
             $changes = [];
             foreach ($target['fields'] as $field => $text) {
-                if ($text === '' || !preg_match_all('#[^\s"\'()<>]+?-(?:\d+x\d+|scaled)\.[A-Za-z0-9]{2,5}(?:[?#][^\s"\'()<>]*)?#i', $text, $m)) {
+                if ($text === '' || !preg_match_all('~[^\s"\'()<>]+?-(?:\d+x\d+|scaled)\.[A-Za-z0-9]{2,5}(?:[?#][^\s"\'()<>]*)?~i', $text, $m)) {
                     continue;
                 }
                 foreach (array_unique($m[0]) as $variantUrl) {
