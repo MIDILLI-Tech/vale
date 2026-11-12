@@ -13,13 +13,8 @@ use ValeApp\Domain\Content\Repository\CategoryRepositoryInterface;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Content\Repository\TagRepositoryInterface;
 use ValeApp\Domain\Content\TreeHelper;
-use ValeApp\Domain\Media\Repository\MediaRepositoryInterface;
 use ValeApp\Domain\Seo\Repository\SeoMetaRepositoryInterface;
-use ValeApp\Domain\Shared\Exception\DomainException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
-use ValeApp\Domain\Shared\ValueObject\Slug;
-use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
-use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Translation\Translator;
@@ -30,14 +25,12 @@ final class HomeController
         private readonly Twig $twig,
         private readonly DbalSettingsRepository $settings,
         private readonly PostRepositoryInterface $posts,
-        private readonly ProductRepositoryInterface $products,
-        private readonly ProductCategoryRepositoryInterface $categories,
         private readonly CategoryRepositoryInterface $blogCategories,
         private readonly TagRepositoryInterface $tags,
-        private readonly MediaRepositoryInterface $media,
         private readonly SeoMetaRepositoryInterface $seoMeta,
         private readonly UserRepositoryInterface $users,
         private readonly SeoState $seoState,
+        private readonly ShopController $shop,
     ) {
     }
 
@@ -102,7 +95,7 @@ final class HomeController
         $blogEnabled = ($this->settings->get('blog_enabled', '1') ?? '1') === '1';
 
         return match ($mode) {
-            'shop'  => $this->renderShop($request, $response),
+            'shop'  => $this->shop->index($request, $response),
             'page'  => $this->renderPage($response),
             'posts' => $blogEnabled ? $this->renderBlog($request, $response) : $this->twig->render($response, 'home.twig', [
                 'title'                => 'Welcome to Vale',
@@ -168,103 +161,6 @@ final class HomeController
             'sidebar_categories'   => TreeHelper::buildTree($this->getSidebarCategories()),
             'sidebar_tags'         => $this->getSidebarTags(),
             'sidebar_recent_posts' => $this->getSidebarRecentPosts(),
-        ]);
-    }
-
-    private function renderShop(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
-    {
-        $params      = $request->getQueryParams();
-        $page        = max(1, (int) ($params['page'] ?? 1));
-        $perPage     = 12;
-        $filters     = ['status' => 'published'];
-        $contentLang = null;
-        $fallback    = $this->settings->get('i18n_display_originals_fallback', '1') === '1';
-
-        if ($this->settings->get('multi_language_content', '0') === '1') {
-            $contentLang         = $this->twig->getEnvironment()->getGlobals()['current_locale'] ?? 'en';
-            $filters['language'] = $contentLang;
-            if ($fallback) {
-                $filters['language_fallback'] = true;
-            }
-        }
-        if (!empty($params['category'])) {
-            $filters['category_slug'] = $params['category'];
-        }
-        if (!empty($params['search'])) {
-            $filters['search'] = $params['search'];
-        }
-
-        $pagination = new Pagination($page, $perPage);
-        $products   = $this->products->findAll($pagination, $filters);
-        $total      = $this->products->count($filters);
-        $categories = $this->categories->findAll($contentLang, $fallback);
-
-        if ($this->settings->get('multi_language_content', '0') === '1') {
-            $locales        = Translator::getInstance()?->getSupportedLocales() ?: ['en'];
-            $translationMap = [];
-            foreach ($locales as $l) {
-                $translationMap[$l] = '/';
-            }
-            $this->seoState->setTranslations($translationMap);
-        }
-
-        $imageMap = [];
-        foreach ($products as $p) {
-            $imgId = $p->getFeaturedImageId();
-            if ($imgId) {
-                $img = $this->resolveImage($imgId);
-                if ($img) {
-                    $imageMap[$p->getId()] = $img;
-                }
-            }
-        }
-
-        $categoryFallback = [
-            'is_fallback'      => false,
-            'content_language' => $contentLang ?? 'en',
-            'has_translation'  => false,
-        ];
-        if (
-            $this->settings->get('multi_language_content', '0')             === '1'
-            && $this->settings->get('i18n_display_originals_fallback', '1') === '1'
-            && $this->settings->get('i18n_fallback_content_notice', '1')    === '1'
-            && !empty($params['category'])
-        ) {
-            try {
-                $filteredCategory = $this->categories->findBySlug(new Slug($params['category']));
-            } catch (DomainException) {
-                $filteredCategory = null;
-            }
-            if ($filteredCategory && $contentLang && $filteredCategory->getLanguage() !== $contentLang) {
-                $originalId     = $filteredCategory->getTranslationOf() ?: $filteredCategory->getId();
-                $translations   = $this->categories->findTranslations($originalId);
-                $hasTranslation = false;
-                foreach ($translations as $t) {
-                    if ($t->getLanguage() === $contentLang) {
-                        $hasTranslation = true;
-                        break;
-                    }
-                }
-                $categoryFallback = [
-                    'is_fallback'      => !$hasTranslation,
-                    'content_language' => $filteredCategory->getLanguage(),
-                    'has_translation'  => $hasTranslation,
-                ];
-            }
-        }
-
-        return $this->twig->render($response, 'shop/index.twig', [
-            'products'                          => $products,
-            'categories'                        => $categories,
-            'total'                             => $total,
-            'page'                              => $page,
-            'per_page'                          => $perPage,
-            'total_pages'                       => (int) ceil($total / $perPage),
-            'filters'                           => $params,
-            'images'                            => $imageMap,
-            'is_fallback_lang'                  => $categoryFallback['is_fallback'],
-            'content_language'                  => $categoryFallback['content_language'],
-            'has_translation_in_current_locale' => $categoryFallback['has_translation'],
         ]);
     }
 
@@ -360,25 +256,5 @@ final class HomeController
             }
         }
         return $authors;
-    }
-
-    private function resolveImage(?int $mediaId): ?array
-    {
-        if (!$mediaId) {
-            return null;
-        }
-        $m = $this->media->findById($mediaId);
-        if ($m === null) {
-            return null;
-        }
-        $uploadsBase = site_url('/uploads');
-        $url         = $m->getUrl($uploadsBase);
-        return [
-            // Prefer WebP renditions when they exist; fall back to the original.
-            'url'       => $m->getThumbnailUrl('webp', $uploadsBase) ?? $url,
-            'thumbnail' => $m->getThumbnailUrl('webp_medium', $uploadsBase)
-                ?? $m->getThumbnailUrl('medium', $uploadsBase)
-                ?? $url,
-        ];
     }
 }
