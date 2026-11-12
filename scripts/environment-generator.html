@@ -887,6 +887,19 @@
       );
     }
 
+    // Optional / driver-specific keys are omitted when they carry no meaning for
+    // the selected driver, so the generated .env (and the Docker -e flags) never
+    // advertise values the application does not read.
+    //   DB_ROOT_PASSWORD — Docker Compose only, skipped when left empty.
+    //   SQLite ignores server host/port/credentials/charset entirely.
+    var omitForSqlite = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS', 'DB_CHARSET'];
+    rawEntries = rawEntries.filter(function(entry) {
+      if (entry.key === undefined) return true;
+      if (dbDriver === 'sqlite' && omitForSqlite.indexOf(entry.key) !== -1) return false;
+      if (entry.key === 'DB_ROOT_PASSWORD' && entry.val === '') return false;
+      return true;
+    });
+
     // Calculate maximum length of KEY=VALUE strings to align comments neatly
     var showComments = document.getElementById('output-show-comments').checked;
     var format = document.getElementById('output-format').value;
