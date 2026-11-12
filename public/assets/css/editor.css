@@ -559,6 +559,13 @@
   border-radius: 0;
 }
 
+/* Image spacing parity: the front-end themes give standalone images and
+   captioned figures `margin: 1em 0`; mirror that here so the canvas matches
+   the saved markup (the generic `* + *` rule above stays for other blocks). */
+.vl-editor-content .ProseMirror .vl-image-figure {
+  margin: 1em 0;
+}
+
 /* Keep every editor block wrapper visually consistent, including selected nodes. */
 .vl-editor-content .ProseMirror [class*="embed-block"],
 .vl-editor-content .ProseMirror .vl-media-text-block,

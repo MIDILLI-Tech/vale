@@ -382,6 +382,13 @@
         .prose h1 { margin-bottom: 0.67em; }
         .prose h2 { margin-top: 1.5em; margin-bottom: 0.83em; }
         .prose h3 { margin-top: 1.2em; margin-bottom: 0.5em; }
+        .prose img { margin: 1em 0; }
+        .prose .vl-image-figure { margin: 1em 0; }
+        /* Tailwind Typography renders inline code with backtick pseudo-elements
+           (`code`); the editor has no such decoration, so drop them here for
+           editor ↔ front-end parity. */
+        .prose code::before,
+        .prose code::after { content: none; }
 
         /* ── Tables ── */
         /* Editor parity contract (resources/js/editor/table-controls.js and
