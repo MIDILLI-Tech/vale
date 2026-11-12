@@ -106,6 +106,16 @@ function openLinkDialog(editor) {
   const escapeHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const safeHref = href => href.replace(/"/g, '%22').replace(/</g, '%3E');
 
+  // Enter in the External URL field applies the link. The internal panel's
+  // search input keeps its own key handling, and the hidden external input
+  // cannot be focused while that tab is active — so the gate is implicit.
+  const urlInput = modal.querySelector('.vl-link-url-section input[type="url"]');
+  urlInput?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    modal.querySelector('.vl-link-insert').click();
+  });
+
   modal.querySelector('.vl-link-insert').addEventListener('click', () => {
     const blank = modal.querySelector('.vl-link-blank').checked;
     const linkText = modal.querySelector('.vl-link-text').value.trim();
