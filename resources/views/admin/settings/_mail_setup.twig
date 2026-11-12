@@ -36,53 +36,6 @@
                             </a>
                         </div>
 
-                        <div {{ vl.attrs('mail', __('Log outgoing emails'), 'mail_log_enabled', 'setup', __('Mail Setup'), 'debug log mail') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
-                            <label class="flex items-center gap-3">
-                                <input type="hidden" name="mail_log_enabled" value="0">
-                                <input type="checkbox" name="mail_log_enabled" value="1"
-                                       {{ mailConfig.mail_log_enabled|default('1') == '1' ? 'checked' }}
-                                       {{ mailConfig.mail_driver == 'log' ? 'disabled' }}
-                                       id="mail_log_enabled_settings"
-                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <span>
-                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Log outgoing emails') }}</span>
-                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Write a copy of every email to a log file. Useful for debugging.') }}</span>
-                                </span>
-                            </label>
-                        </div>
-
-                        {# ── Batch Sending Settings ── #}
-                        <div {{ vl.attrs('mail', __('Batch Sending & Queue'), 'mail_batch_enabled', 'setup', __('Mail Setup'), 'batch bulk queue chunk limit') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-4" x-data="{ batchEnabled: {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'true' : 'false' }} }">
-                            <label class="flex items-center gap-3">
-                                <input type="hidden" name="mail_batch_enabled" value="0">
-                                <input type="checkbox" name="mail_batch_enabled" value="1"
-                                       {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'checked' }}
-                                       @change="batchEnabled = $event.target.checked"
-                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <span>
-                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Use provider bulk API (faster)') }}</span>
-                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Sends each group in a single provider request. When off, emails go out one by one — queueing is not affected.') }}</span>
-                                </span>
-                            </label>
-
-                            {% if cronConfig.cron_mode|default('none') == 'none' %}
-                            <div x-show="batchEnabled" x-cloak
-                                 class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                                </svg>
-                                <span>{{ __('Batch sending delivers campaigns in chunks via cron. Cron is currently disabled, so queued campaigns will not progress. Enable a cron mode in') }} <a href="#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
-                            </div>
-                            {% endif %}
-
-                            <div x-show="batchEnabled" x-cloak>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Max Batch Chunk Size') }}</label>
-                                <input type="number" name="mail_batch_size" value="{{ mailConfig.mail_batch_size|default('1000') }}" min="1" max="1000"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
-                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Maximum number of emails processed per cron cycle, capped per driver (Mailgun/SendGrid/Log: 1000, SMTP: 500, Resend/Unosend: 100, PHP mail: 50).') }}</span>
-                            </div>
-                        </div>
-
                         <div class="grid grid-cols-2 gap-4">
                             <div {{ vl.attrs('mail', __('From Address'), 'mail_from_address', 'setup', __('Mail Setup'), 'sender email from address') }}>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('From Address') }}</label>
@@ -191,6 +144,54 @@
                                 <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     {{ __('Get your API key') }} <a href="{{ mail_drivers.sendgrid.api_key_url }}" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 underline font-medium">{{ __('here') }}</a>.
                                 </span>
+                            </div>
+                        </div>
+
+                        {# ── Logging & batch sending (kept last) ── #}
+                        <div {{ vl.attrs('mail', __('Log outgoing emails'), 'mail_log_enabled', 'setup', __('Mail Setup'), 'debug log mail') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
+                            <label class="flex items-center gap-3">
+                                <input type="hidden" name="mail_log_enabled" value="0">
+                                <input type="checkbox" name="mail_log_enabled" value="1"
+                                       {{ mailConfig.mail_log_enabled|default('1') == '1' ? 'checked' }}
+                                       {{ mailConfig.mail_driver == 'log' ? 'disabled' }}
+                                       id="mail_log_enabled_settings"
+                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Log outgoing emails') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Write a copy of every email to a log file. Useful for debugging.') }}</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        {# ── Batch Sending Settings ── #}
+                        <div {{ vl.attrs('mail', __('Batch Sending & Queue'), 'mail_batch_enabled', 'setup', __('Mail Setup'), 'batch bulk queue chunk limit') }} class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-4" x-data="{ batchEnabled: {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'true' : 'false' }} }">
+                            <label class="flex items-center gap-3">
+                                <input type="hidden" name="mail_batch_enabled" value="0">
+                                <input type="checkbox" name="mail_batch_enabled" value="1"
+                                       {{ mailConfig.mail_batch_enabled|default('1') == '1' ? 'checked' }}
+                                       @change="batchEnabled = $event.target.checked"
+                                       class="h-4 w-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Use provider bulk API (faster)') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Sends each group in a single provider request. When off, emails go out one by one — queueing is not affected.') }}</span>
+                                </span>
+                            </label>
+
+                            {% if cronConfig.cron_mode|default('none') == 'none' %}
+                            <div x-show="batchEnabled" x-cloak
+                                 class="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                                <span>{{ __('Batch sending delivers campaigns in chunks via cron. Cron is currently disabled, so queued campaigns will not progress. Enable a cron mode in') }} <a href="#tab-maintenance" class="underline font-medium text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200">{{ __('Maintenance → Scheduled Tasks') }}</a>.</span>
+                            </div>
+                            {% endif %}
+
+                            <div x-show="batchEnabled" x-cloak>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Max Batch Chunk Size') }}</label>
+                                <input type="number" name="mail_batch_size" value="{{ mailConfig.mail_batch_size|default('1000') }}" min="1" max="1000"
+                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+                                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Maximum number of emails processed per cron cycle, capped per driver (Mailgun/SendGrid/Log: 1000, SMTP: 500, Resend/Unosend: 100, PHP mail: 50).') }}</span>
                             </div>
                         </div>
 
