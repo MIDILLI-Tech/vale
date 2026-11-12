@@ -33,6 +33,11 @@ final class DoctorCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->title('Vale Doctor');
 
+        $versionFile = base_path('version.php');
+        $valeVersion = file_exists($versionFile) ? (string) (require $versionFile) : 'dev';
+        $baked       = is_file(base_path('storage/.baked'));
+        $io->writeln('Vale ' . $valeVersion . ' (' . ($baked ? 'baked' : 'mutable') . ')');
+
         $installed     = file_exists(base_path('storage/installed.lock'));
         $dbDriver      = (string) env('DB_DRIVER', 'mysql');
         $isPgDriver    = in_array($dbDriver, ['pgsql', 'postgres', 'postgresql'], true);
