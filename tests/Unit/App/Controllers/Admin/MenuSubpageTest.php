@@ -21,6 +21,7 @@ use ValeApp\Domain\Menu\Entity\Menu;
 use ValeApp\Domain\Menu\Entity\MenuItem;
 use ValeApp\Domain\Menu\Repository\MenuRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -32,18 +33,19 @@ final class MenuSubpageTest extends TestCase
 {
     public function testMenuControllerContentItemsBuildsSubpagePath(): void
     {
-        $translator   = $this->createStub(Translator::class);
-        $twig         = $this->createStub(Twig::class);
-        $menus        = $this->createStub(MenuRepositoryInterface::class);
-        $slugs        = $this->createStub(SlugService::class);
-        $saveMenu     = new SaveMenuUseCase($menus, $slugs);
-        $session      = $this->createStub(SessionManager::class);
-        $posts        = $this->createStub(PostRepositoryInterface::class);
-        $categories   = $this->createStub(CategoryRepositoryInterface::class);
-        $products     = $this->createStub(\ValeApp\Domain\Shop\Repository\ProductRepositoryInterface::class);
-        $themes       = $this->createStub(ThemeManager::class);
-        $contentTypes = $this->createStub(ContentTypeRepositoryInterface::class);
-        $settings     = $this->createStub(DbalSettingsRepository::class);
+        $translator        = $this->createStub(Translator::class);
+        $twig              = $this->createStub(Twig::class);
+        $menus             = $this->createStub(MenuRepositoryInterface::class);
+        $slugs             = $this->createStub(SlugService::class);
+        $saveMenu          = new SaveMenuUseCase($menus, $slugs);
+        $session           = $this->createStub(SessionManager::class);
+        $posts             = $this->createStub(PostRepositoryInterface::class);
+        $categories        = $this->createStub(CategoryRepositoryInterface::class);
+        $products          = $this->createStub(\ValeApp\Domain\Shop\Repository\ProductRepositoryInterface::class);
+        $productCategories = $this->createStub(ProductCategoryRepositoryInterface::class);
+        $themes            = $this->createStub(ThemeManager::class);
+        $contentTypes      = $this->createStub(ContentTypeRepositoryInterface::class);
+        $settings          = $this->createStub(DbalSettingsRepository::class);
 
         $subPage = new Post('Sub Page', new Slug('sub-page'), 1);
 
@@ -59,6 +61,7 @@ final class MenuSubpageTest extends TestCase
             $posts,
             $categories,
             $products,
+            $productCategories,
             $slugs,
             $themes,
             $contentTypes,
@@ -112,18 +115,19 @@ final class MenuSubpageTest extends TestCase
 
     private function makeContentItemsController(array $allCategories): MenuController
     {
-        $translator   = $this->createStub(Translator::class);
-        $twig         = $this->createStub(Twig::class);
-        $menus        = $this->createStub(MenuRepositoryInterface::class);
-        $slugs        = $this->createStub(SlugService::class);
-        $saveMenu     = new SaveMenuUseCase($menus, $slugs);
-        $session      = $this->createStub(SessionManager::class);
-        $posts        = $this->createStub(PostRepositoryInterface::class);
-        $categories   = $this->createStub(CategoryRepositoryInterface::class);
-        $products     = $this->createStub(\ValeApp\Domain\Shop\Repository\ProductRepositoryInterface::class);
-        $themes       = $this->createStub(ThemeManager::class);
-        $contentTypes = $this->createStub(ContentTypeRepositoryInterface::class);
-        $settings     = $this->createStub(DbalSettingsRepository::class);
+        $translator        = $this->createStub(Translator::class);
+        $twig              = $this->createStub(Twig::class);
+        $menus             = $this->createStub(MenuRepositoryInterface::class);
+        $slugs             = $this->createStub(SlugService::class);
+        $saveMenu          = new SaveMenuUseCase($menus, $slugs);
+        $session           = $this->createStub(SessionManager::class);
+        $posts             = $this->createStub(PostRepositoryInterface::class);
+        $categories        = $this->createStub(CategoryRepositoryInterface::class);
+        $products          = $this->createStub(\ValeApp\Domain\Shop\Repository\ProductRepositoryInterface::class);
+        $productCategories = $this->createStub(ProductCategoryRepositoryInterface::class);
+        $themes            = $this->createStub(ThemeManager::class);
+        $contentTypes      = $this->createStub(ContentTypeRepositoryInterface::class);
+        $settings          = $this->createStub(DbalSettingsRepository::class);
 
         $settings->method('get')->willReturnCallback(
             static fn (string $key, ?string $default = null): ?string => $default
@@ -140,6 +144,7 @@ final class MenuSubpageTest extends TestCase
             $posts,
             $categories,
             $products,
+            $productCategories,
             $slugs,
             $themes,
             $contentTypes,
