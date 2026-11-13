@@ -1122,6 +1122,7 @@ return [
             $c->get(CategoryRepositoryInterface::class),
             $c->get(ProductRepositoryInterface::class),
             $c->get(ContentTypeRepositoryInterface::class),
+            $c->get(ProductCategoryRepositoryInterface::class),
         );
     }),
 

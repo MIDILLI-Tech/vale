@@ -17,6 +17,7 @@ use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Content\RoutingPrefixTypes;
 use ValeApp\Domain\Menu\Repository\MenuRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -49,6 +50,7 @@ final class LocaleMiddleware implements MiddlewareInterface
         private readonly ?CategoryRepositoryInterface $categories = null,
         private readonly ?ProductRepositoryInterface $products = null,
         private readonly ?ContentTypeRepositoryInterface $contentTypes = null,
+        private readonly ?ProductCategoryRepositoryInterface $productCategories = null,
     ) {
     }
 
@@ -433,9 +435,9 @@ final class LocaleMiddleware implements MiddlewareInterface
                 // Hide items whose feature is disabled (independent of stored URL)
                 $items = array_values(array_filter($items, function ($item) use ($shopEnabled, $subsEnabled): bool {
                     return match ($item->getType()) {
-                        'shop'       => $shopEnabled,
-                        'membership' => $subsEnabled,
-                        default      => true,
+                        'shop', 'shop_category' => $shopEnabled,
+                        'membership'            => $subsEnabled,
+                        default                 => true,
                     };
                 }));
 
@@ -471,6 +473,12 @@ final class LocaleMiddleware implements MiddlewareInterface
                             $c = $this->categories->findById($refId);
                             if ($c !== null) {
                                 $item->setUrl(site_url($categoryPrefix . '/') . $c->getSlug());
+                                $isValid = true;
+                            }
+                        } elseif ($type === 'shop_category' && $this->productCategories !== null) {
+                            $shopCategory = $this->productCategories->findById($refId);
+                            if ($shopCategory !== null) {
+                                $item->setUrl(site_url($shopPrefix, [], ['category' => (string) $shopCategory->getSlug()]));
                                 $isValid = true;
                             }
                         } elseif ($type === 'product' && $this->products !== null) {
