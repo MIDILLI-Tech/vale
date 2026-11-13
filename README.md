@@ -11,13 +11,15 @@
   <br><br>
   <img src="https://img.shields.io/badge/PHP-8.3-777BB4?logo=php&logoColor=white" alt="PHP 8.3+">
   <img src="https://img.shields.io/badge/MySQL-8.4+-4479A1?logo=mysql&logoColor=white" alt="MySQL 8.4+">
-  <img src="https://img.shields.io/badge/PostgreSQL-18+-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 18+">
+  <img src="https://img.shields.io/badge/PostgreSQL-18.0+-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 18+">
   <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=SQLite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/license-AGPL_3.0-green" alt="AGPL License">
   <img src="https://img.shields.io/badge/version-0.77.3-blue" alt="Version 0.77.3">
 </p>
 
 > **No plugins required.** Shop, newsletters, memberships, SEO, and AI-crawler control all ship in core — readable code you can override, with no third-party plugin dependencies.
+
+**Documentation:** <https://docs.getvale.org/> · **Try it online:** <https://getvale.org/try-vale>
 
 ---
 
