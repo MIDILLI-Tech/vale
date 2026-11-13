@@ -19,6 +19,7 @@ use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
@@ -41,6 +42,7 @@ final class MenuController
         private readonly ThemeManager $themes,
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly DbalSettingsRepository $settings,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -73,6 +75,7 @@ final class MenuController
 
         try {
             $this->saveMenu->execute($body, $items);
+            $this->flushPageCache();
             $this->session->set('flash_success', $this->translator->get('Menu created successfully.'));
             return $response->withHeader('Location', admin_url('/menus'))->withStatus(302);
         } catch (ValidationException $e) {
@@ -128,6 +131,7 @@ final class MenuController
 
         try {
             $this->saveMenu->execute($body, $items, $id);
+            $this->flushPageCache();
             $this->session->set('flash_success', $this->translator->get('Menu updated successfully.'));
             return $response->withHeader('Location', admin_url('/menus'))->withStatus(302);
         } catch (ValidationException $e) {
@@ -140,6 +144,7 @@ final class MenuController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         $this->menus->delete((int) $args['id']);
+        $this->flushPageCache();
         $this->session->set('flash_success', $this->translator->get('Menu deleted.'));
         return $response->withHeader('Location', admin_url('/menus'))->withStatus(302);
     }
@@ -185,6 +190,7 @@ final class MenuController
             }
         }
 
+        $this->flushPageCache();
         $this->session->set('flash_success', 'Menu cloned successfully.');
         return $response->withHeader('Location', admin_url('/menus'))->withStatus(302);
     }
@@ -299,6 +305,15 @@ final class MenuController
 
         $response->getBody()->write(json_encode($items, JSON_THROW_ON_ERROR));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * Menus render in the header/footer of every page, so any change makes all
+     * cached HTML stale — a full flush is the only correct invalidation here.
+     */
+    private function flushPageCache(): void
+    {
+        $this->pageCache?->flush();
     }
 
     /**

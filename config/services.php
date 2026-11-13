@@ -23,6 +23,7 @@ use ValeApp\App\Controllers\Admin\DashboardController;
 use ValeApp\App\Controllers\Admin\ExchangeRateController;
 use ValeApp\App\Controllers\Admin\MailController;
 use ValeApp\App\Controllers\Admin\MembershipController;
+use ValeApp\App\Controllers\Admin\MenuController;
 use ValeApp\App\Controllers\Admin\NewsletterController;
 use ValeApp\App\Controllers\Admin\OrderController;
 use ValeApp\App\Controllers\Admin\PaymentController;
@@ -1919,6 +1920,8 @@ return [
     ExchangeRateController::class => autowire(),
     DashboardController::class    => autowire(),
     ContentTypeController::class  => autowire(),
+    MenuController::class         => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
     AccountController::class      => autowire()
         ->constructorParameter('orders', get(OrderRepositoryInterface::class))
         ->constructorParameter('orderLogs', get(OrderLogRepositoryInterface::class))
