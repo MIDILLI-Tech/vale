@@ -102,6 +102,15 @@ $versionFile = __DIR__ . '/version.php';
 $version     = file_exists($versionFile) ? require $versionFile : 'dev';
 $cli         = new Application('vale CLI', $version);
 
+// Register the same domain event listeners the web app uses (webhooks + page
+// cache invalidation). Without this, `php vale cron:run` would publish due
+// content while leaving the cached listing pages untouched.
+try {
+    (require __DIR__ . '/bootstrap/events.php')($container);
+} catch (\Throwable $e) {
+    error_log('[Vale CLI] Event listener registration failed: ' . $e->getMessage());
+}
+
 $connection = Connection::createFromEnv();
 $hasher     = $container->get(ValeApp\Infrastructure\Auth\PasswordHasher::class);
 

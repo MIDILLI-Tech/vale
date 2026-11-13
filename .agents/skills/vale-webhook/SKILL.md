@@ -118,9 +118,9 @@ $this->events->doAction('comment.created', $comment);
 
 If the emitting class doesn't yet have `EventDispatcherInterface`, constructor-inject it and bind it in `config/services.php`.
 
-### 3. Wire action → webhook dispatch: `bootstrap/app.php`
+### 3. Wire action → webhook dispatch: `bootstrap/events.php`
 
-After the container is built, bridge the action to the outbound service (follow how existing events like `order.paid` are bridged):
+After the container is built, bridge the action to the outbound service (follow how existing events like `order.paid` are bridged). All domain listeners live in `bootstrap/events.php`; it is required by `bootstrap/app.php` (web/pseudo-cron) **and** by the `vale` CLI (so `php vale cron:run` fires webhooks too) — never register listeners only in `bootstrap/app.php`.
 
 ```php
 $events = $container->get(\ValeApp\Domain\Shared\Event\EventDispatcherInterface::class);
@@ -169,7 +169,7 @@ Then wrong-signature case must return 401.
 - [ ] Signature verified over raw body (consumer) / fail-closed
 - [ ] Unknown events answered 200, not 500
 - [ ] AVAILABLE_EVENTS entry present (producer) — visible in admin dropdown
-- [ ] Action bridged in bootstrap/app.php, payload JSON-safe
+- [ ] Action bridged in bootstrap/events.php, payload JSON-safe
 - [ ] `samplePayload()` match arm + admin placeholder chips added for the new event
 - [ ] sample payload keys === placeholder chips === real dispatched body keys (all three in sync)
 - [ ] Docs reminder: update `vale-docs/en/latest/developer/webhooks.md` event table (producer)

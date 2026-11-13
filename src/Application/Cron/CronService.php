@@ -20,9 +20,12 @@ use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Content\Repository\RevisionRepositoryInterface;
 use ValeApp\Domain\Newsletter\Repository\CampaignRepositoryInterface;
+use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Domain\Shop\Entity\Product;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
+use ValeApp\Infrastructure\Cache\PageCacheInvalidator;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\ExchangeRate\ExchangeRateService;
 
@@ -63,6 +66,8 @@ final class CronService
         private readonly ?ContentTypeRepositoryInterface $contentTypes = null,
         private readonly ?PluginMigrator $pluginMigrator = null,
         private readonly ?PluginUpdateService $pluginUpdater = null,
+        private readonly ?EventDispatcherInterface $events = null,
+        private readonly ?PageCacheInvalidator $pageCache = null,
     ) {
     }
 
@@ -172,6 +177,7 @@ final class CronService
                 try {
                     $product->publish();
                     $this->products->save($product);
+                    $this->productChanged($product);
                     $result['products_published']++;
                 } catch (\Throwable) {
                     // Continue with other jobs if one fails
@@ -186,6 +192,7 @@ final class CronService
                 try {
                     $product->publish();
                     $this->products->save($product);
+                    $this->productChanged($product);
                     $result['products_go_public']++;
                 } catch (\Throwable) {
                     // Continue with other jobs if one fails
@@ -379,12 +386,39 @@ final class CronService
         $partner = $this->swapPartner($post);
         if ($partner !== null && $partner->isPublished()) {
             $this->swapWithHomepageFollow($partner, $post);
+            $this->contentPublished($post);
+            $this->contentChanged($partner);
             return true;
         }
 
         $post->publish();
         $this->posts->save($post);
+        $this->contentPublished($post);
         return false;
+    }
+
+    /**
+     * A due record went live: one webhook event per record (never a burst of
+     * created + updated + published for the same content) and the targeted
+     * page-cache invalidation, identical to an admin publish.
+     */
+    private function contentPublished(Post $post): void
+    {
+        $this->events?->doAction('post.published', $post);
+        $this->pageCache?->forPost($post);
+    }
+
+    /** An existing record changed state (expiry, unlisting, swap handover). */
+    private function contentChanged(Post $post): void
+    {
+        $this->events?->doAction('post.updated', $post);
+        $this->pageCache?->forPost($post);
+    }
+
+    private function productChanged(Product $product): void
+    {
+        $this->events?->doAction('product.updated', $product);
+        $this->pageCache?->forProduct($product);
     }
 
     /**
@@ -404,9 +438,12 @@ final class CronService
                 if ($partner !== null) {
                     $this->swapWithHomepageFollow($post, $partner);
                     $swapped++;
+                    $this->contentChanged($post);
+                    $this->contentChanged($partner);
                 } else {
                     $post->expire();
                     $this->posts->save($post);
+                    $this->contentChanged($post);
                 }
                 $expired++;
             } catch (\Throwable) {
@@ -495,6 +532,7 @@ final class CronService
             try {
                 $product->setStatus('expired');
                 $this->products->save($product);
+                $this->productChanged($product);
                 $expired++;
             } catch (\Throwable) {
                 // Continue with other jobs if one fails

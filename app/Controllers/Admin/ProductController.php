@@ -13,6 +13,7 @@ use ValeApp\Domain\Content\TreeHelper;
 use ValeApp\Domain\Media\Repository\MediaRepositoryInterface;
 use ValeApp\Domain\Membership\Repository\PlanRepositoryInterface;
 use ValeApp\Domain\Seo\Repository\SeoMetaRepositoryInterface;
+use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
 use ValeApp\Domain\Shared\Exception\DomainException;
 use ValeApp\Domain\Shared\Exception\ValidationException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
@@ -43,6 +44,7 @@ final class ProductController
         private readonly RedirectService $redirects,
         private readonly AdminSearchCache $searchCache,
         private readonly PlanRepositoryInterface $plans,
+        private readonly EventDispatcherInterface $events,
     ) {
     }
     private const PRODUCT_SEARCH_NAMESPACE = 'product_search';
@@ -413,6 +415,7 @@ final class ProductController
         $this->searchCache->bump(self::PRODUCT_SEARCH_NAMESPACE);
         $this->session->flash('success', $this->translator->get('Product created.'));
         $this->saveSeo->execute('product', $product->getId(), (array) ($body['seo'] ?? []));
+        $this->events->doAction('product.created', $product);
         return $response->withHeader('Location', admin_url('/products'))->withStatus(302);
     }
 
@@ -570,6 +573,7 @@ final class ProductController
         $this->searchCache->bump(self::PRODUCT_SEARCH_NAMESPACE);
         $this->session->flash('success', $this->translator->get('Product updated.'));
         $this->saveSeo->execute('product', $product->getId(), (array) ($body['seo'] ?? []));
+        $this->events->doAction('product.updated', $product);
         return $response->withHeader('Location', admin_url('/products/' . $args['id'] . '/edit'))->withStatus(302);
     }
 
@@ -788,6 +792,11 @@ final class ProductController
             $this->redirects->deleteManualByTarget($canonical);
         }
         $this->searchCache->bump(self::PRODUCT_SEARCH_NAMESPACE);
+        $this->events->doAction('product.deleted', [
+            'id'   => (int) $args['id'],
+            'sku'  => $product?->getSku(),
+            'slug' => $product !== null ? (string) $product->getSlug() : '',
+        ]);
         $this->session->flash('success', $this->translator->get('Product deleted.'));
         return $response->withHeader('Location', admin_url('/products'))->withStatus(302);
     }
@@ -821,11 +830,17 @@ final class ProductController
                 $canonical = $this->productCanonicalFor($product);
                 $this->products->delete($id);
                 $this->redirects->deleteManualByTarget($canonical);
+                $this->events->doAction('product.deleted', [
+                    'id'   => $id,
+                    'sku'  => $product->getSku(),
+                    'slug' => (string) $product->getSlug(),
+                ]);
                 $count++;
             } elseif (in_array($action, ['publish', 'draft', 'archive'], true)) {
                 $status = $action === 'publish' ? 'published' : ($action === 'draft' ? 'draft' : 'archived');
                 $product->setStatus($status);
                 $this->products->save($product);
+                $this->events->doAction('product.updated', $product);
                 $count++;
             }
         }

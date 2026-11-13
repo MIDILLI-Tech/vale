@@ -75,7 +75,8 @@ final class ProductControllerTest extends TestCase
             $this->saveSeo,
             $this->redirects,
             $this->searchCache,
-            $this->plans
+            $this->plans,
+            $this->createStub(\ValeApp\Domain\Shared\Event\EventDispatcherInterface::class)
         );
     }
 

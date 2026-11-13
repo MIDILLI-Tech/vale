@@ -145,7 +145,8 @@ final class CsvFormulaInjectionTest extends TestCase
             $this->createStub(SaveSeoMetaUseCase::class),
             $this->createStub(RedirectService::class),
             new AdminSearchCache($this->createStub(CacheInterface::class)),
-            $plansRepo
+            $plansRepo,
+            $this->createStub(\ValeApp\Domain\Shared\Event\EventDispatcherInterface::class)
         );
         $request  = $this->createStub(ServerRequestInterface::class);
         $response = new Response();

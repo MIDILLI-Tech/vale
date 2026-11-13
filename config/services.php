@@ -143,6 +143,7 @@ use ValeApp\Infrastructure\Auth\PasswordHasher;
 use ValeApp\Infrastructure\Cache\AdminSearchCache;
 use ValeApp\Infrastructure\Cache\FileCache;
 use ValeApp\Infrastructure\Cache\PageCache;
+use ValeApp\Infrastructure\Cache\PageCacheInvalidator;
 use ValeApp\Infrastructure\Content\ContentMarkerNormalizer;
 use ValeApp\Infrastructure\Content\ContentSummary;
 use ValeApp\Infrastructure\Content\ReadingTimeService;
@@ -1875,6 +1876,8 @@ return [
             $c->get(ContentTypeRepositoryInterface::class),
             $c->get(PluginMigrator::class),
             $c->get(PluginUpdateService::class),
+            $c->get(EventDispatcherInterface::class),
+            $c->get(PageCacheInvalidator::class),
         );
     }),
 

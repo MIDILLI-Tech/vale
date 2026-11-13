@@ -25,6 +25,7 @@ app/
 └── helpers.php      # Global helper functions
 
 bootstrap/app.php    # App bootstrap (env, DI, middleware, routes)
+bootstrap/events.php # Domain event listeners (webhooks + page-cache invalidation) shared by web and CLI
 routes/              # Route definitions (web.php, admin.php, api.php)
 config/              # Config files + services.php (DI container)
 resources/views/     # Twig templates
@@ -791,6 +792,7 @@ SavePostUseCase::class => factory(function ($c) {
 | `app/Middleware/` | PSR-15 middleware |
 | `app/Commands/` | CLI commands |
 | `bootstrap/app.php` | Application bootstrap |
+| `bootstrap/events.php` | Domain event listeners (webhook delivery + page-cache invalidation), loaded by both the web bootstrap and the `vale` CLI |
 | `config/` | Configuration files |
 | `routes/web.php` | Public routes |
 | `routes/admin.php` | Admin routes |
