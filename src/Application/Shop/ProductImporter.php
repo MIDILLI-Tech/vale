@@ -1186,15 +1186,26 @@ final class ProductImporter
      * "VARIATION TYPE / NAME / VALUE") column triples into a single attribute
      * map. Both the number of slots and the attribute labels are discovered from
      * the file, so any custom variation (Farbe, Size, kamil, ...) is supported.
+     *
+     * Two export layouts are in the wild and both put the slot number in a
+     * different place:
+     *   - older German export: VARIATIONSTYP 1 / VARIATIONSNAME 1 / VARIATIONSWERT 1
+     *   - current export:      VARIATION 1 TYPE / VARIATION 1 NAME / VARIATION 1 VALUES
+     * The slot regex therefore accepts the number before or after the word, and
+     * the value aliases include the plural "values"/"werte" spellings.
      */
     private function readEtsyVariationAttributes(array $row): array
     {
         $slots = [];
         foreach (array_keys($row) as $key) {
-            if (preg_match('/^(?:variationstyp|variation type)\s*(\d+)$/', (string) $key, $matches) === 1) {
+            $key = (string) $key;
+            $matched = preg_match('/^(?:variationstyp|variation type)\s*(\d+)$/', $key, $matches) === 1
+                || preg_match('/^variation\s+(\d+)\s+(?:type|typ)$/', $key, $matches) === 1;
+            if ($matched) {
                 $slots[] = (int) $matches[1];
             }
         }
+        $slots = array_values(array_unique($slots));
         sort($slots);
 
         $attributes = [];
@@ -1202,14 +1213,18 @@ final class ProductImporter
             $type = $this->readRowValue($row, [
                 "variationstyp {$slot}", "variationstyp{$slot}",
                 "variation type {$slot}", "variation type{$slot}",
+                "variation {$slot} type", "variation {$slot} typ",
             ]);
             $name = $this->readRowValue($row, [
                 "variationsname {$slot}", "variationsname{$slot}",
                 "variation name {$slot}", "variation name{$slot}",
+                "variation {$slot} name",
             ]);
             $value = $this->readRowValue($row, [
                 "variationswert {$slot}", "variationswert{$slot}",
+                "variationswerte {$slot}", "variationswerte{$slot}",
                 "variation value {$slot}", "variation value{$slot}",
+                "variation {$slot} value", "variation {$slot} values",
             ]);
             if ($value === '') {
                 continue;

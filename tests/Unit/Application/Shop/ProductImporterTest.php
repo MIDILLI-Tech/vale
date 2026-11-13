@@ -1010,6 +1010,49 @@ final class ProductImporterTest extends TestCase
         $this->assertEquals(22.92, $insertedVariants[0]['price']);
     }
 
+    public function testImportEtsyNumberedVariationColumns(): void
+    {
+        $csvContent = "\"TITEL\",\"BESCHREIBUNG\",\"PREIS\",\"STÜCKZAHL\"," .
+                      "\"VARIATION 1 TYPE\",\"VARIATION 1 NAME\",\"VARIATION 1 VALUES\"," .
+                      "\"VARIATION 2 TYPE\",\"VARIATION 2 NAME\",\"VARIATION 2 VALUES\"\n" .
+                      "\"Dekorative Kerzen\",\"Handgemachte Kerzen\",\"22,92\",\"559\"," .
+                      "\"Selbstgewählte Eigenschaft\",\"Style\",\"Romantisches Paar,Pfingstrose\"," .
+                      "\"Farbe\",\"Hauptfarbe\",\"Weiß,Braun\"\n";
+
+        $filePath = $this->createTempFile($csvContent);
+
+        $this->slugServiceMock->method('generate')
+            ->willReturn(new Slug('dekorative-kerzen'));
+
+        $this->dbMock->method('lastInsertId')->willReturn('78');
+
+        $insertedProducts = [];
+        $insertedVariants = [];
+        $this->dbMock->method('insert')
+            ->willReturnCallback(function ($table, $data) use (&$insertedProducts, &$insertedVariants) {
+                if ($table === 'vl_products') {
+                    $insertedProducts[] = $data;
+                } elseif ($table === 'vl_product_variations') {
+                    $insertedVariants[] = $data;
+                }
+                return 1;
+            });
+
+        $res = $this->importer->importEtsy($filePath, false);
+        unlink($filePath);
+
+        $this->assertTrue($res['success']);
+        $this->assertSame(1, $res['imported']);
+        $this->assertSame(1, $res['variants']);
+        $this->assertSame('variable', $insertedProducts[0]['type']);
+
+        $this->assertCount(1, $insertedVariants);
+        $this->assertSame([
+            'Style'      => 'Romantisches Paar,Pfingstrose',
+            'Hauptfarbe' => 'Weiß,Braun',
+        ], json_decode((string) $insertedVariants[0]['attributes'], true));
+    }
+
     public function testImportEtsyUsesVariationLabelsFromFile(): void
     {
         $csvContent = "\"TITEL\",\"PREIS\",\"STÜCKZAHL\",\"VARIATIONSTYP 1\",\"VARIATIONSNAME 1\",\"VARIATIONSWERT 1\"\n" .
