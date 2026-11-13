@@ -7,6 +7,7 @@ namespace ValeApp\App\Controllers\Admin;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Views\Twig;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Translation\Translator;
@@ -18,6 +19,7 @@ final class AppearanceController
         private readonly DbalSettingsRepository $settings,
         private readonly SessionManager $session,
         private readonly Translator $translator,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -81,6 +83,7 @@ final class AppearanceController
         }
 
         $this->settings->set('font_family', $font, 'general');
+        $this->pageCache?->flush();
 
         $this->session->set('flash_success', $this->translator->get('Font settings updated.'));
 

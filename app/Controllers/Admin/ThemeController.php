@@ -13,6 +13,7 @@ use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Shared\Exception\DomainException;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Theme\ColorValueValidator;
@@ -30,6 +31,7 @@ final class ThemeController
         private readonly Translator $translator,
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly PostRepositoryInterface $posts,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -211,6 +213,7 @@ final class ThemeController
 
         file_put_contents($filePath, $content);
         $this->invalidateTemplateCache($file, $filePath);
+        $this->pageCache?->flush();
 
         return $this->jsonResponse($response, ['ok' => true]);
     }
@@ -428,6 +431,7 @@ final class ThemeController
         }
 
         $this->invalidateTemplateCache($file, $filePath);
+        $this->pageCache?->flush();
         @unlink($filePath);
         $this->session->set('flash_success', $this->translator->get('Template ":name" deleted.', [':name' => basename($file)]));
         return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
@@ -559,6 +563,7 @@ final class ThemeController
         }
 
         $this->settings->set('active_theme', $slug, 'theme');
+        $this->pageCache?->flush();
 
         // Clear any preview session so the activated theme takes effect
         $this->session->remove('preview_theme');
@@ -802,6 +807,7 @@ final class ThemeController
         }
 
         $this->settings->set('theme_' . $slug . '_colors', json_encode($newColors), 'theme');
+        $this->pageCache?->flush();
 
         $this->session->set('flash_success', $this->translator->get('Theme colors saved successfully.'));
         return $response->withHeader('Location', admin_url('/themes/' . $slug . '/colors'))->withStatus(302);
@@ -825,6 +831,7 @@ final class ThemeController
         }
 
         $this->settings->delete('theme_' . $slug . '_colors');
+        $this->pageCache?->flush();
 
         $this->session->set('flash_success', $this->translator->get('Theme colors reset to defaults.'));
         return $response->withHeader('Location', admin_url('/themes/' . $slug . '/colors'))->withStatus(302);

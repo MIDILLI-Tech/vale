@@ -14,6 +14,7 @@ use ValeApp\Domain\Content\TreeHelper;
 use ValeApp\Domain\Shared\Exception\ValidationException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Translation\Translator;
@@ -28,6 +29,7 @@ final class CategoryController
         private readonly SessionManager $session,
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly DbalSettingsRepository $settings,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -130,6 +132,7 @@ final class CategoryController
 
         try {
             $this->saveCategory->execute($body);
+            $this->flushPageCache();
             $this->session->set('flash_success', $this->translator->get('Category created successfully.'));
             return $response->withHeader('Location', $redirect)->withStatus(302);
         } catch (ValidationException $e) {
@@ -154,6 +157,7 @@ final class CategoryController
 
         try {
             $this->saveCategory->execute($body, $id);
+            $this->flushPageCache();
             $this->session->set('flash_success', $this->translator->get('Category updated successfully.'));
             return $response->withHeader('Location', $redirect)->withStatus(302);
         } catch (ValidationException $e) {
@@ -166,10 +170,20 @@ final class CategoryController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         $this->categories->delete((int) $args['id']);
+        $this->flushPageCache();
         $this->session->set('flash_success', $this->translator->get('Category deleted.'));
         return $response->withHeader('Location', admin_url('/categories'))->withStatus(302);
     }
 
+
+    /**
+     * A category renders in archive listings, post cards and menus, so a rename
+     * or delete makes cached HTML stale beyond the archive page itself.
+     */
+    private function flushPageCache(): void
+    {
+        $this->pageCache?->flush();
+    }
 
     public function getCategoryJson(Request $request, Response $response, array $args): Response
     {

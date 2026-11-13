@@ -10,6 +10,7 @@ use Slim\Views\Twig;
 use ValeApp\Domain\Content\TreeHelper;
 use ValeApp\Domain\Shop\Entity\ProductCategory;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Content\RedirectService;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -26,6 +27,7 @@ final class ProductCategoryController
         private readonly SessionManager $session,
         private readonly DbalSettingsRepository $settings,
         private readonly RedirectService $redirects,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -129,6 +131,7 @@ final class ProductCategoryController
         $cat->setParentId(!empty($body['parent_id']) ? (int) $body['parent_id'] : null);
 
         $this->categories->save($cat);
+        $this->pageCache?->flush();
         $this->session->flash('success', $this->translator->get('Category created.'));
         return $response->withHeader('Location', admin_url('/product-categories'))->withStatus(302);
     }
@@ -197,6 +200,7 @@ final class ProductCategoryController
         $category->setParentId(!empty($body['parent_id']) ? (int) $body['parent_id'] : null);
 
         $this->categories->save($category);
+        $this->pageCache?->flush();
         $this->session->flash('success', $this->translator->get('Category updated.'));
         return $response->withHeader('Location', admin_url('/product-categories'))->withStatus(302);
     }
@@ -204,6 +208,7 @@ final class ProductCategoryController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         $this->categories->delete((int) $args['id']);
+        $this->pageCache?->flush();
         $this->session->flash('success', $this->translator->get('Category deleted.'));
         return $response->withHeader('Location', admin_url('/product-categories'))->withStatus(302);
     }

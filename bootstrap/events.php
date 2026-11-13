@@ -386,6 +386,11 @@ return static function (Container $container): void {
         $invalidator->forPost($post);
     });
 
+    $events->addAction('post.deleted', static function (Post $post) use ($webhookSvc, $buildPostPayload, $invalidator): void {
+        $webhookSvc->dispatch('post.deleted', $buildPostPayload($post));
+        $invalidator->forPost($post);
+    });
+
     $buildProductPayload = static function (Product $product) use ($productRepo): array {
         $variations = [];
         try {
@@ -434,8 +439,9 @@ return static function (Container $container): void {
         $invalidator->forProduct($product);
     });
 
-    $events->addAction('product.deleted', static function (array $payload) use ($webhookSvc): void {
+    $events->addAction('product.deleted', static function (array $payload) use ($webhookSvc, $invalidator): void {
         $webhookSvc->dispatch('product.deleted', $payload);
+        $invalidator->forDeletedProduct((string) ($payload['slug'] ?? ''));
     });
 
     $events->addAction('user.registered', static function (User $user) use ($webhookSvc, $buildUserPayload): void {

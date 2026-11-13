@@ -339,6 +339,18 @@ return [
         );
     }),
 
+    PageCacheInvalidator::class => factory(function ($c) {
+        return new PageCacheInvalidator(
+            $c->get(PageCache::class),
+            $c->get(SettingsRepositoryInterface::class),
+            $c->get(ContentTypeRepositoryInterface::class),
+            $c->get(\ValeApp\Domain\Content\Repository\CategoryRepositoryInterface::class),
+            $c->get(\ValeApp\Domain\Content\Repository\TagRepositoryInterface::class),
+            $c->get(PostRepositoryInterface::class),
+            $c->get(ProductRepositoryInterface::class),
+        );
+    }),
+
     // ── Rate Limiting ────────────────────────────────────────────────
     RateLimiter::class => factory(function ($c) {
         $cfg = $c->get('config.auth');
@@ -1161,7 +1173,16 @@ return [
     }),
 
     ProductController::class         => autowire(),
-    ProductCategoryController::class => autowire(),
+    ProductCategoryController::class => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
+    \ValeApp\App\Controllers\Admin\CategoryController::class => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
+    \ValeApp\App\Controllers\Admin\TagController::class => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
+    \ValeApp\App\Controllers\Admin\CommentController::class => autowire()
+        ->constructorParameter('pageCacheInvalidator', get(PageCacheInvalidator::class)),
+    \ValeApp\App\Controllers\Front\CommentController::class => autowire()
+        ->constructorParameter('pageCacheInvalidator', get(PageCacheInvalidator::class)),
 
     PageCacheMiddleware::class => factory(function ($c) {
         return new PageCacheMiddleware(
@@ -1472,6 +1493,7 @@ return [
             $c->get(DbalSettingsRepository::class),
             $c->get(SessionManager::class),
             $c->get(Translator::class),
+            $c->get(PageCache::class),
         );
     }),
 
@@ -1919,7 +1941,8 @@ return [
 
     ExchangeRateController::class => autowire(),
     DashboardController::class    => autowire(),
-    ContentTypeController::class  => autowire(),
+    ContentTypeController::class  => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
     MenuController::class         => autowire()
         ->constructorParameter('pageCache', get(PageCache::class)),
     AccountController::class      => autowire()
@@ -1931,7 +1954,8 @@ return [
         ->constructorParameter('paypal', get(PayPalGateway::class))
         ->constructorParameter('encrypter', env('ENCRYPT_PII', false) ? get(Encrypter::class) : null),
     CurrencyController::class => autowire(),
-    ThemeController::class    => autowire(),
+    ThemeController::class    => autowire()
+        ->constructorParameter('pageCache', get(PageCache::class)),
     MailController::class     => autowire(),
     SettingsController::class => autowire()
         ->constructorParameter('pageCache', get(PageCache::class))

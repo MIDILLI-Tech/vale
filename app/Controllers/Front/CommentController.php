@@ -18,6 +18,7 @@ use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductVoteRepositoryInterface;
 use ValeApp\Infrastructure\Analytics\UserAgentParser;
+use ValeApp\Infrastructure\Cache\PageCacheInvalidator;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Security\IpAnonymizer;
 use ValeApp\Infrastructure\Session\SessionManager;
@@ -41,6 +42,7 @@ final class CommentController
         private readonly MailService $mail,
         private readonly CommentNotificationService $notifications,
         private readonly ContentTypeRepositoryInterface $contentTypes,
+        private readonly ?PageCacheInvalidator $pageCacheInvalidator = null,
     ) {
     }
 
@@ -169,6 +171,7 @@ final class CommentController
         }
 
         $this->comments->save($comment);
+        $this->pageCacheInvalidator?->forComment($entityType, $entityId);
 
         // Notify admin about new comment/review
         $this->sendAdminNotification($entityType, $entityId, $authorName, $authorEmail, $content, $body);

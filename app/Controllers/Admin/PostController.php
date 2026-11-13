@@ -688,6 +688,7 @@ final class PostController
                 }
                 $this->deleteContentAliases($post);
                 $this->posts->delete($id);
+                $this->events->doAction('post.deleted', $post);
                 $count++;
             } elseif (in_array($action, ['publish', 'draft', 'unlisted', 'archive'], true)) {
                 if (in_array($action, ['publish', 'unlisted', 'archive'], true) && $role !== 'super_admin') {
@@ -704,6 +705,10 @@ final class PostController
                 }
                 $post->setStatus($status);
                 $this->posts->save($post);
+                $this->events->doAction('post.updated', $post);
+                if ($status === 'published') {
+                    $this->events->doAction('post.published', $post);
+                }
                 $count++;
             }
         }
@@ -750,6 +755,7 @@ final class PostController
 
         $this->deleteContentAliases($post);
         $this->posts->delete($id);
+        $this->events->doAction('post.deleted', $post);
         $this->session->set('flash_success', $this->translator->get('Post deleted.'));
         return $response->withHeader('Location', admin_url('/posts?content_type=' . $contentType))->withStatus(302);
     }

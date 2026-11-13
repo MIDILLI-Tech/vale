@@ -14,6 +14,7 @@ use ValeApp\Domain\Content\Repository\TagRepositoryInterface;
 use ValeApp\Domain\Shared\Exception\ValidationException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Infrastructure\Cache\AdminSearchCache;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Translation\Translator;
@@ -29,6 +30,7 @@ final class TagController
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly DbalSettingsRepository $settings,
         private readonly AdminSearchCache $searchCache,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -170,6 +172,7 @@ final class TagController
 
         try {
             $this->saveTag->execute($body);
+            $this->flushPageCache();
             $this->searchCache->bump(self::TAG_SEARCH_NAMESPACE);
             $this->session->set('flash_success', $this->translator->get('Tag created successfully.'));
             return $response->withHeader('Location', admin_url('/tags?content_type=' . $rawCt))->withStatus(302);
@@ -194,6 +197,7 @@ final class TagController
 
         try {
             $this->saveTag->execute($body, $id);
+            $this->flushPageCache();
             $this->searchCache->bump(self::TAG_SEARCH_NAMESPACE);
             $this->session->set('flash_success', $this->translator->get('Tag updated successfully.'));
             return $response->withHeader('Location', admin_url('/tags?content_type=' . $rawCt))->withStatus(302);
@@ -207,9 +211,19 @@ final class TagController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         $this->tags->delete((int) $args['id']);
+        $this->flushPageCache();
         $this->searchCache->bump(self::TAG_SEARCH_NAMESPACE);
         $this->session->set('flash_success', $this->translator->get('Tag deleted.'));
         return $response->withHeader('Location', admin_url('/tags'))->withStatus(302);
+    }
+
+    /**
+     * Tags render in archive listings, post cards and menus, so a rename or
+     * delete makes cached HTML stale beyond the archive page itself.
+     */
+    private function flushPageCache(): void
+    {
+        $this->pageCache?->flush();
     }
 
     /**

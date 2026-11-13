@@ -13,6 +13,7 @@ use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Content\RoutingValidator;
 use ValeApp\Domain\Roles\Repository\RoleRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
+use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Content\RedirectService;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
@@ -30,6 +31,7 @@ final class ContentTypeController
         private readonly DbalSettingsRepository $settings,
         private readonly PostRepositoryInterface $posts,
         private readonly RoutingValidator $routing,
+        private readonly ?PageCache $pageCache = null,
     ) {
     }
 
@@ -171,6 +173,7 @@ final class ContentTypeController
 
         $this->contentTypes->save($type);
         $this->roles->ensureContentTypePermissions($type->getSlug()->__toString(), $name);
+        $this->pageCache?->flush();
 
         $this->session->set('flash_success', $this->translator->get('Content type created.'));
         return $response->withHeader('Location', admin_url('/content-types'))->withStatus(302);
@@ -278,6 +281,7 @@ final class ContentTypeController
         }
 
         $this->contentTypes->save($type);
+        $this->pageCache?->flush();
 
         $this->session->set('flash_success', $this->translator->get('Content type updated.'));
         return $response->withHeader('Location', admin_url('/content-types'))->withStatus(302);
@@ -292,6 +296,7 @@ final class ContentTypeController
 
         $this->roles->removeContentTypePermissions($type->getSlug()->__toString());
         $this->contentTypes->delete($type->getId());
+        $this->pageCache?->flush();
         $this->session->set('flash_success', $this->translator->get('Content type deleted.'));
         return $response->withHeader('Location', admin_url('/content-types'))->withStatus(302);
     }
@@ -305,6 +310,7 @@ final class ContentTypeController
 
         $type->setIsActive(!$type->isActive());
         $this->contentTypes->save($type);
+        $this->pageCache?->flush();
 
         $msg = $type->isActive()
             ? $this->translator->get('Content type enabled.')

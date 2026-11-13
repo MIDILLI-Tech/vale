@@ -16,6 +16,7 @@ use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Infrastructure\Cache\AdminSearchCache;
+use ValeApp\Infrastructure\Cache\PageCacheInvalidator;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Translation\Translator;
 
@@ -31,6 +32,7 @@ final class CommentController
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly SettingsRepositoryInterface $settings,
         private readonly AdminSearchCache $searchCache,
+        private readonly ?PageCacheInvalidator $pageCacheInvalidator = null,
     ) {
     }
 
@@ -139,6 +141,7 @@ final class CommentController
                 'pending' => $comment->setStatus('pending'),
             };
             $this->comments->save($comment);
+            $this->pageCacheInvalidator?->forComment($comment->getEntityType(), (int) $comment->getEntityId());
             $this->searchCache->bump('comment_search');
 
             // Notify parent author if this was just approved and is a reply
@@ -153,7 +156,11 @@ final class CommentController
 
     public function destroy(Request $request, Response $response, array $args): Response
     {
+        $comment = $this->comments->findById((int) $args['id']);
         $this->comments->delete((int) $args['id']);
+        if ($comment !== null) {
+            $this->pageCacheInvalidator?->forComment($comment->getEntityType(), (int) $comment->getEntityId());
+        }
         $this->searchCache->bump('comment_search');
         return $response->withHeader('Location', admin_url('/comments'))->withStatus(302);
     }
@@ -186,6 +193,7 @@ final class CommentController
 
             if ($action === 'delete') {
                 $this->comments->delete($id);
+                $this->pageCacheInvalidator?->forComment($comment->getEntityType(), (int) $comment->getEntityId());
                 $count++;
             } elseif (in_array($action, ['approve', 'spam', 'unapprove'], true)) {
                 $wasAlreadyApproved = $comment->isApproved();
@@ -195,6 +203,7 @@ final class CommentController
                     'unapprove'  => $comment->setStatus('pending'),
                 };
                 $this->comments->save($comment);
+                $this->pageCacheInvalidator?->forComment($comment->getEntityType(), (int) $comment->getEntityId());
 
                 if ($action === 'approve' && !$wasAlreadyApproved && $comment->getParentId()) {
                     $this->notifications->sendReplyNotification($comment);
@@ -257,6 +266,7 @@ final class CommentController
         $comment->setNotifyReplies(($body['notify_replies'] ?? '0') === '1');
 
         $this->comments->save($comment);
+        $this->pageCacheInvalidator?->forComment($comment->getEntityType(), (int) $comment->getEntityId());
         $this->searchCache->bump('comment_search');
 
         // Notify parent author if this was just approved and is a reply
