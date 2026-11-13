@@ -13,6 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use ValeApp\App\Commands\Concerns\BackfillsMediaVariants;
 use ValeApp\App\Commands\Concerns\FlushesPageCache;
+use ValeApp\Application\Media\MediaOwnerResolver;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Infrastructure\Auth\PasswordHasher;
 use ValeApp\Infrastructure\Cache\PageCache;
@@ -39,6 +40,8 @@ final class ImportGhostCommand extends Command
     /** @var array<string, array{id: int, path: string}> normalized URL => media row */
     private array $mediaMap = [];
 
+    private ?MediaOwnerResolver $mediaOwner = null;
+
     public function __construct(
         private readonly Connection $valeDb,
         private readonly PasswordHasher $hasher,
@@ -46,6 +49,15 @@ final class ImportGhostCommand extends Command
         private readonly ?PageCache $pageCache = null,
     ) {
         parent::__construct();
+    }
+
+    /**
+     * Owner for imported media rows — `media.user_id` is a NOT NULL FK to
+     * `users`, so the id must be resolved instead of hard-coded.
+     */
+    private function mediaOwner(): MediaOwnerResolver
+    {
+        return $this->mediaOwner ??= new MediaOwnerResolver($this->valeDb);
     }
 
     protected function configure(): void
@@ -306,8 +318,13 @@ final class ImportGhostCommand extends Command
             return ['id' => 0, 'path' => $relativePath];
         }
 
+        $mediaUserId = $this->mediaOwner()->resolve();
+        if ($mediaUserId === null) {
+            return null;
+        }
+
         $this->valeDb->insert(VL_DB_PREFIX . 'media', [
-            'user_id'       => (int) ($this->valeDb->fetchOne('SELECT id FROM ' . VL_DB_PREFIX . 'users ORDER BY id ASC LIMIT 1') ?: 1),
+            'user_id'       => $mediaUserId,
             'filename'      => $filename,
             'original_name' => $filename,
             'mime_type'     => $mime,

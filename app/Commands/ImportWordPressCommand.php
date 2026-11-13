@@ -16,6 +16,7 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use ValeApp\App\Commands\Concerns\BackfillsMediaVariants;
 use ValeApp\App\Commands\Concerns\FlushesPageCache;
+use ValeApp\Application\Media\MediaOwnerResolver;
 use ValeApp\Domain\Content\RoutingPrefixTypes;
 use ValeApp\Domain\Content\RoutingValidator;
 use ValeApp\Domain\Shared\Exception\DomainException;
@@ -51,6 +52,8 @@ final class ImportWordPressCommand extends Command
 
     private SymfonyStyle $io;
     private ?Connection $wpDb = null;
+
+    private ?MediaOwnerResolver $mediaOwner = null;
     private string $wpPrefix;
     private bool $dryRun                 = false;
     private bool $downloadMedia          = false;
@@ -876,8 +879,15 @@ final class ImportWordPressCommand extends Command
                 }
             }
 
+            $mediaUserId = $this->mediaOwner()->resolveMapped($this->userMap[$media['post_author']] ?? null);
+            if ($mediaUserId === null) {
+                $this->io->warning("\nSkipped media {$originalName}: no user account to own the imported file.");
+                $progressBar->advance();
+                continue;
+            }
+
             $this->valeDb->insert(VL_DB_PREFIX . 'media', [
-                'user_id'       => $this->userMap[$media['post_author']] ?? 1,
+                'user_id'       => $mediaUserId,
                 'filename'      => basename($relativePath),
                 'original_name' => $originalName,
                 'mime_type'     => $mimeType,
@@ -1599,6 +1609,15 @@ final class ImportWordPressCommand extends Command
     }
 
     /**
+     * Owner for imported media rows — `media.user_id` is a NOT NULL FK to
+     * `users`, so the id must be resolved instead of hard-coded.
+     */
+    private function mediaOwner(): MediaOwnerResolver
+    {
+        return $this->mediaOwner ??= new MediaOwnerResolver($this->valeDb);
+    }
+
+    /**
      * Import a download file into Vale's media library. Returns the media id, or
      * null when the file could not be downloaded/validated.
      */
@@ -1641,8 +1660,13 @@ final class ImportWordPressCommand extends Command
             return (int) $existing;
         }
 
+        $userId = $this->mediaOwner()->resolve();
+        if ($userId === null) {
+            return null;
+        }
+
         $this->valeDb->insert(VL_DB_PREFIX . 'media', [
-            'user_id'       => 1,
+            'user_id'       => $userId,
             'filename'      => basename($relativePath),
             'original_name' => $name !== '' ? $name : basename($relativePath),
             'mime_type'     => $mimeType,
@@ -3808,8 +3832,16 @@ final class ImportWordPressCommand extends Command
                     }
                 }
 
+                $mediaUserId = $this->mediaOwner()->resolve();
+                if ($mediaUserId === null) {
+                    $this->io->warning("Skipped attachment {$title}: no user account to own the imported file.");
+                    $this->mediaMap[$postId] = 0;
+                    $progressBar->advance();
+                    continue;
+                }
+
                 $this->valeDb->insert(VL_DB_PREFIX . 'media', [
-                    'user_id'       => 1,
+                    'user_id'       => $mediaUserId,
                     'original_name' => $title,
                     'filename'      => basename($localPath),
                     'path'          => $localPath,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ValeApp\Application\Shop;
 
 use Doctrine\DBAL\Connection;
+use ValeApp\Application\Media\MediaOwnerResolver;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Infrastructure\Content\SlugService;
 use ValeApp\Infrastructure\Media\ImageProcessor;
@@ -14,12 +15,20 @@ final class ProductImporter
 {
     private array $downloadedImages = [];
 
+    /** @var list<string> Media problems collected during the run (reported, never swallowed). */
+    private array $mediaErrors = [];
+
+    /** Owner of imported media rows (media.user_id is a NOT NULL FK). */
+    private readonly MediaOwnerResolver $mediaOwner;
+
     public function __construct(
         private readonly Connection $db,
         private readonly SlugService $slugService,
         private readonly ImageProcessor $imageProcessor,
         private readonly array $mediaConfig = [],
+        ?MediaOwnerResolver $mediaOwner = null,
     ) {
+        $this->mediaOwner = $mediaOwner ?? new MediaOwnerResolver($db);
     }
 
     /**
@@ -585,9 +594,15 @@ final class ProductImporter
         $size       = filesize($destPath);
         $thumbnails = $this->generateThumbnailsForFile($destPath, $subDir);
 
+        $userId = $this->mediaOwner->resolve();
+        if ($userId === null) {
+            $this->mediaErrors[] = 'No user account found to own imported media — create an admin user and re-run the import.';
+            return null;
+        }
+
         try {
             $this->db->insert(VL_DB_PREFIX . 'media', [
-                'user_id'       => 1, // Default admin user ID
+                'user_id'       => $userId,
                 'filename'      => $filename,
                 'original_name' => basename($url),
                 'mime_type'     => $mimeType,
@@ -601,9 +616,30 @@ final class ProductImporter
             $mediaId                      = (int) $this->db->lastInsertId();
             $this->downloadedImages[$url] = $mediaId;
             return $mediaId;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            $this->mediaErrors[] = sprintf(
+                'Downloaded image "%s" could not be added to the media library: %s',
+                $filename,
+                $e->getMessage()
+            );
             return null;
         }
+    }
+
+    /**
+     * Adds media problems collected during the run to an import result
+     * so the console report can surface them instead of dropping them.
+     *
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function withMediaErrors(array $result): array
+    {
+        if ($this->mediaErrors !== []) {
+            $result['errors'] = array_merge($result['errors'] ?? [], $this->mediaErrors);
+        }
+
+        return $result;
     }
 
     /**
@@ -732,6 +768,8 @@ final class ProductImporter
     /** @param array<string, mixed> $result */
     private function finishDryRun(bool $dryRun, array $result): array
     {
+        $result = $this->withMediaErrors($result);
+
         if ($dryRun) {
             if ($this->db->isTransactionActive()) {
                 $this->db->rollBack();
@@ -1198,9 +1236,9 @@ final class ProductImporter
     {
         $slots = [];
         foreach (array_keys($row) as $key) {
-            $key = (string) $key;
+            $key     = (string) $key;
             $matched = preg_match('/^(?:variationstyp|variation type)\s*(\d+)$/', $key, $matches) === 1
-                || preg_match('/^variation\s+(\d+)\s+(?:type|typ)$/', $key, $matches) === 1;
+                || preg_match('/^variation\s+(\d+)\s+(?:type|typ)$/', $key, $matches)             === 1;
             if ($matched) {
                 $slots[] = (int) $matches[1];
             }
@@ -1877,7 +1915,7 @@ final class ProductImporter
                 'imported' => $imported,
                 'variants' => $variants,
                 'skipped'  => $skipped,
-                'errors'   => array_merge($errors, [$e->getMessage()]),
+                'errors'   => array_merge($this->mediaErrors, $errors, [$e->getMessage()]),
             ];
         }
     }

@@ -10,10 +10,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use ValeApp\Application\Media\MediaOwnerResolver;
 use ValeApp\Infrastructure\Media\MediaScanService;
 
 final class MediaScanCommand extends Command
 {
+    private ?MediaOwnerResolver $mediaOwner = null;
+
     public function __construct(
         private readonly MediaScanService $scanService,
         private readonly Connection $db,
@@ -56,9 +59,9 @@ final class MediaScanCommand extends Command
         if ($userId !== null) {
             $userId = (int) $userId;
         } else {
-            $userId = $this->resolveFallbackUserId($io);
+            $userId = $this->mediaOwner()->resolve();
             if ($userId === null) {
-                $io->error('No admin user found. Create one first with: php vale user:create');
+                $io->error('No user found to own scanned media. Create one first with: php vale user:create');
                 return Command::FAILURE;
             }
         }
@@ -105,28 +108,12 @@ final class MediaScanCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function resolveFallbackUserId(SymfonyStyle $io): ?int
+    /**
+     * Owner for scanned media rows — `media.user_id` is a NOT NULL FK to
+     * `users`, so the id must be resolved instead of hard-coded.
+     */
+    private function mediaOwner(): MediaOwnerResolver
     {
-        $prefix = VL_DB_PREFIX;
-
-        // Try to find a super_admin or admin user via roles pivot table
-        $rows = $this->db->fetchAllAssociative(
-            "SELECT u.id FROM {$prefix}users u
-             INNER JOIN {$prefix}user_roles ur ON ur.user_id = u.id
-             INNER JOIN {$prefix}roles r ON r.id = ur.role_id
-             WHERE r.slug IN ('super_admin', 'admin')
-             ORDER BY u.id ASC LIMIT 1",
-        );
-
-        if (!empty($rows)) {
-            return (int) $rows[0]['id'];
-        }
-
-        // Fallback: first user in the system
-        $rows = $this->db->fetchAllAssociative(
-            "SELECT id FROM {$prefix}users ORDER BY id ASC LIMIT 1",
-        );
-
-        return !empty($rows) ? (int) $rows[0]['id'] : null;
+        return $this->mediaOwner ??= new MediaOwnerResolver($this->db);
     }
 }
