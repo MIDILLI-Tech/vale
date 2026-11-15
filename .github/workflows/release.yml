@@ -62,6 +62,7 @@ jobs:
         with:
           files: |
             dist/vale-*.zip
+            dist/vale.zip
             dist/manifest-*.json
             dist/manifest.json
           body_path: dist/changelog-${{ env.VERSION }}.md

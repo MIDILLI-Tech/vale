@@ -40,6 +40,13 @@ jobs:
       - name: Run JS syntax check
         run: composer lint:js
 
+      # Fails fast with a clear check name: every named /api/v1 route must have
+      # an operation in resources/api/openapi.json (same path, method and
+      # operationId, matching x-vale-abilities). Adding an endpoint without
+      # updating the spec breaks this, before the full suite runs.
+      - name: OpenAPI contract
+        run: php vendor/bin/phpunit tests/Unit/Api
+
       - name: Run PHPUnit
         run: php vendor/bin/phpunit --display-deprecations --display-notices --fail-on-deprecation --fail-on-notice
         env:

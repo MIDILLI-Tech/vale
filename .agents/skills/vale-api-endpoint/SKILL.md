@@ -5,6 +5,7 @@ license: AGPL-3.0
 metadata:
   project: vale/vale
   reference: vale-docs/en/latest/developer/api.md
+  api_spec: resources/api/openapi.json (served at GET /api/v1/openapi.json)
 ---
 
 # Add a REST API v1 Endpoint
@@ -109,6 +110,7 @@ return $this->json($response->withStatus(422), [
 ```
 
 - **List status filters** — `?status=` on content/shop list endpoints goes through `ApiStatusFilter::parse($params['status'] ?? null, self::STATUSES)` (`app/Controllers/Api/ApiStatusFilter.php`): it accepts one status, a comma-separated combination, or `all` (every allowed status except `trash`), defaults to `published`, throws `ValidationException` (→ `422`) for unknown values, and the applied filter is echoed as `meta.status`. Never hand the raw query value to the repository — a `draft,published` string silently matches nothing. Listing anything beyond `published` / `unlisted` (including `all`) is gated on the endpoint's own write ability — `ApiStatusFilter::tokenHasAbility($request->getAttribute('api_abilities', ''), 'write:x')` → `403` — so a read-only token only reaches publicly readable content. The single-item endpoints use the same rule through `ApiStatusFilter::isPubliclyReadable()`: `show()` / `pageShow()` answer `published` / `unlisted` for any token, other statuses only with the write ability (`404` otherwise, `trash` never). Live examples: `PostApiController::index` / `pageIndex` / `show` / `pageShow`, `ProductApiController::index`.
+- **OpenAPI spec** — every route must also be described in `resources/api/openapi.json`, served at `GET /api/v1/openapi.json`: one operation per route, `operationId` equal to the Slim route name (`api.coupons.index`), schemas under `components.schemas`, the ability the route enforces in `x-vale-abilities`, and `security: []` (with an empty `x-vale-abilities`) for public routes. `tests/Unit/Api/OpenApiSpecTest.php` fails on a missing or an extra operation, so run `vendor/bin/phpunit tests/Unit/Api` after adding an endpoint. The file ships in the release ZIP and in the agent packs.
 - Creating/updating/deleting resources that have webhook events should fire them via `OutboundWebhookService::dispatch('coupon.created', [...])` — see vale-webhook skill.
 - Sub-resource "note"-style endpoints (e.g. `POST /api/v1/orders/{id}/notes` in `OrderApiController`) write through an existing log repository (`OrderLogRepositoryInterface::add(...)`) with `added_by = 'API'` — no migration needed; the note appears in the admin detail timeline. This is also the standard write-back path for webhook receivers (see vale-webhook, vale-integrate). `GET`/`DELETE` note variants (`OrderApiController::notes` / `destroyNote`, the latter restricted to `type=note` rows) complete that sub-resource.
 - When an API operation mirrors an admin workflow with heavy side effects (order status changes: stock, coupons, subscriptions, mail), **extract the admin logic into an Application use case first** and have both the admin controller and the API controller call it — `ChangeOrderStatusUseCase` / `UpdateOrderTrackingUseCase` in `src/Application/Shop/` are the reference pattern. Never reimplement the side-effect chain in the API layer.
@@ -167,7 +169,8 @@ Expect `{data: [...], meta: {...}}`; without token expect 401; wrong ability exp
 - [ ] Routes registered with correct ability strings + both middlewares
 - [ ] Rate-limit group middleware untouched
 - [ ] New repository wired in DI (if applicable)
-- [ ] Tests added and green
+- [ ] Tests added and green (`vendor/bin/phpunit tests/Unit/Api` covers the OpenAPI drift test)
+- [ ] OpenAPI: operation added to `resources/api/openapi.json` with `operationId` = route name and `x-vale-abilities`
 - [ ] resources\views\admin\api-tokens user side text ability etc. updated
 - [ ] resources\views\admin\webhooks user side text ability etc. updated
 - [ ] Docs: update `vale-docs/en/latest/developer/api.md` endpoint list (only `en/latest`, not versioned snapshots)

@@ -11,6 +11,7 @@ use Slim\Routing\RouteCollectorProxy;
 use ValeApp\App\Controllers\Api\FeedController;
 use ValeApp\App\Controllers\Api\HealthController;
 use ValeApp\App\Controllers\Api\MediaApiController;
+use ValeApp\App\Controllers\Api\OpenApiController;
 use ValeApp\App\Controllers\Api\OrderApiController;
 use ValeApp\App\Controllers\Api\PostApiController;
 use ValeApp\App\Controllers\Api\ProductApiController;
@@ -26,6 +27,9 @@ return function (App $app): void {
         // proof (used by the Docker HEALTHCHECK); ?deep=1 adds DB + storage
         // verification with per-IP throttling for external monitors.
         $group->get('/health', [HealthController::class, 'index'])->setName('api.health');
+
+        // Machine-readable contract — public, mirrors resources/api/openapi.json.
+        $group->get('/openapi.json', [OpenApiController::class, 'index'])->setName('api.openapi');
 
         // ── Posts & Pages ─────────────────────────────────────────────
         $group->get('/posts', [PostApiController::class, 'index'])

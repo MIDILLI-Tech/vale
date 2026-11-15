@@ -238,6 +238,8 @@ External systems call Vale's `/api/v1/*` endpoints using a **Bearer Token**.
 
 Abilities follow the `verb:resource` convention (`read:orders`, not `orders:read`). The full endpoint→ability reference lives in `vale-docs/en/latest/developer/api.md`.
 
+**Machine-readable spec.** `GET /api/v1/openapi.json` returns the OpenAPI 3.1 document for every endpoint — public, no token needed. Use it to generate a client, import into Postman, or drive an MCP server / AI agent instead of hand-copying the table above; each operation declares its ability in `x-vale-abilities`. The `vale-integration-skills-*.zip` and `vale-agents-*.zip` release assets bundle the same file as `resources/api/openapi.json` for offline use.
+
 **Order write paths.** Orders are normally created by checkout and read with `read:orders`; notes are the standard write-back path for webhook receivers (`order.paid` → external fulfillment → note on the order). On top of that, two write operations mirror the admin panel:
 - `POST /api/v1/orders` creates a **manual/offline order** (admin *Create Order* parity): prices for `product_id`/`sku`-referenced items are resolved server-side, the total is computed server-side (`subtotal + shipping − discount`), and `payment_method` accepts offline methods only (`cash`, `manual`, `banktransfer`).
 - `PUT /api/v1/orders/{id}` runs the full admin status side-effect chain (paid_at, coupon usage sync, download revocation, `order.paid` / `order.reversed` / `order.shipped` events) plus `carrier`/`tracking_number`/`customer_note`/`note`. Amounts and addresses are protected and rejected with `422`.

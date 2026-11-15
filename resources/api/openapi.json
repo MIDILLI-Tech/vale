@@ -1,0 +1,1918 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vale REST API",
+    "version": "1.0.0",
+    "summary": "JSON REST API for Vale CMS content, shop, orders, media and newsletter data.",
+    "description": "All operations live under `/api/v1` and use Bearer token authentication, except the operations marked with an empty `security` list (health, this specification and the marketplace feeds).\n\nTokens are created in **Admin → Settings → Advanced → API Tokens** and carry a comma-separated list of abilities, or `*` for everything. Abilities follow the `verb:resource` convention (`read:posts`, `write:products`, `delete:subscribers`).\n\nThe ability an operation needs is declared in the `x-vale-abilities` extension. An empty array means any valid token is enough (`security` still applies); an empty `security` array means the operation is public.\n\nUnpublished content (`draft`, `scheduled`, `expired`, `archived`, `trash` and the `all` list filter) additionally requires the endpoint's write ability, so a read-only token only ever sees publicly readable content.\n\nThis document is the source of truth for tooling (MCP servers, client generators, Postman). `tests/Unit/Api/OpenApiSpecTest.php` fails whenever `routes/api.php` and this file drift apart.",
+    "license": {
+      "name": "AGPL-3.0-or-later",
+      "url": "https://www.gnu.org/licenses/agpl-3.0.html"
+    },
+    "contact": {
+      "name": "Vale",
+      "url": "https://github.com/MIDILLI-Tech/vale"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current installation. Prefix the paths below with your site URL (and with APP_BASE_PATH when Vale runs in a subdirectory)."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "System", "description": "Health, specification and public data feeds." },
+    { "name": "Content", "description": "Blog posts and pages." },
+    { "name": "Products", "description": "Shop catalog, categories and product feeds." },
+    { "name": "Orders", "description": "Orders and their note timeline." },
+    { "name": "Media", "description": "Media library." },
+    { "name": "Subscribers", "description": "Newsletter subscribers." }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "api.health",
+        "tags": ["System"],
+        "summary": "Liveness / readiness probe",
+        "description": "Plain mode is a static liveness proof and never touches the database. `deep=1` additionally verifies the database, `storage/` and `storage/cache/` and answers `503` with `status: degraded` when something is wrong. Deep mode is rate limited per IP (30 requests per 60 seconds) and returns `429` when exhausted.",
+        "security": [],
+        "x-vale-abilities": [],
+        "parameters": [
+          {
+            "name": "deep",
+            "in": "query",
+            "required": false,
+            "description": "`1`, `true` or `yes` enables the deep check.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is up.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" }
+              }
+            }
+          },
+          "429": { "description": "Deep-check rate limit exhausted (`Retry-After` set)." },
+          "503": {
+            "description": "Deep check failed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Health" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "operationId": "api.openapi",
+        "tags": ["System"],
+        "summary": "This OpenAPI document",
+        "description": "Serves the specification used to generate clients, MCP tool definitions and API documentation. Public — no token required.",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts": {
+      "get": {
+        "operationId": "api.posts.index",
+        "tags": ["Content"],
+        "summary": "List posts",
+        "x-vale-abilities": ["read:posts"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/ContentStatusFilter" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated posts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Post" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "post": {
+        "operationId": "api.posts.store",
+        "tags": ["Content"],
+        "summary": "Create a post",
+        "description": "Fires `post.created` and, when the result is published, `post.published`.",
+        "x-vale-abilities": ["write:posts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContentWrite" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/posts/{slug}": {
+      "get": {
+        "operationId": "api.posts.show",
+        "tags": ["Content"],
+        "summary": "Get a post by slug",
+        "description": "Published and unlisted posts are returned for any token. Other statuses are returned only when the token also holds `write:posts`; trashed posts always answer `404`, so a read-only token cannot detect an unpublished post.",
+        "x-vale-abilities": ["read:posts"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The post.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Post" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/posts/{id}": {
+      "put": {
+        "operationId": "api.posts.update",
+        "tags": ["Content"],
+        "summary": "Update a post",
+        "description": "Partial payloads are supported: omitted fields keep their stored value. Fires `post.updated` (and `post.published` when the result is published).",
+        "x-vale-abilities": ["write:posts"],
+        "parameters": [{ "$ref": "#/components/parameters/ContentId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContentWrite" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "delete": {
+        "operationId": "api.posts.destroy",
+        "tags": ["Content"],
+        "summary": "Delete a post",
+        "description": "Permanently deletes the record and fires `post.deleted`.",
+        "x-vale-abilities": ["delete:posts"],
+        "parameters": [{ "$ref": "#/components/parameters/ContentId" }],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Message" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/pages": {
+      "get": {
+        "operationId": "api.pages.index",
+        "tags": ["Content"],
+        "summary": "List pages",
+        "x-vale-abilities": ["read:pages"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/ContentStatusFilter" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated pages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Page" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "post": {
+        "operationId": "api.pages.store",
+        "tags": ["Content"],
+        "summary": "Create a page",
+        "x-vale-abilities": ["write:pages"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContentWrite" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Page created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/pages/{slug}": {
+      "get": {
+        "operationId": "api.pages.show",
+        "tags": ["Content"],
+        "summary": "Get a page by slug",
+        "description": "Unpublished statuses follow the same rule as posts: the page is returned to a token holding `write:pages`, otherwise `404` (trashed pages are never returned).",
+        "x-vale-abilities": ["read:pages"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Page" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/pages/{id}": {
+      "put": {
+        "operationId": "api.pages.update",
+        "tags": ["Content"],
+        "summary": "Update a page",
+        "x-vale-abilities": ["write:pages"],
+        "parameters": [{ "$ref": "#/components/parameters/ContentId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ContentWrite" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Page updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ContentWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "delete": {
+        "operationId": "api.pages.destroy",
+        "tags": ["Content"],
+        "summary": "Delete a page",
+        "x-vale-abilities": ["delete:pages"],
+        "parameters": [{ "$ref": "#/components/parameters/ContentId" }],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Message" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "operationId": "api.products.index",
+        "tags": ["Products"],
+        "summary": "List products",
+        "x-vale-abilities": ["read:products"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          { "$ref": "#/components/parameters/ProductStatusFilter" },
+          {
+            "name": "sku",
+            "in": "query",
+            "required": false,
+            "description": "Exact SKU match.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Case-insensitive match on name and SKU.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["simple", "variable", "digital"] }
+          },
+          {
+            "name": "on_sale",
+            "in": "query",
+            "required": false,
+            "description": "`1` restricts the result to products inside an active sale window.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Product" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "post": {
+        "operationId": "api.products.store",
+        "tags": ["Products"],
+        "summary": "Create a product",
+        "description": "`name` is required; duplicate SKUs are rejected with `422`. Image values (featured image, gallery, variation image, download files) are imported into the media library and a provided-but-unimportable value fails with `422`. Fires `product.created`.",
+        "x-vale-abilities": ["write:products"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductWrite" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/products/id/{id}": {
+      "get": {
+        "operationId": "api.products.showById",
+        "tags": ["Products"],
+        "summary": "Get a product by numeric ID",
+        "description": "Use this to resolve an `order.items[].product_id` back to the product.",
+        "x-vale-abilities": ["read:products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Product" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/products/{slug}": {
+      "get": {
+        "operationId": "api.products.show",
+        "tags": ["Products"],
+        "summary": "Get a product by slug",
+        "x-vale-abilities": ["read:products"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The product.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Product" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/products/{id}": {
+      "put": {
+        "operationId": "api.products.update",
+        "tags": ["Products"],
+        "summary": "Update a product",
+        "description": "Partial payloads are supported. Fires `product.updated`.",
+        "x-vale-abilities": ["write:products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductWrite" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductWriteResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      },
+      "delete": {
+        "operationId": "api.products.destroy",
+        "tags": ["Products"],
+        "summary": "Delete a product",
+        "description": "Fires `product.deleted`.",
+        "x-vale-abilities": ["delete:products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Message" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/products/categories": {
+      "post": {
+        "operationId": "api.products.categories.store",
+        "tags": ["Products"],
+        "summary": "Create a product category",
+        "description": "Returns the existing category (status `200`) when the slug is already taken.",
+        "x-vale-abilities": ["write:products"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "parent_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category already existed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductCategoryResponse" }
+              }
+            }
+          },
+          "201": {
+            "description": "Category created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProductCategoryResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/orders": {
+      "get": {
+        "operationId": "api.orders.index",
+        "tags": ["Orders"],
+        "summary": "List orders",
+        "x-vale-abilities": ["read:orders"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "$ref": "#/components/schemas/OrderStatus" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Order number, billing name/email or coupon code.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "description": "Creation date, `Y-m-d`.",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "Creation date, `Y-m-d`.",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "updated_since",
+            "in": "query",
+            "required": false,
+            "description": "Date or datetime — use for incremental sync.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "coupon_code",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "description": "Only orders containing this product.",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "api.orders.store",
+        "tags": ["Orders"],
+        "summary": "Create a manual (offline) order",
+        "description": "Mirrors the admin *Create Order* screen. Catalog prices are resolved server-side and the total is always computed as `subtotal + shipping - discount`; it is never taken from the payload. Only offline payment methods are accepted. Creating the order in a paid status sets `paid_at`, fires `order.paid` and applies the same subscriber tagging as the admin panel.",
+        "x-vale-abilities": ["write:orders"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrderCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "operationId": "api.orders.show",
+        "tags": ["Orders"],
+        "summary": "Get an order",
+        "description": "Returns the safe subset: status, totals, payment method, timestamps, customer e-mail and line items. Billing address and payment tokens are never exposed.",
+        "x-vale-abilities": ["read:orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Order" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "operationId": "api.orders.update",
+        "tags": ["Orders"],
+        "summary": "Update an order",
+        "description": "Status transitions run the full admin side-effect chain (paid_at bookkeeping, coupon usage, download revocation, `order.status_changed` / `order.paid` / `order.reversed` / `order.shipped` events, subscriber tagging, subscription cancellation). Financial and address fields are protected and rejected with `422`.",
+        "x-vale-abilities": ["write:orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OrderUpdate" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/Order" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/orders/{id}/notes": {
+      "get": {
+        "operationId": "api.orders.notes.index",
+        "tags": ["Orders"],
+        "summary": "List order notes",
+        "description": "Only `type=note` timeline entries are returned (system/event log rows are excluded).",
+        "x-vale-abilities": ["read:orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order's notes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/OrderNote" } },
+                    "meta": {
+                      "type": "object",
+                      "properties": { "total": { "type": "integer" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "operationId": "api.orders.notes.store",
+        "tags": ["Orders"],
+        "summary": "Add an order note",
+        "description": "The note appears in the admin order detail timeline with `added_by = API`. Maximum length is 5000 characters; a whitespace-only note is rejected.",
+        "x-vale-abilities": ["write:orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["note"],
+                "properties": {
+                  "note": { "type": "string", "maxLength": 5000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Note added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "order_id": { "type": "integer" },
+                        "note": { "type": "string" },
+                        "added_by": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/api/v1/orders/{id}/notes/{noteId}": {
+      "delete": {
+        "operationId": "api.orders.notes.destroy",
+        "tags": ["Orders"],
+        "summary": "Delete an order note",
+        "description": "Only `type=note` entries can be deleted; system rows answer `404`.",
+        "x-vale-abilities": ["write:orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "noteId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Note deleted (no body)." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/media": {
+      "get": {
+        "operationId": "api.media.index",
+        "tags": ["Media"],
+        "summary": "List media files",
+        "x-vale-abilities": ["read:media"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated media files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Media" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "api.media.store",
+        "tags": ["Media"],
+        "summary": "Import or upload media",
+        "description": "Accepts a JSON body with `url` (downloaded, private/internal hosts blocked), a JSON body with `base64` (+ optional `name`), or a multipart request with one or more files in `files[]`. Admin upload limits and the mime whitelist apply.",
+        "x-vale-abilities": ["write:media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "base64": { "type": "string", "description": "Data URI or bare base64 payload." },
+                  "name": { "type": "string" }
+                }
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Media imported.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "data": {
+                      "oneOf": [
+                        { "$ref": "#/components/schemas/Media" },
+                        { "type": "array", "items": { "$ref": "#/components/schemas/Media" } }
+                      ]
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": { "type": "object" },
+                      "description": "Per-file failures for multipart batches."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    },
+    "/api/v1/media/{id}": {
+      "delete": {
+        "operationId": "api.media.destroy",
+        "tags": ["Media"],
+        "summary": "Delete a media file",
+        "x-vale-abilities": ["delete:media"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Message" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/subscribers": {
+      "get": {
+        "operationId": "api.subscribers.index",
+        "tags": ["Subscribers"],
+        "summary": "List newsletter subscribers",
+        "x-vale-abilities": ["read:subscribers"],
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PerPage" },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["pending", "active", "confirmed", "unsubscribed"] }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "E-mail / name search.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated subscribers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Subscriber" } },
+                    "meta": { "$ref": "#/components/schemas/ListMeta" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "operationId": "api.subscribers.store",
+        "tags": ["Subscribers"],
+        "summary": "Create a subscriber",
+        "description": "New subscribers are created in `pending` status (double opt-in). Set `skip_optin: true` to create them as `active` without the opt-in e-mail. Fires `subscriber.created`.",
+        "x-vale-abilities": ["write:subscribers"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SubscriberWrite" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Subscriber created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Subscriber" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    },
+    "/api/v1/subscribers/{id}": {
+      "get": {
+        "operationId": "api.subscribers.show",
+        "tags": ["Subscribers"],
+        "summary": "Get a subscriber",
+        "x-vale-abilities": ["read:subscribers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscriber.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Subscriber" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "operationId": "api.subscribers.update",
+        "tags": ["Subscribers"],
+        "summary": "Update a subscriber",
+        "description": "Partial payloads are supported. Setting `status` to `active` confirms the subscription.",
+        "x-vale-abilities": ["write:subscribers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SubscriberWrite" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscriber updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "data": { "$ref": "#/components/schemas/Subscriber" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      },
+      "delete": {
+        "operationId": "api.subscribers.destroy",
+        "tags": ["Subscribers"],
+        "summary": "Delete a subscriber",
+        "x-vale-abilities": ["delete:subscribers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscriber deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Message" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/feed/google-merchant": {
+      "get": {
+        "operationId": "api.feed.google-merchant",
+        "tags": ["System", "Products"],
+        "summary": "Google Merchant Center feed (XML)",
+        "description": "Public when the feed is enabled in the shop settings; answers `404` when the shop is switched off.",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "XML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/bing": {
+      "get": {
+        "operationId": "api.feed.bing",
+        "tags": ["System", "Products"],
+        "summary": "Bing Shopping feed (XML)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "XML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/meta": {
+      "get": {
+        "operationId": "api.feed.meta",
+        "tags": ["System", "Products"],
+        "summary": "Meta (Facebook/Instagram) catalog feed (XML)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "XML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/pinterest": {
+      "get": {
+        "operationId": "api.feed.pinterest",
+        "tags": ["System", "Products"],
+        "summary": "Pinterest catalog feed (XML)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "XML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/idealo": {
+      "get": {
+        "operationId": "api.feed.idealo",
+        "tags": ["System", "Products"],
+        "summary": "Idealo price-comparison feed (CSV)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "CSV feed." }
+        }
+      }
+    },
+    "/api/v1/feed/shopify": {
+      "get": {
+        "operationId": "api.feed.shopify",
+        "tags": ["System", "Products"],
+        "summary": "Shopify-compatible product export (CSV)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "CSV feed." }
+        }
+      }
+    },
+    "/api/v1/feed/tiktok": {
+      "get": {
+        "operationId": "api.feed.tiktok",
+        "tags": ["System", "Products"],
+        "summary": "TikTok Shop feed (XML)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "XML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/yandex-market": {
+      "get": {
+        "operationId": "api.feed.yandex-market",
+        "tags": ["System", "Products"],
+        "summary": "Yandex Market YML feed (XML)",
+        "security": [],
+        "x-vale-abilities": [],
+        "responses": {
+          "200": { "description": "YML feed." }
+        }
+      }
+    },
+    "/api/v1/feed/google-taxonomy": {
+      "get": {
+        "operationId": "api.feed.google-taxonomy",
+        "tags": ["System", "Products"],
+        "summary": "Google Merchant Center taxonomy tree",
+        "description": "Used by the admin GMC category picker. Requires a valid token but no specific ability.",
+        "x-vale-abilities": [],
+        "responses": {
+          "200": {
+            "description": "Taxonomy tree.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API token created in Admin → Settings → Advanced → API Tokens. Send it as `Authorization: Bearer <token>`; tokens are stored as SHA-256 hashes and may carry an expiry date."
+      }
+    },
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "1-based page number.",
+        "schema": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "PerPage": {
+        "name": "per_page",
+        "in": "query",
+        "required": false,
+        "description": "Items per page (maximum 100). Defaults to 15 for posts, pages and products, and to 30 for orders, media and subscribers.",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+      },
+      "ContentStatusFilter": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "One status, a comma-separated combination, or `all` (every status except `trash`). Defaults to `published`. Anything beyond `published` / `unlisted` (including `all`) requires the endpoint's write ability — a read-only token gets `403`. The applied filter is echoed as `meta.status`.",
+        "schema": {
+          "type": "string",
+          "default": "published",
+          "examples": ["published", "draft", "draft,scheduled", "all"]
+        }
+      },
+      "ProductStatusFilter": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "One status, a comma-separated combination, or `all` (every status except `trash`). Defaults to `published`. Anything beyond `published` / `unlisted` (including `all`) requires `write:products`.",
+        "schema": {
+          "type": "string",
+          "default": "published",
+          "examples": ["published", "draft", "unlisted", "draft,published", "all"]
+        }
+      },
+      "ContentId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, invalid or expired token.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The token lacks the required ability.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource does not exist, or its status is not readable with this token.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Payload rejected by validation.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ValidationError" }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "description": "Request rejected with a single message.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": ["error", "errors"],
+        "properties": {
+          "error": { "type": "string", "const": "Validation failed" },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        }
+      },
+      "ListMeta": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "per_page": { "type": "integer" },
+          "total_pages": { "type": "integer" },
+          "status": {
+            "type": ["string", "array"],
+            "description": "The applied status filter (`all` when every status is included).",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["ok", "degraded"] },
+          "version": { "type": "string" },
+          "timestamp": { "type": "integer", "description": "Unix timestamp." }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "slug": { "type": "string" },
+          "title": { "type": "string" },
+          "excerpt": { "type": ["string", "null"] },
+          "body": { "type": ["string", "null"], "description": "Rendered HTML." },
+          "status": { "type": "string", "enum": ["draft", "published", "unlisted", "scheduled", "expired", "archived", "trash"] },
+          "published_at": { "type": ["string", "null"], "format": "date-time" },
+          "categories": { "type": "array", "items": { "type": "integer" }, "description": "Category IDs." },
+          "tags": { "type": "array", "items": { "type": "integer" }, "description": "Tag IDs." }
+        }
+      },
+      "Page": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "slug": { "type": "string" },
+          "title": { "type": "string" },
+          "excerpt": { "type": ["string", "null"] },
+          "body": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["draft", "published", "unlisted", "scheduled", "expired", "archived", "trash"] },
+          "order": { "type": ["integer", "null"], "description": "Menu sort order." },
+          "parentId": { "type": ["integer", "null"] }
+        }
+      },
+      "ContentWrite": {
+        "type": "object",
+        "description": "All fields are optional on update; `title` is required on create.",
+        "properties": {
+          "title": { "type": "string" },
+          "slug": { "type": "string", "description": "Generated from the title when omitted." },
+          "body": { "type": "string", "description": "HTML body." },
+          "html": { "type": "string", "description": "Alias for `body`." },
+          "excerpt": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["draft", "published", "unlisted", "scheduled", "expired", "archived", "trash"] },
+          "published_at": { "type": "string", "description": "ISO-8601 or `Y-m-d H:i:s`. A future value marks the item as scheduled." },
+          "language": { "type": "string" },
+          "author_id": { "type": "integer" },
+          "featured_image": { "type": "string", "description": "Media ID, absolute https URL, or base64 data URI. Private/internal hosts are blocked." },
+          "categories": { "type": "array", "items": { "type": "integer" }, "description": "Category IDs; unknown IDs are dropped." },
+          "tags": { "type": "array", "items": { "type": "string" }, "description": "Tag names; created automatically when they do not exist." },
+          "meta_title": { "type": ["string", "null"] },
+          "meta_description": { "type": ["string", "null"] }
+        }
+      },
+      "ContentWriteResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "data": { "oneOf": [{ "$ref": "#/components/schemas/Post" }, { "$ref": "#/components/schemas/Page" }] }
+        }
+      },
+      "ProductCategory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "parent_id": { "type": ["integer", "null"] },
+          "description": { "type": ["string", "null"] }
+        }
+      },
+      "ProductCategoryResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/ProductCategory" }
+        }
+      },
+      "ProductVariation": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "sku": { "type": ["string", "null"] },
+          "price": { "type": "number" },
+          "sale_price": { "type": ["number", "null"] },
+          "sale_price_start": { "type": ["string", "null"], "format": "date-time" },
+          "sale_price_end": { "type": ["string", "null"], "format": "date-time" },
+          "stock_quantity": { "type": "integer" },
+          "stock_status": { "type": "string", "enum": ["in_stock", "out_of_stock", "on_backorder"] },
+          "image_url": { "type": ["string", "null"] },
+          "attributes": { "type": "object", "additionalProperties": { "type": "string" } },
+          "download_mode": { "type": "string" },
+          "download_url": { "type": ["string", "null"] },
+          "download_limit": { "type": "integer" },
+          "download_expiry_days": { "type": "integer" },
+          "download_files": { "type": "array", "items": { "type": "string" } },
+          "shipping_class": { "type": "string" },
+          "shipping_cost": { "type": ["number", "null"] },
+          "vat_mode": { "type": "string" },
+          "vat_rate": { "type": ["number", "null"] },
+          "refund_mode": { "type": "string" }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "slug": { "type": "string" },
+          "name": { "type": "string" },
+          "sku": { "type": ["string", "null"] },
+          "type": { "type": "string", "enum": ["simple", "variable", "digital"] },
+          "price": { "type": "number" },
+          "sale_price": { "type": ["number", "null"] },
+          "sale_price_start": { "type": ["string", "null"], "format": "date-time" },
+          "sale_price_end": { "type": ["string", "null"], "format": "date-time" },
+          "on_sale": { "type": "boolean" },
+          "effective_price": { "type": "number" },
+          "short_description": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["draft", "published", "unlisted", "scheduled", "archived", "trash"] },
+          "stock_status": { "type": "string", "enum": ["in_stock", "out_of_stock", "on_backorder"] },
+          "stock_quantity": { "type": "integer" },
+          "category_ids": { "type": "array", "items": { "type": "integer" } },
+          "upsell_ids": { "type": "array", "items": { "type": "integer" } },
+          "cross_sell_ids": { "type": "array", "items": { "type": "integer" } },
+          "featured_image_url": { "type": ["string", "null"] },
+          "gallery": { "type": "array", "items": { "type": ["string", "null"] } },
+          "variations": { "type": "array", "items": { "$ref": "#/components/schemas/ProductVariation" } },
+          "gtin": { "type": ["string", "null"] },
+          "mpn": { "type": ["string", "null"] },
+          "brand": { "type": ["string", "null"] },
+          "google_product_category": { "type": ["string", "null"] },
+          "condition": { "type": ["string", "null"] },
+          "gender": { "type": ["string", "null"] },
+          "age_group": { "type": ["string", "null"] },
+          "color": { "type": ["string", "null"] },
+          "size": { "type": ["string", "null"] },
+          "material": { "type": ["string", "null"] },
+          "pattern": { "type": ["string", "null"] },
+          "custom_label_0": { "type": ["string", "null"] },
+          "custom_label_1": { "type": ["string", "null"] },
+          "custom_label_2": { "type": ["string", "null"] },
+          "custom_label_3": { "type": ["string", "null"] },
+          "custom_label_4": { "type": ["string", "null"] },
+          "gmc_exclude": { "type": "boolean" },
+          "download_source": { "type": ["string", "null"] },
+          "download_url": { "type": ["string", "null"] },
+          "download_limit": { "type": "integer" },
+          "download_expiry_days": { "type": "integer" },
+          "download_files": { "type": "array", "items": { "type": ["string", "null"] } },
+          "meta_title": { "type": ["string", "null"] },
+          "meta_description": { "type": ["string", "null"] },
+          "comment_status": { "type": ["string", "null"] },
+          "vote_status": { "type": ["string", "null"] },
+          "total_sold": { "type": "integer" },
+          "vat_mode": { "type": ["string", "null"] },
+          "vat_rate": { "type": ["number", "null"] },
+          "refund_mode": { "type": ["string", "null"] },
+          "shipping_class": { "type": ["string", "null"] },
+          "shipping_cost": { "type": ["number", "null"] },
+          "weight": { "type": ["number", "null"] },
+          "dimensions": { "type": ["string", "null"] },
+          "shipping_country_overrides": { "type": "object" },
+          "vat_country_overrides": { "type": "object" },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "ProductWrite": {
+        "type": "object",
+        "description": "`name` is required on create. Every other field is optional; on update omitted fields keep their stored value.",
+        "properties": {
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "sku": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "published", "unlisted", "scheduled", "archived", "trash"] },
+          "type": { "type": "string", "enum": ["simple", "variable", "digital"] },
+          "description": { "type": "string" },
+          "short_description": { "type": "string" },
+          "price": { "type": "number" },
+          "sale_price": { "type": ["number", "null"] },
+          "sale_price_start": { "type": "string", "description": "ISO-8601." },
+          "sale_price_end": { "type": "string", "description": "ISO-8601." },
+          "stock_quantity": { "type": "integer" },
+          "stock_status": {
+            "type": "string",
+            "description": "Canonical values are `in_stock`, `out_of_stock`, `on_backorder`; WooCommerce spellings (`instock`, `onbackorder`, `notify`, …) are normalized.",
+            "enum": ["in_stock", "out_of_stock", "on_backorder", "instock", "outofstock", "onbackorder", "backorder", "notify"]
+          },
+          "categories": { "type": "array", "items": { "type": ["integer", "string"] }, "description": "Category IDs or slugs." },
+          "featured_image": { "type": "string", "description": "Media ID, absolute https URL, or base64 data. Unimportable values fail with `422`." },
+          "gallery": { "type": "array", "items": { "type": "string" } },
+          "variations": { "type": "array", "items": { "type": "object" } },
+          "upsell_ids": { "type": "array", "items": { "type": "integer" } },
+          "cross_sell_ids": { "type": "array", "items": { "type": "integer" } },
+          "weight": { "type": "number" },
+          "dimensions": { "type": ["string", "object"], "description": "String or `{length,width,height}`, normalized to `L x W x H`." },
+          "shipping_class": { "type": "string" },
+          "shipping_cost": { "type": ["number", "null"] },
+          "gtin": { "type": "string" },
+          "mpn": { "type": "string" },
+          "brand": { "type": "string" },
+          "google_product_category": { "type": "string" },
+          "condition": { "type": "string" },
+          "gender": { "type": "string" },
+          "age_group": { "type": "string" },
+          "color": { "type": "string" },
+          "size": { "type": "string" },
+          "material": { "type": "string" },
+          "pattern": { "type": "string" },
+          "custom_label_0": { "type": "string" },
+          "custom_label_1": { "type": "string" },
+          "custom_label_2": { "type": "string" },
+          "custom_label_3": { "type": "string" },
+          "custom_label_4": { "type": "string" },
+          "gmc_exclude": { "type": "boolean" },
+          "comment_status": { "type": "string" },
+          "vote_status": { "type": "string" },
+          "vat_mode": { "type": "string" },
+          "vat_rate": { "type": ["number", "null"] },
+          "refund_mode": { "type": "string", "enum": ["use_global", "allow", "non_refundable"] },
+          "meta_title": { "type": "string" },
+          "meta_description": { "type": "string" },
+          "download_source": { "type": "string" },
+          "download_url": { "type": "string" },
+          "download_limit": { "type": "integer" },
+          "download_expiry_days": { "type": "integer" },
+          "download_files": { "type": "array", "items": { "type": "string" } },
+          "shipping_country_overrides": { "type": "object" },
+          "vat_country_overrides": { "type": "object" }
+        }
+      },
+      "ProductWriteResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/Product" }
+        }
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processing",
+          "on-hold",
+          "shipped",
+          "completed",
+          "refund_requested",
+          "refund_rejected",
+          "refunded",
+          "cancelled"
+        ]
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": ["integer", "null"] },
+          "variation_id": { "type": ["integer", "null"] },
+          "name": { "type": "string" },
+          "sku": { "type": ["string", "null"] },
+          "quantity": { "type": "integer" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "order_number": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "currency": { "type": "string" },
+          "subtotal": { "type": "number" },
+          "total": { "type": "number" },
+          "payment_method": { "type": ["string", "null"] },
+          "paid_at": { "type": ["string", "null"], "format": "date-time" },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "customer_email": { "type": ["string", "null"] },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItem" } }
+        }
+      },
+      "OrderNote": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "note": { "type": "string" },
+          "added_by": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrderCreate": {
+        "type": "object",
+        "required": ["billing", "items"],
+        "description": "Manual/offline order. Totals are computed server-side as `subtotal + shipping - discount` and are VAT-inclusive.",
+        "properties": {
+          "billing": {
+            "type": "object",
+            "required": ["first_name", "email"],
+            "properties": {
+              "first_name": { "type": "string" },
+              "last_name": { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "phone": { "type": "string" },
+              "address_1": { "type": "string" },
+              "address_2": { "type": "string" },
+              "city": { "type": "string" },
+              "state": { "type": "string" },
+              "postcode": { "type": "string" },
+              "country": { "type": "string", "description": "ISO-3166 alpha-2, upper-cased." }
+            }
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": { "type": "integer" },
+                "sku": { "type": "string" },
+                "variation_id": { "type": "integer", "description": "Requires a product reference; unknown variations fail with `422`." },
+                "variation": {
+                  "type": "object",
+                  "additionalProperties": { "type": "string" },
+                  "description": "Overrides the stored variation attributes for this line."
+                },
+                "name": { "type": "string", "description": "Required for custom lines without a product reference." },
+                "price": { "type": "number", "description": "Required for custom lines; overrides the catalog price otherwise." },
+                "qty": { "type": "integer", "minimum": 1, "default": 1 }
+              }
+            }
+          },
+          "shipping": { "type": "number", "minimum": 0 },
+          "discount": { "type": "number", "minimum": 0 },
+          "coupon_code": { "type": "string" },
+          "currency": { "type": "string", "description": "Defaults to the shop currency." },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "payment_method": {
+            "type": "string",
+            "enum": ["cash", "manual", "banktransfer"],
+            "description": "Offline methods only; gateway-paid orders must be created by checkout."
+          },
+          "customer_note": { "type": "string" },
+          "transaction_id": { "type": "string" },
+          "note": { "type": "string", "maxLength": 5000, "description": "Added to the order timeline as an API note." },
+          "shipping_address": {
+            "type": "object",
+            "properties": {
+              "first_name": { "type": "string" },
+              "last_name": { "type": "string" },
+              "company": { "type": "string" },
+              "address_1": { "type": "string" },
+              "address_2": { "type": "string" },
+              "city": { "type": "string" },
+              "state": { "type": "string" },
+              "postcode": { "type": "string" },
+              "country": { "type": "string" },
+              "phone": { "type": "string" }
+            }
+          }
+        }
+      },
+      "OrderUpdate": {
+        "type": "object",
+        "description": "Protected fields (`subtotal`, `shipping`, `discount`, `total`, `tax`, `items`, `billing`, `shipping_address`, `currency`, `payment_method`, `user_id`) are rejected with `422`.",
+        "properties": {
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "carrier": { "type": "string" },
+          "tracking_number": { "type": "string" },
+          "notify_customer": { "type": "boolean", "description": "Sends the tracking e-mail with the shipment update." },
+          "customer_note": { "type": ["string", "null"] },
+          "note": { "type": "string", "maxLength": 5000 }
+        }
+      },
+      "Media": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "filename": { "type": "string" },
+          "original_name": { "type": "string" },
+          "mime_type": { "type": "string" },
+          "size": { "type": "integer" },
+          "url": { "type": "string" }
+        }
+      },
+      "Subscriber": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": ["string", "null"] },
+          "status": { "type": "string", "enum": ["pending", "active", "confirmed", "unsubscribed"] },
+          "tier": { "type": ["string", "null"] },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "token": { "type": ["string", "null"], "description": "Confirmation/unsubscribe token." },
+          "source_form_id": { "type": ["integer", "null"] },
+          "user_id": { "type": ["integer", "null"] },
+          "subscribed_at": { "type": ["string", "null"], "format": "date-time" },
+          "confirmed_at": { "type": ["string", "null"], "format": "date-time" },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "SubscriberWrite": {
+        "type": "object",
+        "description": "`email` is required on create.",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": ["string", "null"] },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "tier": { "type": "string", "enum": ["free", "pro", "premium"] },
+          "status": { "type": "string", "enum": ["pending", "active", "unsubscribed"] },
+          "skip_optin": { "type": "boolean", "description": "Create the subscriber as `active` and skip the opt-in e-mail." }
+        }
+      }
+    }
+  }
+}

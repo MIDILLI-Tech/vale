@@ -92,6 +92,7 @@ jobs:
           tag_name: ${{ steps.release-meta.outputs.tag }}
           files: |
             dist/vale-*.zip
+            dist/vale.zip
             dist/manifest-*.json
             dist/manifest.json
           body_path: dist/changelog-${{ steps.release-meta.outputs.version }}.md

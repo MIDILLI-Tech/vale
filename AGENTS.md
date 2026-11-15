@@ -256,6 +256,7 @@ All CLI commands are registered in the `vale` file at the project root. For the 
 ### 8.3 API Routes (`routes/api.php`)
 - Under `/api` prefix
 - API key authentication
+- Machine-readable contract: `resources/api/openapi.json`, served at `GET /api/v1/openapi.json`. Every named route needs an operation there (`operationId` = route name, `x-vale-abilities` = the ability its middleware enforces). `tests/Unit/Api/OpenApiSpecTest.php` fails on any drift — the spec is checked in, never generated at runtime
 
 ---
 

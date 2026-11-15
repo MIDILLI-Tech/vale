@@ -32,9 +32,11 @@ declare(strict_types=1);
  *   ZIP path, SHA-256, manifest JSON snippet (+ signature when key is available)
  *
  * Extra artifacts:
- *   dist/vale-agents-<version>.zip — AI agent tooling (.agents/ + AGENTS.md),
- *   built automatically when those files exist. The main release ZIP always
- *   excludes them.
+ *   dist/vale-agents-<version>.zip — AI agent tooling (.agents/ + AGENTS.md)
+ *   plus resources/api/openapi.json, built automatically when those files
+ *   exist. The main release ZIP always excludes them.
+ *   dist/vale.zip — copy of the main ZIP under a version-independent name so
+ *   .../releases/latest/download/vale.zip always resolves to the newest build.
  *   dist/vale-integration-skills-<version>.zip — the vale-integrate skill on its
  *   own, for handing the REST API / Webhook integration workflow to an external
  *   developer without the full agents pack.
@@ -455,6 +457,13 @@ foreach (['AGENTS.md', 'AGENTS.MD'] as $agentsCandidate) {
     }
 }
 
+// The API contract travels with the skills so an agent can read it offline;
+// the live copy is served at /api/v1/openapi.json.
+$openApiSpecFile = $rootDir . '/resources/api/openapi.json';
+if (file_exists($openApiSpecFile)) {
+    $agentsFiles[] = ['abs' => $openApiSpecFile, 'rel' => 'resources/api/openapi.json'];
+}
+
 $agentsZipName = "vale-agents-{$version}.zip";
 $agentsZipPath = $outputDir . '/' . $agentsZipName;
 
@@ -542,6 +551,20 @@ $zip->close();
 
 info("ZIP created: {$zipPath}");
 info("Files packed: {$fileCount}");
+info('');
+
+// ── Stable download alias ────────────────────────────────────────────────────
+// /releases/latest/download/vale.zip resolves to the newest build without the
+// caller knowing the version number.
+
+$stableZipPath = $outputDir . '/vale.zip';
+if (file_exists($stableZipPath)) {
+    unlink($stableZipPath);
+}
+if (!copy($zipPath, $stableZipPath)) {
+    err("Could not create the stable alias: {$stableZipPath}");
+}
+info("Stable alias: {$stableZipPath}");
 info('');
 
 // ── SHA-256 ──────────────────────────────────────────────────────────────────
@@ -687,6 +710,7 @@ info("────────────────────────�
 info('');
 info("Next steps:");
 info("  1. Upload {$zipName} to your release server");
+info("     - Also attach vale.zip (same file, version-independent download URL)");
 if ($agentsFiles !== []) {
     info("     - Also attach {$agentsZipName} as a release asset (AI agent skills pack)");
 }
