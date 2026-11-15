@@ -20,6 +20,12 @@ use ValeApp\Infrastructure\Media\RemoteImageImporter;
 
 final class PostApiController
 {
+    /** Statuses accepted by the ?status= listing filter. */
+    private const STATUSES = ['published', 'draft', 'scheduled', 'unlisted', 'expired', 'archived', 'trash'];
+
+    private const WRITE_ABILITY      = 'write:posts';
+    private const PAGE_WRITE_ABILITY = 'write:pages';
+
     public function __construct(
         private readonly PostRepositoryInterface $posts,
         private readonly SavePostUseCase $savePost,
@@ -36,7 +42,23 @@ final class PostApiController
         $params  = $request->getQueryParams();
         $page    = max(1, (int) ($params['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($params['per_page'] ?? 15)));
-        $filters = ['content_type' => 'post', 'status' => 'published'];
+
+        try {
+            $status = ApiStatusFilter::parse($params['status'] ?? null, self::STATUSES);
+        } catch (ValidationException $e) {
+            return $this->validationError($response, $e);
+        }
+
+        $abilities = (string) $request->getAttribute('api_abilities', '');
+        if (ApiStatusFilter::needsWriteAccess($status)
+            && !ApiStatusFilter::tokenHasAbility($abilities, self::WRITE_ABILITY)) {
+            return $this->unpublishedForbidden($response, self::WRITE_ABILITY);
+        }
+
+        $filters = ['content_type' => 'post'];
+        if ($status !== null) {
+            $filters['status'] = $status;
+        }
 
         $posts = $this->posts->findAll(new Pagination($page, $perPage), $filters);
         $total = $this->posts->count($filters);
@@ -48,6 +70,7 @@ final class PostApiController
                 'page'        => $page,
                 'per_page'    => $perPage,
                 'total_pages' => (int) ceil($total / $perPage),
+                'status'      => $status ?? 'all',
             ],
         ]);
     }
@@ -104,10 +127,7 @@ final class PostApiController
                 $post = $this->posts->save($post);
             }
         } catch (ValidationException $e) {
-            return $this->json($response->withStatus(422), [
-                'error'  => 'Validation failed',
-                'errors' => $e->getErrors(),
-            ]);
+            return $this->validationError($response, $e);
         }
 
         $isNew = $id === null;
@@ -210,7 +230,13 @@ final class PostApiController
         }
 
         $post = $this->posts->findBySlug($slug, 'post');
-        if ($post === null || $post->getStatus() !== 'published') {
+        if ($post === null || $post->getStatus() === 'trash') {
+            return $this->error($response, 404, 'Not Found');
+        }
+
+        $abilities = (string) $request->getAttribute('api_abilities', '');
+        if (!ApiStatusFilter::isPubliclyReadable($post->getStatus())
+            && !ApiStatusFilter::tokenHasAbility($abilities, self::WRITE_ABILITY)) {
             return $this->error($response, 404, 'Not Found');
         }
 
@@ -223,7 +249,23 @@ final class PostApiController
         $params  = $request->getQueryParams();
         $page    = max(1, (int) ($params['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($params['per_page'] ?? 15)));
-        $filters = ['content_type' => 'page', 'status' => 'published'];
+
+        try {
+            $status = ApiStatusFilter::parse($params['status'] ?? null, self::STATUSES);
+        } catch (ValidationException $e) {
+            return $this->validationError($response, $e);
+        }
+
+        $abilities = (string) $request->getAttribute('api_abilities', '');
+        if (ApiStatusFilter::needsWriteAccess($status)
+            && !ApiStatusFilter::tokenHasAbility($abilities, self::PAGE_WRITE_ABILITY)) {
+            return $this->unpublishedForbidden($response, self::PAGE_WRITE_ABILITY);
+        }
+
+        $filters = ['content_type' => 'page'];
+        if ($status !== null) {
+            $filters['status'] = $status;
+        }
 
         $pages = $this->posts->findAll(new Pagination($page, $perPage), $filters);
         $total = $this->posts->count($filters);
@@ -235,6 +277,7 @@ final class PostApiController
                 'page'        => $page,
                 'per_page'    => $perPage,
                 'total_pages' => (int) ceil($total / $perPage),
+                'status'      => $status ?? 'all',
             ],
         ]);
     }
@@ -249,7 +292,13 @@ final class PostApiController
         }
 
         $page = $this->posts->findBySlug($slug, 'page');
-        if ($page === null || $page->getStatus() !== 'published') {
+        if ($page === null || $page->getStatus() === 'trash') {
+            return $this->error($response, 404, 'Not Found');
+        }
+
+        $abilities = (string) $request->getAttribute('api_abilities', '');
+        if (!ApiStatusFilter::isPubliclyReadable($page->getStatus())
+            && !ApiStatusFilter::tokenHasAbility($abilities, self::PAGE_WRITE_ABILITY)) {
             return $this->error($response, 404, 'Not Found');
         }
 
@@ -257,6 +306,22 @@ final class PostApiController
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    private function validationError(ResponseInterface $response, ValidationException $e): ResponseInterface
+    {
+        return $this->json($response->withStatus(422), [
+            'error'  => 'Validation failed',
+            'errors' => $e->getErrors(),
+        ]);
+    }
+
+    private function unpublishedForbidden(ResponseInterface $response, string $ability): ResponseInterface
+    {
+        return $this->json($response->withStatus(403), [
+            'error'   => 'Forbidden',
+            'message' => 'Listing unpublished content requires the ' . $ability . ' ability.',
+        ]);
+    }
 
     /** @param array<string, mixed> $data */
     private function json(ResponseInterface $response, array $data): ResponseInterface

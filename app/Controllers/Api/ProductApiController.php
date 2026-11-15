@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use ValeApp\Domain\Media\Repository\MediaRepositoryInterface;
 use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
 use ValeApp\Domain\Shared\Exception\DomainException;
+use ValeApp\Domain\Shared\Exception\ValidationException;
 use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Domain\Shop\Entity\Product;
@@ -20,6 +21,11 @@ use ValeApp\Infrastructure\Media\RemoteImageImporter;
 
 final class ProductApiController
 {
+    /** Statuses accepted by the ?status= listing filter. */
+    private const STATUSES = ['draft', 'published', 'unlisted', 'scheduled', 'archived', 'trash'];
+
+    private const WRITE_ABILITY = 'write:products';
+
     public function __construct(
         private readonly ProductRepositoryInterface $products,
         private readonly ProductCategoryRepositoryInterface $categories,
@@ -36,7 +42,29 @@ final class ProductApiController
         $params  = $request->getQueryParams();
         $page    = max(1, (int) ($params['page'] ?? 1));
         $perPage = min(100, max(1, (int) ($params['per_page'] ?? 15)));
-        $filters = ['status' => $params['status'] ?? 'published'];
+
+        try {
+            $status = ApiStatusFilter::parse($params['status'] ?? null, self::STATUSES);
+        } catch (ValidationException $e) {
+            return $this->json($response->withStatus(422), [
+                'error'  => 'Validation failed',
+                'errors' => $e->getErrors(),
+            ]);
+        }
+
+        $abilities = (string) $request->getAttribute('api_abilities', '');
+        if (ApiStatusFilter::needsWriteAccess($status)
+            && !ApiStatusFilter::tokenHasAbility($abilities, self::WRITE_ABILITY)) {
+            return $this->json($response->withStatus(403), [
+                'error'   => 'Forbidden',
+                'message' => 'Listing unpublished content requires the ' . self::WRITE_ABILITY . ' ability.',
+            ]);
+        }
+
+        $filters = [];
+        if ($status !== null) {
+            $filters['status'] = $status;
+        }
 
         foreach (['sku', 'search', 'type'] as $key) {
             if (isset($params[$key]) && trim((string) $params[$key]) !== '') {
@@ -46,10 +74,6 @@ final class ProductApiController
         if (isset($params['on_sale']) && in_array(strtolower((string) $params['on_sale']), ['1', 'true', 'yes'], true)) {
             $filters['on_sale'] = true;
         }
-
-        // If not 'published', check if user is admin/authenticated for more?
-        // For now, let's keep it simple or restricted to published for public.
-        // But the user wants a powerful API, so if they have a token, maybe they can see all.
 
         $products = $this->products->findAll(new Pagination($page, $perPage), $filters);
         $total    = $this->products->count($filters);
@@ -61,6 +85,7 @@ final class ProductApiController
             'page'        => $page,
             'per_page'    => $perPage,
             'total_pages' => (int) ceil($total / $perPage),
+            'status'      => $status ?? 'all',
         ],
         ]);
     }

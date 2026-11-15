@@ -11,6 +11,7 @@ use ValeApp\App\Controllers\Api\ProductApiController;
 use ValeApp\Domain\Media\Entity\Media;
 use ValeApp\Domain\Media\Repository\MediaRepositoryInterface;
 use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
+use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Domain\Shop\Entity\Product;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
@@ -154,6 +155,42 @@ final class ProductApiControllerTest extends TestCase
         self::assertIsArray($body['data']);
     }
 
+    public function testIndexFiltersByStatusList(): void
+    {
+        $seen = [];
+        $this->productRepo->method('findAll')->willReturnCallback(
+            function (Pagination $pagination, array $filters) use (&$seen): array {
+                $seen[] = $filters;
+                return [];
+            }
+        );
+        $this->productRepo->method('count')->willReturn(0);
+
+        $request  = (new RequestFactory())->createRequest('GET', '/api/v1/products?status=draft,scheduled')
+            ->withAttribute('api_abilities', 'write:products');
+        $response = $this->controller->index($request, (new ResponseFactory())->createResponse());
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(['draft', 'scheduled'], $seen[0]['status']);
+    }
+
+    public function testIndexRejectsUnpublishedStatusesWithoutWriteAbility(): void
+    {
+        $request  = (new RequestFactory())->createRequest('GET', '/api/v1/products?status=draft')
+            ->withAttribute('api_abilities', 'read:products');
+        $response = $this->controller->index($request, (new ResponseFactory())->createResponse());
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    public function testIndexRejectsUnknownStatus(): void
+    {
+        $request  = (new RequestFactory())->createRequest('GET', '/api/v1/products?status=foo');
+        $response = $this->controller->index($request, (new ResponseFactory())->createResponse());
+
+        self::assertSame(422, $response->getStatusCode());
+    }
+
     public function testShowReturnsProduct(): void
     {
         $product = new Product('Test', new Slug('test'));
@@ -222,7 +259,7 @@ final class ProductApiControllerTest extends TestCase
         $request = (new RequestFactory())->createRequest(
             'GET',
             '/api/v1/products?status=draft&sku=ABC-1&search=abc&type=simple&on_sale=1'
-        );
+        )->withAttribute('api_abilities', 'write:products');
         $response = $this->controller->index($request, (new ResponseFactory())->createResponse());
 
         self::assertSame(200, $response->getStatusCode());
