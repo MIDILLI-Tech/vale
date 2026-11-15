@@ -54,7 +54,7 @@
     "@tiptap/suggestion": "^3.27.1",
     "alpinejs": "^3.14.8",
     "chart.js": "^4.4.8",
-    "codejar": "^4.3.0",
+    "codejar": "^5.0.0",
     "prismjs": "^1.30.0",
     "prosemirror-tables": "^1.8.5",
     "sortablejs": "^1.15.6",
