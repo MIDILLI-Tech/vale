@@ -51,7 +51,7 @@
     "@tiptap/markdown": "^3.27.1",
     "@tiptap/pm": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
-    "@tiptap/suggestion": "^3.27.1",
+    "@tiptap/suggestion": "^3.33.1",
     "alpinejs": "^3.14.8",
     "chart.js": "^4.4.8",
     "codejar": "^4.3.0",
