@@ -34,18 +34,22 @@
                 {{ table.th_checkbox(allIds) }}
                 {{ table.th(__('Name'), 'name') }}
                 {% if multi_language_content %}{{ table.th(__('Lang'), 'language') }}{% endif %}
-                {{ table.th(__('Slug'), 'slug') }}
-                {{ table.th(__('Fields'), 'fields') }}
-                {{ table.th(__('Submissions'), 'submissions') }}
                 {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Fields'), 'fields', 'center', {cellClass: 'px-3'}) }}
+                {{ table.th(__('Submissions'), 'submissions', 'center', {cellClass: 'px-3'}) }}
+                {{ table.th(__('Created'), 'created_at') }}
+                {{ table.th(__('Updated'), 'updated_at') }}
                 {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
             {% for f in forms %}
-            <tr data-row-id="{{ f.id }}" class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {name: f.name, slug: f.slug, language: f.language ?? '', fields: f.fields|length, submissions: f.submissionCount, status: f.enabled ? '1' : '0'}|json_encode|e('html_attr') }}">
+            <tr data-row-id="{{ f.id }}" class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {name: f.name, slug: f.slug, language: f.language ?? '', fields: f.fields|length, submissions: f.submissionCount, status: f.enabled ? '1' : '0', created_at: f.createdAt ? f.createdAt.format('Y-m-d H:i:s') : '', updated_at: f.updatedAt ? f.updatedAt.format('Y-m-d H:i:s') : ''}|json_encode|e('html_attr') }}">
                 {{ table.td_checkbox(f.id) }}
-                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100"><a href="{{ url('/admin/forms/' ~ f.id ~ '/edit') }}" class="text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:underline">{{ f.name }}</a></td>
+                <td class="px-6 py-4">
+                    <a href="{{ url('/admin/forms/' ~ f.id ~ '/edit') }}" class="text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline">{{ f.name }}</a>
+                    <p class="text-xs text-gray-400">/{{ f.slug }}</p>
+                </td>
                 {% if multi_language_content %}
                 <td class="whitespace-nowrap px-6 py-4 text-center">
                     <span class="rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 text-xs font-bold uppercase" title="{{ locale_name(f.language) }}">
@@ -53,14 +57,17 @@
                     </span>
                 </td>
                 {% endif %}
-                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.slug }}</td>
-                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __(':count fields', {':count': f.fields|length}) }}</td>
-                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400"><a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}" class="hover:underline" title="{{ __('View submissions') }}">{{ __(':count submissions', {':count': f.submissionCount}) }}</a></td>
                 <td class="whitespace-nowrap px-6 py-4">
                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ f.enabled ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400' }}">
                         {{ f.enabled ? __('Active') : __('Inactive') }}
                     </span>
                 </td>
+                <td class="whitespace-nowrap px-3 py-4 text-center text-sm tabular-nums text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.fields|length }}</td>
+                <td class="whitespace-nowrap px-3 py-4 text-center text-sm tabular-nums text-gray-500 dark:text-gray-400 dark:text-gray-400">
+                    <a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}" class="hover:underline" title="{{ __('View submissions') }}">{{ f.submissionCount }}</a>
+                </td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.createdAt ? f.createdAt.format('M j, Y') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.updatedAt ? f.updatedAt.format('M j, Y') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                     <div class="inline-flex items-center justify-end gap-2">
                         <a href="{{ absolute_url(url('/form/' ~ f.slug)) }}" target="_blank" rel="noopener"
@@ -85,7 +92,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="{{ multi_language_content ? 8 : 7 }}" class="px-6 py-12 text-center text-gray-400">{{ __('No forms yet. Create one!') }}</td></tr>
+            <tr><td colspan="{{ multi_language_content ? 9 : 8 }}" class="px-6 py-12 text-center text-gray-400">{{ __('No forms yet. Create one!') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>
