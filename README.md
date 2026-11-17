@@ -49,7 +49,7 @@
 | **Tax & currency** | VAT-inclusive gross pricing, per-country tax rates, multi-currency with exchange rates | [Shop](https://docs.getvale.org/en/latest/admin/ecommerce/) |
 | **Membership** | Plans, recurring subscriptions, access control, payment reconciliation | [Membership](https://docs.getvale.org/en/latest/admin/ecommerce/) |
 | **Newsletter** | Campaigns, automation sequences, segmentation, A/B testing, recurring digests, subscribers | [Marketing](https://docs.getvale.org/en/latest/admin/marketing/) |
-| **Forms** | Drag-and-drop form builder, submissions, embeddable forms, external POST endpoint | [Forms](https://docs.getvale.org/en/latest/admin/forms) |
+| **Forms** | Drag-and-drop form builder, conditional fields, submissions, embeddable forms, external POST endpoint | [Forms](https://docs.getvale.org/en/latest/admin/forms) |
 | **Media** | Library with drag-and-drop upload, thumbnails, WebP renditions, video posters, scan command | [Media](https://docs.getvale.org/en/latest/developer/media) |
 | **SEO** | Meta/OG/Twitter tags, sitemap, redirects, `robots.txt` — plus per-crawler AI bot control at `/ai-robots.txt` | [Settings](https://docs.getvale.org/en/latest/admin/settings) |
 | **Users & roles** | Granular RBAC, TOTP two-factor (optionally enforced), SSO with Google, Microsoft, GitHub and Facebook, customer accounts, emergency reset | [Users](https://docs.getvale.org/en/latest/admin/users) · [SSO](https://docs.getvale.org/en/latest/developer/sso) |

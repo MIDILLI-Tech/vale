@@ -1115,6 +1115,13 @@ final class ShortcodeProcessor
         $html .= '})();';
         $html .= '</script>';
 
+        // The conditional-visibility helper is idempotent: several embedded
+        // forms on one page include it once each and only the first run wires
+        // listeners, the rest just re-scan.
+        $html .= '<script defer src="'
+            . htmlspecialchars($this->basePath . '/assets/js/form-conditions.js', ENT_QUOTES, 'UTF-8')
+            . '"></script>';
+
         return $html;
     }
 
@@ -1268,7 +1275,14 @@ final class ShortcodeProcessor
             default => 'w-full',
         };
 
-        $html = '<div class="vl-field-col ' . $widthClass . ' px-2.5 mb-5">';
+        $conditions = $field['conditions'] ?? null;
+        $condition  = '';
+        if (is_array($conditions) && !empty($conditions['rules'])) {
+            $condition = ' data-vl-conditions="'
+                . htmlspecialchars((string) json_encode($conditions), ENT_QUOTES, 'UTF-8') . '"';
+        }
+
+        $html = '<div class="vl-field-col ' . $widthClass . ' px-2.5 mb-5"' . $condition . '>';
 
         if ($type === 'newsletter_subscribe' || ($type === 'checkbox' && empty($field['options']))) {
             $html .= '<label class="flex items-center gap-2 text-sm">';

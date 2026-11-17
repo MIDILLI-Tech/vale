@@ -607,6 +607,107 @@ final class FormController
         return $normalized;
     }
 
+    /**
+     * Normalizes per-field visibility conditions against the final field list:
+     * a rule may only reference an existing choice field (radio / select /
+     * checkbox) of this form, and its operator and value must fit that source.
+     * Dangling rules are dropped rather than kept as dead logic.
+     *
+     * @param array<int, array<string, mixed>> $fields
+     * @return array<int, array<string, mixed>>
+     */
+    private static function applyConditionRules(array $fields): array
+    {
+        $sources = [];
+        foreach ($fields as $candidate) {
+            $name = (string) ($candidate['name'] ?? '');
+            $type = (string) ($candidate['type'] ?? 'text');
+            if ($name === '' || !in_array($type, ['select', 'radio', 'checkbox'], true)) {
+                continue;
+            }
+
+            $options = [];
+            foreach ((array) ($candidate['options'] ?? []) as $option) {
+                if (is_array($option) && isset($option['value'])) {
+                    $options[] = (string) $option['value'];
+                }
+            }
+
+            $sources[$name] = ['type' => $type, 'options' => $options];
+        }
+
+        foreach ($fields as &$field) {
+            $raw = $field['conditions'] ?? null;
+            unset($field['conditions']);
+
+            $conditions = self::normalizeConditions($raw, (string) ($field['name'] ?? ''), $sources);
+            if ($conditions !== null) {
+                $field['conditions'] = $conditions;
+            }
+        }
+        unset($field);
+
+        return $fields;
+    }
+
+    /**
+     * @param array<string, array{type: string, options: string[]}> $sources
+     * @return array{logic: string, rules: array<int, array{field: string, operator: string, value: string}>}|null
+     */
+    private static function normalizeConditions(mixed $raw, string $selfName, array $sources): ?array
+    {
+        if (!is_array($raw) || !is_array($raw['rules'] ?? null)) {
+            return null;
+        }
+
+        $logic = ($raw['logic'] ?? 'all') === 'any' ? 'any' : 'all';
+        $rules = [];
+
+        foreach ($raw['rules'] as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $sourceName = is_scalar($rule['field'] ?? null) ? trim((string) $rule['field']) : '';
+            if ($sourceName === '' || $sourceName === $selfName || !isset($sources[$sourceName])) {
+                continue;
+            }
+
+            $source   = $sources[$sourceName];
+            $operator = (string) ($rule['operator'] ?? '');
+
+            if ($source['type'] === 'checkbox' && $source['options'] === []) {
+                $operator = $operator === 'unchecked' ? 'unchecked' : 'checked';
+                $value    = '';
+            } else {
+                $fallback = $source['type'] === 'checkbox' ? 'contains' : 'equals';
+                $operator = $operator       === 'not_' . $fallback ? 'not_' . $fallback : $fallback;
+                $value    = self::conditionValue($rule['value'] ?? null);
+
+                if ($value === '') {
+                    continue;
+                }
+
+                if ($source['options'] !== [] && !in_array($value, $source['options'], true)) {
+                    continue;
+                }
+            }
+
+            $rules[] = ['field' => $sourceName, 'operator' => $operator, 'value' => $value];
+
+            if (count($rules) >= 10) {
+                break;
+            }
+        }
+
+        return $rules === [] ? null : ['logic' => $logic, 'rules' => $rules];
+    }
+
+    private static function conditionValue(mixed $raw): string
+    {
+        return is_scalar($raw) ? mb_substr(trim((string) $raw), 0, 255) : '';
+    }
+
     private function fillForm(Form $form, array $body): void
     {
         // Fields come as JSON string from the builder
@@ -667,7 +768,7 @@ final class FormController
         }
         unset($f);
 
-        $form->setFields($fields);
+        $form->setFields(self::applyConditionRules($fields));
 
         $captchaType = $body['captcha_type'] ?? 'none';
         if (!in_array($captchaType, ['none', 'honeypot', 'math', 'hcaptcha', 'recaptcha', 'turnstile'], true)) {

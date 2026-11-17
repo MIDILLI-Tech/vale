@@ -90,7 +90,7 @@
                                 <div class="grid grid-cols-2 gap-4 sm:col-span-2 lg:col-span-2">
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
-                                        <select x-model="field.type" @change="field.type === 'email' ? (field.name = 'email') : autoName(field)" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                        <select x-model="field.type" @change="field.type === 'email' ? (field.name = 'email') : autoName(field); pruneConditions()" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                             <option value="text">Text</option>
                                             <option value="email">{{ __('Email') }}</option>
                                             <option value="textarea">Textarea</option>
@@ -183,6 +183,70 @@
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Option Titles') }}</label>
                                     <textarea x-model="field._titlesText" @input="syncOptionTitles(field)" rows="3" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="{{ __('Optional tooltip for each option, one per line') }}"></textarea>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{{ __('Optional tooltip text shown on hover, one per line, matched by position with the options above.') }}</p>
+                                </div>
+                                <div class="w-full col-span-full">
+                                    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                        <label class="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-300 cursor-pointer">
+                                            <input type="checkbox"
+                                                   :checked="!!field.conditions"
+                                                   :disabled="conditionSources(field).length === 0"
+                                                   @change="toggleConditions(field)"
+                                                   class="rounded-sm border-gray-300 dark:border-gray-700">
+                                            {{ __('Show only when…') }}
+                                        </label>
+                                        <p x-show="conditionSources(field).length === 0" x-cloak class="mt-1 text-[11px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                                            {{ __('Add another Select, Radio or Checkbox field to drive this condition.') }}
+                                        </p>
+
+                                        <template x-if="field.conditions">
+                                        <div class="mt-3 space-y-2">
+                                            <template x-for="(rule, ri) in (field.conditions ? field.conditions.rules : [])" :key="ri">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <select x-model="rule.field" @change="syncRuleOperator(field, rule)"
+                                                            class="rounded-lg border-gray-300 dark:border-gray-700 text-xs py-1">
+                                                        <template x-for="src in conditionSources(field)" :key="src.name">
+                                                            <option :value="src.name" x-text="src.label"></option>
+                                                        </template>
+                                                    </select>
+
+                                                    <select x-model="rule.operator" @change="syncRuleValue(field, rule)"
+                                                            class="rounded-lg border-gray-300 dark:border-gray-700 text-xs py-1">
+                                                        <template x-for="op in conditionOperators(field, rule)" :key="op.value">
+                                                            <option :value="op.value" x-text="op.label"></option>
+                                                        </template>
+                                                    </select>
+
+                                                    <select x-show="conditionNeedsValue(rule)" x-model="rule.value"
+                                                            class="rounded-lg border-gray-300 dark:border-gray-700 text-xs py-1">
+                                                        <template x-for="opt in conditionValues(field, rule)" :key="opt">
+                                                            <option :value="opt" x-text="opt"></option>
+                                                        </template>
+                                                    </select>
+
+                                                    <span x-show="!conditionSourceField(rule)" x-cloak class="text-[11px] text-red-500 dark:text-red-400">
+                                                        {{ __('Source field no longer exists') }}
+                                                    </span>
+
+                                                    <button type="button" @click="removeConditionRule(field, ri)"
+                                                            class="ml-auto text-red-400 hover:text-red-600 text-lg leading-none p-1"
+                                                            title="{{ __('Remove') }}">&times;</button>
+                                                </div>
+                                            </template>
+
+                                            <div class="flex items-center justify-between gap-3 pt-1">
+                                                <button type="button" @click="addConditionRule(field)"
+                                                        class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">+ {{ __('Add rule') }}</button>
+                                                <label x-show="field.conditions && field.conditions.rules.length > 1" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    {{ __('Match') }}
+                                                    <select x-model="field.conditions.logic" class="rounded-lg border-gray-300 dark:border-gray-700 text-xs py-0.5">
+                                                        <option value="all">{{ __('all') }}</option>
+                                                        <option value="any">{{ __('any') }}</option>
+                                                    </select>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -567,10 +631,22 @@ function formBuilder() {
             if (f.type === 'newsletter_subscribe' && !Array.isArray(f.tags)) {
                 f.tags = [];
             }
+            f.conditions = (f.conditions && Array.isArray(f.conditions.rules) && f.conditions.rules.length > 0)
+                ? {
+                    logic: f.conditions.logic === 'any' ? 'any' : 'all',
+                    rules: f.conditions.rules.map(function (r) {
+                        return {
+                            field: (r && typeof r.field === 'string') ? r.field : '',
+                            operator: (r && typeof r.operator === 'string') ? r.operator : 'equals',
+                            value: (r && typeof r.value === 'string') ? r.value : ''
+                        };
+                    })
+                }
+                : null;
             return f;
         }),
         addField() {
-            this.fields.push({ type: 'text', label: '', name: '', required: false, width: '100', options: [], _optionsText: '', _titlesText: '', placeholder: '' });
+            this.fields.push({ type: 'text', label: '', name: '', required: false, width: '100', options: [], _optionsText: '', _titlesText: '', placeholder: '', conditions: null });
         },
         addEmailField() {
             if (this.hasEmailField) {
@@ -602,6 +678,144 @@ function formBuilder() {
                 options[i].title = lines[i].trim();
             }
         },
+        conditionSources(field) {
+            return this.fields
+                .filter(function (f) {
+                    return f && f !== field && f.name && ['select', 'radio', 'checkbox'].indexOf(f.type) !== -1;
+                })
+                .map(function (f) {
+                    return { name: f.name, label: (f.label || f.name) + ' — ' + f.name };
+                });
+        },
+        conditionSourceField(rule) {
+            var name = rule && rule.field;
+            if (!name) {
+                return null;
+            }
+            return this.fields.filter(function (f) {
+                return f && f.name === name && ['select', 'radio', 'checkbox'].indexOf(f.type) !== -1;
+            })[0] || null;
+        },
+        optionValues(field) {
+            return (field && Array.isArray(field.options) ? field.options : [])
+                .map(function (o) {
+                    return (o && typeof o === 'object') ? (o.value || '') : (o || '');
+                })
+                .filter(function (v) {
+                    return v !== '';
+                });
+        },
+        conditionOperators(field, rule) {
+            var source = this.conditionSourceField(rule);
+            var text = [
+                { value: 'equals', label: '{{ __('is')|e('js') }}' },
+                { value: 'not_equals', label: '{{ __('is not')|e('js') }}' }
+            ];
+
+            if (!source) {
+                return text;
+            }
+            if (source.type === 'checkbox' && this.optionValues(source).length === 0) {
+                return [
+                    { value: 'checked', label: '{{ __('is checked')|e('js') }}' },
+                    { value: 'unchecked', label: '{{ __('is not checked')|e('js') }}' }
+                ];
+            }
+            if (source.type === 'checkbox') {
+                return [
+                    { value: 'contains', label: '{{ __('includes')|e('js') }}' },
+                    { value: 'not_contains', label: '{{ __('does not include')|e('js') }}' }
+                ];
+            }
+            return text;
+        },
+        conditionValues(field, rule) {
+            var source = this.conditionSourceField(rule);
+            return source ? this.optionValues(source) : [];
+        },
+        conditionNeedsValue(rule) {
+            return !!rule && rule.operator !== 'checked' && rule.operator !== 'unchecked';
+        },
+        defaultConditionRule(field) {
+            var sources = this.conditionSources(field);
+            if (sources.length === 0) {
+                return null;
+            }
+            var rule = { field: sources[0].name };
+            rule.operator = this.conditionOperators(field, rule)[0].value;
+            var values = this.conditionValues(field, rule);
+            rule.value = this.conditionNeedsValue(rule) ? (values[0] || '') : '';
+            return rule;
+        },
+        toggleConditions(field) {
+            if (field.conditions) {
+                field.conditions = null;
+                return;
+            }
+            var rule = this.defaultConditionRule(field);
+            if (rule) {
+                field.conditions = { logic: 'all', rules: [rule] };
+            }
+        },
+        addConditionRule(field) {
+            if (!field.conditions) {
+                this.toggleConditions(field);
+                return;
+            }
+            var rule = this.defaultConditionRule(field);
+            if (rule) {
+                field.conditions.rules.push(rule);
+            }
+        },
+        removeConditionRule(field, index) {
+            if (!field.conditions) {
+                return;
+            }
+            field.conditions.rules.splice(index, 1);
+            if (field.conditions.rules.length === 0) {
+                field.conditions = null;
+            }
+        },
+        syncRuleOperator(field, rule) {
+            var allowed = this.conditionOperators(field, rule).map(function (operator) {
+                return operator.value;
+            });
+            if (allowed.indexOf(rule.operator) === -1) {
+                rule.operator = allowed[0];
+            }
+            this.syncRuleValue(field, rule);
+        },
+        syncRuleValue(field, rule) {
+            if (!this.conditionNeedsValue(rule)) {
+                rule.value = '';
+                return;
+            }
+            var values = this.conditionValues(field, rule);
+            if (values.indexOf(rule.value) === -1) {
+                rule.value = values[0] || '';
+            }
+        },
+        pruneConditions() {
+            var self = this;
+            this.fields.forEach(function (field) {
+                if (!field || !field.conditions) {
+                    return;
+                }
+                if (!Array.isArray(field.conditions.rules)) {
+                    field.conditions = null;
+                    return;
+                }
+                field.conditions.rules = field.conditions.rules.filter(function (rule) {
+                    return rule.field !== field.name && self.conditionSourceField(rule) !== null;
+                });
+                field.conditions.rules.forEach(function (rule) {
+                    self.syncRuleOperator(field, rule);
+                });
+                if (field.conditions.rules.length === 0) {
+                    field.conditions = null;
+                }
+            });
+        },
         _optValue(o) {
             return (o && typeof o === 'object') ? (o.value ?? '') : (o ?? '');
         },
@@ -610,6 +824,7 @@ function formBuilder() {
         },
         removeField(idx) {
             this.fields.splice(idx, 1);
+            this.pruneConditions();
         },
         moveFieldTop(idx) {
             var item = this.fields.splice(idx, 1)[0];
@@ -648,6 +863,7 @@ function formBuilder() {
                         }
                     }
                 }
+                this.pruneConditions();
                 this._initialFieldsJson = JSON.stringify(this.fields);
                 this._formDirty = false;
             });
@@ -720,14 +936,18 @@ function formBuilder() {
                 var placeholderAttr = f.placeholder ? ' placeholder="' + this._escape(f.placeholder) + '"' : '';
                 var w = f.width === '50' ? 'width:50%' : f.width === '33' ? 'width:33.333%' : f.width === '25' ? 'width:25%' : 'width:100%';
                 var boxStyle = 'style="' + w + ';box-sizing:border-box;padding:0 5px;margin-bottom:10px;display:inline-block;vertical-align:top;"';
+                var fieldAttrs = '';
+                if (f.conditions && Array.isArray(f.conditions.rules) && f.conditions.rules.length > 0) {
+                    fieldAttrs = ' data-vl-conditions="' + this._escape(JSON.stringify(f.conditions)) + '"';
+                }
 
                 if (f.type === 'textarea') {
-                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '    <div ' + boxStyle + fieldAttrs + '>\n';
                     htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
                     htmlFields += '      <textarea name="fields[' + f.name + ']"' + requiredAttr + placeholderAttr + ' style="width:100%"></textarea>\n';
                     htmlFields += '    </div>\n';
                 } else if (f.type === 'select') {
-                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '    <div ' + boxStyle + fieldAttrs + '>\n';
                     htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
                     htmlFields += '      <select name="fields[' + f.name + ']"' + requiredAttr + ' style="width:100%">\n';
                     htmlFields += '        <option value="">-- Select --</option>\n';
@@ -740,11 +960,22 @@ function formBuilder() {
                     htmlFields += '      </select>\n';
                     htmlFields += '    </div>\n';
                 } else if (f.type === 'checkbox') {
-                    htmlFields += '    <div ' + boxStyle + '>\n';
-                    htmlFields += '      <label><input type="checkbox" name="fields[' + f.name + ']" value="1"' + requiredAttr + '> ' + this._escape(f.label) + '</label>\n';
+                    htmlFields += '    <div ' + boxStyle + fieldAttrs + '>\n';
+                    var checkOptions = f.options || [];
+                    if (checkOptions.length === 0) {
+                        htmlFields += '      <label><input type="checkbox" name="fields[' + f.name + ']" value="1"' + requiredAttr + '> ' + this._escape(f.label) + '</label>\n';
+                    } else {
+                        htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
+                        for (var c = 0; c < checkOptions.length; c++) {
+                            var checkValue = this._optValue(checkOptions[c]);
+                            var checkTitle = this._optTitle(checkOptions[c]);
+                            var checkTitleAttr = checkTitle ? ' title="' + this._escape(checkTitle) + '"' : '';
+                            htmlFields += '      <label' + checkTitleAttr + '><input type="checkbox" name="fields[' + f.name + '][]" value="' + this._escape(checkValue) + '"> ' + this._escape(checkValue) + '</label><br>\n';
+                        }
+                    }
                     htmlFields += '    </div>\n';
                 } else if (f.type === 'radio') {
-                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '    <div ' + boxStyle + fieldAttrs + '>\n';
                     htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
                     for (var o = 0; o < (f.options || []).length; o++) {
                         var radioValue = this._optValue(f.options[o]);
@@ -754,35 +985,46 @@ function formBuilder() {
                     }
                     htmlFields += '    </div>\n';
                 } else {
-                    htmlFields += '    <div ' + boxStyle + '>\n';
+                    htmlFields += '    <div ' + boxStyle + fieldAttrs + '>\n';
                     htmlFields += '      <label>' + this._escape(f.label) + '</label><br>\n';
                     htmlFields += '      <input type="' + (f.type === 'email' ? 'email' : f.type === 'tel' ? 'tel' : 'text') + '" name="fields[' + (f.type === 'email' ? 'email' : f.name) + ']"' + requiredAttr + placeholderAttr + ' style="width:100%">\n';
                     htmlFields += '    </div>\n';
                 }
             }
-            return '<div id="vl-form-wrap">\n'
-                + '  <form id="vl-external-form" action="' + this.actionUrl + '" method="POST">\n'
+            return '<div class="vl-form-embed">\n'
+                + '  <form class="vl-external-form" action="' + this.actionUrl + '" method="POST">\n'
                 + '    <div style="display:flex;flex-wrap:wrap;margin:0 -5px">\n'
                 + htmlFields
                 + '    </div>\n'
                 + (this.honeypotEnabled ? '    <div style="display:none"><input type="text" name="' + this.honeypotFieldName + '" autocomplete="off" tabindex="-1" aria-hidden="true"></div>\n' : '')
                 + '    <div style="padding:0 5px;margin-top:10px"><button type="submit">Submit</button></div>\n'
                 + '  </form>\n'
-                + '  <div id="vl-form-msg" style="display:none;margin-top:10px;padding:10px;border-radius:4px"></div>\n'
+                + '  <div class="vl-form-msg" style="display:none;margin-top:10px;padding:10px;border-radius:4px"></div>\n'
                 + '</div>\n'
                 + '\n'
                 + '<script>\n'
-                + 'document.getElementById(\'vl-external-form\').addEventListener(\'submit\', function(e) {\n'
+                + '(function() {\n'
+                + '  var wrap = document.currentScript && document.currentScript.previousElementSibling;\n'
+                + '  if (!wrap) { return; }\n'
+                + '  var form = wrap.querySelector(\'form.vl-external-form\');\n'
+                + '  var msgDiv = wrap.querySelector(\'.vl-form-msg\');\n'
+                + '  if (!form || !msgDiv) { return; }\n'
+                + 'form.addEventListener(\'submit\', function(e) {\n'
                 + '  e.preventDefault();\n'
-                + '  const form = e.target;\n'
-                + '  const msgDiv = document.getElementById(\'vl-form-msg\');\n'
                 + '  const data = {};\n'
                 + '  const fd = new FormData(form);\n'
                 + '  for (const [k, v] of fd) {\n'
                 + '    if (k.startsWith(\'fields[\')) {\n'
-                + '      const key = k.slice(7, -1);\n'
-                + '      if (!data.fields) data.fields = {};\n'
-                + '      data.fields[key] = v;\n'
+                + '      const match = k.match(/^fields\\[(.+?)\\](\\[\\])?$/);\n'
+                + '      if (match) {\n'
+                + '        if (!data.fields) data.fields = {};\n'
+                + '        if (match[2]) {\n'
+                + '          if (!Array.isArray(data.fields[match[1]])) data.fields[match[1]] = [];\n'
+                + '          data.fields[match[1]].push(v);\n'
+                + '        } else {\n'
+                + '          data.fields[match[1]] = v;\n'
+                + '        }\n'
+                + '      }\n'
                 + '    } else {\n'
                 + '      data[k] = v;\n'
                 + '    }\n'
@@ -797,7 +1039,7 @@ function formBuilder() {
                 + '    msgDiv.innerText = data.message;\n'
                 + '    msgDiv.style.display = \'block\';\n'
                 + '    msgDiv.style.backgroundColor = data.success ? \'#dcfce7\' : \'#fee2e2\';\n'
-                + '    if (data.success) form.reset();\n'
+                + '    if (data.success) { form.reset(); apply(); }\n'
                 + '  })\n'
                 + '  .catch(err => {\n'
                 + '    msgDiv.innerText = \'Error submitting form.\';\n'
@@ -805,7 +1047,56 @@ function formBuilder() {
                 + '    msgDiv.style.backgroundColor = \'#fee2e2\';\n'
                 + '  });\n'
                 + '});\n'
+                + this._conditionsScript()
+                + '})();\n'
                 + '<\/script>';
+        },
+        _conditionsScript() {
+            return `
+  var boxes = wrap.querySelectorAll('[data-vl-conditions]');
+  function val(name){
+    var single='fields['+name+']',multi=single+'[]',nodes=form.querySelectorAll('input,select,textarea');
+    var value=null,values=[];
+    for(var i=0;i<nodes.length;i++){
+      var node=nodes[i],nodeName=node.getAttribute('name')||'';
+      if(nodeName===multi){if(node.type==='checkbox'&&node.checked){values.push(node.value);}}
+      else if(nodeName===single){
+        if(node.type==='checkbox'){value=node.checked?(node.value||'1'):'';}
+        else if(node.type==='radio'){if(node.checked){value=node.value;}}
+        else{value=node.value;}
+      }
+    }
+    return values.length>0?values:(value===null?'':value);
+  }
+  function has(v){return Array.isArray(v)?v.length>0:String(v===null?'':v).trim()!=='';}
+  function eq(v,e){return Array.isArray(v)?false:String(v===null?'':v).trim()===e;}
+  function inc(v,e){var list=Array.isArray(v)?v:[v];for(var i=0;i<list.length;i++){if(String(list[i]===null?'':list[i]).trim()===e){return true;}}return false;}
+  function apply(){
+    for(var i=0;i<boxes.length;i++){
+      var box=boxes[i];
+      if(!box.__c){try{box.__c=JSON.parse(box.getAttribute('data-vl-conditions'));}catch(e){box.__c=null;}}
+      var c=box.__c,visible=true;
+      if(c&&c.rules&&c.rules.length){
+        var results=c.rules.map(function(r){
+          var v=val(r.field||''),o=r.operator;
+          if(o==='checked')return has(v);
+          if(o==='unchecked')return !has(v);
+          if(o==='contains')return inc(v,r.value||'');
+          if(o==='not_contains')return !inc(v,r.value||'');
+          if(o==='not_equals')return !eq(v,r.value||'');
+          return eq(v,r.value||'');
+        });
+        visible=c.logic==='any'?results.indexOf(true)!==-1:results.indexOf(false)===-1;
+      }
+      if(box.__d===undefined){box.__d=box.style.display;}
+      box.style.display=visible?box.__d:'none';
+      var inputs=box.querySelectorAll('input,select,textarea');
+      for(var k=0;k<inputs.length;k++){inputs[k].disabled=!visible;}
+    }
+  }
+  apply();
+  form.addEventListener('change',apply);
+`;
         },
         _escape(s) {
             if (typeof s !== 'string') return '';
@@ -892,6 +1183,18 @@ function formBuilder() {
                         f._titlesText = f.options.map(function(o) { return o.title || ''; }).join('\n');
                         f.width = f.width || '100';
                         f.placeholder = f.placeholder || '';
+                        f.conditions = (f.conditions && Array.isArray(f.conditions.rules) && f.conditions.rules.length > 0)
+                            ? {
+                                logic: f.conditions.logic === 'any' ? 'any' : 'all',
+                                rules: f.conditions.rules.map(function (r) {
+                                    return {
+                                        field: (r && typeof r.field === 'string') ? r.field : '',
+                                        operator: (r && typeof r.operator === 'string') ? r.operator : 'equals',
+                                        value: (r && typeof r.value === 'string') ? r.value : ''
+                                    };
+                                })
+                            }
+                            : null;
                         return f;
                     });
                     alpineData.externalEnabled = !!settings.allow_external;

@@ -387,16 +387,22 @@ final class FormFrontController
             }
         }
 
-        // Validate required fields
-        $missing = [];
+        // Validate required fields — a field hidden by its conditions is not
+        // required, exactly like the browser skips it when it is disabled.
+        $submitted = (array) ($body['fields'] ?? []);
+        $missing   = [];
         foreach ($form->getFields() as $field) {
             $type = $field['type'] ?? 'text';
             $key  = $type === 'email' ? 'email' : ($field['name'] ?? '');
-            if ($key !== '' && !empty($field['required'])) {
-                $value = $body['fields'][$key] ?? '';
-                if (trim((string) $value) === '') {
-                    $missing[] = $field['label'] ?? $key;
-                }
+            if ($key === '' || empty($field['required']) || !$form->isFieldVisible($field, $submitted)) {
+                continue;
+            }
+            $value = $submitted[$key] ?? '';
+            if (is_array($value)) {
+                $value = implode(',', array_map('strval', $value));
+            }
+            if (trim((string) $value) === '') {
+                $missing[] = $field['label'] ?? $key;
             }
         }
         if ($missing !== []) {
@@ -419,17 +425,23 @@ final class FormFrontController
 
     private function processSubmission(ServerRequestInterface $request, ResponseInterface $response, Form $form, array $body, bool $isExternal): ResponseInterface
     {
-        // Build submission data from form fields
-        $data = [];
+        // Build submission data from form fields. Fields hidden by their
+        // conditions are skipped, so their values never reach the database,
+        // the webhook payload or the notification mail.
+        $submitted = (array) ($body['fields'] ?? []);
+        $data      = [];
         foreach ($form->getFields() as $field) {
+            if (!$form->isFieldVisible($field, $submitted)) {
+                continue;
+            }
             $type = $field['type'] ?? 'text';
             if ($type === 'email') {
-                $data['email'] = $body['fields']['email'] ?? '';
+                $data['email'] = $submitted['email'] ?? '';
                 continue;
             }
             $key = $field['name'] ?? '';
             if ($key !== '') {
-                $data[$key] = $body['fields'][$key] ?? '';
+                $data[$key] = $submitted[$key] ?? '';
             }
         }
 

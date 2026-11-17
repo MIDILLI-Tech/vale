@@ -93,7 +93,8 @@
         {% for field in fields %}
         {% set width = field.width|default('100') %}
         {% set widthClass = width == '50' ? 'w-full md:w-1/2' : (width == '33' ? 'w-full md:w-1/3' : (width == '25' ? 'w-full md:w-1/4' : 'w-full')) %}
-        <div class="{{ widthClass }} px-2.5 mb-5">
+        {% set conditions = field.conditions|default(null) %}
+        <div class="{{ widthClass }} px-2.5 mb-5"{% if conditions and conditions.rules|default([])|length > 0 %} data-vl-conditions="{{ conditions|json_encode|e('html_attr') }}"{% endif %}>
             {% if field.type == 'static_text' %}
             <p class="text-sm leading-6 text-gray-600 whitespace-pre-line">{{ field.label }}</p>
 
@@ -215,4 +216,5 @@
     </div>
     {% endif %}
 </div>
+<script defer src="{{ asset('assets/js/form-conditions.js') }}"></script>
 {% endblock %}

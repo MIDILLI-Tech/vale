@@ -105,6 +105,87 @@ class Form extends BaseEntity
         return $name === '' ? '_hp_name' : $name;
     }
 
+    /**
+     * Whether a field passes its own conditional rules for the given raw
+     * submitted values, keyed by field name.
+     *
+     * A field without conditions is always visible. Rules are evaluated in a
+     * single pass against the submitted values, so a rule that points at a
+     * field hidden by another condition simply reads as not matched.
+     *
+     * @param array<string, mixed> $field
+     * @param array<string, mixed> $submitted
+     */
+    public function isFieldVisible(array $field, array $submitted): bool
+    {
+        $conditions = $field['conditions'] ?? null;
+        if (!is_array($conditions) || empty($conditions['rules']) || !is_array($conditions['rules'])) {
+            return true;
+        }
+
+        $results = [];
+        foreach ($conditions['rules'] as $rule) {
+            if (is_array($rule)) {
+                $results[] = $this->conditionRuleMatches(
+                    $rule,
+                    $submitted[(string) ($rule['field'] ?? '')] ?? null
+                );
+            }
+        }
+
+        if ($results === []) {
+            return true;
+        }
+
+        return ($conditions['logic'] ?? 'all') === 'any'
+            ? in_array(true, $results, true)
+            : !in_array(false, $results, true);
+    }
+
+    /** @param array<string, mixed> $rule */
+    private function conditionRuleMatches(array $rule, mixed $value): bool
+    {
+        $expected = isset($rule['value']) && is_scalar($rule['value']) ? (string) $rule['value'] : '';
+
+        return match ((string) ($rule['operator'] ?? 'equals')) {
+            'checked'      => $this->conditionHasValue($value),
+            'unchecked'    => !$this->conditionHasValue($value),
+            'contains'     => $this->conditionContains($value, $expected),
+            'not_contains' => !$this->conditionContains($value, $expected),
+            'not_equals'   => !$this->conditionEquals($value, $expected),
+            default        => $this->conditionEquals($value, $expected),
+        };
+    }
+
+    private function conditionHasValue(mixed $value): bool
+    {
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return trim((string) $value) !== '';
+    }
+
+    private function conditionEquals(mixed $value, string $expected): bool
+    {
+        if (is_array($value)) {
+            return false;
+        }
+
+        return trim((string) $value) === $expected;
+    }
+
+    private function conditionContains(mixed $value, string $expected): bool
+    {
+        foreach (is_array($value) ? $value : [$value] as $item) {
+            if (is_scalar($item) && trim((string) $item) === $expected) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function setName(string $name): void
     {
         $this->name = $name;

@@ -103,4 +103,73 @@ final class FormTest extends TestCase
         self::assertNull($form->getSuccessMessage());
         self::assertNull($form->getTranslationOf());
     }
+
+    public function testFieldWithoutConditionsIsAlwaysVisible(): void
+    {
+        $form = new Form('Contact', new Slug('contact'));
+
+        self::assertTrue($form->isFieldVisible(['type' => 'text', 'name' => 'company'], []));
+        self::assertTrue($form->isFieldVisible(
+            ['type' => 'text', 'name' => 'company', 'conditions' => ['logic' => 'all', 'rules' => []]],
+            []
+        ));
+    }
+
+    public function testEqualsConditionFollowsChoiceAnswer(): void
+    {
+        $form  = new Form('Contact', new Slug('contact'));
+        $field = [
+            'type'       => 'text',
+            'name'       => 'company_name',
+            'conditions' => [
+                'logic' => 'all',
+                'rules' => [['field' => 'request_type', 'operator' => 'equals', 'value' => 'company']],
+            ],
+        ];
+
+        self::assertFalse($form->isFieldVisible($field, []));
+        self::assertFalse($form->isFieldVisible($field, ['request_type' => 'person']));
+        self::assertTrue($form->isFieldVisible($field, ['request_type' => 'company']));
+    }
+
+    public function testAnyLogicAndCheckboxOperators(): void
+    {
+        $form  = new Form('Contact', new Slug('contact'));
+        $field = [
+            'type'       => 'text',
+            'name'       => 'details',
+            'conditions' => [
+                'logic' => 'any',
+                'rules' => [
+                    ['field' => 'agree', 'operator' => 'checked', 'value' => ''],
+                    ['field' => 'topics', 'operator' => 'contains', 'value' => 'billing'],
+                ],
+            ],
+        ];
+
+        self::assertFalse($form->isFieldVisible($field, []));
+        self::assertTrue($form->isFieldVisible($field, ['agree' => '1']));
+        self::assertTrue($form->isFieldVisible($field, ['topics' => ['billing', 'sales']]));
+        self::assertFalse($form->isFieldVisible($field, ['topics' => ['sales']]));
+    }
+
+    public function testAllLogicRequiresEveryRule(): void
+    {
+        $form  = new Form('Contact', new Slug('contact'));
+        $field = [
+            'type'       => 'text',
+            'name'       => 'details',
+            'conditions' => [
+                'logic' => 'all',
+                'rules' => [
+                    ['field' => 'region', 'operator' => 'not_equals', 'value' => 'eu'],
+                    ['field' => 'topics', 'operator' => 'not_contains', 'value' => 'legal'],
+                ],
+            ],
+        ];
+
+        self::assertTrue($form->isFieldVisible($field, ['region' => 'us']));
+        self::assertFalse($form->isFieldVisible($field, ['region' => 'eu']));
+        self::assertFalse($form->isFieldVisible($field, ['region' => 'us', 'topics' => ['legal']]));
+    }
 }
