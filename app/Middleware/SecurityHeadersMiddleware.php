@@ -8,6 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 
 /**
  * Adds security-related HTTP response headers to every response.
@@ -23,6 +24,10 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
 {
     /** Cached reference-data catalog — config does not change per request. */
     private static ?array $catalog = null;
+
+    public function __construct(private readonly ?SettingsRepositoryInterface $settings = null)
+    {
+    }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
@@ -55,14 +60,15 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
         // form-action allows 'self' plus the configured APP_URL origin so absolute
         // URLs produced by absolute_url() (e.g. checkout redirects) are never
         // blocked when the app is served from a different host than APP_URL.
-        $formAction = $this->buildFormActionSources($request);
+        $formAction     = $this->buildFormActionSources($request);
+        $connectSources = $this->buildConnectSources();
 
         $csp = "default-src 'self'; "
             . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
             . "style-src 'self' 'unsafe-inline' https:; "
             . "img-src 'self' data: https: blob:; "
             . "font-src 'self' data: https:; "
-            . "connect-src 'self' https:; "
+            . 'connect-src ' . implode(' ', $connectSources) . '; '
             . 'frame-src ' . implode(' ', $frameSources) . '; '
             . "frame-ancestors 'self'; "
             . "base-uri 'self'; "
@@ -83,6 +89,58 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
         }
 
         return $response;
+    }
+
+    /**
+     * connect-src sources: 'self' and HTTPS by default. A configured
+     * collaboration server is a WebSocket endpoint, which `https:` never
+     * covers, so its exact origin is added while the feature is enabled.
+     *
+     * @return list<string>
+     */
+    private function buildConnectSources(): array
+    {
+        $sources = ["'self'", 'https:'];
+
+        if ($this->settings === null) {
+            return $sources;
+        }
+
+        try {
+            if (($this->settings->get('collaboration_enabled', '0') ?? '0') !== '1') {
+                return $sources;
+            }
+            $url = trim((string) ($this->settings->get('collaboration_url', '') ?? ''));
+        } catch (\Throwable) {
+            return $sources;
+        }
+
+        $parts = $url !== '' ? parse_url($url) : false;
+        if (!is_array($parts) || empty($parts['host'])) {
+            return $sources;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'ws'));
+        $scheme = match ($scheme) {
+            'http', 'ws'   => 'ws',
+            'https', 'wss' => 'wss',
+            default        => '',
+        };
+        if ($scheme === '') {
+            return $sources;
+        }
+
+        $host      = (string) $parts['host'];
+        $port      = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        $sources[] = $scheme . '://' . $host . $port;
+
+        // CSP host-sources do not reliably match IP addresses; keep a scheme
+        // fallback for LAN/dev URLs (127.0.0.1 is exempt).
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false && $host !== '127.0.0.1') {
+            $sources[] = $scheme . ':';
+        }
+
+        return array_values(array_unique($sources));
     }
 
     /**

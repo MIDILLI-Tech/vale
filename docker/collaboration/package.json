@@ -1,0 +1,12 @@
+{
+  "name": "vale-collaboration",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted Hocuspocus (Yjs) server for Vale editor collaboration",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@hocuspocus/server": "^4.0.0"
+  }
+}

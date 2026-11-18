@@ -34,8 +34,11 @@
     "@fontsource/open-sans": "^5.2.7",
     "@fontsource/playfair-display": "^5.2.5",
     "@fontsource/roboto": "^5.2.10",
+    "@hocuspocus/provider": "^4.8.0",
     "@tiptap/core": "^3.27.1",
     "@tiptap/extension-bubble-menu": "^3.27.1",
+    "@tiptap/extension-collaboration": "^3.34.0",
+    "@tiptap/extension-collaboration-caret": "^3.34.0",
     "@tiptap/extension-highlight": "^3.27.1",
     "@tiptap/extension-image": "^3.27.1",
     "@tiptap/extension-link": "^3.27.1",
@@ -58,7 +61,8 @@
     "prismjs": "^1.30.0",
     "prosemirror-tables": "^1.8.5",
     "sortablejs": "^1.15.6",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "yjs": "^13.6.33"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

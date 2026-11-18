@@ -100,6 +100,8 @@ docker exec vale vale doctor
 
 For MySQL/MariaDB or PostgreSQL, drop `DB_DRIVER=sqlite` and pass `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`. The Nginx flavour is `midillitech/vale:nginx`.
 
+Real-time editor collaboration is optional and runs as a separate small Hocuspocus container. Build it from [`docker/collaboration`](docker/collaboration), then enable it under **Settings → Content → Collaboration** and enter the WebSocket URL plus a shared secret ([guide](https://docs.getvale.org/en/latest/developer/collaboration)). It is not part of the released `midillitech/vale` tags — deploy it where you host the site, and publish your own image if you want one.
+
 Let the [environment generator](https://docs.getvale.org/environment-generator.html) build the `-e` flags for you (it runs offline in the browser), and see the [Docker deployment guide](https://docs.getvale.org/en/latest/developer/deployment/docker-registry) for production, pinned digests and updates.
 
 ### From source

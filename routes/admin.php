@@ -444,6 +444,8 @@ return function (App $app): void {
         $group->group('', function (RouteCollectorProxy $g): void {
             $g->put('/settings', [SettingsController::class, 'update']);
             $g->post('/settings/verify-captcha', [SettingsController::class, 'verifyCaptcha']);
+            $g->post('/settings/collaboration-test', [SettingsController::class, 'testCollaboration'])
+                ->setName('admin.settings.collaboration-test');
             $g->post('/settings/import-site-data', [SettingsController::class, 'importSiteData']);
             $g->post('/settings/import-products', [SettingsController::class, 'importProducts']);
 

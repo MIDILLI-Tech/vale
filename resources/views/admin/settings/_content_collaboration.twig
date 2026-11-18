@@ -1,0 +1,103 @@
+{# Content › Collaboration #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+{% set collaborationServers = collaboration_servers|default({}) %}
+{% set activeServer = attribute(collaborationServers, settings.collaboration_provider|default('private'))|default({}) %}
+<div id="{{ content_tab_id|default('content-tab-collaboration') }}" class="content-tab-panel {{ is_active ? '' : 'hidden' }}">
+<form method="post" action="{{ url('/admin/settings') }}"
+      class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs"
+      x-data="{
+        collab: {{ settings.collaboration_enabled|default('0') == '1' ? 'true' : 'false' }},
+        testing: false,
+        testOk: null,
+        testMsg: '',
+        testConnection() {
+            if (this.testing) return;
+            const form = this.$root;
+            const token = form.querySelector('input[name=_csrf_token]')?.value || '';
+            const body = new URLSearchParams();
+            body.append('_csrf_token', token);
+            body.append('collaboration_url', form.querySelector('input[name=collaboration_url]')?.value || '');
+            body.append('collaboration_secret', form.querySelector('input[name=collaboration_secret]')?.value || '');
+            this.testing = true;
+            this.testOk = null;
+            this.testMsg = '';
+            fetch('{{ url('/admin/settings/collaboration-test') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': token },
+                body: body.toString(),
+                credentials: 'same-origin'
+            })
+                .then((response) => response.json())
+                .then((data) => { this.testOk = Boolean(data.ok); this.testMsg = data.message || ''; })
+                .catch(() => { this.testOk = false; this.testMsg = '{{ __('Could not reach the server.')|e('js') }}'; })
+                .finally(() => { this.testing = false; });
+        }
+      }">
+    {{ csrf_field() }}
+    <input type="hidden" name="_METHOD" value="PUT">
+    <input type="hidden" name="_group" value="content">
+    <input type="hidden" name="_subtab" value="collaboration">
+
+    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Collaboration') }}</p>
+
+    <div {{ vl.attrs('content', __('Enable collaboration'), 'collaboration_enabled', 'collaboration', __('Collaboration'), 'realtime multi-user editing websocket hocuspocus yjs') }}>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="hidden" name="collaboration_enabled" value="0">
+            <input type="checkbox" name="collaboration_enabled" value="1" x-model="collab"
+                   {{ settings.collaboration_enabled|default('0') == '1' ? 'checked' }}
+                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+            {{ __('Enable collaboration') }}
+        </label>
+        <p class="mt-1 text-xs text-gray-400">{{ __('Allow several editors to edit the same content at the same time. Requires a running collaboration server (Hocuspocus).') }}</p>
+    </div>
+
+    <div x-show="collab" x-cloak class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-800">
+        <div {{ vl.attrs('content', __('Server'), 'collaboration_provider', 'collaboration', __('Collaboration'), 'server provider self hosted private') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Server') }}</label>
+            <select name="collaboration_provider" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+                {% for serverKey, server in collaborationServers %}
+                <option value="{{ serverKey }}" {{ settings.collaboration_provider|default('private') == serverKey ? 'selected' }}>{{ server.name|default(serverKey) }}</option>
+                {% endfor %}
+            </select>
+            <p class="mt-1 text-xs text-gray-400">{{ __('Where the collaboration server runs.') }}</p>
+            {% if activeServer.docs_url %}
+            <p class="mt-1 text-xs">
+                <a href="{{ activeServer.docs_url }}" target="_blank" rel="noopener noreferrer"
+                   class="text-blue-600 hover:underline dark:text-blue-400">{{ __('Setup guide') }}</a>
+            </p>
+            {% endif %}
+        </div>
+        <div {{ vl.attrs('content', __('Server URL'), 'collaboration_url', 'collaboration', __('Collaboration'), 'websocket server address url ws wss') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Server URL') }}</label>
+            <input type="text" name="collaboration_url" value="{{ settings.collaboration_url|default('') }}"
+                   placeholder="{{ activeServer.url_placeholder|default('ws://localhost:1234') }}" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('WebSocket address of the collaboration server. Use wss:// behind HTTPS.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Room prefix'), 'collaboration_room_prefix', 'collaboration', __('Collaboration'), 'namespace room document prefix') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Room prefix') }}</label>
+            <input type="text" name="collaboration_room_prefix" value="{{ settings.collaboration_room_prefix|default('') }}"
+                   placeholder="site-a" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Optional. Prepends a namespace to every room name (site-a/admin/pages/5/edit). On a shared server it must match the tenant the shared secret is bound to.') }}</p>
+        </div>
+        <div {{ vl.attrs('content', __('Shared secret'), 'collaboration_secret', 'collaboration', __('Collaboration'), 'token secret password authentication') }}>
+            <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Shared secret') }}</label>
+            <input type="password" name="collaboration_secret" value="{{ settings.collaboration_secret|default('') }}"
+                   autocomplete="new-password" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+            <p class="mt-1 text-xs text-gray-400">{{ __('Optional. Must match COLLAB_SECRET or one of the COLLAB_SECRETS entries on the server. Leave empty to allow unauthenticated connections.') }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <button type="button" @click="testConnection()" :disabled="testing"
+                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                <svg class="h-3.5 w-3.5" :class="testing ? 'vl-icon-spin' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 018-8 8 8 0 016.32 3.1M20 12a8 8 0 01-8 8 8 8 0 01-6.32-3.1"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 4v5h-5M4 20v-5h5"/>
+                </svg>
+                <span x-show="!testing">{{ __('Test connection') }}</span>
+                <span x-show="testing" x-cloak>{{ __('Testing...') }}</span>
+            </button>
+            <p class="text-xs" x-show="testMsg" x-cloak x-text="testMsg"
+               :class="testOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></p>
+        </div>
+    </div>
+</form>
+</div>

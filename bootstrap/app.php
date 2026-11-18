@@ -174,7 +174,9 @@ $isDebug = env('APP_DEBUG', false);
 $isDev   = env('APP_ENV', 'production') === 'dev';
 
 // Security headers (X-Frame-Options, X-Content-Type-Options, etc.) — runs on every response
-$app->add(new SecurityHeadersMiddleware());
+$app->add(new SecurityHeadersMiddleware(
+    $container->get(\ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface::class)
+));
 
 // Base path fixer — prefixes /admin redirects with APP_BASE_PATH (outermost — runs last on response)
 $app->add(new BasePathMiddleware());

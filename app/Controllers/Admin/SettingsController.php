@@ -662,6 +662,83 @@ final class SettingsController
         return $response->withHeader('Location', admin_url($redirectUrl))->withStatus(302);
     }
 
+    /**
+     * "Test connection" on Settings -> Content -> Collaboration. Hocuspocus has
+     * no HTTP health endpoint, so this runs the same TCP probe as the dashboard:
+     * it proves the address accepts connections from the PHP server, while the
+     * shared secret is only verified when an editor actually connects.
+     */
+    public function testCollaboration(Request $request, Response $response): Response
+    {
+        $this->releaseSessionLock();
+
+        $body   = (array) $request->getParsedBody();
+        $url    = trim((string) ($body['collaboration_url'] ?? ''));
+        $secret = (string) ($body['collaboration_secret'] ?? '');
+        if ($secret === '••••••••') {
+            $secret = (string) ($this->settings->get('collaboration_secret', '') ?? '');
+        }
+
+        $probe = $this->probeCollaborationServer($url);
+
+        $payload = match (true) {
+            $url === '' => [
+                'ok'      => false,
+                'message' => $this->translator->get('Enter the WebSocket address of the collaboration server first.'),
+            ],
+            $probe['error'] !== null => ['ok' => false, 'message' => $probe['error']],
+            $probe['reachable']      => [
+                'ok'      => true,
+                'message' => $this->translator->get('Server reachable at :url.', [':url' => $probe['target']])
+                    . ' ' . ($secret === ''
+                        ? $this->translator->get('No shared secret is set, so the server accepts unauthenticated clients.')
+                        : $this->translator->get('The shared secret is checked when an editor connects.')),
+            ],
+            default => [
+                'ok'      => false,
+                'message' => $this->translator->get('Could not connect to :url. Check the address and that the server is running.', [':url' => $probe['target']]),
+            ],
+        };
+
+        $response->getBody()->write((string) json_encode($payload));
+
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /** @return array{reachable: bool, target: string, error: ?string} */
+    private function probeCollaborationServer(string $url): array
+    {
+        $parts = $url !== '' ? parse_url($url) : false;
+        if (!is_array($parts) || empty($parts['host'])) {
+            return [
+                'reachable' => false,
+                'target'    => $url,
+                'error'     => $this->translator->get('That is not a valid ws:// or wss:// address.'),
+            ];
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['ws', 'wss'], true)) {
+            return [
+                'reachable' => false,
+                'target'    => $url,
+                'error'     => $this->translator->get('The address must start with ws:// or wss://.'),
+            ];
+        }
+
+        $host   = (string) $parts['host'];
+        $port   = (int) ($parts['port'] ?? ($scheme === 'wss' ? 443 : 80));
+        $target = $scheme . '://' . $host . ':' . $port;
+
+        $socket = @fsockopen($host, $port, $errno, $errstr, 1.0);
+        if ($socket === false) {
+            return ['reachable' => false, 'target' => $target, 'error' => null];
+        }
+        fclose($socket);
+
+        return ['reachable' => true, 'target' => $target, 'error' => null];
+    }
+
     private function settingsTab(string $group): string
     {
         $tabMap = [

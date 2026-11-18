@@ -44,6 +44,7 @@
             <button type="button" data-subtab="blog" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.blog" x-cloak>{{ __('Blog') }}</button>
             <button type="button" data-subtab="mlc" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.mlc" x-cloak>{{ __('Multi-Language') }}</button>
             <button type="button" data-subtab="ads" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.ads" x-cloak>{{ __('Advertisement') }}</button>
+            <button type="button" data-subtab="collaboration" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Collaboration') }}</button>
         </nav>
     </div>
 
@@ -51,4 +52,5 @@
     {{ include('admin/settings/_content_blog.twig', {content_tab_id: 'content-tab-blog', is_active: false}) }}
     {{ include('admin/settings/_content_multilanguage.twig', {content_tab_id: 'content-tab-mlc', is_active: false}) }}
     {{ include('admin/settings/_content_advertisement.twig', {content_tab_id: 'content-tab-ads', is_active: false}) }}
+    {{ include('admin/settings/_content_collaboration.twig', {content_tab_id: 'content-tab-collaboration', is_active: false}) }}
 </div>

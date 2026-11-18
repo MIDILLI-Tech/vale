@@ -267,6 +267,10 @@
             "Add a group of custom styled link buttons": "{{ __('Add a group of custom styled link buttons')|e('js') }}",
             "Header row": "{{ __('Header row')|e('js') }}",
             "Save": "{{ __('Save')|e('js') }}",
+            "%d online": "{{ __('%d online')|e('js') }}",
+            "Click to jump to :name": "{{ __('Click to jump to :name')|e('js') }}",
+            "Click again to follow :name": "{{ __('Click again to follow :name')|e('js') }}",
+            "Following :name — click to stop": "{{ __('Following :name — click to stop')|e('js') }}",
             "Undo (Ctrl+Z)": "{{ __('Undo (Ctrl+Z)')|e('js') }}",
             "Redo (Ctrl+Y)": "{{ __('Redo (Ctrl+Y)')|e('js') }}",
             "Bold (Ctrl+B)": "{{ __('Bold (Ctrl+B)')|e('js') }}",
@@ -1779,6 +1783,18 @@
             --vl-table-head-text: {{ vl_theme_colors['--theme-text'].value ?? '#111827' }};
         }
     </style>
+    <script>
+    window.VL_COLLAB = {
+        enabled: {{ collaboration_enabled|default('0') == '1' ? 'true' : 'false' }},
+        url: {{ collaboration_url|default('')|json_encode|raw }},
+        secret: {{ collaboration_secret|default('')|json_encode|raw }},
+        prefix: {{ collaboration_room_prefix|default('')|json_encode|raw }},
+        user: {
+            id: {{ (user.id ?? 0)|json_encode|raw }},
+            name: {{ (user.name ?? user.email ?? 'Admin')|json_encode|raw }}
+        }
+    };
+    </script>
     <script>window.CURRENCY_SYMBOL = '{{ default_currency_symbol|default(currency_symbol)|raw }}';window.APP_DEBUG = {% if env('APP_DEBUG') or env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};window.VL_VERBOSE = {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};</script>
     {% if assets_use_cdn %}
     <script type="module" src="{{ asset('assets/js/editor.js') }}"></script>

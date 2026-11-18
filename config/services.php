@@ -537,6 +537,13 @@ return [
         $env->addGlobal('multi_language_content', $settings->get('multi_language_content', '0'));
         $env->addGlobal('content_languages', $settings->get('content_languages', ''));
 
+        // Collaboration (Settings -> Content -> Collaboration). The editor
+        // reads these through window.VL_COLLAB in the admin layout.
+        $env->addGlobal('collaboration_enabled', $settings->get('collaboration_enabled', '0'));
+        $env->addGlobal('collaboration_url', $settings->get('collaboration_url', ''));
+        $env->addGlobal('collaboration_secret', $settings->get('collaboration_secret', ''));
+        $env->addGlobal('collaboration_room_prefix', $settings->get('collaboration_room_prefix', ''));
+
         $env->addGlobal('advertisement_enabled', $settings->get('advertisement_enabled', '0'));
         $env->addGlobal('advertisement_code', $settings->get('advertisement_code', ''));
         $env->addGlobal('advertisement_placement', $settings->get('advertisement_placement', 'manual'));
@@ -702,6 +709,7 @@ return [
         $servicesList  = is_array($referenceData['services'] ?? null) ? $referenceData['services'] : [];
         $env->addGlobal('services_list', $servicesList);
         $env->addGlobal('captcha_urls', is_array($referenceData['captcha_urls'] ?? null) ? $referenceData['captcha_urls'] : []);
+        $env->addGlobal('collaboration_servers', is_array($referenceData['collaboration_servers'] ?? null) ? $referenceData['collaboration_servers'] : []);
         $env->addGlobal('media_embeds', is_array($referenceData['media_embeds'] ?? null) ? $referenceData['media_embeds'] : []);
         $env->addGlobal('cron_mode', $settings->get('cron_mode', 'none'));
 

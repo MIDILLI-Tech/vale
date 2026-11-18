@@ -63,6 +63,13 @@ const CustomLink = Link.extend({
 
 import { TableBubbleMenu, TextBubbleMenu, buildTableBubbleMenu, buildTextBubbleMenu } from './bubble-menus.js';
 import { commentToMore, commentToNextpage, formEmbedToShortcode, htmlToSpacer, htmlToVideoEmbed, moreToComment, nextpageToComment, normalizeImageFigures, resolveFormNames, shortcodeToFormEmbed, shortcodeToVideoEmbed, spacerToHtml, videoEmbedHtmlForUrl, videoEmbedToHtml } from './converters.js';
+import { Collaboration } from '@tiptap/extension-collaboration';
+import { CollaborationCaret } from '@tiptap/extension-collaboration-caret';
+import {
+  createCollaborationSession,
+  initCollaborationPresence,
+  seedCollaborationContent,
+} from './collaboration.js';
 import { initEditorDraftRecovery } from './draft.js';
 import { HeroEmbed, HeroHeading, HeroSubtitle } from './embeds/hero-embed.js';
 import { CarouselEmbed } from './embeds/carousel-embed.js';
@@ -154,6 +161,7 @@ function vlMountEditor(textarea) {
     const textMenu = buildTextBubbleMenu(wrapper);
 
     if (window.VL_VERBOSE) console.log('[Vale] Initializing Vale editor.');
+    const collab = createCollaborationSession();
     let editorReady = false;
     const editor = new Editor({
       element: editorEl,
@@ -166,6 +174,8 @@ function vlMountEditor(textarea) {
       extensions: [
               StarterKit.configure({
                 link: false,
+                // Yjs keeps its own undo history while collaborating.
+                ...(collab ? { undoRedo: false } : {}),
               }),
               CustomLink.configure({
                 openOnClick: false,
@@ -231,6 +241,12 @@ function vlMountEditor(textarea) {
               MoreNode,
               NextPageNode,
               SpacerBlock,
+              ...(collab
+                ? [
+                    Collaboration.configure({ document: collab.document, field: 'default' }),
+                    CollaborationCaret.configure({ provider: collab.provider, user: collab.user }),
+                  ]
+                : []),
               Markdown.configure({
                 html: true,
                 tightLists: true,
@@ -240,7 +256,7 @@ function vlMountEditor(textarea) {
                 breaks: false,
               }),
             ],
-      content: initialContent,
+      content: collab ? '' : initialContent,
       onCreate() {
         editorReady = true;
         // Clicking a link should select it (and surface the bubble menu) instead
@@ -432,6 +448,7 @@ function vlMountEditor(textarea) {
     }
 
     resolveFormNames(editor);
+    seedCollaborationContent(editor, collab, initialContent);
 
     // Add slash suggestion plugin
     try {
@@ -448,11 +465,13 @@ function vlMountEditor(textarea) {
 
     // Word & character counter
     initWordCounter(editor, wrapper);
+    initCollaborationPresence(collab, wrapper, editorEl, editor);
 
     // Crash-safe local drafts: keep a copy in localStorage and offer to
     // recover it when the page is reloaded with different saved content.
     initEditorDraftRecovery({
       textarea,
+      disabled: Boolean(collab),
       wrapper,
       applyHtml: (html, opts = {}) => {
         if (isHtmlMode) {

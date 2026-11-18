@@ -10,17 +10,64 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Response;
 use ValeApp\App\Middleware\SecurityHeadersMiddleware;
+use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 
 final class SecurityHeadersMiddlewareTest extends TestCase
 {
-    private function processRequest(string $url = 'http://localhost/blog/hello'): ResponseInterface
-    {
+    private function processRequest(
+        string $url = 'http://localhost/blog/hello',
+        ?SettingsRepositoryInterface $settings = null,
+    ): ResponseInterface {
         $handler = $this->createStub(RequestHandlerInterface::class);
         $handler->method('handle')->willReturn(new Response());
 
         $request = (new ServerRequestFactory())->createServerRequest('GET', $url);
 
-        return (new SecurityHeadersMiddleware())->process($request, $handler);
+        return (new SecurityHeadersMiddleware($settings))->process($request, $handler);
+    }
+
+    private function collaborationSettings(bool $enabled, string $url): SettingsRepositoryInterface
+    {
+        $settings = $this->createStub(SettingsRepositoryInterface::class);
+        $settings->method('get')->willReturnCallback(
+            static fn (string $key, ?string $default = null): ?string => match ($key) {
+                'collaboration_enabled' => $enabled ? '1' : '0',
+                'collaboration_url'     => $url,
+                default                 => $default,
+            },
+        );
+
+        return $settings;
+    }
+
+    public function testCspConnectSourcesAllowTheConfiguredCollaborationServer(): void
+    {
+        $csp = $this->processRequest(
+            'http://localhost/admin/pages/1/edit',
+            $this->collaborationSettings(true, 'ws://localhost:1234'),
+        )->getHeaderLine('Content-Security-Policy');
+
+        self::assertStringContainsString("connect-src 'self' https: ws://localhost:1234", $csp);
+    }
+
+    public function testCspConnectSourcesMapHttpsCollaborationUrlsToWss(): void
+    {
+        $csp = $this->processRequest(
+            'https://example.com/admin/pages/1/edit',
+            $this->collaborationSettings(true, 'https://collab.example.com'),
+        )->getHeaderLine('Content-Security-Policy');
+
+        self::assertStringContainsString('wss://collab.example.com', $csp);
+    }
+
+    public function testCspConnectSourcesIgnoreTheCollaborationServerWhenDisabled(): void
+    {
+        $csp = $this->processRequest(
+            'http://localhost/admin/pages/1/edit',
+            $this->collaborationSettings(false, 'ws://localhost:1234'),
+        )->getHeaderLine('Content-Security-Policy');
+
+        self::assertStringNotContainsString('ws://localhost:1234', $csp);
     }
 
     public function testCspFrameSourcesAllowExternalCommentSystemOrigins(): void

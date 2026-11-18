@@ -370,6 +370,17 @@ return [
             'signup_url'  => 'https://steamcommunity.com/dev',
         ],
     ],
+    // Collaboration server providers for Settings -> Content -> Collaboration.
+    // `private` is the self-hosted Hocuspocus image shipped in docker/collaboration;
+    // add another entry to offer a hosted/managed option without touching the UI.
+    'collaboration_servers' => [
+        'private' => [
+            'name'            => 'Private server (self-hosted)',
+            'url_placeholder' => 'ws://localhost:1234',
+            'docs_url'        => 'https://tiptap.dev/docs/hocuspocus',
+            'requires_url'    => true,
+        ],
+    ],
     'captcha_urls' => [
         'recaptcha' => [
             'signup_url' => 'https://www.google.com/recaptcha/admin/create',

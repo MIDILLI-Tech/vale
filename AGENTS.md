@@ -288,7 +288,7 @@ Key bindings: `DbalConnection`, `Twig`, `EventDispatcherInterface`, `MailInterfa
 | `config/media.php` | Media settings |
 | `config/shop.php` | E-commerce settings |
 | `config/admin-nav.php` | Admin navigation structure |
-| `config/reference-data.php` | Reference data (countries, currencies, provider catalogs, third-party service lists, captcha + media-embed CSP `frame-src` origins — `SecurityHeadersMiddleware` merges the `captcha_urls` and `media_embeds` `frame_src` values into the policy). Also the **media file type catalogs**: `media_file_types` (validation — extension + accepted content detections, derived into config/media.php's allowed lists) and `media_serve_types` (Content-Type for served uploads). Never add `text/html` or executable extensions to either; `MediaFileTypes::BLOCKED_EXTENSIONS` is enforced in code regardless |
+| `config/reference-data.php` | Reference data (countries, currencies, provider catalogs, third-party service lists, collaboration server providers (`collaboration_servers`, rendered as the Settings → Content → Collaboration **Server** dropdown), captcha + media-embed CSP `frame-src` origins — `SecurityHeadersMiddleware` merges the `captcha_urls` and `media_embeds` `frame_src` values into the policy). Also the **media file type catalogs**: `media_file_types` (validation — extension + accepted content detections, derived into config/media.php's allowed lists) and `media_serve_types` (Content-Type for served uploads). Never add `text/html` or executable extensions to either; `MediaFileTypes::BLOCKED_EXTENSIONS` is enforced in code regardless |
 | `config/services.php` | DI container definitions |
 
 ---
@@ -530,7 +530,7 @@ composer test:unit
 - `docker-compose.prod.yml` — Production deployment
 - Dev: volume mount for live development
 - Production (immutable): one parameterized `docker/Dockerfile` — `VARIANT=apache|nginx`, `FLAVOR=immutable|mutable` — multi-stage build
-- Four images publish to Docker Hub (`midillitech/vale`) via `scripts/publish-docker.php` (passes the build args per target) + composer aliases (`composer docker:plan|build|test|publish`). Tags: unsuffixed = immutable Apache (`latest`, `apache`, `<ver>`), `-nginx` = immutable Nginx, `mutable-*` = self-managed bind-mount flavor, `edge*` = unreleased master builds. Docs: `vale-docs/en/latest/developer/deployment/docker-registry.md`
+- The optional editor-collaboration server lives in `docker/collaboration/` with its own Node image; `.github/workflows/collaboration-image.yml` builds and boots it (build-only, never published with the release tags). Four Vale images publish to Docker Hub (`midillitech/vale`) via `scripts/publish-docker.php` (passes the build args per target) + composer aliases (`composer docker:plan|build|test|publish`). Tags: unsuffixed = immutable Apache (`latest`, `apache`, `<ver>`), `-nginx` = immutable Nginx, `mutable-*` = self-managed bind-mount flavor, `edge*` = unreleased master builds. Docs: `vale-docs/en/latest/developer/deployment/docker-registry.md`
 
 ### Admin Media Previews:
 - Shared partial: `resources/views/admin/partials/_media_preview.twig` (variants: `grid`, `list`, `full`) — every admin surface that renders media tiles (media library grid/list, media edit page, gallery pickers) reuses it instead of ad-hoc emoji fallbacks.

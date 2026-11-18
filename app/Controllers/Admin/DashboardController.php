@@ -34,6 +34,70 @@ final class DashboardController
     ) {
     }
 
+    /**
+     * Dashboard notice for the collaboration feature: nothing when it is off or
+     * the server answers, a warning when the URL is missing or unreachable.
+     *
+     * @return array{type: string, message: string, link?: string, linkText?: string}|null
+     */
+    private function collaborationStatus(): ?array
+    {
+        if (($this->settings->get('collaboration_enabled', '0') ?? '0') !== '1') {
+            return null;
+        }
+
+        $url = trim((string) ($this->settings->get('collaboration_url', '') ?? ''));
+        if ($url === '') {
+            return [
+                'type'     => 'warning',
+                'message'  => __('Collaboration is enabled but no server URL is set. Real-time editing stays off until one is configured.'),
+                'link'     => '/admin/settings#tab-content',
+                'linkText' => __('Content Settings'),
+            ];
+        }
+
+        $cacheKey  = 'dashboard_collab_probe_' . md5($url);
+        $reachable = $this->cache->get($cacheKey);
+        if ($reachable === null) {
+            $reachable = $this->probeCollaborationServer($url);
+            $this->cache->set($cacheKey, $reachable, 300);
+        }
+
+        if ($reachable) {
+            return null;
+        }
+
+        return [
+            'type'     => 'warning',
+            'message'  => __('Collaboration is enabled but :url is not reachable. Editors fall back to single-user editing.', [':url' => $url]),
+            'link'     => '/admin/settings#tab-content',
+            'linkText' => __('Content Settings'),
+        ];
+    }
+
+    /**
+     * TCP probe: a WebSocket server has no plain HTTP health endpoint, so the
+     * cheapest reliable check is opening the host/port with a short timeout.
+     */
+    private function probeCollaborationServer(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return false;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $port   = (int) ($parts['port'] ?? ($scheme === 'wss' ? 443 : 80));
+
+        $socket = @fsockopen((string) $parts['host'], $port, $errno, $errstr, 1.0);
+        if ($socket === false) {
+            return false;
+        }
+        fclose($socket);
+
+        return true;
+    }
+
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         // ── Quick stats ──────────────────────────────────────────────
@@ -104,6 +168,12 @@ final class DashboardController
                 'type'    => 'warning',
                 'message' => 'Debug mode is enabled. Cache is disabled and performance may be reduced while debugging is active.',
             ];
+        }
+
+        // Collaboration server (Settings -> Content -> Collaboration)
+        $collabNotice = $this->collaborationStatus();
+        if ($collabNotice !== null) {
+            $status[] = $collabNotice;
         }
 
         // Shop enabled but no payment configured

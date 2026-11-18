@@ -1,0 +1,54 @@
+name: Build collaboration server image (no push)
+
+# The collaboration server is an optional, separately deployed Node process.
+# It deliberately stays out of the release/publish pipeline (docker-publish.yml
+# and docker-edge.yml): no midillitech tag is produced here, so its lifecycle
+# and version can move independently of Vale releases. This workflow only
+# proves the image in docker/collaboration still builds when it changes.
+
+on:
+  pull_request:
+    paths:
+      - 'docker/collaboration/**'
+      - '.github/workflows/collaboration-image.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'docker/collaboration/**'
+      - '.github/workflows/collaboration-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collaboration-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build image (no push)
+        run: docker build -t vale-collaboration:ci docker/collaboration
+
+      - name: Smoke-test the server boots
+        run: |
+          docker run -d --name vale-collaboration-ci -p 1234:1234 \
+            -e COLLAB_SECRET=ci-secret vale-collaboration:ci
+          for i in $(seq 1 20); do
+            if docker logs vale-collaboration-ci 2>&1 | grep -q 'Hocuspocus listening'; then
+              echo "server booted"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "server did not boot in time"
+          docker logs vale-collaboration-ci || true
+          exit 1
+        timeout-minutes: 2

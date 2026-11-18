@@ -114,7 +114,8 @@ function bannerContainer(wrapper) {
  *
  * @param {{textarea: HTMLTextAreaElement, wrapper: HTMLElement, applyHtml: Function}} opts
  */
-export function initEditorDraftRecovery({ textarea, wrapper, applyHtml }) {
+export function initEditorDraftRecovery({ textarea, wrapper, applyHtml, disabled = false }) {
+  if (disabled) return;
   if (textarea.dataset.draftAutosave === 'off') return;
 
   const key = storageKey(textarea);
