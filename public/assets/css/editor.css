@@ -562,7 +562,15 @@
 /* Image spacing parity: the front-end themes give standalone images and
    captioned figures `margin: 1em 0`; mirror that here so the canvas matches
    the saved markup (the generic `* + *` rule above stays for other blocks). */
+/* A standalone image is inline on the front-end, where vertical margins on the
+   <img> are ignored; only captioned figures (inline-table) get `1em 0`. The
+   node view always builds a <figure>, so the margin is scoped to captioned
+   ones — otherwise every newly inserted image gained a large gap above and
+   below that the published page never shows. */
 .vl-editor-content .ProseMirror .vl-image-figure {
+  margin: 0;
+}
+.vl-editor-content .ProseMirror .vl-image-figure--captioned {
   margin: 1em 0;
 }
 

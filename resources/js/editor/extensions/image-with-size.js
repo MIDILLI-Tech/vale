@@ -109,7 +109,7 @@ const ImageWithSize = Image.extend({
       if (borderRadius) styles.push(`border-radius:${borderRadius}`);
 
       const figure = document.createElement('figure');
-      figure.className = 'vl-image-figure';
+      figure.className = 'vl-image-figure' + (caption ? ' vl-image-figure--captioned' : '');
       // The selection halo (box-shadow) lives on the figure, so it needs the
       // same radius — otherwise a rounded image keeps a square halo.
       if (borderRadius) figure.style.borderRadius = borderRadius;
@@ -241,6 +241,7 @@ const ImageWithSize = Image.extend({
             positionCorner();
           }
           if (na.caption !== attrs.caption) {
+            figure.classList.toggle('vl-image-figure--captioned', Boolean(na.caption));
             if (na.caption) {
               if (figcaption) {
                 figcaption.textContent = na.caption;

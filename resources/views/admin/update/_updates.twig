@@ -163,13 +163,13 @@
 <div class="flex flex-wrap gap-3 mb-6">
 
     {# Check now #}
-    <form method="POST" action="{{ url('/admin/update/check') }}">
+    <form method="POST" action="{{ url('/admin/update/check') }}" data-update-check>
         {{ csrf_field() }}
         <button type="submit"
                 class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 dark:bg-gray-800/50">
-            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
+            <span class="vl-update-check-icon text-gray-400 dark:text-gray-500" aria-hidden="true">
+                <span class="vl-icon-refresh"></span>
+            </span>
             {{ __('Check now') }}
         </button>
     </form>
@@ -360,3 +360,16 @@
         {% endif %}
     </dl>
 </div>
+
+<script>
+(function () {
+    document.querySelectorAll('form[data-update-check]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var icon = form.querySelector('.vl-update-check-icon');
+            if (!icon) return;
+            var glyph = icon.querySelector('.vl-icon-refresh');
+            if (glyph) glyph.classList.add('vl-icon-spin');
+        });
+    });
+})();
+</script>

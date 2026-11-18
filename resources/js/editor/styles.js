@@ -405,6 +405,120 @@
     .dark .vl-editor-wrapper.is-dragover { outline-color: #60a5fa !important; }
     .dark .vl-editor-wrapper.is-dragover::after { background: rgba(96, 165, 250, 0.08); }
 
+/* ── Draft recovery banner (localStorage) ───────────────────────────── */
+    .vl-draft-banner {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 14px; margin: 0 0 16px;
+      border: 1px solid #fcd34d; border-radius: 12px;
+      background: #fffbeb; color: #78350f;
+      font-size: 13px; line-height: 1.45;
+    }
+    .dark .vl-draft-banner { border-color: #92400e; background: #451a03; color: #fde68a; }
+    .vl-draft-banner-icon { flex: none; font-size: 16px; line-height: 1.2; }
+    .vl-draft-banner-text { flex: 1 1 auto; min-width: 0; }
+    .vl-draft-banner-title { display: block; font-weight: 600; margin-bottom: 2px; }
+    .vl-draft-banner-field { font-weight: 600; }
+    .vl-draft-banner-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: none; }
+    .vl-draft-btn {
+      appearance: none; border: 1px solid #d1d5db; background: #ffffff; color: #374151;
+      border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600;
+      line-height: 1.4; cursor: pointer; white-space: nowrap;
+    }
+    .vl-draft-btn:hover { background: #f3f4f6; }
+    .dark .vl-draft-btn { border-color: #4b5563; background: #1f2937; color: #e5e7eb; }
+    .dark .vl-draft-btn:hover { background: #374151; }
+    .vl-draft-btn--primary { border-color: #1f2937; background: #1f2937; color: #ffffff; }
+    .vl-draft-btn--primary:hover { background: #374151; }
+    .dark .vl-draft-btn--primary { border-color: #4b5563; background: #374151; color: #ffffff; }
+    .dark .vl-draft-btn--primary:hover { background: #4b5563; }
+    .vl-draft-btn--danger { border-color: #fca5a5; background: transparent; color: #b91c1c; }
+    .vl-draft-btn--danger:hover { background: #fef2f2; }
+    .dark .vl-draft-btn--danger { border-color: #7f1d1d; color: #fca5a5; }
+    .dark .vl-draft-btn--danger:hover { background: #451a03; }
+    .vl-draft-banner-close {
+      appearance: none; border: none; background: transparent; color: inherit;
+      opacity: .55; cursor: pointer; font-size: 16px; line-height: 1;
+      padding: 2px 5px; border-radius: 6px;
+    }
+    .vl-draft-banner-close:hover { opacity: 1; background: rgba(0, 0, 0, .06); }
+    .dark .vl-draft-banner-close:hover { background: rgba(255, 255, 255, .12); }
+    @media (max-width: 720px) {
+      .vl-draft-banner { flex-wrap: wrap; }
+      .vl-draft-banner-actions { width: 100%; }
+    }
+
+    /* ── Draft comparison modal ───────────────────────────────────────── */
+    .vl-modal.vl-modal--draft-diff { max-width: min(960px, calc(100vw - 24px)); }
+    .vl-draft-diff-sub { margin: 0 0 10px; font-size: 12px; color: #6b7280; }
+    .dark .vl-draft-diff-sub { color: #9ca3af; }
+    .vl-draft-diff-meta { opacity: .85; }
+    .vl-draft-diff-legend {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 10px; font-size: 11px; color: #6b7280;
+    }
+    .dark .vl-draft-diff-legend { color: #9ca3af; }
+    .vl-draft-diff-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .vl-draft-diff-legend-item .vl-diff-swatch-add,
+    .vl-draft-diff-legend-item .vl-diff-swatch-del {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+      background: var(--vl-diff-add-bg, #f0fdf4); border: 1px solid var(--vl-diff-add-border, #bbf7d0);
+    }
+    .vl-draft-diff-legend-item .vl-diff-swatch-del {
+      background: var(--vl-diff-del-bg, #fef2f2); border-color: var(--vl-diff-del-border, #fecaca);
+    }
+    .dark .vl-draft-diff-legend-item .vl-diff-swatch-add {
+      background: var(--vl-diff-add-bg, rgba(16, 185, 129, .09));
+      border-color: var(--vl-diff-add-border, rgba(16, 185, 129, .35));
+    }
+    .dark .vl-draft-diff-legend-item .vl-diff-swatch-del {
+      background: var(--vl-diff-del-bg, rgba(239, 68, 68, .10));
+      border-color: var(--vl-diff-del-border, rgba(239, 68, 68, .35));
+    }
+    .vl-draft-diff-counts { margin-left: auto; font-size: 11px; color: #6b7280; }
+    .dark .vl-draft-diff-counts { color: #9ca3af; }
+    .vl-draft-diff-body {
+      max-height: 55vh; overflow: auto; padding: 10px 12px;
+      border: 1px solid #e5e7eb; border-radius: 10px;
+      background: #f9fafb; color: #111827;
+    }
+    .dark .vl-draft-diff-body { border-color: #374151; background: #111827; color: #e5e7eb; }
+    .vl-draft-diff-body .vl-diff-line {
+      padding: 1px 6px; border-left: 3px solid transparent; border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.7;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .vl-draft-diff-body .vl-diff-line + .vl-diff-line { margin-top: 1px; }
+    .vl-draft-diff-body .vl-diff-marker {
+      display: inline-block; width: 14px; text-align: center;
+      user-select: none; font-weight: 700; opacity: .7;
+    }
+    .vl-draft-diff-body .vl-diff-same { color: var(--vl-diff-same-text, #4b5563); }
+    .dark .vl-draft-diff-body .vl-diff-same { color: var(--vl-diff-same-text, #9ca3af); }
+    .vl-draft-diff-body .vl-diff-add {
+      background: var(--vl-diff-add-bg, #f0fdf4); color: var(--vl-diff-add-text, #15803d);
+      border-left-color: var(--vl-diff-add-border, #bbf7d0);
+    }
+    .dark .vl-draft-diff-body .vl-diff-add {
+      background: var(--vl-diff-add-bg, rgba(16, 185, 129, .09)); color: var(--vl-diff-add-text, #86efac);
+      border-left-color: var(--vl-diff-add-border, rgba(16, 185, 129, .35));
+    }
+    .vl-draft-diff-body .vl-diff-del {
+      background: var(--vl-diff-del-bg, #fef2f2); color: var(--vl-diff-del-text, #b91c1c);
+      border-left-color: var(--vl-diff-del-border, #fecaca);
+    }
+    .dark .vl-draft-diff-body .vl-diff-del {
+      background: var(--vl-diff-del-bg, rgba(239, 68, 68, .10)); color: var(--vl-diff-del-text, #fca5a5);
+      border-left-color: var(--vl-diff-del-border, rgba(239, 68, 68, .35));
+    }
+    .vl-draft-diff-body .vl-w-add,
+    .vl-draft-diff-body .vl-w-del { border-radius: 3px; padding: 0 2px; font-weight: 600; }
+    .vl-draft-diff-body .vl-w-add { background: var(--vl-diff-word-add-bg, #bbf7d0); }
+    .vl-draft-diff-body .vl-w-del {
+      background: var(--vl-diff-word-del-bg, #fecaca);
+      text-decoration: line-through; opacity: .85;
+    }
+
 /* Fullscreen HTML source editor & stats bar */
 .vl-editor-wrapper.is-fullscreen .vl-html-editor {
       flex: 1 1 auto;

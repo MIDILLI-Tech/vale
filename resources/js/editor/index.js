@@ -63,6 +63,7 @@ const CustomLink = Link.extend({
 
 import { TableBubbleMenu, TextBubbleMenu, buildTableBubbleMenu, buildTextBubbleMenu } from './bubble-menus.js';
 import { commentToMore, commentToNextpage, formEmbedToShortcode, htmlToSpacer, htmlToVideoEmbed, moreToComment, nextpageToComment, normalizeImageFigures, resolveFormNames, shortcodeToFormEmbed, shortcodeToVideoEmbed, spacerToHtml, videoEmbedHtmlForUrl, videoEmbedToHtml } from './converters.js';
+import { initEditorDraftRecovery } from './draft.js';
 import { HeroEmbed, HeroHeading, HeroSubtitle } from './embeds/hero-embed.js';
 import { CarouselEmbed } from './embeds/carousel-embed.js';
 import { CardGroup } from './embeds/card-group.js';
@@ -447,6 +448,31 @@ function vlMountEditor(textarea) {
 
     // Word & character counter
     initWordCounter(editor, wrapper);
+
+    // Crash-safe local drafts: keep a copy in localStorage and offer to
+    // recover it when the page is reloaded with different saved content.
+    initEditorDraftRecovery({
+      textarea,
+      wrapper,
+      applyHtml: (html, opts = {}) => {
+        if (isHtmlMode) {
+          htmlArea.value = html;
+          textarea.value = html;
+        } else {
+          editor.commands.setContent(
+            htmlToVideoEmbed(shortcodeToVideoEmbed(shortcodeToFormEmbed(commentToNextpage(commentToMore(normalizeImageFigures(html)))))),
+            false
+          );
+          textarea.value = spacerToHtml(nextpageToComment(moreToComment(normalizeImageFigures(videoEmbedToHtml(formEmbedToShortcode(editor.getHTML()))))));
+        }
+        if (opts.emitInput !== false) {
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        try {
+          wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (_) { /* ignore */ }
+      },
+    });
 
     // Image drag resize
     initImageResize(editor);

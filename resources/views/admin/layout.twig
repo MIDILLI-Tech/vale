@@ -475,7 +475,20 @@
             "Custom delay (seconds)": "{{ __('Custom delay (seconds)')|e('js') }}",
             "No URL set — click the gear to configure.": "{{ __('No URL set — click the gear to configure.')|e('js') }}",
             "This page has :count redirect blocks — only the first one navigates.": "{{ __('This page has :count redirect blocks — only the first one navigates.')|e('js') }}",
-            "Redirect after :count s": "{{ __('Redirect after :count s')|e('js') }}"
+            "Redirect after :count s": "{{ __('Redirect after :count s')|e('js') }}",
+            "Unsaved draft found": "{{ __('Unsaved draft found')|e('js') }}",
+            "This content was restored from a draft saved in this browser at :time. Discard it to use the saved version.": "{{ __('This content was restored from a draft saved in this browser at :time. Discard it to use the saved version.')|e('js') }}",
+            "Saved at :time": "{{ __('Saved at :time')|e('js') }}",
+            "Show differences": "{{ __('Show differences')|e('js') }}",
+            "Discard draft": "{{ __('Discard draft')|e('js') }}",
+            "Discard this draft? This cannot be undone.": "{{ __('Discard this draft? This cannot be undone.')|e('js') }}",
+            "Dismiss": "{{ __('Dismiss')|e('js') }}",
+            "Draft comparison": "{{ __('Draft comparison')|e('js') }}",
+            "Changes made in this browser (not saved yet) compared with the saved version.": "{{ __('Changes made in this browser (not saved yet) compared with the saved version.')|e('js') }}",
+            "The draft could not be compared. Showing the saved version only.": "{{ __('The draft could not be compared. Showing the saved version only.')|e('js') }}",
+            "Saved version": "{{ __('Saved version')|e('js') }}",
+            "Draft": "{{ __('Draft')|e('js') }}",
+            "Close": "{{ __('Close')|e('js') }}"
         };
         function tjs(text, replacements = {}) {
             let translated = window.VL_I18N[text] || text;
@@ -1831,6 +1844,9 @@
         window.addEventListener('beforeunload', function (e) {
             if (dirty) { e.preventDefault(); e.returnValue = ''; }
         });
+        // Last created guard (one per admin page) — lets editor features reset
+        // the dirty state after they put the saved content back on screen.
+        window.vlDirtyGuardApi = api;
         return api;
     };
     </script>
