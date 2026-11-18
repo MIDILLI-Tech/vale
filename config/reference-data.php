@@ -377,7 +377,6 @@ return [
         'private' => [
             'name'            => 'Private server (self-hosted)',
             'url_placeholder' => 'ws://localhost:1234',
-            'docs_url'        => 'https://tiptap.dev/docs/hocuspocus',
             'requires_url'    => true,
         ],
     ],

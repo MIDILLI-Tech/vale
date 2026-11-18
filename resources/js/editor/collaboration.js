@@ -181,6 +181,7 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   let jumpedClientId = null;
   let followingClientId = null;
   let followFrame = null;
+  let connectionState = 'connecting';
 
   const titleFor = (clientId, user) => {
     if (clientId === awareness.clientID) return user.name;
@@ -203,11 +204,19 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
     });
   };
 
+  const isOnline = () => connectionState === 'connected' && session.provider.synced;
+
   const render = () => {
     const users = [];
     awareness.getStates().forEach((state, clientId) => {
       if (state?.user?.name) users.push({ clientId, user: state.user });
     });
+
+    const online = isOnline();
+    if (!online) {
+      followingClientId = null;
+      jumpedClientId = null;
+    }
 
     if (followingClientId !== null && !users.some((entry) => entry.clientId === followingClientId)) {
       followingClientId = null;
@@ -217,6 +226,23 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
     }
 
     bar.textContent = '';
+
+    // Disconnected: the awareness map only holds our own state, so a "1 online"
+    // count would be misleading. Show a hoverable warning instead and keep the
+    // remaining presence UI for when the socket is back.
+    if (!online) {
+      const alert = document.createElement('span');
+      alert.className = 'vl-collab-presence-alert';
+      alert.textContent = '!';
+      alert.title = connectionState === 'connecting'
+        ? translate('Connecting to the collaboration server…')
+        : translate('Collaboration not available — changes are saved when you save the form.');
+      alert.setAttribute('role', 'status');
+      alert.setAttribute('aria-label', alert.title);
+      bar.appendChild(alert);
+      return;
+    }
+
     if (users.length === 0) return;
 
     const count = document.createElement('span');
@@ -265,6 +291,11 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
       bar.appendChild(chip);
     });
   };
+
+  session.provider.on('status', ({ status }) => {
+    connectionState = status;
+    render();
+  });
 
   awareness.on('change', () => {
     render();

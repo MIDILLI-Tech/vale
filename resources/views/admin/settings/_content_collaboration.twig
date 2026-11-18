@@ -60,12 +60,6 @@
                 {% endfor %}
             </select>
             <p class="mt-1 text-xs text-gray-400">{{ __('Where the collaboration server runs.') }}</p>
-            {% if activeServer.docs_url %}
-            <p class="mt-1 text-xs">
-                <a href="{{ activeServer.docs_url }}" target="_blank" rel="noopener noreferrer"
-                   class="text-blue-600 hover:underline dark:text-blue-400">{{ __('Setup guide') }}</a>
-            </p>
-            {% endif %}
         </div>
         <div {{ vl.attrs('content', __('Server URL'), 'collaboration_url', 'collaboration', __('Collaboration'), 'websocket server address url ws wss') }}>
             <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Server URL') }}</label>

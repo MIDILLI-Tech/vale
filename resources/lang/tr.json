@@ -217,6 +217,7 @@
     "Allow email change": "",
     "Allow refunds": "",
     "Allow search engines to index this site": "",
+    "Allow several editors to edit the same content at the same time. Requires a running collaboration server (Hocuspocus).": "Birkaç editörün aynı içeriği aynı anda düzenlemesine izin verin. Çalışan bir iş birliği sunucusu (Hocuspocus) gerektirir.",
     "Allow users to edit/remove their own comments": "",
     "Allow users to edit/remove their own reviews": "",
     "Allow users to register using their social accounts.": "",
@@ -569,6 +570,7 @@
     "Collaboration": "İş birliği",
     "Collaboration is enabled but :url is not reachable. Editors fall back to single-user editing.": "İş birliği etkin ama :url adresine ulaşılamıyor. Editörler tek kullanıcılı düzenlemeye düşer.",
     "Collaboration is enabled but no server URL is set. Real-time editing stays off until one is configured.": "İş birliği etkin ama sunucu adresi girilmemiş. Bir adres yapılandırılana kadar gerçek zamanlı düzenleme kapalı kalır.",
+    "Collaboration not available — changes are saved when you save the form.": "İş birliği kullanılamıyor — değişiklikler formu kaydettiğinizde kaydedilir.",
     "Collapse": "",
     "Collapse All": "",
     "Color": "Renk",
@@ -615,6 +617,7 @@
     "Confirm your newsletter subscription.": "",
     "Confirm your subscription": "Aboneliğinizi onaylayın",
     "Confirmed to": "",
+    "Connecting to the collaboration server…": "İş birliği sunucusuna bağlanılıyor…",
     "Container-managed (baked) image": "",
     "Content": "İçerik",
     "Content Body": "İçerik Gövdesi",
@@ -3354,6 +3357,7 @@
     "When enabled, users will see a \"Delete My Account\" option in their account settings. The account and personal data will be anonymized.": "",
     "When enabled, users will see a \"Download Data\" option in their account settings.": "Etkinleştirildiğinde, kullanıcılar hesap ayarlarında bir \"Verileri İndir\" seçeneği görecektir.",
     "When set, each request includes": "",
+    "Where the collaboration server runs.": "İş birliği sunucusunun nerede çalıştığı.",
     "White": "Beyaz",
     "Why Vale": "",
     "Wide": "Geniş",
@@ -3576,8 +3580,5 @@
     "— Choose —": "",
     "— None —": "",
     "— Select —": "",
-    "— may look different depending on your theme": "",
-    "Allow several editors to edit the same content at the same time. Requires a running collaboration server (Hocuspocus).": "Birkaç editörün aynı içeriği aynı anda düzenlemesine izin verin. Çalışan bir iş birliği sunucusu (Hocuspocus) gerektirir.",
-    "Where the collaboration server runs.": "İş birliği sunucusunun nerede çalıştığı.",
-    "Setup guide": "Kurulum kılavuzu"
+    "— may look different depending on your theme": ""
 }

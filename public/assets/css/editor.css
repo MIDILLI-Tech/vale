@@ -1421,6 +1421,8 @@
 .vl-collab-presence-user:not(.is-self):hover { transform: scale(1.08); }
 .vl-collab-presence-user.is-following { outline: 2px solid var(--vl-collab-user-color, #2563eb); outline-offset: 2px; }
 .vl-collab-presence-user.is-jumped { outline: 2px dashed var(--vl-collab-user-color, #2563eb); outline-offset: 2px; }
+.vl-collab-presence-alert { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 9999px; background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 12px; font-weight: 700; line-height: 1; cursor: help; }
+.dark .vl-collab-presence-alert { background: #451a03; border-color: #78350f; color: #fcd34d; }
 .dark .vl-collab-presence-count { color: #e5e7eb; }
 .dark .vl-collab-presence-user { box-shadow: 0 0 0 2px #111827; }
 
