@@ -742,7 +742,9 @@ final class FormFrontController
         foreach ($form->getFields() as $field) {
             if (($field['type'] ?? '') === 'newsletter_subscribe') {
                 $subscribeField = $field['name'] ?? '';
-                $subscribeTags  = $this->normalizeSubscribeTags($field['tags'] ?? []);
+                $subscribeTags  = $this->normalizeSubscribeTags(
+                    $form->resolveSubscribeTags($field, $data)
+                );
             }
             if (($field['type'] ?? '') === 'email') {
                 $hasEmailField = true;

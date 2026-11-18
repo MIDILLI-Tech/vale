@@ -1026,7 +1026,10 @@ final class ShortcodeProcessor
         $csrf          = htmlspecialchars($this->csrf->getToken(), ENT_QUOTES, 'UTF-8');
         $slug          = htmlspecialchars((string) $form->getSlug(), ENT_QUOTES, 'UTF-8');
         $action        = $this->basePath . '/form/' . $slug;
-        $formId        = 'vl-form-' . $slug;
+        // One instance suffix per render: the same form may be embedded more
+        // than once on a page, and duplicate ids would make every inline script
+        // bind to the first copy (and leave the others without an AJAX handler).
+        $formId        = 'vl-form-' . $slug . '-' . bin2hex(random_bytes(4));
         $formKey       = 'vl_form_submitted_' . $form->getId();
         $allowMultiple = (bool) ($form->getSettings()['allow_multiple'] ?? '1');
 

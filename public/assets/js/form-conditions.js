@@ -90,6 +90,10 @@
                 return hasValue(value);
             case 'unchecked':
                 return !hasValue(value);
+            case 'is_empty':
+                return !hasValue(value);
+            case 'is_not_empty':
+                return hasValue(value);
             case 'contains':
                 return contains(value, expected);
             case 'not_contains':

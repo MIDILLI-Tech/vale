@@ -142,6 +142,62 @@ class Form extends BaseEntity
             : !in_array(false, $results, true);
     }
 
+    /**
+     * Tags the newsletter field assigns for a submission: its static `tags`
+     * plus the tags of every `tag_rules` entry whose rule matches an answer.
+     *
+     * Rules reuse the field-condition matcher, so an operator that does not
+     * fit its source field simply never matches, and a rule pointing at a
+     * hidden field reads as unanswered.
+     *
+     * @param array<string, mixed> $field
+     * @param array<string, mixed> $submitted
+     * @return string[]
+     */
+    public function resolveSubscribeTags(array $field, array $submitted): array
+    {
+        $tags = self::collectTags($field['tags'] ?? []);
+
+        foreach ((array) ($field['tag_rules'] ?? []) as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $source = (string) ($rule['field'] ?? '');
+            if ($source === '' || !$this->conditionRuleMatches($rule, $submitted[$source] ?? null)) {
+                continue;
+            }
+
+            $tags = array_merge($tags, self::collectTags($rule['tags'] ?? []));
+        }
+
+        return array_values(array_unique($tags));
+    }
+
+    /** @return string[] */
+    private static function collectTags(mixed $tags): array
+    {
+        if (is_string($tags)) {
+            $tags = explode(',', $tags);
+        }
+        if (!is_array($tags)) {
+            return [];
+        }
+
+        $clean = [];
+        foreach ($tags as $tag) {
+            if (!is_scalar($tag)) {
+                continue;
+            }
+            $tag = trim((string) $tag);
+            if ($tag !== '') {
+                $clean[] = $tag;
+            }
+        }
+
+        return $clean;
+    }
+
     /** @param array<string, mixed> $rule */
     private function conditionRuleMatches(array $rule, mixed $value): bool
     {
@@ -150,6 +206,8 @@ class Form extends BaseEntity
         return match ((string) ($rule['operator'] ?? 'equals')) {
             'checked'      => $this->conditionHasValue($value),
             'unchecked'    => !$this->conditionHasValue($value),
+            'is_empty'     => !$this->conditionHasValue($value),
+            'is_not_empty' => $this->conditionHasValue($value),
             'contains'     => $this->conditionContains($value, $expected),
             'not_contains' => !$this->conditionContains($value, $expected),
             'not_equals'   => !$this->conditionEquals($value, $expected),

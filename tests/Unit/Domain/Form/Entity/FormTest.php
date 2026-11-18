@@ -172,4 +172,88 @@ final class FormTest extends TestCase
         self::assertFalse($form->isFieldVisible($field, ['region' => 'eu']));
         self::assertFalse($form->isFieldVisible($field, ['region' => 'us', 'topics' => ['legal']]));
     }
+
+    public function testEmptyOperatorsFollowAnsweredState(): void
+    {
+        $form  = new Form('Contact', new Slug('contact'));
+        $field = [
+            'type'       => 'text',
+            'name'       => 'details',
+            'conditions' => [
+                'logic' => 'all',
+                'rules' => [['field' => 'request_type', 'operator' => 'is_empty', 'value' => '']],
+            ],
+        ];
+
+        self::assertTrue($form->isFieldVisible($field, []));
+        self::assertTrue($form->isFieldVisible($field, ['request_type' => '']));
+        self::assertFalse($form->isFieldVisible($field, ['request_type' => 'company']));
+
+        $field['conditions']['rules'][0]['operator'] = 'is_not_empty';
+
+        self::assertFalse($form->isFieldVisible($field, []));
+        self::assertTrue($form->isFieldVisible($field, ['request_type' => 'company']));
+
+        $group = [
+            'type'       => 'text',
+            'name'       => 'details',
+            'conditions' => [
+                'logic' => 'all',
+                'rules' => [['field' => 'topics', 'operator' => 'is_empty', 'value' => '']],
+            ],
+        ];
+
+        self::assertTrue($form->isFieldVisible($group, []));
+        self::assertTrue($form->isFieldVisible($group, ['topics' => []]));
+        self::assertFalse($form->isFieldVisible($group, ['topics' => ['billing']]));
+    }
+
+    public function testResolveSubscribeTagsAddsStaticAndMatchingRuleTags(): void
+    {
+        $form  = new Form('Newsletter', new Slug('newsletter'));
+        $field = [
+            'type'      => 'newsletter_subscribe',
+            'name'      => 'sub',
+            'tags'      => ['newsletter'],
+            'tag_rules' => [
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => ['b2b']],
+                ['field' => 'topics', 'operator' => 'contains', 'value' => 'billing', 'tags' => ['finance']],
+            ],
+        ];
+
+        self::assertSame(['newsletter'], $form->resolveSubscribeTags($field, []));
+        self::assertSame(
+            ['newsletter'],
+            $form->resolveSubscribeTags($field, ['request_type' => 'individual'])
+        );
+        self::assertSame(
+            ['newsletter', 'b2b'],
+            $form->resolveSubscribeTags($field, ['request_type' => 'company'])
+        );
+        self::assertSame(
+            ['newsletter', 'b2b', 'finance'],
+            $form->resolveSubscribeTags($field, ['request_type' => 'company', 'topics' => ['billing']])
+        );
+    }
+
+    public function testResolveSubscribeTagsDeduplicatesAndSkipsMalformedRules(): void
+    {
+        $form  = new Form('Newsletter', new Slug('newsletter'));
+        $field = [
+            'type'      => 'newsletter_subscribe',
+            'name'      => 'sub',
+            'tags'      => ['newsletter', 'newsletter', ' '],
+            'tag_rules' => [
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => ['b2b', 'newsletter']],
+                'not-a-rule',
+                ['field' => '', 'operator' => 'equals', 'value' => 'company', 'tags' => ['void']],
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => 'b2b, vıp'],
+            ],
+        ];
+
+        self::assertSame(
+            ['newsletter', 'b2b', 'vıp'],
+            $form->resolveSubscribeTags($field, ['request_type' => 'company'])
+        );
+    }
 }

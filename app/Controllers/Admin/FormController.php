@@ -618,6 +618,30 @@ final class FormController
      */
     private static function applyConditionRules(array $fields): array
     {
+        $sources = self::choiceSources($fields);
+
+        foreach ($fields as &$field) {
+            $raw = $field['conditions'] ?? null;
+            unset($field['conditions']);
+
+            $conditions = self::normalizeConditions($raw, (string) ($field['name'] ?? ''), $sources);
+            if ($conditions !== null) {
+                $field['conditions'] = $conditions;
+            }
+        }
+        unset($field);
+
+        return $fields;
+    }
+
+    /**
+     * Choice fields usable as a condition or tag-rule source, keyed by name.
+     *
+     * @param array<int, array<string, mixed>> $fields
+     * @return array<string, array{type: string, options: string[]}>
+     */
+    private static function choiceSources(array $fields): array
+    {
         $sources = [];
         foreach ($fields as $candidate) {
             $name = (string) ($candidate['name'] ?? '');
@@ -636,18 +660,7 @@ final class FormController
             $sources[$name] = ['type' => $type, 'options' => $options];
         }
 
-        foreach ($fields as &$field) {
-            $raw = $field['conditions'] ?? null;
-            unset($field['conditions']);
-
-            $conditions = self::normalizeConditions($raw, (string) ($field['name'] ?? ''), $sources);
-            if ($conditions !== null) {
-                $field['conditions'] = $conditions;
-            }
-        }
-        unset($field);
-
-        return $fields;
+        return $sources;
     }
 
     /**
@@ -676,7 +689,9 @@ final class FormController
             $source   = $sources[$sourceName];
             $operator = (string) ($rule['operator'] ?? '');
 
-            if ($source['type'] === 'checkbox' && $source['options'] === []) {
+            if (in_array($operator, ['is_empty', 'is_not_empty'], true)) {
+                $value = '';
+            } elseif ($source['type'] === 'checkbox' && $source['options'] === []) {
                 $operator = $operator === 'unchecked' ? 'unchecked' : 'checked';
                 $value    = '';
             } else {
@@ -706,6 +721,95 @@ final class FormController
     private static function conditionValue(mixed $raw): string
     {
         return is_scalar($raw) ? mb_substr(trim((string) $raw), 0, 255) : '';
+    }
+
+    /**
+     * Normalizes the answer-driven tag rules of every newsletter field against
+     * the final field list. A rule needs an existing choice source, a value that
+     * fits it and at least one tag; anything else is dropped, so stored logic
+     * never points at a field the form no longer has.
+     *
+     * @param array<int, array<string, mixed>> $fields
+     * @return array<int, array<string, mixed>>
+     */
+    private static function applyTagRules(array $fields): array
+    {
+        $sources = self::choiceSources($fields);
+
+        foreach ($fields as &$field) {
+            if (($field['type'] ?? '') !== 'newsletter_subscribe') {
+                unset($field['tag_rules']);
+                continue;
+            }
+
+            $rules = self::normalizeTagRules($field['tag_rules'] ?? null, (string) ($field['name'] ?? ''), $sources);
+            if ($rules === []) {
+                unset($field['tag_rules']);
+            } else {
+                $field['tag_rules'] = $rules;
+            }
+        }
+        unset($field);
+
+        return $fields;
+    }
+
+    /**
+     * @param array<string, array{type: string, options: string[]}> $sources
+     * @return array<int, array{field: string, operator: string, value: string, tags: string[]}>
+     */
+    private static function normalizeTagRules(mixed $raw, string $selfName, array $sources): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $rules = [];
+        foreach ($raw as $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $sourceName = is_scalar($rule['field'] ?? null) ? trim((string) $rule['field']) : '';
+            if ($sourceName === '' || $sourceName === $selfName || !isset($sources[$sourceName])) {
+                continue;
+            }
+
+            $tags = self::normalizeTags($rule['tags'] ?? []);
+            if ($tags === []) {
+                continue;
+            }
+
+            $source   = $sources[$sourceName];
+            $operator = (string) ($rule['operator'] ?? '');
+
+            if (in_array($operator, ['is_empty', 'is_not_empty'], true)) {
+                $value = '';
+            } elseif ($source['type'] === 'checkbox' && $source['options'] === []) {
+                $operator = $operator === 'unchecked' ? 'unchecked' : 'checked';
+                $value    = '';
+            } else {
+                $fallback = $source['type'] === 'checkbox' ? 'contains' : 'equals';
+                $operator = $operator       === 'not_' . $fallback ? 'not_' . $fallback : $fallback;
+                $value    = self::conditionValue($rule['value'] ?? null);
+
+                if ($value === '') {
+                    continue;
+                }
+
+                if ($source['options'] !== [] && !in_array($value, $source['options'], true)) {
+                    continue;
+                }
+            }
+
+            $rules[] = ['field' => $sourceName, 'operator' => $operator, 'value' => $value, 'tags' => $tags];
+
+            if (count($rules) >= 10) {
+                break;
+            }
+        }
+
+        return $rules;
     }
 
     private function fillForm(Form $form, array $body): void
@@ -768,7 +872,7 @@ final class FormController
         }
         unset($f);
 
-        $form->setFields(self::applyConditionRules($fields));
+        $form->setFields(self::applyTagRules(self::applyConditionRules($fields)));
 
         $captchaType = $body['captcha_type'] ?? 'none';
         if (!in_array($captchaType, ['none', 'honeypot', 'math', 'hcaptcha', 'recaptcha', 'turnstile'], true)) {

@@ -221,6 +221,28 @@ class ShortcodeProcessorTest extends TestCase
         self::assertTrue($processor->hadShortcodes());
     }
 
+    public function testSameFormEmbeddedTwiceGetsDistinctIdsAndScripts(): void
+    {
+        $forms = $this->createStub(FormRepositoryInterface::class);
+        $forms->method('findBySlug')->willReturn($this->makeForm());
+
+        $processor = $this->createProcessor(forms: $forms);
+
+        $processed = $processor->process('[form slug="contact"] [form slug="contact"]');
+
+        preg_match_all('/id="(vl-form-contact-[a-f0-9]{8})"/', $processed, $matches);
+        self::assertCount(2, $matches[1]);
+        self::assertNotSame($matches[1][0], $matches[1][1]);
+
+        // Each inline handler must look up its own copy, not the first one.
+        foreach ($matches[1] as $formId) {
+            self::assertStringContainsString(
+                'document.getElementById(' . json_encode($formId) . ')',
+                $processed
+            );
+        }
+    }
+
     public function testFormShortcodeStripsWrappingPTag(): void
     {
         $forms = $this->createStub(FormRepositoryInterface::class);
@@ -355,7 +377,7 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $processor->process('[form slug="contact"]');
 
         self::assertStringContainsString('name="captcha"', $processed);
-        self::assertStringContainsString('id="vl-form-contact-captcha"', $processed);
+        self::assertMatchesRegularExpression('/id="vl-form-contact-[a-f0-9]{8}-captcha"/', $processed);
         self::assertStringNotContainsString('g-recaptcha-response', $processed);
         self::assertStringNotContainsString('cf-turnstile', $processed);
     }
@@ -438,7 +460,7 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $processor->process('[form slug="contact"]');
 
         self::assertStringContainsString('name="g-recaptcha-response"', $processed);
-        self::assertStringContainsString('id="vl-form-contact-g-recaptcha-response"', $processed);
+        self::assertMatchesRegularExpression('/id="vl-form-contact-[a-f0-9]{8}-g-recaptcha-response"/', $processed);
         self::assertStringContainsString('recaptcha/api.js?render=rc-site-key', $processed);
         self::assertStringNotContainsString('name="captcha"', $processed);
     }

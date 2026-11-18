@@ -218,6 +218,61 @@ final class FormControllerTest extends TestCase
         self::assertArrayNotHasKey('tags', $savedFields[1]);
     }
 
+    public function testStoreNormalizesConditionalTagRules(): void
+    {
+        $this->forms      = $this->createMock(FormRepositoryInterface::class);
+        $this->session    = $this->createMock(SessionManager::class);
+        $this->controller = $this->buildController();
+
+        $this->slugService->method('generate')->willReturn(new Slug('tagged-form'));
+        $this->session->expects(self::once())->method('flash')->with('success', self::anything());
+
+        $saved = null;
+        $this->forms->expects(self::once())->method('save')
+            ->willReturnCallback(static function (Form $form) use (&$saved): Form {
+                $saved = $form;
+                return $form;
+            });
+
+        $fields = [
+            ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true, 'width' => '100'],
+            ['type' => 'radio', 'label' => 'I am a', 'name' => 'request_type', 'width' => '100', 'options' => [
+                ['value' => 'company', 'title' => ''],
+                ['value' => 'individual', 'title' => ''],
+            ]],
+            ['type' => 'newsletter_subscribe', 'label' => 'Subscribe', 'name' => 'sub', 'width' => '100', 'tags' => ['newsletter'], 'tag_rules' => [
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => [' b2b ', '', 'b2b']],
+                ['field' => 'request_type', 'operator' => 'is_not_empty', 'value' => 'ignored', 'tags' => ['engaged']],
+                ['field' => 'missing_field', 'operator' => 'equals', 'value' => 'company', 'tags' => ['void']],
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => []],
+                ['field' => 'sub', 'operator' => 'checked', 'value' => '', 'tags' => ['self']],
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'not-an-option', 'tags' => ['void']],
+            ]],
+            ['type' => 'text', 'label' => 'Notes', 'name' => 'notes', 'width' => '100', 'tag_rules' => [
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => ['stray']],
+            ]],
+        ];
+        $request = (new RequestFactory())->createRequest('POST', '/admin/forms')
+            ->withParsedBody(['name' => 'Tagged Form', 'fields_json' => json_encode($fields)]);
+
+        $response = $this->controller->store($request, (new ResponseFactory())->createResponse());
+
+        self::assertSame(302, $response->getStatusCode());
+        self::assertNotNull($saved);
+        $savedFields = $saved->getFields();
+
+        self::assertSame(
+            [
+                ['field' => 'request_type', 'operator' => 'equals', 'value' => 'company', 'tags' => ['b2b']],
+                ['field' => 'request_type', 'operator' => 'is_not_empty', 'value' => '', 'tags' => ['engaged']],
+            ],
+            $savedFields[2]['tag_rules']
+        );
+        self::assertSame(['newsletter'], $savedFields[2]['tags']);
+        self::assertArrayNotHasKey('tag_rules', $savedFields[0]);
+        self::assertArrayNotHasKey('tag_rules', $savedFields[3]);
+    }
+
     public function testStoreNormalizesPlaceholderAndOptionTitles(): void
     {
         $this->forms      = $this->createMock(FormRepositoryInterface::class);
