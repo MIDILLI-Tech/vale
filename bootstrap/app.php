@@ -117,14 +117,23 @@ $containerBuilder = new ContainerBuilder();
 $containerBuilder->addDefinitions(dirname(__DIR__) . '/config/services.php');
 
 if (env('APP_ENV', 'production') === 'production') {
-    // Key the compiled class by the definitions file hash so definition
-    // changes invalidate the cache automatically instead of causing
-    // stale-definition runtime errors after deploys.
-    $definitionsFile = dirname(__DIR__) . '/config/services.php';
-    $containerBuilder->enableCompilation(
-        dirname(__DIR__) . '/storage/cache/container',
-        'CompiledContainer' . substr((string) md5_file($definitionsFile), 0, 16)
-    );
+    // Never compile while an update is copying files. PHP-DI embeds closure
+    // source extracted from config/services.php into the compiled class; a
+    // request booting mid-copy would cache a container generated from a
+    // half-replaced file, and every later request would fatal on that class.
+    // The update flag is written before the first file is copied.
+    $updateInProgress = is_file(dirname(__DIR__) . '/storage/framework/maintenance.php');
+
+    if (!$updateInProgress) {
+        // Key the compiled class by the definitions file hash so definition
+        // changes invalidate the cache automatically instead of causing
+        // stale-definition runtime errors after deploys.
+        $definitionsFile = dirname(__DIR__) . '/config/services.php';
+        $containerBuilder->enableCompilation(
+            dirname(__DIR__) . '/storage/cache/container',
+            'CompiledContainer' . substr((string) md5_file($definitionsFile), 0, 16)
+        );
+    }
 }
 
 $container = $containerBuilder->build();
