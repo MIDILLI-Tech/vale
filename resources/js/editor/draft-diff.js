@@ -151,7 +151,6 @@ function buildRows(ops) {
  */
 function visibleText(html) {
   return String(html)
-    .replace(/<(?:img|video|audio|iframe|embed|object|canvas|svg|picture|source|track|hr)[^>]*>/gi, (tag) => ` [${tag.replace(/[<>]/g, '').replace(/s+/g, ' ').trim()}] `)
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
     .replace(/&quot;/gi, '"')
@@ -166,6 +165,18 @@ function visibleText(html) {
 function isContentToken(token) {
   if (token.trim() === '') return false;
   return !TAG_TOKEN.test(token) || CONTENT_TAG.test(token);
+}
+
+function tokenText(tokens) {
+  const parts = [];
+  for (const token of tokens) {
+    if (TAG_TOKEN.test(token)) {
+      if (CONTENT_TAG.test(token)) parts.push(token.replace(/[<>\s]+/g, ' '));
+      continue;
+    }
+    parts.push(token);
+  }
+  return parts.join(' ');
 }
 
 function countWords(tokens) {
@@ -224,7 +235,7 @@ function renderRow(row) {
   const before = saved.trim();
   const after = draft.trim();
 
-  if (visibleText(saved) === visibleText(draft)) {
+  if (visibleText(tokenText(row.saved)) === visibleText(tokenText(row.draft))) {
     return { html: lineHtml('same', '', escapeHtml(before)), removed: 0, added: 0, changed: false };
   }
   if (after === '') {
