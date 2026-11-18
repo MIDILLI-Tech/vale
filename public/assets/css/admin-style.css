@@ -646,6 +646,15 @@ audio.vl-media-facade-player {
   transform-origin: center;
 }
 
+/* Update page "Check now" icon: the shared clockwise refresh glyph. On submit
+   the inner glyph spins clockwise (.vl-icon-spin) until the form's page reload
+   replaces it. The spin sits on the inner element so it never animates from
+   another base transform (a mirrored base made it flip sideways instead of
+   rotating). */
+.vl-update-check-icon {
+  display: inline-flex;
+}
+
 /* ── Analytics "Load more" sentinel ─────────────────────────
    Invisible 1px strip rendered after every analytics rows
    container (admin/analytics/rows/more.twig). The dashboard JS
