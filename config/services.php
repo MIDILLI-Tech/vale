@@ -67,6 +67,7 @@ use ValeApp\Application\Content\SaveCategoryUseCase;
 use ValeApp\Application\Content\SavePostUseCase;
 use ValeApp\Application\Content\SaveTagUseCase;
 use ValeApp\Application\Cron\CronService;
+use ValeApp\Application\Cron\ScheduledTaskNotificationService;
 use ValeApp\Application\Form\FormAccessService;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Application\Mail\MailService;
@@ -1885,6 +1886,13 @@ return [
         );
     }),
 
+    ScheduledTaskNotificationService::class => factory(function ($c) {
+        return new ScheduledTaskNotificationService(
+            $c->get(MailService::class),
+            $c->get(DbalSettingsRepository::class),
+        );
+    }),
+
     CronService::class => factory(function ($c) {
         return new CronService(
             $c->get(NewsletterService::class),
@@ -1910,6 +1918,7 @@ return [
             $c->get(PluginUpdateService::class),
             $c->get(EventDispatcherInterface::class),
             $c->get(PageCacheInvalidator::class),
+            $c->get(ScheduledTaskNotificationService::class),
         );
     }),
 

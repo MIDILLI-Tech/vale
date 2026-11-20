@@ -172,6 +172,7 @@ final class MailController
             'password-reset'          => 'Password Reset',
             'welcome'                 => 'Welcome',
             'newsletter-confirmation' => 'Newsletter Confirmation',
+            'scheduled-task-report'   => 'Scheduled Task Report',
             default                   => str_replace(['-', '_'], ' ', ucfirst($name)),
         };
     }
@@ -631,6 +632,22 @@ final class MailController
             'stock-warning-admin' => array_merge($base, [
                 'product_name'  => 'Product A', 'sku' => 'SKU-001',
                 'current_stock' => 2, 'is_out_of_stock' => false,
+            ]),
+            'scheduled-task-report' => array_merge($base, [
+                'generated_at' => '2026-01-01 09:00:00',
+                'content_url'  => 'https://example.com/admin/posts',
+                'published'    => [
+                    ['title' => 'Spring Campaign', 'type' => 'Post', 'url' => 'https://example.com/admin/posts/12/edit'],
+                    ['title' => 'Landing Page', 'type' => 'Page', 'url' => 'https://example.com/admin/pages/7/edit'],
+                    ['title' => 'Canvas Tote Bag', 'type' => 'Product', 'url' => 'https://example.com/admin/products/5/edit'],
+                ],
+                'went_public'  => [
+                    ['title' => 'Price List 2027', 'type' => 'Page', 'url' => 'https://example.com/admin/pages/9/edit'],
+                ],
+                'expired'      => [
+                    ['title' => 'Winter Sale', 'type' => 'Post', 'url' => 'https://example.com/admin/posts/3/edit', 'replaced_by' => 'Spring Sale'],
+                    ['title' => 'Summer Hat', 'type' => 'Product', 'url' => 'https://example.com/admin/products/8/edit', 'replaced_by' => ''],
+                ],
             ]),
             'order-status-update' => array_merge($base, [
                 'order'      => (object)['orderNumber' => '1001', 'status' => 'shipped', 'total' => 299.99, 'currency' => 'USD', 'items' => [(object)['name' => 'Product A', 'quantity' => 1, 'price' => 299.99]]],

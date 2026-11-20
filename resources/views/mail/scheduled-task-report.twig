@@ -1,0 +1,53 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Scheduled task report') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Scheduled task report') }}</h2>
+<p>{{ __('These changes ran automatically during a cron job. No one published or expired them manually.') }}</p>
+
+{% if published is not empty %}
+<h3 style="margin-bottom:8px;">{{ __('Published') }} ({{ published|length }})</h3>
+<ul style="margin:0 0 20px; padding-left:18px;">
+    {% for item in published %}
+    <li style="margin-bottom:6px;">
+        <a href="{{ item.url }}" style="color:{{ email_accent }}; font-weight:600;">{{ item.title }}</a>
+        <span style="color:{{ email_text_muted }};">&mdash; {{ item.type }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if went_public is not empty %}
+<h3 style="margin-bottom:8px;">{{ __('Now public') }} ({{ went_public|length }})</h3>
+<p style="margin:0 0 8px; color:{{ email_text_muted }}; font-size:13px;">{{ __('Unlisted items whose publish date has been reached.') }}</p>
+<ul style="margin:0 0 20px; padding-left:18px;">
+    {% for item in went_public %}
+    <li style="margin-bottom:6px;">
+        <a href="{{ item.url }}" style="color:{{ email_accent }}; font-weight:600;">{{ item.title }}</a>
+        <span style="color:{{ email_text_muted }};">&mdash; {{ item.type }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if expired is not empty %}
+<h3 style="margin-bottom:8px;">{{ __('Expired') }} ({{ expired|length }})</h3>
+<ul style="margin:0 0 20px; padding-left:18px;">
+    {% for item in expired %}
+    <li style="margin-bottom:6px;">
+        <a href="{{ item.url }}" style="color:{{ email_accent }}; font-weight:600;">{{ item.title }}</a>
+        <span style="color:{{ email_text_muted }};">&mdash; {{ item.type }}</span>
+        {% if item.replaced_by is not empty %}
+        <div style="color:{{ email_text_muted }}; font-size:13px;">{{ __(':title took over the URL.', {':title': item.replaced_by}) }}</div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<p style="margin:24px 0 8px;">
+    <a href="{{ content_url }}" class="btn">{{ __('View content in admin') }}</a>
+</p>
+<p style="margin:0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Generated at :time.', {':time': generated_at}) }}</p>
+{% endblock %}

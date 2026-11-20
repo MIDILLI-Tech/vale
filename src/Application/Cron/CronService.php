@@ -68,6 +68,7 @@ final class CronService
         private readonly ?PluginUpdateService $pluginUpdater = null,
         private readonly ?EventDispatcherInterface $events = null,
         private readonly ?PageCacheInvalidator $pageCache = null,
+        private readonly ?ScheduledTaskNotificationService $scheduledTaskNotifier = null,
     ) {
     }
 
@@ -101,6 +102,19 @@ final class CronService
             'trials_expired'           => 0,
             'abandoned_carts_sent'     => 0,
         ];
+
+        /** @var list<Post> $publishedItems */
+        $publishedItems = [];
+        /** @var list<Post> $wentPublicItems */
+        $wentPublicItems = [];
+        /** @var list<array{post: Post, replaced_by: Post|null}> $expiredItems */
+        $expiredItems = [];
+        /** @var list<Product> $publishedProducts */
+        $publishedProducts = [];
+        /** @var list<Product> $wentPublicProducts */
+        $wentPublicProducts = [];
+        /** @var list<Product> $expiredProducts */
+        $expiredProducts = [];
 
         $newsletterEnabled = $this->settings->bool('newsletter_enabled', true);
 
@@ -139,6 +153,7 @@ final class CronService
                     $result['swaps_processed']++;
                 }
                 $result['posts_published']++;
+                $publishedItems[] = $post;
             } catch (\Throwable) {
                 // Continue with other jobs if one fails
             }
@@ -156,6 +171,7 @@ final class CronService
                     $result['swaps_processed']++;
                 }
                 $result['posts_go_public']++;
+                $wentPublicItems[] = $post;
             } catch (\Throwable) {
                 // Continue with other jobs if one fails
             }
@@ -164,9 +180,10 @@ final class CronService
         // ── Expired posts/pages (plain expiry or swap-back) ─────────
         // Per-type gating happens inside processDueExpiries().
         try {
-            $expiry                        = $this->processDueExpiries();
-            $result['posts_expired']       = $expiry['expired'];
-            $result['swaps_processed']    += $expiry['swapped'];
+            $expiry                     = $this->processDueExpiries();
+            $result['posts_expired']    = $expiry['expired'];
+            $result['swaps_processed'] += $expiry['swapped'];
+            $expiredItems               = $expiry['items'];
         } catch (\Throwable) {
             // Non-critical
         }
@@ -179,13 +196,16 @@ final class CronService
                     $this->products->save($product);
                     $this->productChanged($product);
                     $result['products_published']++;
+                    $publishedProducts[] = $product;
                 } catch (\Throwable) {
                     // Continue with other jobs if one fails
                 }
             }
 
             // ── Expired products ───────────────────────────────────────
-            $result['products_expired'] = $this->processDueProductExpirations();
+            $productExpirations         = $this->processDueProductExpirations();
+            $result['products_expired'] = $productExpirations['expired'];
+            $expiredProducts            = $productExpirations['items'];
 
             // ── Go-public for unlisted products ──────────────────────────
             foreach ($this->products->findDueForGoPublic() as $product) {
@@ -194,9 +214,33 @@ final class CronService
                     $this->products->save($product);
                     $this->productChanged($product);
                     $result['products_go_public']++;
+                    $wentPublicProducts[] = $product;
                 } catch (\Throwable) {
                     // Continue with other jobs if one fails
                 }
+            }
+        }
+
+        // ── Admin digest of the changes this run made on its own ──────
+        // One email per run, never per record: a batch of due items must
+        // not turn into a burst of notifications. Content and products are
+        // reported together, so the mail lands after both loops.
+        if ($this->scheduledTaskNotifier !== null) {
+            try {
+                $this->scheduledTaskNotifier->notifyRun(
+                    [
+                        'published'   => $publishedItems,
+                        'went_public' => $wentPublicItems,
+                        'expired'     => $expiredItems,
+                    ],
+                    [
+                        'published'   => $publishedProducts,
+                        'went_public' => $wentPublicProducts,
+                        'expired'     => $expiredProducts,
+                    ],
+                );
+            } catch (\Throwable) {
+                // A notification must never break the cron run
             }
         }
 
@@ -422,12 +466,13 @@ final class CronService
     }
 
     /**
-     * @return array{expired: int, swapped: int}
+     * @return array{expired: int, swapped: int, items: list<array{post: Post, replaced_by: Post|null}>}
      */
     private function processDueExpiries(): array
     {
         $expired = 0;
         $swapped = 0;
+        $items   = [];
 
         foreach ($this->posts->findDueForExpiry() as $post) {
             if (!$this->contentTypeEnabled($post->getContentType())) {
@@ -440,10 +485,12 @@ final class CronService
                     $swapped++;
                     $this->contentChanged($post);
                     $this->contentChanged($partner);
+                    $items[] = ['post' => $post, 'replaced_by' => $partner];
                 } else {
                     $post->expire();
                     $this->posts->save($post);
                     $this->contentChanged($post);
+                    $items[] = ['post' => $post, 'replaced_by' => null];
                 }
                 $expired++;
             } catch (\Throwable) {
@@ -451,7 +498,7 @@ final class CronService
             }
         }
 
-        return ['expired' => $expired, 'swapped' => $swapped];
+        return ['expired' => $expired, 'swapped' => $swapped, 'items' => $items];
     }
 
     /**
@@ -523,10 +570,13 @@ final class CronService
      * Expire products whose expires_at has passed. The date is kept on
      * purpose: cart/checkout reject date-expired items, so clearing it
      * would silently make them purchasable again.
+     *
+     * @return array{expired: int, items: list<Product>}
      */
-    private function processDueProductExpirations(): int
+    private function processDueProductExpirations(): array
     {
         $expired = 0;
+        $items   = [];
 
         foreach ($this->products->findDueForExpiry() as $product) {
             try {
@@ -534,12 +584,13 @@ final class CronService
                 $this->products->save($product);
                 $this->productChanged($product);
                 $expired++;
+                $items[] = $product;
             } catch (\Throwable) {
                 // Continue with other jobs if one fails
             }
         }
 
-        return $expired;
+        return ['expired' => $expired, 'items' => $items];
     }
 
     /**
