@@ -8,6 +8,32 @@
 {% set active_tab = 'profile' %}
 
 {% block content %}
+<script>
+function vlPublicBio(initial) {
+    return {
+        bio: initial,
+        preview: false,
+        wrap(before, after) {
+            const el = this.$refs.bio;
+            const s = el.selectionStart, e = el.selectionEnd;
+            const sel = this.bio.slice(s, e);
+            this.bio = this.bio.slice(0, s) + before + sel + after + this.bio.slice(e);
+            this.$nextTick(() => { el.focus(); el.selectionStart = s + before.length; el.selectionEnd = s + before.length + sel.length; });
+        }
+    };
+}
+
+function vlMiniMd(src) {
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const text = esc(src).trim();
+    if (!text) return '';
+    return text.split(/\n{2,}/).map((p) => '<p>' + p
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, '<a href="$2" rel="nofollow noopener" target="_blank">$1</a>')
+        .replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/gs, '<em>$1</em>')
+        .replace(/\n/g, '<br>') + '</p>').join('');
+}
+</script>
 <div class="mx-auto max-w-5xl px-4 py-14">
     <h1 class="account-text mb-8 text-3xl font-bold">{{ __('My Profile') }}</h1>
 
@@ -61,6 +87,7 @@
     <form method="POST" id="profile-form">
         {{ csrf_field() }}
 
+        <div class="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 dark:border-gray-800 dark:bg-gray-900">
         <div class="grid gap-8 lg:grid-cols-2">
             <div class="space-y-5">
                 <div>
@@ -113,6 +140,37 @@
                            class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
                 </div>
             </div>
+        </div>
+
+        {% if settings.user_profiles_enabled|default('0') == '1' %}
+        <div class="mt-6 border-t border-gray-200 pt-6 dark:border-gray-800">
+            <label for="display_name" class="account-form-label block text-sm font-medium">{{ __('Public display name') }}</label>
+            <input id="display_name" type="text" name="display_name" maxlength="255" value="{{ user.displayName }}"
+                   placeholder="{{ user.name }}"
+                   class="account-form-field mt-1 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">
+            <p class="mt-1 text-xs account-table-muted">{{ __('Shown instead of your account name on your author page.') }}</p>
+        </div>
+
+        <div class="mt-6 border-t border-gray-200 pt-6 dark:border-gray-800"
+             x-data="vlPublicBio({{ user.bio|default('')|json_encode|e('html_attr') }})">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <label for="bio" class="account-form-label text-sm font-medium">{{ __('Public bio') }}</label>
+                <span class="text-xs account-table-muted">{{ __('Shown on your author page') }}</span>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                <button type="button" @click="wrap('**', '**')" class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{{ __('Bold') }}</button>
+                <button type="button" @click="wrap('*', '*')" class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs italic text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{{ __('Italic') }}</button>
+                <button type="button" @click="wrap('[', '](https://)')" class="rounded-lg border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{{ __('Link') }}</button>
+                <button type="button" @click="preview = !preview" class="ml-auto rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                        x-text="preview ? '{{ __('Edit')|e('js') }}' : '{{ __('Preview')|e('js') }}'"></button>
+            </div>
+            <textarea id="bio" x-ref="bio" x-model="bio" name="bio" rows="4" maxlength="2000" x-show="!preview"
+                      placeholder="{{ __('Write something about yourself…') }}"
+                      class="account-form-field mt-2 block w-full rounded-lg border px-3 py-2 text-sm focus:outline-hidden focus:ring-1">{{ user.bio }}</textarea>
+            <div x-show="preview" x-cloak class="prose prose-sm mt-2 min-h-24 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200" x-html="vlMiniMd(bio)"></div>
+            <p class="mt-1.5 text-xs account-table-muted">{{ __('Bold **text**, italic *text*, links [label](https://example.com). Blank lines start a new paragraph.') }}</p>
+        </div>
+        {% endif %}
         </div>
     </form>
 

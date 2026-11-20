@@ -60,7 +60,7 @@
                         <span class="text-gray-300">&middot;</span>
                         <span class="inline-flex items-center gap-1.5">
                             {% if author_avatar %}<img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>{% endif %}
-                            {{ author.name }}
+                            <a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id) }}" class="hover:underline">{{ author.publicName }}</a>
                         </span>
                         {% endif %}
 
@@ -145,15 +145,15 @@
                     <div class="flex items-center gap-4">
                         {% set author_avatar = avatar_url(author.avatar) %}
                         {% if author_avatar %}
-                        <img src="{{ author_avatar }}" alt="{{ author.name }}" class="h-12 w-12 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                        <img src="{{ author_avatar }}" alt="{{ author.publicName }}" class="h-12 w-12 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
                         {% else %}
                         <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-lg font-bold text-indigo-700">
-                            {{ author.name|slice(0,1)|upper }}
+                            {{ author.publicName|slice(0,1)|upper }}
                         </div>
                         {% endif %}
                         <div>
                             <p class="text-xs uppercase tracking-widest text-indigo-500 font-semibold">{{ __('Author') }}</p>
-                            <p class="font-semibold text-gray-900 mt-0.5">{{ author.name }}</p>
+                            <p class="font-semibold text-gray-900 mt-0.5"><a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id) }}" class="hover:underline">{{ author.publicName }}</a></p>
                         </div>
                     </div>
                 </div>

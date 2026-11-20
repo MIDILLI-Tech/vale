@@ -194,6 +194,8 @@ final class DbalUserRepository implements UserRepositoryInterface
             'password'                       => $user->getPassword(),
             'name'                           => $user->getName(),
             'avatar'                         => $user->getAvatar(),
+            'bio'                            => $user->getBio(),
+            'display_name'                   => $user->getDisplayName(),
             'locale'                         => $user->getLocale(),
             'is_active'                      => $user->isActive() ? 1 : 0,
             'email_verified_at'              => $user->getEmailVerifiedAt()?->format('Y-m-d H:i:s'),

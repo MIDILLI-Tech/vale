@@ -100,7 +100,7 @@
                     {% set author_avatar = avatar_url(author.avatar) %}
                     <span class="flex items-center gap-1.5 text-xs text-gray-400">
                         {% if author_avatar %}<img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>{% endif %}
-                        {{ author.name }}
+                        <a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id) }}" class="hover:underline">{{ author.publicName }}</a>
                     </span>
                     {% else %}
                     <span></span>

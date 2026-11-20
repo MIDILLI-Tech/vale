@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace ValeApp\Application\Seo;
 
+use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Seo\Repository\SeoMetaRepositoryInterface;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
+use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 
 final class GenerateSitemapUseCase
 {
     public function __construct(
         private readonly SeoMetaRepositoryInterface $seoMeta,
         private readonly SettingsRepositoryInterface $settings,
+        private readonly PostRepositoryInterface $posts,
+        private readonly UserRepositoryInterface $users,
         private readonly string $baseUrl,
     ) {
     }
@@ -59,6 +63,24 @@ final class GenerateSitemapUseCase
             $priority = $type === 'page' ? '0.8' : '0.6';
             $xml .= "    <priority>{$priority}</priority>\n";
             $xml .= "  </url>\n";
+        }
+
+        // Author pages carry the public bio, so they belong in the index too.
+        if ($this->settings->get('blog_enabled', '1') === '1') {
+            foreach ($this->posts->findPublishedAuthors() as $author) {
+                $user = $this->users->findById($author['id']);
+                if ($user === null || !$user->isActive()) {
+                    continue;
+                }
+
+                $xml .= "  <url>\n";
+                $xml .= "    <loc>{$siteUrl}{$blogPrefix}/author/{$author['id']}</loc>\n";
+                if ($author['lastmod'] !== null) {
+                    $xml .= '    <lastmod>' . date('Y-m-d', strtotime($author['lastmod'])) . "</lastmod>\n";
+                }
+                $xml .= "    <priority>0.5</priority>\n";
+                $xml .= "  </url>\n";
+            }
         }
 
         $xml .= "</urlset>\n";

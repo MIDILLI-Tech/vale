@@ -274,7 +274,8 @@
     {% set is_own = user is defined and user and (c.userId == user.id) %}
     {% set _ratings = comment_ratings|default([]) %}
     {% set c_rating = c.id in _ratings|keys ? _ratings[c.id] : 0 %}
-    {% set js_body = c.body|json_encode|raw %}
+    {% set c_name = c.userId ? (user_public_name(c.userId) ?? c.authorName) : c.authorName %}
+    {% set js_body = c.body|json_encode|e('html_attr') %}
     {% set js_notify = c.notifyReplies ? 'true' : 'false' %}
 
     {% set indent_class = depth > 0 and depth < 3 ? 'ml-2 sm:ml-6 md:ml-10 mt-4 sm:mt-6 pl-2 sm:pl-0 border-l-2 border-gray-100 sm:border-l-0' : (depth > 0 ? 'mt-4 sm:mt-6' : '') %}
@@ -283,9 +284,9 @@
         <div class="shrink-0 w-8 h-8 sm:w-9 sm:h-9 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-semibold text-xs shadow-xs">
             {% set c_avatar = c.userId ? user_avatar_url(c.userId) : null %}
             {% if c_avatar %}
-            <img src="{{ c_avatar }}" alt="{{ c.authorName }}" class="h-full w-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+            <img src="{{ c_avatar }}" alt="{{ c_name }}" class="h-full w-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
             {% else %}
-            {{ c.authorName|slice(0,1)|upper }}
+            {{ c_name|slice(0,1)|upper }}
             {% endif %}
         </div>
         <div class="flex-1 min-w-0">
@@ -295,7 +296,7 @@
             <div {% if is_own %}x-show="!editing"{% endif %}>
                 <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-1">
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-                        <span class="font-semibold text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">{{ c.authorName }}</span>
+                        <span class="font-semibold text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">{{ c_name }}</span>
                         <div x-show="rating > 0" class="flex gap-0.5 shrink-0">
                             <template x-for="i in [1,2,3,4,5]">
                                 <svg class="w-3 h-3" :class="i <= rating ? 'text-yellow-400' : 'text-gray-200'" fill="currentColor" viewBox="0 0 20 20">
@@ -330,7 +331,7 @@
                     </div>
                     <div class="flex gap-2 shrink-0">
                         {% if entity_type != 'product' and depth < max_depth and (replies_enabled == '1') %}
-                        <button @click="$dispatch('vl-comment-reply', { id: {{ c.id }}, name: '{{ c.authorName|e('js') }}' })" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                        <button @click="$dispatch('vl-comment-reply', { id: {{ c.id }}, name: '{{ c_name|e('js') }}' })" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
                             {{ __('Reply') }}
                         </button>
                         {% endif %}
@@ -397,7 +398,7 @@
                 <div class="relative mt-2">
                     <div class="absolute -left-9 top-0 bottom-4 w-px bg-gray-100 hidden md:block"></div>
                     {% for child in children_map[_ckey] %}
-                        {{ _self.render_comment(child, entity_type, user, comment_ratings, show_verified_badge, children_map, depth + 1, replies_enabled, max_depth, c.authorName, c.id) }}
+                        {{ _self.render_comment(child, entity_type, user, comment_ratings, show_verified_badge, children_map, depth + 1, replies_enabled, max_depth, c_name, c.id) }}
                     {% endfor %}
                 </div>
             {% endif %}

@@ -220,6 +220,25 @@ final class DbalPostRepository implements PostRepositoryInterface
         return $this->hydratePostRows($rows);
     }
 
+    /**
+     * @return array<int, array{id: int, lastmod: ?string}>
+     */
+    public function findPublishedAuthors(): array
+    {
+        $rows = $this->db->fetchAllAssociative(
+            'SELECT author_id, MAX(COALESCE(updated_at, published_at, created_at)) AS lastmod'
+            . ' FROM ' . VL_DB_PREFIX . 'posts'
+            . ' WHERE status = ? AND content_type = ?'
+            . ' GROUP BY author_id',
+            ['published', 'post'],
+        );
+
+        return array_map(static fn (array $row): array => [
+            'id'      => (int) $row['author_id'],
+            'lastmod' => $row['lastmod'] !== null ? (string) $row['lastmod'] : null,
+        ], $rows);
+    }
+
     public function countByCategorySlug(string $slug, string $contentType = 'post', ?string $language = null, bool $fallback = false): int
     {
         $table      = VL_DB_PREFIX . 'posts';

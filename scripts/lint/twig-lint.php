@@ -65,7 +65,8 @@ foreach ([
 foreach ([
     'resolveIcon', '__', 'current_locale', 'csrf_field', 'csrf_token',
     'theme_hook', 'url', 'locale_name', 'country_name', 'language_name',
-    'site_url', 'absolute_url', 'get_media_url', 'avatar_url', 'user_avatar_url', 'asset', 'env',
+    'site_url', 'absolute_url', 'get_media_url', 'avatar_url', 'user_avatar_url', 'user_public_name',
+    'asset', 'env',
     'vale_version', 'format_bytes', 'admin_url', 'table', 'vl_setting',
     'flash', 'icon',
 ] as $function) {

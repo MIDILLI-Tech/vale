@@ -77,6 +77,7 @@ final class AccountController
         }
 
         if ($request->getMethod() === 'POST') {
+            $this->savePublicProfile($request, $user);
             return $this->updateProfile($request, $response, $user);
         }
 
@@ -90,6 +91,41 @@ final class AccountController
         }
 
         return $this->twig->render($response, 'account/profile.twig', $data);
+    }
+
+    /**
+     * Stores the public profile bio (markdown subset) when the form carries it.
+     * Author pages are cached, so a changed bio flushes the page cache.
+     */
+    private function savePublicProfile(Request $request, \ValeApp\Domain\User\Entity\User $user): void
+    {
+        $body    = (array) $request->getParsedBody();
+        $changed = false;
+
+        if (array_key_exists('bio', $body)) {
+            $bio = mb_substr(trim(strip_tags((string) $body['bio'])), 0, 2000);
+            $bio = $bio === '' ? null : $bio;
+            if ($bio !== $user->getBio()) {
+                $user->setBio($bio);
+                $changed = true;
+            }
+        }
+
+        if (array_key_exists('display_name', $body)) {
+            $displayName = mb_substr(trim(strip_tags((string) $body['display_name'])), 0, 255);
+            $displayName = $displayName === '' ? null : $displayName;
+            if ($displayName !== $user->getDisplayName()) {
+                $user->setDisplayName($displayName);
+                $changed = true;
+            }
+        }
+
+        if (!$changed) {
+            return;
+        }
+
+        $this->users->save($user);
+        $this->pageCache->flush();
     }
 
     public function uploadAvatar(Request $request, Response $response): Response

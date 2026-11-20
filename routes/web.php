@@ -19,6 +19,7 @@ use ValeApp\App\Controllers\Admin\ThemeController;
 use ValeApp\App\Controllers\CronController;
 use ValeApp\App\Controllers\Front\AccountController;
 use ValeApp\App\Controllers\Front\AuthController;
+use ValeApp\App\Controllers\Front\AuthorController;
 use ValeApp\App\Controllers\Front\CheckoutController;
 use ValeApp\App\Controllers\Front\CommentController;
 use ValeApp\App\Controllers\Front\CurrencyController;
@@ -274,6 +275,7 @@ return function (App $app): void {
     $app->group('', function (RouteCollectorProxy $group) use ($c, $blogPrefix, $categoryPrefix, $tagPrefix) {
         $group->get($blogPrefix, [PostController::class, 'index'])->setName('blog');
         $group->get($blogPrefix . '/feed.xml', [PostController::class, 'feed'])->setName('blog.feed');
+        $group->get($blogPrefix . '/author/{id:[0-9]+}', [AuthorController::class, 'show'])->setName('author.show');
         $group->get($blogPrefix . '/{slug}', [PostController::class, 'show'])->setName('post.show');
         $group->get($categoryPrefix . '/{slug}', [PostController::class, 'byCategory'])
             ->setName('category.archive')

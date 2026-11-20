@@ -57,7 +57,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
                 {% endif %}
-                {{ author.name }}
+                <a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id) }}" class="hover:underline">{{ author.publicName }}</a>
             </span>
             <span class="opacity-40">&middot;</span>
             {% endif %}
@@ -188,15 +188,15 @@
     <div class="mt-14 flex items-center gap-5 rounded-2xl bg-gray-50 ring-1 ring-gray-100 p-6">
         {% set author_avatar = avatar_url(author.avatar) %}
         {% if author_avatar %}
-        <img src="{{ author_avatar }}" alt="{{ author.name }}" class="shrink-0 h-14 w-14 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+        <img src="{{ author_avatar }}" alt="{{ author.publicName }}" class="shrink-0 h-14 w-14 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
         {% else %}
         <div class="shrink-0 h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xl">
-            {{ author.name|slice(0,1)|upper }}
+            {{ author.publicName|slice(0,1)|upper }}
         </div>
         {% endif %}
         <div>
             <p class="text-xs uppercase tracking-widest text-emerald-500 font-semibold mb-0.5">{{ __('Author') }}</p>
-            <p class="font-semibold text-gray-900">{{ author.name }}</p>
+            <p class="font-semibold text-gray-900"><a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id) }}" class="hover:underline">{{ author.publicName }}</a></p>
             {% if author.bio is defined and author.bio %}
             <p class="text-sm text-gray-500 mt-1">{{ author.bio }}</p>
             {% endif %}
