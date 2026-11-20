@@ -66,7 +66,7 @@ class RedirectMiddlewareTest extends TestCase
         $middleware = new RedirectMiddleware($this->redirectService, $this->translator, $this->settings);
 
         // Ensure helpers can access instances
-        new \ValeApp\Infrastructure\Translation\Translator('', 'tr', ['en', 'tr']);
+        new \ValeApp\Infrastructure\Translation\Translator(dirname(__DIR__, 4) . '/resources/lang', 'tr');
 
         $settingsMock = $this->createStub(\ValeApp\Infrastructure\Persistence\DbalSettingsRepository::class);
         $settingsMock->method('get')->willReturnMap([
@@ -109,7 +109,7 @@ class RedirectMiddlewareTest extends TestCase
             ->with('/old-page')
             ->willReturn('/new-page');
 
-        new \ValeApp\Infrastructure\Translation\Translator('', 'en', ['en', 'tr']);
+        new \ValeApp\Infrastructure\Translation\Translator(dirname(__DIR__, 4) . '/resources/lang', 'en');
 
         $settingsMock = $this->createStub(\ValeApp\Infrastructure\Persistence\DbalSettingsRepository::class);
         $settingsMock->method('get')->willReturnMap([

@@ -29,16 +29,15 @@ class Translator
     private string $langDir;
 
     /**
-     * @param string   $langDir       Path to resources/lang/
-     * @param string   $locale        Default locale
-     * @param string[] $supported     Supported locale codes
-     * @param string   $defaultLocale Fallback locale when key is missing (defaults to $locale)
+     * @param string $langDir       Path to resources/lang/
+     * @param string $locale        Current locale
+     * @param string $defaultLocale Fallback locale when key is missing (defaults to $locale)
      */
-    public function __construct(string $langDir, string $locale, array $supported, string $defaultLocale = 'en')
+    public function __construct(string $langDir, string $locale, string $defaultLocale = 'en')
     {
         $this->langDir       = $langDir;
-        $this->supported     = $supported;
-        $this->locale        = in_array($locale, $supported, true) ? $locale : 'en';
+        $this->supported     = $this->discoverLocales();
+        $this->locale        = in_array($locale, $this->supported, true) ? $locale : 'en';
         $this->defaultLocale = $defaultLocale;
         self::$instance      = $this;
     }
@@ -170,21 +169,36 @@ class Translator
      */
     public function getAllAvailableLocales(): array
     {
-        $files   = glob($this->langDir . '/*.json');
         $locales = [];
-        foreach ($files as $file) {
-            $code = basename($file, '.json');
-            if ($code !== '' && preg_match('/^[a-z]{2}(-[a-z0-9]+)?$/i', $code)) {
-                $locales[$code] = extension_loaded('intl')
-                    ? \Locale::getDisplayLanguage($code, $code)
-                    : strtoupper($code);
-            }
+        foreach ($this->discoverLocales() as $code) {
+            $locales[$code] = extension_loaded('intl')
+                ? \Locale::getDisplayLanguage($code, $code)
+                : strtoupper($code);
         }
-        ksort($locales);
         return $locales;
     }
 
     // ── Internals ────────────────────────────────────────────────────
+
+    /**
+     * Locale codes backed by a resources/lang/{locale}.json file. Dropping in
+     * a translation file is all it takes to make a language selectable — there
+     * is no separate allowlist to keep in sync.
+     *
+     * @return string[]
+     */
+    private function discoverLocales(): array
+    {
+        $codes = [];
+        foreach (glob($this->langDir . '/*.json') ?: [] as $file) {
+            $code = basename($file, '.json');
+            if ($code !== '' && preg_match('/^[a-z]{2}(-[a-z0-9]+)?$/i', $code)) {
+                $codes[] = $code;
+            }
+        }
+        sort($codes);
+        return $codes;
+    }
 
     /**
      * Load a locale's translation file (cached in memory).

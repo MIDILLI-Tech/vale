@@ -440,7 +440,6 @@ return [
         return new Translator(
             $cfg['paths']['resources'] . '/lang',
             $cfg['locale'],
-            $cfg['locales'],
             $defaultLocale,
         );
     }),

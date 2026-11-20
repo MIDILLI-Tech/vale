@@ -18,9 +18,6 @@ return [
     // to server-side search/pagination (admin lists, editor pickers, account orders)
     'client_side_search_fetch_limit' => max(1, (int) env('CLIENT_SIDE_SEARCH_FETCH_LIMIT', 100)),
 
-    // Supported locales for i18n
-    'locales' => ['en', 'tr', 'de'],
-
     // Paths
     'paths' => [
         'root'      => dirname(__DIR__),

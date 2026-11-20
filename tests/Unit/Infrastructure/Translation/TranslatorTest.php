@@ -35,7 +35,7 @@ class TranslatorTest extends TestCase
 
     public function testGetFallbackToEnglishOnEmptyString(): void
     {
-        $translator = new Translator($this->langDir, 'fr', ['en', 'fr']);
+        $translator = new Translator($this->langDir, 'fr');
 
         // Should fallback to English because fr.json has an empty string for 'Welcome'
         $this->assertEquals('Welcome', $translator->get('Welcome'));
@@ -46,13 +46,64 @@ class TranslatorTest extends TestCase
 
     public function testGetFallbackToEnglishOnMissingKey(): void
     {
-        $translator = new Translator($this->langDir, 'fr', ['en', 'fr']);
-
         // Key exists in EN but not in FR
         file_put_contents($this->langDir . '/en.json', json_encode(['OnlyInEn' => 'Only In English']));
         // Force reload by creating new instance
-        $translator = new Translator($this->langDir, 'fr', ['en', 'fr']);
+        $translator = new Translator($this->langDir, 'fr');
 
         $this->assertEquals('Only In English', $translator->get('OnlyInEn'));
+    }
+
+    public function testLocaleIsActiveWhenItsLangFileExists(): void
+    {
+        file_put_contents($this->langDir . '/de.json', json_encode(['Welcome' => 'Willkommen']));
+
+        $translator = new Translator($this->langDir, 'de');
+
+        $this->assertSame('de', $translator->getLocale());
+        $this->assertSame('Willkommen', $translator->get('Welcome'));
+    }
+
+    public function testSetLocaleAcceptsAnyLocaleBackedByAFile(): void
+    {
+        file_put_contents($this->langDir . '/tr.json', json_encode(['Welcome' => 'Hoş geldiniz']));
+
+        $translator = new Translator($this->langDir, 'en');
+        $translator->setLocale('tr');
+
+        $this->assertSame('tr', $translator->getLocale());
+        $this->assertSame('Hoş geldiniz', $translator->get('Welcome'));
+    }
+
+    public function testSetLocaleIgnoresLocaleWithoutLangFile(): void
+    {
+        $translator = new Translator($this->langDir, 'fr');
+
+        $translator->setLocale('es');
+
+        $this->assertSame('fr', $translator->getLocale());
+    }
+
+    public function testInitialLocaleWithoutLangFileFallsBackToEnglish(): void
+    {
+        $translator = new Translator($this->langDir, 'it');
+
+        $this->assertSame('en', $translator->getLocale());
+    }
+
+    public function testGetAllAvailableLocalesListsEveryLangFile(): void
+    {
+        file_put_contents($this->langDir . '/tr.json', json_encode(['Welcome' => 'Hoş geldiniz']));
+
+        $translator = new Translator($this->langDir, 'en');
+
+        $this->assertSame(['en', 'fr', 'tr'], array_keys($translator->getAllAvailableLocales()));
+    }
+
+    public function testGetUiLocalesMatchesLangFiles(): void
+    {
+        $translator = new Translator($this->langDir, 'en');
+
+        $this->assertSame(['en', 'fr'], $translator->getUiLocales());
     }
 }
