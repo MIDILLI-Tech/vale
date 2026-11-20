@@ -314,6 +314,13 @@ final class MediaScanService
             // make every subdirectory file look unregistered.
             $relativePath = str_replace('\\', '/', $file->getRelativePathname());
 
+            // Profile pictures are user-owned, not media-library entries: never
+            // register them (they would then show up in the browser and could be
+            // removed by the unused-media cleanup).
+            if (str_starts_with($relativePath, AvatarStorage::DIRECTORY . '/')) {
+                continue;
+            }
+
             if (preg_match($thumbPattern, $relativePath)) {
                 continue;
             }

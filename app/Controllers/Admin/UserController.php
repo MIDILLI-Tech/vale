@@ -20,6 +20,8 @@ use ValeApp\Domain\User\Entity\User;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Auth\PasswordHasher;
 use ValeApp\Infrastructure\Cache\AdminSearchCache;
+use ValeApp\Infrastructure\Cache\PageCache;
+use ValeApp\Infrastructure\Media\AvatarStorage;
 use ValeApp\Infrastructure\Payment\PayPalGateway;
 use ValeApp\Infrastructure\Payment\StripeGateway;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -45,6 +47,8 @@ final class UserController
         private readonly EventDispatcherInterface $events,
         private readonly OutboundWebhookService $webhookService,
         private readonly AdminSearchCache $searchCache,
+        private readonly AvatarStorage $avatars,
+        private readonly PageCache $pageCache,
         private readonly ?StripeGateway $stripeGateway = null,
         private readonly ?PayPalGateway $paypalGateway = null,
     ) {
@@ -114,19 +118,6 @@ final class UserController
     /**
      * GET /admin/users/create — Show create user form.
      */
-    public function create(Request $request, Response $response): Response
-    {
-        $roles = $this->fetchAllRoles();
-
-        return $this->twig->render($response, 'admin/users/form.twig', [
-            'roles'                    => $roles,
-            'user'                     => null,
-            'is_edit'                  => false,
-            'two_factor_global'        => $this->settings->get('two_factor_enabled_global', '0') === '1',
-            'two_factor_forced_global' => $this->settings->get('two_factor_forced_global', '0')  === '1',
-        ]);
-    }
-
     /**
      * POST /admin/users — Store new user.
      */
@@ -179,42 +170,15 @@ final class UserController
                 ->withHeader('Location', admin_url('/users'))
                 ->withStatus(302);
         } catch (ValidationException $e) {
-            return $this->twig->render($response->withStatus(422), 'admin/users/form.twig', [
-                'errors'            => $e->getErrors(),
-                'old'               => $body,
-                'roles'             => $this->fetchAllRoles(),
-                'user'              => null,
-                'is_edit'           => false,
-                'two_factor_global' => $this->settings->get('two_factor_enabled_global', '0') === '1',
-            ]);
+            $messages = array_merge(...array_values($e->getErrors()));
+            if ($messages !== []) {
+                $this->session->set('flash_error', implode(' ', $messages));
+            }
+
+            return $response
+                ->withHeader('Location', admin_url('/users'))
+                ->withStatus(302);
         }
-    }
-
-    /**
-     * GET /admin/users/{id}/edit — Show edit form.
-     */
-    public function edit(Request $request, Response $response, array $args): Response
-    {
-        $user = $this->users->findById((int) $args['id']);
-
-        if ($user === null) {
-            return $response->withStatus(404);
-        }
-
-        $data = [
-            'user'                     => $user,
-            'roles'                    => $this->fetchAllRoles(),
-            'is_edit'                  => true,
-            'two_factor_global'        => $this->settings->get('two_factor_enabled_global', '0')  === '1',
-            'two_factor_forced_global' => $this->settings->get('two_factor_forced_global', '0')   === '1',
-        ];
-
-        if ($this->session->has('two_factor_new_codes')) {
-            $data['two_factor_new_codes'] = $this->session->get('two_factor_new_codes');
-            $this->session->remove('two_factor_new_codes');
-        }
-
-        return $this->twig->render($response, 'admin/users/form.twig', $data);
     }
 
     /**
@@ -256,14 +220,11 @@ final class UserController
         }
 
         if (!empty($errors)) {
-            return $this->twig->render($response->withStatus(422), 'admin/users/form.twig', [
-                'errors'            => $errors,
-                'old'               => $body,
-                'user'              => $user,
-                'roles'             => $this->fetchAllRoles(),
-                'is_edit'           => true,
-                'two_factor_global' => $this->settings->get('two_factor_enabled_global', '0') === '1',
-            ]);
+            $this->session->set('flash_error', implode(' ', array_merge(...array_values($errors))));
+
+            return $response
+                ->withHeader('Location', admin_url('/users'))
+                ->withStatus(302);
         }
 
         if (!empty($body['disable_2fa'])) {
@@ -305,6 +266,32 @@ final class UserController
         $user->setIsActive(!empty($body['is_active']));
         $user->setLocale($body['locale'] ?? 'en');
 
+        $avatarChanged = false;
+
+        if (!empty($body['remove_avatar'])) {
+            $this->avatars->delete($user->getAvatar());
+            $user->setAvatar(null);
+            $avatarChanged = true;
+        } else {
+            $avatarFile = $request->getUploadedFiles()['avatar'] ?? null;
+            if ($avatarFile instanceof \Psr\Http\Message\UploadedFileInterface && $avatarFile->getError() === UPLOAD_ERR_OK) {
+                try {
+                    $maxKb      = AvatarStorage::maxKilobytes((int) $this->settings->get('avatar_max_kb', '1024'));
+                    $avatarPath = $this->avatars->store($avatarFile, $maxKb * 1024);
+                } catch (\Throwable $e) {
+                    $this->session->set('flash_error', $e->getMessage());
+
+                    return $response
+                        ->withHeader('Location', admin_url('/users'))
+                        ->withStatus(302);
+                }
+
+                $this->avatars->delete($user->getAvatar());
+                $user->setAvatar($avatarPath);
+                $avatarChanged = true;
+            }
+        }
+
         if (!empty($body['password'])) {
             $user->setPassword($this->hasher->hash($body['password']));
         }
@@ -340,6 +327,12 @@ final class UserController
         }
 
         $this->users->save($user);
+
+        if ($avatarChanged) {
+            // Cached pages embed the previous avatar URL, whose file no longer exists.
+            $this->pageCache->flush();
+        }
+
         $this->searchCache->bump('user_search');
 
         $this->session->set('flash_success', $this->translator->get('User updated successfully.'));
@@ -498,6 +491,12 @@ final class UserController
 
     private function anonymizeUser(int $userId): void
     {
+        $avatar = $this->db->fetchOne(
+            'SELECT avatar FROM ' . VL_DB_PREFIX . 'users WHERE id = ?',
+            [$userId],
+        );
+        $this->avatars->delete($avatar === false ? null : (string) $avatar);
+
         // Anonymize user — keep email
         $this->db->update(VL_DB_PREFIX . 'users', [
             'name'                          => 'Deleted User',

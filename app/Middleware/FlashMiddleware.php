@@ -195,11 +195,12 @@ final class FlashMiddleware implements MiddlewareInterface
         // Also inject current user info for templates
         if ($this->session->has('user_id')) {
             $storedVersion = (int) $this->session->get('session_version', 0);
+            $userRow       = $this->db->fetchAssociative(
+                'SELECT session_version, avatar FROM ' . VL_DB_PREFIX . 'users WHERE id = ?',
+                [(int) $this->session->get('user_id')],
+            );
             if ($storedVersion > 0) {
-                $dbVersion = $this->db->fetchOne(
-                    'SELECT session_version FROM ' . VL_DB_PREFIX . 'users WHERE id = ?',
-                    [(int) $this->session->get('user_id')],
-                );
+                $dbVersion = $userRow === false ? false : $userRow['session_version'];
                 if ($dbVersion === false || (int) $dbVersion !== $storedVersion) {
                     $this->session->destroy();
                     $response = new Response(302);
@@ -209,10 +210,11 @@ final class FlashMiddleware implements MiddlewareInterface
 
             $this->setGlobal('user_role', $this->session->get('user_role'));
             $this->setGlobal('user', [
-                'id'    => $this->session->get('user_id'),
-                'name'  => $this->session->get('user_name'),
-                'email' => $this->session->get('user_email'),
-                'role'  => $this->session->get('user_role'),
+                'id'     => $this->session->get('user_id'),
+                'name'   => $this->session->get('user_name'),
+                'email'  => $this->session->get('user_email'),
+                'role'   => $this->session->get('user_role'),
+                'avatar' => $userRow === false ? null : $userRow['avatar'],
             ]);
             $this->setGlobal(
                 'user_permissions',

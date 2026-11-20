@@ -163,6 +163,7 @@ use ValeApp\Infrastructure\Mail\PHPMailerAdapter;
 use ValeApp\Infrastructure\Mail\ResendAdapter;
 use ValeApp\Infrastructure\Mail\SendGridAdapter;
 use ValeApp\Infrastructure\Mail\UnosendAdapter;
+use ValeApp\Infrastructure\Media\AvatarStorage;
 use ValeApp\Infrastructure\Media\ImageProcessor;
 use ValeApp\Infrastructure\Media\MediaScanService;
 use ValeApp\Infrastructure\Media\MediaUploadService;
@@ -580,6 +581,9 @@ return [
         // site_url: prefer APP_URL (installer-set) over config
         $appUrl = rtrim((string) env('APP_URL', $cfg['url']), '/');
         $env->addGlobal('site_url', $appUrl);
+        $env->addGlobal('avatar_max_kb', AvatarStorage::maxKilobytes((int) $settings->get('avatar_max_kb', '1024')));
+        $env->addGlobal('media_lazy_loading', $settings->get('media_lazy_loading_enabled', '1') === '1');
+        $env->addGlobal('avatar_server_max_kb', AvatarStorage::serverMaxKilobytes());
         $env->addGlobal('show_author_on_posts', $settings->get('show_author_on_posts', '1'));
         $env->addGlobal('show_modification_date_on_posts', $settings->get('show_modification_date_on_posts', '0'));
         $env->addGlobal('show_timestamp_on_posts', $settings->get('show_timestamp_on_posts', '0'));
@@ -1068,6 +1072,26 @@ return [
             return $url ? rtrim($appUrl, '/') . $url : null;
         }));
 
+        // avatar_url(): stored avatar value (local path or SSO URL) → public URL,
+        // with a file-mtime cache-buster for local pictures.
+        $env->addFunction(new TwigFunction('avatar_url', function (?string $value) use ($c): ?string {
+            return $c->get(AvatarStorage::class)->versionedUrl($value);
+        }));
+
+        // user_avatar_url(): avatar URL for a user id, cached for the request
+        $avatarCache = [];
+        $env->addFunction(new TwigFunction('user_avatar_url', function (int $userId) use ($c, &$avatarCache): ?string {
+            if (array_key_exists($userId, $avatarCache)) {
+                return $avatarCache[$userId];
+            }
+
+            $user = $c->get(UserRepositoryInterface::class)->findById($userId);
+
+            return $avatarCache[$userId] = $user !== null
+                ? $c->get(AvatarStorage::class)->versionedUrl($user->getAvatar())
+                : null;
+        }));
+
         // asset() function: returns URL for local build assets, with cache-busting version
         $env->addFunction(new TwigFunction('asset', function (string $path) use ($basePath): string {
             if (
@@ -1354,6 +1378,14 @@ return [
     SettingsRepositoryInterface::class => get(DbalSettingsRepository::class),
 
     ImageProcessor::class => create(ImageProcessor::class),
+    AvatarStorage::class  => factory(function ($c) {
+        $settings = $c->get(DbalSettingsRepository::class);
+
+        return new AvatarStorage(
+            $c->get('config.media')['upload_dir'],
+            $settings->get('media_webp_enabled', '0') === '1',
+        );
+    }),
 
     // Redirect-hardened HTTP client shared by the download proxy and the
     // remote media importer (validates PrivateNetworkGuard on every hop).

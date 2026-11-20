@@ -2067,9 +2067,14 @@
 
                     <div class="h-5 w-px bg-gray-200 dark:bg-gray-800"></div>
 
+                    {% set admin_header_avatar = avatar_url(user.avatar|default(null)) %}
                     <div x-data="{ userMenu: false }" @click.away="userMenu = false" class="relative flex items-center space-x-2">
                         <button @click="userMenu = !userMenu" type="button" class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+                            {% if admin_header_avatar %}
+                            <img src="{{ admin_header_avatar }}" alt="{{ user.name ?? user.email ?? '' }}" title="{{ user.name ?? user.email ?? '' }}" class="h-7 w-7 rounded-full object-cover">
+                            {% else %}
                             <span class="hidden lg:inline max-w-[150px] truncate" title="{{ user.name ?? user.email ?? '' }}">{{ user.name ?? user.email ?? '' }}</span>
+                            {% endif %}
                             <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>

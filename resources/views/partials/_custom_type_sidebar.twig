@@ -15,9 +15,14 @@
         <div class="rounded-lg border bg-white p-5">
             <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">{{ __('Author') }}</p>
             <div class="flex items-center gap-3">
+                {% set author_avatar = avatar_url(author.avatar) %}
+                {% if author_avatar %}
+                <img src="{{ author_avatar }}" alt="{{ author.name }}" class="h-10 w-10 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                {% else %}
                 <div class="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
                     {{ author.name|slice(0,1)|upper }}
                 </div>
+                {% endif %}
                 <div>
                     <p class="font-medium text-gray-900">{{ author.name }}</p>
                 </div>

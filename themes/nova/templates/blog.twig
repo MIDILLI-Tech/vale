@@ -93,9 +93,14 @@
                         {% set author = authors[post.authorId]|default(post.author|default(null)) %}
                         {% if show_author_on_posts|default('0') == '1' and author %}
                         <div class="flex items-center gap-2">
+                            {% set author_avatar = avatar_url(author.avatar) %}
+                            {% if author_avatar %}
+                            <img src="{{ author_avatar }}" alt="{{ author.name }}" class="h-6 w-6 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                            {% else %}
                             <div class="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
                                 {{ author.name|slice(0,1)|upper }}
                             </div>
+                            {% endif %}
                             <span class="text-xs text-slate-500">{{ author.name }}</span>
                         </div>
                         {% endif %}

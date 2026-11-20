@@ -12,12 +12,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Question\Question;
 use ValeApp\Infrastructure\Auth\PasswordHasher;
+use ValeApp\Infrastructure\Media\AvatarStorage;
 
 final class UserDeleteCommand extends Command
 {
     public function __construct(
         private readonly Connection $connection,
         private readonly PasswordHasher $hasher,
+        private readonly ?AvatarStorage $avatars = null,
     ) {
         parent::__construct();
     }
@@ -106,6 +108,12 @@ final class UserDeleteCommand extends Command
                 'shipping_address'              => null,
                 'updated_at'                    => date('Y-m-d H:i:s'),
             ], ['id' => $user['id']]);
+
+            $avatar = $this->connection->fetchOne(
+                'SELECT avatar FROM ' . VL_DB_PREFIX . 'users WHERE id = ?',
+                [$user['id']],
+            );
+            $this->avatars?->delete($avatar === false ? null : (string) $avatar);
 
             $this->connection->update(VL_DB_PREFIX . 'orders', [
                 'user_id' => null,

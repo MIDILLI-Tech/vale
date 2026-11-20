@@ -56,8 +56,12 @@
                         {% endif %}
                         {% set author = authors[post.authorId]|default(null) %}
                         {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
+                        {% set author_avatar = avatar_url(author.avatar) %}
                         <span class="text-gray-300">&middot;</span>
-                        <span>{{ author.name }}</span>
+                        <span class="inline-flex items-center gap-1.5">
+                            {% if author_avatar %}<img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>{% endif %}
+                            {{ author.name }}
+                        </span>
                         {% endif %}
 
                         {% set showReadingTime = false %}
@@ -139,9 +143,14 @@
                 {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
                 <div class="mt-12 rounded-xl bg-gray-50 ring-1 ring-gray-100 p-6">
                     <div class="flex items-center gap-4">
+                        {% set author_avatar = avatar_url(author.avatar) %}
+                        {% if author_avatar %}
+                        <img src="{{ author_avatar }}" alt="{{ author.name }}" class="h-12 w-12 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                        {% else %}
                         <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-lg font-bold text-indigo-700">
                             {{ author.name|slice(0,1)|upper }}
                         </div>
+                        {% endif %}
                         <div>
                             <p class="text-xs uppercase tracking-widest text-indigo-500 font-semibold">{{ __('Author') }}</p>
                             <p class="font-semibold text-gray-900 mt-0.5">{{ author.name }}</p>

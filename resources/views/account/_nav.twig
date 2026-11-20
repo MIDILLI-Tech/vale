@@ -1,3 +1,20 @@
+{% if user is defined and user %}
+{% set nav_avatar = avatar_url(user.avatar|default(null)) %}
+<div class="mb-6 flex items-center gap-3">
+    <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+        {% if nav_avatar %}
+        <img src="{{ nav_avatar }}" alt="{{ user.name|default('') }}" class="h-full w-full object-cover">
+        {% else %}
+        {{ user.name|default('?')|slice(0, 1)|upper }}
+        {% endif %}
+    </span>
+    <div class="min-w-0">
+        <p class="truncate text-sm font-semibold account-text">{{ user.name|default('') }}</p>
+        <p class="truncate text-xs account-table-muted">{{ user.email|default('') }}</p>
+    </div>
+</div>
+{% endif %}
+
 <div class="account-nav mb-8 flex flex-wrap gap-4 border-b pb-4 text-sm">
     <a href="{{ url(routing_account_prefix ~ '/profile') }}" class="account-tab{{ active_tab == 'profile' ? ' account-tab-active' }}">{{ __('Profile') }}</a>
     {% set showShopLinks = showShopAccountLinks is defined ? showShopAccountLinks : (shop_enabled|default(true)) == true %}

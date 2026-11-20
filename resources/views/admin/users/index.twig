@@ -21,6 +21,7 @@
     editId: null,
     editName: '',
     editEmail: '',
+    editAvatar: '',
     editRole: '',
     editLocale: 'en',
     editIsActive: true,
@@ -31,10 +32,11 @@
     openAdd() {
         this.addOpen = true;
     },
-    openEdit(id, name, email, role, locale, isActive, twoFactorEnabled, twoFactorSecret, recoveryCodes) {
+    openEdit(id, name, email, role, locale, isActive, twoFactorEnabled, twoFactorSecret, recoveryCodes, avatarUrl) {
         this.editId = id;
         this.editName = name;
         this.editEmail = email;
+        this.editAvatar = avatarUrl || '';
         this.editRole = role;
         this.editLocale = locale;
         this.editIsActive = isActive;
@@ -95,9 +97,17 @@
             {% for u in users %}
             <tr data-row-id="{{ u.id }}" class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-sort="{{ {name: u.name, email: u.email, role: u.roles[0] ?? 'subscriber', is_active: u.isActive ? '1' : '0'}|json_encode|e('html_attr') }}">
                 {{ table.td_checkbox(u.id) }}
-                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100">
-                    <button type="button" @click="openEdit({{ u.id }}, '{{ u.name|e('js') }}', '{{ u.email|e('js') }}', '{{ (u.roles[0] ?? 'subscriber')|e('js') }}', '{{ u.locale|e('js') }}', {{ u.isActive ? 'true' : 'false' }}, {{ u.twoFactorEnabled ? 'true' : 'false' }}, '{{ u.twoFactorSecret|e('js') }}', {{ u.twoFactorRecoveryCodes|json_encode|e('html_attr') }})"
-                            class="text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:underline text-left font-medium">{{ u.name }}</button>
+                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {% set u_avatar = avatar_url(u.avatar) %}
+                    <div class="flex items-center gap-3">
+                        {% if u_avatar %}
+                        <img src="{{ u_avatar }}" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                        {% else %}
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-300">{{ u.name|slice(0, 1)|upper }}</span>
+                        {% endif %}
+                        <button type="button" @click="openEdit({{ u.id }}, '{{ u.name|e('js') }}', '{{ u.email|e('js') }}', '{{ (u.roles[0] ?? 'subscriber')|e('js') }}', '{{ u.locale|e('js') }}', {{ u.isActive ? 'true' : 'false' }}, {{ u.twoFactorEnabled ? 'true' : 'false' }}, '{{ u.twoFactorSecret|e('js') }}', {{ u.twoFactorRecoveryCodes|json_encode|e('html_attr') }}, '{{ (u_avatar ?? '')|e('js') }}')"
+                                class="text-gray-900 dark:text-gray-100 hover:underline text-left font-medium">{{ u.name }}</button>
+                    </div>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{{ u.email }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm">
@@ -115,7 +125,7 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                     <div class="inline-flex items-center justify-end gap-2">
-                        <button type="button" @click="openEdit({{ u.id }}, '{{ u.name|e('js') }}', '{{ u.email|e('js') }}', '{{ (u.roles[0] ?? 'subscriber')|e('js') }}', '{{ u.locale|e('js') }}', {{ u.isActive ? 'true' : 'false' }}, {{ u.twoFactorEnabled ? 'true' : 'false' }}, '{{ u.twoFactorSecret|e('js') }}', {{ u.twoFactorRecoveryCodes|json_encode|e('html_attr') }})"
+                        <button type="button" @click="openEdit({{ u.id }}, '{{ u.name|e('js') }}', '{{ u.email|e('js') }}', '{{ (u.roles[0] ?? 'subscriber')|e('js') }}', '{{ u.locale|e('js') }}', {{ u.isActive ? 'true' : 'false' }}, {{ u.twoFactorEnabled ? 'true' : 'false' }}, '{{ u.twoFactorSecret|e('js') }}', {{ u.twoFactorRecoveryCodes|json_encode|e('html_attr') }}, '{{ (avatar_url(u.avatar) ?? '')|e('js') }}')"
                                 class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
                         <form method="POST" action="{{ url('/admin/users/' ~ u.id ~ '/anonymize') }}"
                               onsubmit="return confirm('{{ __('Anonymize user :name? Their profile, comments and subscriptions will be anonymized. Email will be preserved.', {':name': u.name})|e('js') }}')">
@@ -237,7 +247,7 @@
             <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit User') }}</h3>
             <button type="button" @click="closeEdit()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
         </div>
-        <form method="POST" :action="'{{ url('/admin/users')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col">
+        <form method="POST" :action="'{{ url('/admin/users')|e('js') }}/' + editId" enctype="multipart/form-data" class="flex min-h-0 flex-1 flex-col">
             <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             {{ csrf_field() }}
             <input type="hidden" name="_METHOD" value="PUT">
@@ -252,6 +262,25 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700">{{ __('Password') }}</label>
                 <input type="password" name="password" minlength="8" class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:text-sm">
+            </div>
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">{{ __('Profile Picture') }}</label>
+                <div class="flex items-start gap-3">
+                    <img x-show="editAvatar" :src="editAvatar" alt="" class="h-14 w-14 shrink-0 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-700" x-cloak>
+                    <span x-show="!editAvatar" x-cloak
+                          class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100 text-base font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-300"
+                          x-text="(editName || '?').slice(0, 1).toUpperCase()"></span>
+                    <div class="flex-1 space-y-2">
+                        <input type="file" name="avatar" accept="image/jpeg,image/png"
+                               class="block w-full text-xs text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white dark:file:bg-gray-700">
+                        <label x-show="editAvatar" x-cloak class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                            <input type="checkbox" name="remove_avatar" value="1"
+                                   class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                            {{ __('Remove current picture') }}
+                        </label>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('JPEG or PNG, up to :size KB. Uploads are cropped to a square.', {':size': avatar_max_kb}) }}</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">{{ __('Role') }}</label>

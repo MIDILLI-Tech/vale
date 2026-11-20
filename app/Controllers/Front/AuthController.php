@@ -142,9 +142,7 @@ class AuthController
             $user = new User($emailVo, $hashedPassword, $steamName);
             $user->setSsoProvider($ssoProvider);
             $user->setSsoProviderId($ssoProviderId);
-            if ($steamAvatar !== null) {
-                $user->setAvatar($steamAvatar);
-            }
+            $this->applySsoAvatar($user, $steamAvatar);
             $user->setEmailVerifiedAt(new \DateTimeImmutable());
             $user->recordLogin();
             $this->users->save($user);
@@ -776,9 +774,7 @@ class AuthController
             $user = new User($emailVo, $hashedPassword, $name);
             $user->setSsoProvider($provider);
             $user->setSsoProviderId($ssoProviderId);
-            if ($avatar !== null) {
-                $user->setAvatar($avatar);
-            }
+            $this->applySsoAvatar($user, $avatar);
             // The provider authenticated this human; auto-verify new accounts
             // so the login gate cannot lock them out. Account LINKING to an
             // existing local user remains gated by $emailVerified above.
@@ -809,9 +805,7 @@ class AuthController
             if ($name !== null) {
                 $user->setName($name);
             }
-            if ($avatar !== null) {
-                $user->setAvatar($avatar);
-            }
+            $this->applySsoAvatar($user, $avatar);
             $user->recordLogin();
             $this->users->save($user);
         }
@@ -988,9 +982,7 @@ class AuthController
         }
 
         // Existing Steam user — log them in
-        if ($playerAvatar !== null) {
-            $user->setAvatar($playerAvatar);
-        }
+        $this->applySsoAvatar($user, $playerAvatar);
         $user->recordLogin();
         $this->users->save($user);
 
@@ -1109,6 +1101,24 @@ class AuthController
         }
 
         return json_decode($resp, true);
+    }
+
+    /**
+     * Keep a locally uploaded profile picture: the provider may only fill an
+     * empty avatar or refresh a remote (http) one.
+     */
+    private function applySsoAvatar(User $user, ?string $avatar): void
+    {
+        if ($avatar === null || $avatar === '') {
+            return;
+        }
+
+        $current = $user->getAvatar();
+        if ($current !== null && $current !== '' && preg_match('#^https?://#i', $current) !== 1) {
+            return;
+        }
+
+        $user->setAvatar($avatar);
     }
 
     /**

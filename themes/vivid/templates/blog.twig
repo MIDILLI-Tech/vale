@@ -97,7 +97,11 @@
                 {% set author = authors[post.authorId]|default(null) %}
                 <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
                     {% if show_author_on_posts|default('0') == '1' and author %}
-                    <span class="text-xs text-gray-400">{{ author.name }}</span>
+                    {% set author_avatar = avatar_url(author.avatar) %}
+                    <span class="flex items-center gap-1.5 text-xs text-gray-400">
+                        {% if author_avatar %}<img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>{% endif %}
+                        {{ author.name }}
+                    </span>
                     {% else %}
                     <span></span>
                     {% endif %}

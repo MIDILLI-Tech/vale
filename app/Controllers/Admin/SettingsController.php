@@ -36,6 +36,7 @@ use ValeApp\Infrastructure\Analytics\GeoIpResolver;
 use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Content\CaptchaUrls;
 use ValeApp\Infrastructure\Content\RedirectService;
+use ValeApp\Infrastructure\Media\AvatarStorage;
 use ValeApp\Infrastructure\Media\MediaScanService;
 use ValeApp\Infrastructure\Media\MediaUploadService;
 use ValeApp\Infrastructure\Payment\HttpTransport;
@@ -642,6 +643,14 @@ final class SettingsController
             }
             $body['timezone'] = $tz;
             date_default_timezone_set($tz);
+        }
+
+        // Avatar limits: keep the stored values inside the ranges the form offers.
+        if (array_key_exists('avatar_max_kb', $body)) {
+            $body['avatar_max_kb'] = (string) AvatarStorage::maxKilobytes((int) $body['avatar_max_kb']);
+        }
+        if (array_key_exists('avatar_upload_limit', $body)) {
+            $body['avatar_upload_limit'] = (string) max(0, min(1000, (int) $body['avatar_upload_limit']));
         }
 
         $this->settings->setMany($body, $group);

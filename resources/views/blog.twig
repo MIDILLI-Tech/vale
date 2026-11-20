@@ -64,8 +64,12 @@
                         {% endif %}
                         {% set author = authors[post.authorId]|default(null) %}
                         {% if (not _ct or 'author' in type.supports) and show_author_on_posts|default('0') == '1' and author %}
+                        {% set author_avatar = avatar_url(author.avatar) %}
                         <span class="text-gray-300">&middot;</span>
-                        <span>{{ author.name }}</span>
+                        <span class="inline-flex items-center gap-1.5">
+                            {% if author_avatar %}<img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>{% endif %}
+                            {{ author.name }}
+                        </span>
                         {% endif %}
                     </div>
 

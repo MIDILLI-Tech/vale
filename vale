@@ -179,7 +179,7 @@ $cli->setCommandLoader(new FactoryCommandLoader([
         $container->get(ValeApp\Infrastructure\Media\MediaUploadService::class),
     ),
     'user:create'         => fn () => new UserCreateCommand($connection, $hasher),
-    'user:delete'         => fn () => new UserDeleteCommand($connection, $hasher),
+    'user:delete'         => fn () => new UserDeleteCommand($connection, $hasher, $container->get(ValeApp\Infrastructure\Media\AvatarStorage::class)),
     'user:activate'       => fn () => new UserActivateCommand($connection),
     'user:set-role'       => fn () => new UserSetRoleCommand($connection),
     'user:reset-password' => fn () => new UserResetPasswordCommand($connection, $hasher),

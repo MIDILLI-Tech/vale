@@ -298,5 +298,29 @@
             </label>
         </div>
 
+        {# ── Profile Pictures ── #}
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Profile Pictures') }}</p>
+
+        {% set avatar_ceiling = avatar_server_max_kb|default(0) > 0 ? min(10240, avatar_server_max_kb) : 10240 %}
+        <div {{ vl.attrs('registration', __('Maximum avatar size (KB)'), 'avatar_max_kb', '', __('Account'), 'profile picture avatar upload size limit kb') }} class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label for="avatar_max_kb" class="block text-sm font-medium text-gray-700">{{ __('Maximum avatar size (KB)') }}</label>
+            <input id="avatar_max_kb" type="number" name="avatar_max_kb"
+                   value="{{ settings.avatar_max_kb|default('1024') }}" min="64" max="{{ avatar_ceiling }}" step="1"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Users can upload JPEG or PNG profile pictures up to this size. Images are cropped to a square and re-encoded before they are stored.') }}</p>
+            {% if avatar_server_max_kb|default(0) > 0 %}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The server upload limit is :size KB, so avatars cannot be larger than that.', {':size': avatar_server_max_kb}) }}</p>
+            {% endif %}
+        </div>
+
+        <div {{ vl.attrs('registration', __('Avatar uploads per hour'), 'avatar_upload_limit', '', __('Account'), 'profile picture avatar upload rate limit per hour') }} class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label for="avatar_upload_limit" class="block text-sm font-medium text-gray-700">{{ __('Avatar uploads per hour') }}</label>
+            <input id="avatar_upload_limit" type="number" name="avatar_upload_limit"
+                   value="{{ settings.avatar_upload_limit|default('1') }}" min="0" max="1000" step="1"
+                   class="mt-1 w-32 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('How many times one user may change their profile picture per hour. Set 0 for unlimited.') }}</p>
+        </div>
+
     </form>
 </div>

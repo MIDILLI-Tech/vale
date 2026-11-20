@@ -7,6 +7,7 @@ namespace ValeApp\App\Controllers\Front;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\UploadedFileInterface;
 use Slim\Views\Twig;
 use ValeApp\Application\Auth\TwoFactorService;
 use ValeApp\Application\Mail\MailService;
@@ -20,10 +21,13 @@ use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\User\Entity\User;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Auth\PasswordHasher;
+use ValeApp\Infrastructure\Cache\PageCache;
+use ValeApp\Infrastructure\Media\AvatarStorage;
 use ValeApp\Infrastructure\Payment\PayPalGateway;
 use ValeApp\Infrastructure\Payment\StripeGateway;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Security\Encrypter;
+use ValeApp\Infrastructure\Security\RateLimiter;
 use ValeApp\Infrastructure\Session\SessionManager;
 
 final class AccountController
@@ -39,6 +43,9 @@ final class AccountController
         private readonly PlanRepositoryInterface $plans,
         private readonly TwoFactorService $twoFactorService,
         private readonly SeoState $seoState,
+        private readonly AvatarStorage $avatars,
+        private readonly PageCache $pageCache,
+        private readonly RateLimiter $rateLimiter,
         private readonly ?OrderRepositoryInterface $orders = null,
         private readonly ?OrderLogRepositoryInterface $orderLogs = null,
         private readonly ?MailService $mailer = null,
@@ -83,6 +90,67 @@ final class AccountController
         }
 
         return $this->twig->render($response, 'account/profile.twig', $data);
+    }
+
+    public function uploadAvatar(Request $request, Response $response): Response
+    {
+        $userId = (int) $this->session->get('user_id');
+        $user   = $this->users->findById($userId);
+
+        if ($user === null) {
+            $this->session->flash('error', __('User not found.'));
+            return $response->withHeader('Location', site_url('/login'))->withStatus(302);
+        }
+
+        $maxKb  = AvatarStorage::maxKilobytes((int) $this->settings->get('avatar_max_kb', '1024'));
+        $limit  = max(0, min(1000, (int) $this->settings->get('avatar_upload_limit', '1')));
+
+        if ($limit > 0 && !$this->rateLimiter->attempt('avatar-upload', 'user-' . $userId, $limit, 3600)) {
+            $this->session->flash('error', __('Too many uploads. Please try again later.'));
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
+        $file = $request->getUploadedFiles()['avatar'] ?? null;
+
+        try {
+            if (!$file instanceof UploadedFileInterface) {
+                throw new \RuntimeException(__('Please choose an image to upload.'));
+            }
+
+            $path = $this->avatars->store($file, $maxKb * 1024);
+        } catch (\Throwable $e) {
+            $this->session->flash('error', $e->getMessage());
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
+        $previous = $user->getAvatar();
+        $user->setAvatar($path);
+        $this->users->save($user);
+        $this->avatars->delete($previous);
+        // Cached pages embed the previous avatar URL, whose file no longer exists.
+        $this->pageCache->flush();
+
+        $this->session->flash('success', __('Profile picture updated.'));
+        return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+    }
+
+    public function deleteAvatar(Request $request, Response $response): Response
+    {
+        $userId = (int) $this->session->get('user_id');
+        $user   = $this->users->findById($userId);
+
+        if ($user === null) {
+            $this->session->flash('error', __('User not found.'));
+            return $response->withHeader('Location', site_url('/login'))->withStatus(302);
+        }
+
+        $this->avatars->delete($user->getAvatar());
+        $user->setAvatar(null);
+        $this->users->save($user);
+        $this->pageCache->flush();
+
+        $this->session->flash('success', __('Profile picture removed.'));
+        return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
     }
 
     public function resendVerification(Request $request, Response $response): Response
@@ -743,6 +811,9 @@ final class AccountController
             $this->session->flash('error', 'User not found.');
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
+
+        $this->avatars->delete($user->getAvatar());
+        $this->pageCache->flush();
 
         // Cancel any active subscriptions
         $sub = $this->subscriptionService->findActiveByUserId($userId);

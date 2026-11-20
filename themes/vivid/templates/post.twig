@@ -49,9 +49,14 @@
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-emerald-200">
             {% if show_author_on_posts|default('0') == '1' and author %}
             <span class="flex items-center gap-1.5">
+                {% set author_avatar = avatar_url(author.avatar) %}
+                {% if author_avatar %}
+                <img src="{{ author_avatar }}" alt="" class="h-5 w-5 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+                {% else %}
                 <svg class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
+                {% endif %}
                 {{ author.name }}
             </span>
             <span class="opacity-40">&middot;</span>
@@ -181,9 +186,14 @@
     {# ── Author card ── #}
     {% if show_author_on_posts|default('0') == '1' and author %}
     <div class="mt-14 flex items-center gap-5 rounded-2xl bg-gray-50 ring-1 ring-gray-100 p-6">
+        {% set author_avatar = avatar_url(author.avatar) %}
+        {% if author_avatar %}
+        <img src="{{ author_avatar }}" alt="{{ author.name }}" class="shrink-0 h-14 w-14 rounded-full object-cover" {% if media_lazy_loading|default('1') %}loading="lazy"{% endif %}>
+        {% else %}
         <div class="shrink-0 h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xl">
             {{ author.name|slice(0,1)|upper }}
         </div>
+        {% endif %}
         <div>
             <p class="text-xs uppercase tracking-widest text-emerald-500 font-semibold mb-0.5">{{ __('Author') }}</p>
             <p class="font-semibold text-gray-900">{{ author.name }}</p>

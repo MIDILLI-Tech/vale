@@ -68,7 +68,7 @@ return function (App $app): void {
         $group->group('', function (RouteCollectorProxy $g): void {
             $g->get('/users', [UserController::class, 'index'])->setName('admin.users');
             $g->get('/users/{id:[0-9]+}/roles', function ($request, $response, array $args) {
-                return (new Response(302))->withHeader('Location', admin_url('/users/' . ($args['id'] ?? '') . '/edit'));
+                return (new Response(302))->withHeader('Location', admin_url('/users'));
             })->setName('admin.users.roles');
         })->add(new PermissionMiddleware($session, ['users.list']));
 

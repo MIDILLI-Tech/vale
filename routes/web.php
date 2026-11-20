@@ -224,6 +224,8 @@ return function (App $app): void {
     $app->group('', function (RouteCollectorProxy $group) use ($c, $accountPrefix): void {
         $group->get($accountPrefix, [AccountController::class, 'index'])->setName('account.index');
         $group->map(['GET', 'POST'], $accountPrefix . '/profile', [AccountController::class, 'profile'])->setName('account.profile');
+        $group->post($accountPrefix . '/profile/avatar', [AccountController::class, 'uploadAvatar'])->setName('account.profile.avatar');
+        $group->post($accountPrefix . '/profile/avatar/delete', [AccountController::class, 'deleteAvatar'])->setName('account.profile.avatar.delete');
         $group->get($accountPrefix . '/verify-email/resend', [AccountController::class, 'resendVerification'])->setName('account.verify-email.resend');
         $group->get($accountPrefix . '/two-factor/setup', [AccountController::class, 'showTwoFactorSetup'])->setName('account.two-factor.setup');
         $group->post($accountPrefix . '/two-factor/setup', [AccountController::class, 'setupTwoFactor']);
