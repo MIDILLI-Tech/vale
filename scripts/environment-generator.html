@@ -311,6 +311,10 @@
              vale-docs/scripts/sync-env-locales.js during docs build. Do NOT edit by hand. -->
         <select id="APP_LOCALE" name="APP_LOCALE">
           <option value="en" selected>English (en)</option>
+          <option value="de">Deutsch (de)</option>
+          <option value="es">Español (es)</option>
+          <option value="fr">Français (fr)</option>
+          <option value="it">Italiano (it)</option>
           <option value="tr">Türkçe (tr)</option>
         </select>
       </div>
@@ -785,7 +789,7 @@
       { key: 'APP_URL', val: appUrl, comment: 'Required: canonical base URL incl. subfolder (must match actual domain)' },
       { key: 'APP_KEY', val: (appKey !== '' ? appKey : 'change-this-to-a-random-32-char-string'), comment: 'Encryption key (64 hex chars); never change after install' },
       { key: 'ENCRYPT_PII', val: encryptPii, comment: 'Encrypt customer/order address PII at rest (true | false). Enabling it makes addresses unreadable if APP_KEY is lost/changed.' },
-      { key: 'APP_LOCALE', val: appLocale, comment: 'Default locale: en | tr' },
+      { key: 'APP_LOCALE', val: appLocale, comment: 'Default locale: en | de | es | fr | it | tr' },
       { type: 'blank' },
       { type: 'comment', text: '# Database' },
       { key: 'DB_DRIVER', val: dbDriver, comment: 'Database driver: mysql | sqlite | pgsql' },
