@@ -40,7 +40,7 @@
     {# Content Sub-tabs — Media is always the first tab and fallback; blog/mlc/ads are hide/show. #}
     <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex gap-4 overflow-x-auto" id="content-subtabs">
-            <button type="button" data-subtab="media" class="content-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors duration-150 md:hover:bg-blue-50 md:hover:text-blue-700 dark:md:hover:bg-blue-900/20 dark:md:hover:text-blue-300">{{ __('Media') }}</button>
+            <button type="button" data-subtab="media" class="content-tab-btn shrink-0 border-b-2 border-blue-600 pb-2 text-sm font-medium text-blue-600 dark:border-blue-400 dark:text-blue-400 transition-colors">{{ __('Media') }}</button>
             <button type="button" data-subtab="blog" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.blog" x-cloak>{{ __('Blog') }}</button>
             <button type="button" data-subtab="mlc" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.mlc" x-cloak>{{ __('Multi-Language') }}</button>
             <button type="button" data-subtab="ads" class="content-tab-btn shrink-0 border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.ads" x-cloak>{{ __('Advertisement') }}</button>
