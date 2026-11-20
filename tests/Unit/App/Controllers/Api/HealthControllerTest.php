@@ -44,6 +44,18 @@ final class HealthControllerTest extends TestCase
         self::assertArrayNotHasKey('checks', $payload);
     }
 
+    public function testVersionIsReadFromVersionFile(): void
+    {
+        file_put_contents($this->rootDir . '/version.php', "<?php\nreturn '9.8.7';\n");
+
+        $db         = $this->createStub(Connection::class);
+        $controller = new HealthController($db, new RateLimiter($this->limiterDir), $this->rootDir);
+        $response   = $controller->index($this->request('/api/v1/health'), new Response(200));
+
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertSame('9.8.7', $payload['version']);
+    }
+
     public function testDeepModeReturnsOkWhenEverythingIsHealthy(): void
     {
         $db = $this->createStub(Connection::class);

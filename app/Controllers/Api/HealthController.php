@@ -38,7 +38,7 @@ final class HealthController
     {
         $payload = [
             'status'    => 'ok',
-            'version'   => $_ENV['APP_VERSION'] ?? '1.0.0',
+            'version'   => $this->version(),
             'timestamp' => time(),
         ];
 
@@ -59,6 +59,23 @@ final class HealthController
         $payload['status'] = $healthy ? 'ok' : 'degraded';
 
         return $this->json($response, $payload, $healthy ? 200 : 503);
+    }
+
+    /**
+     * Version baked into version.php by the release build, so the reported
+     * value always matches the code that is actually running.
+     */
+    private function version(): string
+    {
+        $file = rtrim($this->rootDir, '/\\') . '/version.php';
+        if (is_file($file)) {
+            $version = require $file;
+            if (is_string($version) && $version !== '') {
+                return $version;
+            }
+        }
+
+        return (string) ($_ENV['APP_VERSION'] ?? '1.0.0');
     }
 
     /**
