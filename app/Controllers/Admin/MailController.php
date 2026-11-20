@@ -475,7 +475,10 @@ final class MailController
 
         $mockData = array_merge(
             $this->getMockData($template),
-            ['vl_email_colors' => $this->mailer->getEmailColorContext()],
+            [
+                'site_logo'       => $this->mailer->emailLogoUrl(),
+                'vl_email_colors' => $this->mailer->getEmailColorContext(),
+            ],
             $this->mailer->getEmailFlatColors(),
         );
 

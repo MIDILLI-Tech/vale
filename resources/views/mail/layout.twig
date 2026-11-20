@@ -27,7 +27,13 @@
 <body>
 <div class="wrapper">
   <div class="header">
-    <a href="{{ site_url ~ '/' }}">{{ site_name|default('Vale') }}</a>
+    <a href="{{ site_url ~ '/' }}">
+      {% if site_logo|default('') %}
+      <img src="{{ site_logo }}" alt="{{ site_name|default('Vale') }}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;">
+      {% else %}
+      <span style="color:#ffffff;font-size:20px;font-weight:700;">{{ site_name|default('Vale') }}</span>
+      {% endif %}
+    </a>
   </div>
   <div class="body">
     {% block body %}{% block content %}{% endblock %}{% endblock %}

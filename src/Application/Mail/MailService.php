@@ -57,6 +57,7 @@ final class MailService
         $siteName = $this->settings->get('site_name', 'Vale');
         $context  = array_merge([
             'site_name'       => $siteName,
+            'site_logo'       => $this->emailLogoUrl(),
             'vl_email_colors' => $this->getEmailColorContext(),
         ], $this->getEmailFlatColors(), $context);
 
@@ -103,6 +104,32 @@ final class MailService
         );
 
         $this->mailer->send($message);
+    }
+
+    /**
+     * Absolute logo URL for the mail header; mail clients cannot resolve
+     * root-relative paths. Empty when no logo is configured.
+     */
+    public function emailLogoUrl(): string
+    {
+        $logo = trim((string) $this->settings->get('site_logo', ''));
+        if ($logo === '') {
+            return '';
+        }
+
+        if (
+            str_starts_with($logo, 'http://')
+            || str_starts_with($logo, 'https://')
+            || str_starts_with($logo, '//')
+        ) {
+            return $logo;
+        }
+
+        try {
+            return site_url('/' . ltrim($logo, '/'));
+        } catch (\Throwable) {
+            return $logo;
+        }
     }
 
     /**
