@@ -14,7 +14,9 @@ declare(strict_types=1);
  *
  * Flags:
  *   --version=x.y.z         Release version (required unless version.php exists)
- *   --tag                   Create git tag vX.Y.Z and push it
+ *   --tag                   Commit version.php/README.md/CHANGELOG.md, push
+ *                           master, then create and push the tag on that commit
+ *   --no-push               With --tag: keep the release commit and tag local
  *   --changelog             Generate changelog from conventional commits since last tag
  *   --build                 Run prepare-release.php to build the ZIP
  *   --description="text"    Custom release notes inserted above the commit list
@@ -39,6 +41,7 @@ $opts = getopt('', [
     'description:',
     'force',
     'dry-run',
+    'no-push',
     'include-vendor',
     'compress',
     'requires-migration',
@@ -53,6 +56,7 @@ $force         = isset($opts['force']);
 $description   = isset($opts['description']) ? (string) $opts['description'] : '';
 $includeVendor = isset($opts['include-vendor']);
 $useCompress   = isset($opts['compress']);
+$pushMaster    = $doTag && !isset($opts['no-push']);
 
 if (!$doChangelog && !$doTag && !$doBuild) {
     err("At least one of --tag, --changelog, or --build must be specified.");
@@ -86,6 +90,7 @@ info("Version     : {$version}");
 info("Tag         : {$tagName}");
 info("Changelog   : " . ($doChangelog ? 'yes' : 'no'));
 info("Create tag  : " . ($doTag ? 'yes' : 'no'));
+info("Push master : " . ($pushMaster ? 'yes' : 'no'));
 info("Build       : " . ($doBuild ? 'yes' : 'no'));
 info("Force       : " . ($force ? 'yes' : 'no'));
 info("Description : " . ($description !== '' ? mb_substr($description, 0, 60) . (mb_strlen($description) > 60 ? '...' : '') : 'no'));
@@ -110,12 +115,46 @@ if (file_exists($envFile)) {
     }
 }
 
-// ── Step 1: Generate changelog ────────────────────────────────────────────────
+// ── Pre-flight ────────────────────────────────────────────────────────────────
+
+if (!$dryRun && ($doChangelog || $doTag)) {
+    assertCleanTree();
+}
+
+if (!$dryRun && $pushMaster) {
+    assertOnMaster();
+}
+
+// ── Step 1: Release metadata ──────────────────────────────────────────────────
+// The bump runs first so the changelog section exists before conventional
+// commits are merged into it, and so the tag commit carries the new version.
+
+if ($doChangelog || $doTag) {
+    $bumpScript = $rootDir . '/scripts/bump-version.php';
+    if (!file_exists($bumpScript)) {
+        err('scripts/bump-version.php not found.');
+    }
+
+    info('Updating version.php, README.md and CHANGELOG.md...');
+
+    $bumpCmd = 'php ' . escapeshellarg($bumpScript)
+        . ' --version=' . escapeshellarg($version)
+        . ' --changelog'
+        . ($dryRun ? ' --dry-run' : '');
+
+    passthru($bumpCmd . ' 2>&1', $bumpCode);
+    if ($bumpCode !== 0) {
+        err("bump-version.php failed (exit {$bumpCode}).");
+    }
+    info('');
+}
+
+// ── Step 2: Generate changelog ────────────────────────────────────────────────
 
 $changelogMd = '';
 
 if ($doChangelog) {
-    info("[1/4] Generating changelog from conventional commits...");
+    info('Generating changelog from conventional commits...');
 
     $changelogMd = generateChangelog($rootDir, $version, $tagName, $description, $force);
 
@@ -168,14 +207,17 @@ if ($doChangelog) {
     }
 }
 
-// ── Step 2: Git tag ───────────────────────────────────────────────────────────
+// ── Step 3: Release commit, master push, git tag ──────────────────────────────
 
 if ($doTag) {
-    info("[2/4] Creating git tag...");
+    info('Committing release metadata and creating git tag...');
 
     if ($dryRun) {
-        info("[DRY RUN] Would create tag: {$tagName}");
-        info("[DRY RUN] Would push tag to remote.");
+        info('[DRY RUN] Would commit version.php, README.md and CHANGELOG.md.');
+        info("[DRY RUN] Would create tag {$tagName} on that commit.");
+        info($pushMaster
+            ? '[DRY RUN] Would push master, then the tag, to origin.'
+            : '[DRY RUN] Would push only the tag (--no-push).');
     } else {
         // Check if tag already exists
         exec("git tag -l " . escapeshellarg($tagName) . " 2>&1", $tagList, $tagListCode);
@@ -191,29 +233,60 @@ if ($doTag) {
                 if ($deleteCode !== 0) {
                     err('Could not delete local tag: ' . trim(implode("\n", $deleteOut)));
                 }
-                exec("git push origin :refs/tags/" . escapeshellarg($tagName) . " 2>&1", $deleteRemoteOut, $deleteRemoteCode);
-                if ($deleteRemoteCode !== 0) {
-                    err('Could not delete remote tag: ' . trim(implode("\n", $deleteRemoteOut)));
+                if ($pushMaster) {
+                    exec("git push origin :refs/tags/" . escapeshellarg($tagName) . " 2>&1", $deleteRemoteOut, $deleteRemoteCode);
+                    if ($deleteRemoteCode !== 0) {
+                        err('Could not delete remote tag: ' . trim(implode("\n", $deleteRemoteOut)));
+                    }
                 }
             } else {
                 err("Tag {$tagName} already exists. Use --force to recreate.");
             }
         }
 
-        // Stage CHANGELOG.md if it was modified
-        $changelogPath = $rootDir . '/CHANGELOG.md';
-        if (file_exists($changelogPath) && $doChangelog) {
-            exec("git add " . escapeshellarg('CHANGELOG.md') . " 2>&1", $addOut, $addCode);
-            if ($addCode !== 0) {
-                err('Could not stage CHANGELOG.md: ' . trim(implode("\n", $addOut)));
+        // Stage only the release metadata, so the tag always describes the
+        // version it ships.
+        $releaseFiles = [];
+        foreach (['version.php', 'README.md', 'CHANGELOG.md'] as $file) {
+            if (file_exists($rootDir . '/' . $file)) {
+                $releaseFiles[] = $file;
             }
-            $commitMsg = "chore: release {$version}";
-            exec("git commit -m " . escapeshellarg($commitMsg) . " 2>&1", $commitOut, $commitCode);
-            if ($commitCode === 0) {
-                info("Committed: {$commitMsg}");
-            } else {
-                info('No changelog changes to commit.');
+        }
+
+        exec('git add -- ' . implode(' ', array_map('escapeshellarg', $releaseFiles)) . ' 2>&1', $addOut, $addCode);
+        if ($addCode !== 0) {
+            err('Could not stage release metadata: ' . trim(implode("\n", $addOut)));
+        }
+
+        $commitMsg = "chore(release): v{$version}";
+        exec('git diff --cached --quiet 2>&1', $stagedOut, $stagedCode);
+
+        if ($stagedCode === 1) {
+            exec('git commit -m ' . escapeshellarg($commitMsg) . ' 2>&1', $commitOut, $commitCode);
+            if ($commitCode !== 0) {
+                err('Could not commit release metadata: ' . trim(implode("\n", $commitOut)));
             }
+            info("Committed: {$commitMsg}");
+        } elseif ($stagedCode === 0) {
+            info('No release metadata changes to commit.');
+        } else {
+            err('Could not inspect the staged release metadata: ' . trim(implode("\n", $stagedOut)));
+        }
+
+        $head = trim((string) (shell_exec('git rev-parse HEAD 2>&1') ?? ''));
+        if (preg_match('/^[0-9a-f]{7,40}$/', $head) !== 1) {
+            err('Could not resolve the release commit (git rev-parse HEAD).');
+        }
+        info("Release commit: {$head}");
+
+        if ($pushMaster) {
+            exec('git push origin master 2>&1', $branchPushOut, $branchPushCode);
+            if ($branchPushCode !== 0) {
+                err('Could not push master: ' . trim(implode("\n", $branchPushOut)));
+            }
+            info('master pushed: ' . trim(implode("\n", $branchPushOut)));
+        } else {
+            info('master not pushed (--no-push): the tag commit will not be on origin/master.');
         }
 
         // Create annotated tag
@@ -228,8 +301,13 @@ if ($doTag) {
         }
         info("Tag created: {$tagName}");
 
-        // Push
-        exec("git push origin " . escapeshellarg($tagName) . " 2>&1", $pushOut, $pushCode);
+        $tagTarget = trim((string) (shell_exec('git rev-list -n 1 ' . escapeshellarg($tagName) . ' 2>&1') ?? ''));
+        if ($tagTarget !== $head) {
+            err("Tag {$tagName} points at {$tagTarget}, expected the release commit {$head}.");
+        }
+
+        // Push the tag last, so origin/master already has the release commit.
+        exec('git push origin ' . escapeshellarg($tagName) . ' 2>&1', $pushOut, $pushCode);
         if ($pushCode !== 0) {
             err('Could not push tag: ' . trim(implode("\n", $pushOut)));
         }
@@ -240,7 +318,7 @@ if ($doTag) {
 // ── Step 3: Build release ─────────────────────────────────────────────────────
 
 if ($doBuild) {
-    info("[3/4] Building release package...");
+    info('Building release package...');
 
     $prepareScript = $rootDir . '/scripts/prepare-release.php';
     if (!file_exists($prepareScript)) {
@@ -268,7 +346,7 @@ if ($doBuild) {
 // ── Done ──────────────────────────────────────────────────────────────────────
 
 info('');
-info("[4/4] Done.");
+info('Done.');
 info("Version: {$version}");
 if ($doTag) {
     info("Tag:    {$tagName}");
@@ -293,6 +371,42 @@ function err(string $msg): never
 {
     fwrite(STDERR, "ERROR: {$msg}\n");
     exit(1);
+}
+
+function assertCleanTree(): void
+{
+    exec('git status --porcelain 2>&1', $out, $code);
+    if ($code !== 0) {
+        err('Could not read the git status: ' . trim(implode("\n", $out)));
+    }
+
+    $dirty = trim(implode("\n", $out));
+    if ($dirty !== '') {
+        err(
+            "Working tree is not clean — the release commit must contain only version metadata.\n" .
+            "       Commit or stash these files first:\n\n{$dirty}"
+        );
+    }
+}
+
+function assertOnMaster(): void
+{
+    exec('git rev-parse --abbrev-ref HEAD 2>&1', $branchOut, $branchCode);
+    $branch = trim(implode("\n", $branchOut));
+    if ($branchCode !== 0 || $branch !== 'master') {
+        err("--tag pushes master; check out master first (current: {$branch}). Use --no-push to tag locally.");
+    }
+
+    exec('git fetch origin master 2>&1', $fetchOut, $fetchCode);
+    if ($fetchCode !== 0) {
+        err('git fetch origin master failed: ' . trim(implode("\n", $fetchOut)));
+    }
+
+    exec('git rev-list --count HEAD..origin/master 2>&1', $behindOut, $behindCode);
+    $behind = trim(implode("\n", $behindOut));
+    if ($behindCode !== 0 || (int) $behind > 0) {
+        err("Local master is behind origin/master by {$behind} commit(s) — pull before releasing.");
+    }
 }
 
 function generateChangelog(
