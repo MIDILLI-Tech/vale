@@ -355,8 +355,15 @@
   color: var(--vl-editor-text);
 }
 
+/* Neutral focus ring, matching the Title field (focus:ring-gray-500).
+   Keeps the editor chrome quiet; the canvas never competes with content. */
 .vl-editor-content:focus-within {
-  box-shadow: inset 0 0 0 2px #a5b4fc;
+  box-shadow: inset 0 0 0 2px #6b7280;
+}
+
+/* Dark canvas: gray-500 would sink into the surface, so step up one stop. */
+.dark .vl-editor-content:focus-within {
+  box-shadow: inset 0 0 0 2px #9ca3af;
 }
 
 /* ProseMirror base */
@@ -518,8 +525,10 @@
   word-wrap: break-word;
 }
 
+/* The source view keeps its dark code surface in both admin modes, so it
+   always takes the lighter gray. */
 .vl-html-editor:focus {
-  box-shadow: inset 0 0 0 2px #a5b4fc;
+  box-shadow: inset 0 0 0 2px #9ca3af;
 }
 
 /* ── Media + Text block ───────────────────────────── */
@@ -548,7 +557,13 @@
 .vl-editor-content .ProseMirror .ProseMirror-selectednode {
   outline: none;
   border-radius: 12px;
-  box-shadow: 0 0 0 2px #3b82f6;
+  box-shadow: 0 0 0 2px #6b7280;
+}
+
+/* Selection follows the same neutral pair as the focus ring, so a selected
+   block and a focused canvas never show two different accents. */
+.dark .vl-editor-content .ProseMirror .ProseMirror-selectednode {
+  box-shadow: 0 0 0 2px #9ca3af;
 }
 
 /* Standalone images: square selection by default. When the user sets
@@ -648,7 +663,11 @@
   outline: none;
 }
 .vl-media-text-content:focus {
-  border-color: #3b82f6;
+  border-color: #6b7280;
+}
+
+.dark .vl-media-text-content:focus {
+  border-color: #9ca3af;
 }
 
 /* ── Form, TOC, and Pages embed blocks ──────────────────────────────── */
