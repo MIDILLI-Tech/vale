@@ -390,8 +390,8 @@ $readmeFile = $rootDir . '/README.md';
 if (file_exists($readmeFile)) {
     $readmeContent = file_get_contents($readmeFile);
     $updatedReadme = preg_replace(
-        '/(version-)(\d+\.\d+\.\d+)(-blue)/',
-        '${1}' . $version . '${3}',
+        ['/(version-)(\d+\.\d+\.\d+)(-blue)/', '/(alt="Version )(\d+\.\d+\.\d+)(")/'],
+        ['${1}' . $version . '${3}', '${1}' . $version . '${3}'],
         $readmeContent
     );
     if ($updatedReadme !== null && $updatedReadme !== $readmeContent) {
