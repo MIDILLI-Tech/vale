@@ -16,6 +16,8 @@ class User extends BaseEntity
     private string $password;
     private string $name;
     private ?string $avatar                                 = null;
+    private ?string $bio                                    = null;
+    private ?string $displayName                            = null;
     private string $locale                                  = 'en';
     private bool $isActive                                  = true;
     private ?\DateTimeImmutable $emailVerifiedAt            = null;
@@ -40,7 +42,7 @@ class User extends BaseEntity
     {
         $this->email    = $email;
         $this->password = $hashedPassword;
-        $this->name     = $name;
+        $this->setName($name);
     }
 
     public function getEmail(): Email
@@ -70,7 +72,7 @@ class User extends BaseEntity
 
     public function setName(string $name): void
     {
-        $this->name = $name;
+        $this->name = self::normalizeName($name);
     }
 
     public function getAvatar(): ?string
@@ -81,6 +83,48 @@ class User extends BaseEntity
     public function setAvatar(?string $avatar): void
     {
         $this->avatar = $avatar;
+    }
+
+    public function getBio(): ?string
+    {
+        return $this->bio;
+    }
+
+    public function setBio(?string $bio): void
+    {
+        $this->bio = $bio;
+    }
+
+    public function getDisplayName(): ?string
+    {
+        return $this->displayName;
+    }
+
+    public function setDisplayName(?string $displayName): void
+    {
+        $normalized = self::normalizeName((string) $displayName);
+
+        $this->displayName = $normalized === '' ? null : $normalized;
+    }
+
+    /**
+     * Names are plain text: strip markup, drop control characters, collapse
+     * whitespace and cap the length to the column size.
+     */
+    private static function normalizeName(string $value, int $maxLength = 255): string
+    {
+        $value = strip_tags($value);
+        $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? $value;
+        $value = preg_replace('/\s+/u', ' ', $value)              ?? $value;
+
+        return mb_substr(trim($value), 0, $maxLength);
+    }
+
+    public function getPublicName(): string
+    {
+        $displayName = trim((string) $this->displayName);
+
+        return $displayName !== '' ? $displayName : $this->name;
     }
 
     public function getLocale(): string
@@ -272,11 +316,13 @@ class User extends BaseEntity
             $row['name'],
         );
 
-        $user->id       = (int) $row['id'];
-        $user->avatar   = $row['avatar'] ?? null;
-        $user->locale   = $row['locale'] ?? 'en';
-        $user->isActive = (bool) ($row['is_active'] ?? true);
-        $user->roles    = $roles;
+        $user->id          = (int) $row['id'];
+        $user->avatar      = $row['avatar']       ?? null;
+        $user->bio         = $row['bio']          ?? null;
+        $user->setDisplayName($row['display_name'] ?? null);
+        $user->locale      = $row['locale']       ?? 'en';
+        $user->isActive    = (bool) ($row['is_active'] ?? true);
+        $user->roles       = $roles;
 
         if (!empty($row['email_verified_at'])) {
             $user->emailVerifiedAt = new \DateTimeImmutable($row['email_verified_at']);

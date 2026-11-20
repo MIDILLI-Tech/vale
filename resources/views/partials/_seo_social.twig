@@ -120,7 +120,9 @@
       "dateModified": "{{ post.updatedAt ? post.updatedAt|date('c') : (post.publishedAt ? post.publishedAt|date('c') : post.createdAt|date('c')) }}"{% if post.contentType != 'page' %},
       "author": [{
           "@type": "Person",
-          "name": "{{ (author_name ?: site_name)|e('js') }}"
+          "name": "{{ post.author ? post.author.publicName|e('js') : (author_name ?: site_name)|e('js') }}"{% if post.author %},
+          "url": "{{ absolute_url(routing_blog_prefix ~ '/author/' ~ post.author.id)|e('js') }}"{% if settings.user_profiles_enabled|default('0') == '1' and post.author.bio %},
+          "description": "{{ post.author.bio|striptags|slice(0, 300)|e('js') }}"{% endif %}{% endif %}
         }],
       "publisher": {
         "@type": "Organization",

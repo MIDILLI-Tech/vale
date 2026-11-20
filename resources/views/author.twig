@@ -1,0 +1,72 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ public_name }}{{ seo_title_separator }}{{ site_name }}{% endblock %}
+{% block meta_description %}{{ bio ? bio|striptags|slice(0, 160) : __('Articles by :name', {':name': public_name}) }}{% endblock %}
+
+{% block head %}
+{% set ld_avatar = avatar_url(author.avatar) %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "{{ public_name|e('js') }}",
+  "url": "{{ absolute_url(routing_blog_prefix ~ '/author/' ~ author.id)|e('js') }}"{% if ld_avatar %},
+  "image": "{{ absolute_url(ld_avatar)|e('js') }}"{% endif %}{% if bio %},
+  "description": "{{ bio|striptags|slice(0, 300)|e('js') }}"{% endif %}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <header class="mb-10 flex flex-col gap-5 border-b pb-8 sm:flex-row sm:items-center">
+        {% set author_avatar = avatar_url(author.avatar) %}
+        {% if author_avatar %}
+        <img src="{{ author_avatar }}" alt="{{ public_name }}" class="h-20 w-20 shrink-0 rounded-full object-cover">
+        {% else %}
+        <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-2xl font-bold text-indigo-700">{{ public_name|slice(0, 1)|upper }}</span>
+        {% endif %}
+        <div class="min-w-0">
+            <h1 class="text-3xl font-bold text-gray-900">{{ public_name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">{{ __(':count articles', {':count': total}) }}</p>
+        </div>
+    </header>
+
+    {% if bio %}
+    <section class="mb-10">
+        <h2 class="text-lg font-semibold text-gray-900">{{ __('About :name', {':name': public_name}) }}</h2>
+        <div class="prose prose-sm mt-3 max-w-none text-gray-700">{{ bio_html|raw }}</div>
+    </section>
+    {% endif %}
+
+    {% if posts|length == 0 %}
+    <p class="text-gray-500">{{ __('No posts yet.') }}</p>
+    {% else %}
+    <div class="space-y-8">
+        {% for post in posts %}
+        <article class="border-b pb-8 last:border-0">
+            <a href="{{ url(routing_blog_prefix ~ '/' ~ post.slug) }}" class="group">
+                <h2 class="text-xl font-semibold text-gray-900">{{ post.title }}</h2>
+            </a>
+            {% if post.publishedAt %}
+            <p class="mt-1 text-xs text-gray-400">{% include 'partials/_vtime.twig' with {value: post.publishedAt, style: 'long'} %}</p>
+            {% endif %}
+            <p class="mt-2 text-sm text-gray-600">{{ post|meta_teaser(180) }}</p>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <nav class="mt-10 flex items-center justify-between text-sm">
+        {% if page > 1 %}
+        <a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id, {}, {page: page - 1}) }}" class="text-gray-700 hover:underline">&larr; {{ __('Previous') }}</a>
+        {% else %}<span></span>{% endif %}
+        <span class="text-gray-500">{{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a href="{{ url(routing_blog_prefix ~ '/author/' ~ author.id, {}, {page: page + 1}) }}" class="text-gray-700 hover:underline">{{ __('Next') }} &rarr;</a>
+        {% else %}<span></span>{% endif %}
+    </nav>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

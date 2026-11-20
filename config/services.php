@@ -254,6 +254,8 @@ return [
         return new GenerateSitemapUseCase(
             $c->get(SeoMetaRepositoryInterface::class),
             $c->get(SettingsRepositoryInterface::class),
+            $c->get(PostRepositoryInterface::class),
+            $c->get(UserRepositoryInterface::class),
             rtrim((string) env('APP_URL', $appCfg['url']), '/'),
         );
     }),
@@ -1090,6 +1092,17 @@ return [
             return $avatarCache[$userId] = $user !== null
                 ? $c->get(AvatarStorage::class)->versionedUrl($user->getAvatar())
                 : null;
+        }));
+
+        // user_public_name(): display name (falls back to the account name), cached per request
+        $publicNameCache = [];
+        $env->addFunction(new TwigFunction('user_public_name', function (int $userId) use ($c, &$publicNameCache): ?string {
+            if (array_key_exists($userId, $publicNameCache)) {
+                return $publicNameCache[$userId];
+            }
+
+            return $publicNameCache[$userId] = $c->get(UserRepositoryInterface::class)
+                ->findById($userId)?->getPublicName();
         }));
 
         // asset() function: returns URL for local build assets, with cache-busting version

@@ -28,6 +28,13 @@ interface PostRepositoryInterface
      * @param array{content_type?: string, status?: string, author_id?: int, search?: string, search_body?: bool} $filters */
     public function count(array $filters = []): int;
 
+    /**
+     * Authors with at least one published post, plus their newest update.
+     *
+     * @return array<int, array{id: int, lastmod: ?string}>
+     */
+    public function findPublishedAuthors(): array;
+
     public function save(Post $post): Post;
 
     public function delete(int $id): void;
