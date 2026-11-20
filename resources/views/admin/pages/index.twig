@@ -127,7 +127,7 @@
 
 {{ table.pagination() }}
 {% include 'admin/partials/_bulk_bar.twig' with {action: 'posts', extraActions: [
-    {label: __('Publish'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Publish Now'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
     {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
     {label: __('Unlisted'), action: 'unlisted', class: 'bg-purple-600/10 text-purple-700 dark:text-purple-400 hover:bg-purple-600/20'},
     {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},

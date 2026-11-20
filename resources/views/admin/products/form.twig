@@ -1344,7 +1344,7 @@
             {% set _has_schedule = product and (product.status == 'scheduled' or (product.publishedAt and product.publishedAt|date('U') > 'now'|date('U')) or product.expiresAt) %}
             {% set _sched = old.set_schedule|default(_has_schedule ? '1' : '') %}
             <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="publish_card" x-data="{ status: '{{ _st }}', scheduling: {{ _sched ? 'true' : 'false' }} }">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Publish') }}</h3>
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Publish Now') }}</h3>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Status') }}</label>
                     <select name="status" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs" x-model="status">
