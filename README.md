@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PostgreSQL-18.0+-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 18+">
   <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=SQLite&logoColor=white" alt="SQLite">
   <img src="https://img.shields.io/badge/license-AGPL_3.0-green" alt="AGPL License">
-  <img src="https://img.shields.io/badge/version-0.78.1-blue" alt="Version 0.78.1">
+  <img src="https://img.shields.io/badge/version-0.79.0-blue" alt="Version 0.79.0">
 </p>
 
 <p align="center">
