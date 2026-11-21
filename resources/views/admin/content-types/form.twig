@@ -131,9 +131,12 @@
 
             {% if not type.isSystem %}
             <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs" data-panel-id="fields_card">
-                <div class="flex items-center justify-between mb-4">
+                <div class="mb-4 grid grid-cols-3 items-center">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Custom Fields') }}</h3>
-                    <button type="button" @click="addField()" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">+ {{ __('Add Field') }}</button>
+                    <div class="flex justify-center">
+                        <button type="button" @click="addField()" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">+ {{ __('Add Field') }}</button>
+                    </div>
+                    <div></div>
                 </div>
 
                 <div class="flex flex-wrap gap-3" id="fields-sortable">
@@ -153,6 +156,11 @@
                                     <button type="button" @click="moveFieldUp(idx)" title="{{ __('Move up (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↑</button>
                                     <button type="button" @click="moveFieldDown(idx)" title="{{ __('Move down (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">↓</button>
                                     <button type="button" @click="moveFieldBottom(idx)" title="{{ __('Move to bottom (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇊</button>
+                                    <span class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></span>
+                                    <label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer mr-0.5" title="{{ __('Required') }}">
+                                        <input type="checkbox" x-model="field.required" class="rounded-sm border-gray-300 dark:border-gray-700"> {{ __('Req.') }}
+                                    </label>
+                                    <button type="button" @click="removeField(idx)" class="text-red-400 hover:text-red-600 text-lg leading-none p-1" title="{{ __('Remove') }}">&times;</button>
                                 </div>
                             </div>
                             <div class="grid gap-3 items-start"
@@ -161,7 +169,7 @@
                                      'grid-cols-1 sm:grid-cols-2': field.width === '50',
                                      'grid-cols-1': field.width === '33' || field.width === '25'
                                  }">
-                                <div :class="(field.width === '33' || field.width === '25') ? 'grid grid-cols-2 gap-2' : ''">
+                                <div class="grid grid-cols-2 gap-4 sm:col-span-2 lg:col-span-2">
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
                                         <select x-model="field.type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
@@ -171,6 +179,7 @@
                                             <option value="select">Select</option>
                                             <option value="checkbox">Checkbox</option>
                                             <option value="date">Date</option>
+                                            <option value="phone">Phone</option>
                                             <option value="image">Image</option>
                                         </select>
                                     </div>
@@ -190,10 +199,7 @@
                                 </div>
                                 <div class="min-w-0">
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Name (key)') }} <span class="text-red-500">*</span></label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="text" x-model="field.name" required placeholder="field_name" class="w-full min-w-0 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-                                        <button type="button" @click="removeField(idx)" class="text-red-400 hover:text-red-600 text-lg leading-none shrink-0 p-1" title="{{ __('Remove') }}">&times;</button>
-                                    </div>
+                                    <input type="text" x-model="field.name" required placeholder="field_name" class="w-full min-w-0 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                 </div>
                                 <div x-show="field.type === 'select'" class="w-full col-span-full">
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Options (one per line)') }}</label>
@@ -356,6 +362,7 @@ function typeBuilder() {
         fields: ({{ type and type.fieldSchema|length > 0 ? type.fieldSchema|json_encode|raw : '[]' }}).map(function(f) {
             f._optionsText = (f.options || []).join('\n');
             f.width = f.width || '100';
+            f.required = !!f.required;
             return f;
         }),
         _formDirty: false,
@@ -432,7 +439,7 @@ function typeBuilder() {
             return oldPath !== newPath;
         },
         addField() {
-            this.fields.push({ type: 'text', label: '', name: '', width: '100', options: [], _optionsText: '' });
+            this.fields.push({ type: 'text', label: '', name: '', width: '100', required: false, options: [], _optionsText: '' });
         },
         removeField(idx) {
             this.fields.splice(idx, 1);

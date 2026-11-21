@@ -141,6 +141,41 @@ class ContentType extends BaseEntity
         $this->fieldSchema = $schema;
     }
 
+    /**
+     * Required custom fields that have no value in the given meta map.
+     *
+     * @param array<string, mixed> $meta
+     * @return array<string, string> field name => label
+     */
+    public function missingRequiredFields(array $meta): array
+    {
+        $missing = [];
+
+        foreach ($this->fieldSchema as $field) {
+            if (empty($field['required'])) {
+                continue;
+            }
+
+            $name = trim((string) ($field['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $value  = $meta[$name] ?? null;
+            $filled = match ((string) ($field['type'] ?? 'text')) {
+                'checkbox' => !empty($value),
+                'image'    => (int) $value > 0,
+                default    => is_scalar($value) && trim((string) $value) !== '',
+            };
+
+            if (!$filled) {
+                $missing[$name] = (string) ($field['label'] ?? $name);
+            }
+        }
+
+        return $missing;
+    }
+
     public function setIsSystem(bool $isSystem): void
     {
         $this->isSystem = $isSystem;

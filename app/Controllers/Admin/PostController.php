@@ -10,6 +10,7 @@ use Slim\Views\Twig;
 use ValeApp\Application\Content\SavePostUseCase;
 use ValeApp\Application\Seo\SaveSeoMetaUseCase;
 use ValeApp\Application\Webhook\OutboundWebhookService;
+use ValeApp\Domain\Content\Entity\ContentType;
 use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Content\Repository\CategoryRepositoryInterface;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
@@ -412,6 +413,10 @@ final class PostController
         $hasSeo                 = $type !== null && in_array('seo', $type->getSupports(), true);
 
         try {
+            if ($type !== null) {
+                $this->assertRequiredFields($type, (array) ($body['meta'] ?? []));
+            }
+
             $post = $this->savePost->execute($body);
             if ($hasSeo) {
                 $this->saveSeo->execute('post', $post->getId(), $seoData);
@@ -617,6 +622,10 @@ final class PostController
         $hasSeo                 = $type !== null && in_array('seo', $type->getSupports(), true);
 
         try {
+            if ($type !== null) {
+                $this->assertRequiredFields($type, (array) ($body['meta'] ?? []));
+            }
+
             $updated = $this->savePost->execute($body, $id);
             if ($hasSeo) {
                 $this->saveSeo->execute('post', $id, $seoData);
@@ -829,6 +838,19 @@ final class PostController
             'content_type = ? AND language = ?',
             [$source->getContentType(), $source->getLanguage()],
         );
+    }
+
+    /** @param array<string, mixed> $meta */
+    private function assertRequiredFields(ContentType $type, array $meta): void
+    {
+        $errors = [];
+        foreach ($type->missingRequiredFields($meta) as $name => $label) {
+            $errors['meta.' . $name] = [$this->translator->get(':field is required.', [':field' => $label])];
+        }
+
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
     }
 
     /** POST /admin/posts/preview — render unsaved content without saving */

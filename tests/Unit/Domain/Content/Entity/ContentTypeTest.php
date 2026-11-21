@@ -27,6 +27,28 @@ final class ContentTypeTest extends TestCase
         self::assertSame('/d/secondcpt', ContentType::buildPublicBasePath('/d', 'secondcpt'));
     }
 
+    public function testMissingRequiredFieldsReportsEmptyRequiredFields(): void
+    {
+        $type = new ContentType('Book', new Slug('book'));
+        $type->setFieldSchema([
+            ['name' => 'website', 'label' => 'Website', 'type' => 'text', 'required' => true],
+            ['name' => 'pages', 'label' => 'Pages', 'type' => 'number', 'required' => true],
+            ['name' => 'cover', 'label' => 'Cover', 'type' => 'image', 'required' => true],
+            ['name' => 'in_stock', 'label' => 'In stock', 'type' => 'checkbox', 'required' => true],
+            ['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea'],
+        ]);
+
+        $missing = $type->missingRequiredFields([
+            'website'  => 'https://example.com',
+            'pages'    => '  ',
+            'cover'    => '0',
+            'in_stock' => '',
+            'notes'    => '',
+        ]);
+
+        self::assertSame(['pages' => 'Pages', 'cover' => 'Cover', 'in_stock' => 'In stock'], $missing);
+    }
+
     public function testBuildPublicBasePathEmptySlugReturnsRoot(): void
     {
         self::assertSame('/', ContentType::buildPublicBasePath(null, ''));
