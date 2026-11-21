@@ -858,21 +858,55 @@ final class PostController
     {
         $body = (array) $request->getParsedBody();
 
-        $fake                   = new \stdClass();
-        $fake->id               = (int) ($body['id'] ?? 0);
-        $fake->title            = $body['title']   ?? 'Untitled';
-        $fake->slug             = $body['slug']    ?? '';
-        $fake->excerpt          = $body['excerpt'] ?? null;
-        $fake->body             = $body['body']    ?? '';
-        $fake->featuredImageUrl = null;
-        $fake->publishedAt      = null;
-        $fake->authorName       = '';
-        $fake->commentStatus    = $body['comment_status']          ?? 'use_global';
-        $fake->metaTitle        = $body['seo']['meta_title']       ?? null;
-        $fake->metaDescription  = $body['seo']['meta_description'] ?? null;
+        $contentType = trim((string) ($body['content_type'] ?? 'post'));
+        $type        = null;
+        if ($contentType !== '') {
+            try {
+                $type = $this->contentTypes->findBySlug(new Slug($contentType));
+            } catch (\Throwable) {
+                $type = null;
+            }
+        }
+
+        $title = trim((string) ($body['title'] ?? ''));
+        $slug  = trim((string) ($body['slug'] ?? ''));
+
+        // A real Post entity (not a plain object) so the shortcode filter can
+        // resolve {{ custom_field }} placeholders and the custom field box.
+        $preview = new Post($title !== '' ? $title : 'Untitled', Slug::fromString($slug !== '' ? $slug : $title), 0);
+        $preview->setContentType($contentType !== '' ? $contentType : 'post');
+        $preview->setBody((string) ($body['body'] ?? ''));
+        $preview->setExcerpt(isset($body['excerpt']) ? (string) $body['excerpt'] : null);
+        $preview->setCommentStatus((string) ($body['comment_status'] ?? 'use_global'));
+        $preview->setMetaTitle(isset($body['seo']['meta_title']) ? (string) $body['seo']['meta_title'] : null);
+        $preview->setMetaDescription(isset($body['seo']['meta_description']) ? (string) $body['seo']['meta_description'] : null);
+
+        if (!empty($body['featured_image_id'])) {
+            $preview->setFeaturedImageId((int) $body['featured_image_id']);
+        }
+
+        if (!empty($body['language']) && is_string($body['language'])) {
+            $preview->setLanguage($body['language']);
+        }
+
+        $meta = $body['meta'] ?? [];
+        if (is_array($meta)) {
+            $preview->setMeta(array_filter($meta, static fn (mixed $value): bool => is_scalar($value)));
+        }
+
+        $publishedAt = trim((string) ($body['published_at'] ?? ''));
+        $publishedTs = $publishedAt !== '' ? strtotime($publishedAt) : false;
+        if ($publishedTs !== false) {
+            $preview->setPublishedAt((new \DateTimeImmutable())->setTimestamp($publishedTs));
+        }
+
+        if (!empty($body['id'])) {
+            $preview->setId((int) $body['id']);
+        }
 
         return $this->twig->render($response, 'post.twig', [
-            'post'                    => $fake,
+            'post'                    => $preview,
+            'type'                    => $type,
             'is_preview'              => true,
             'comments'                => [],
             'global_comments_enabled' => $this->settings->get('comments_enabled', '1') === '1',
