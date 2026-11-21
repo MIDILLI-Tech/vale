@@ -2156,27 +2156,29 @@
                 {% if panel_rail|default(false) %}
                 {# Sticky action bar — visible only while the right rail is collapsed on edit screens (right-rail.js) #}
                 <div data-rail-bar class="hidden sticky top-0 z-30 -mx-6 -mt-6 mb-6 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 px-6 py-2.5 shadow-xs backdrop-blur">
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <span data-rail-status-wrap class="flex items-center gap-2">
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Status') }}</span>
-                            <select data-rail-status class="w-32 rounded-lg border-gray-300 dark:border-gray-700 text-sm shadow-xs focus:border-gray-600 focus:ring-gray-500"></select>
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <span data-rail-status-wrap class="flex min-w-0 items-center gap-2">
+                            <span class="hidden shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400 sm:inline">{{ __('Status') }}</span>
+                            <select data-rail-status class="w-24 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 text-sm shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:w-32"></select>
                         </span>
-                        <div class="ml-auto flex flex-wrap items-center gap-2">
+                        <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                             <button type="button" data-rail-publish data-no-dirty
-                                    class="flex items-center gap-1 rounded-lg border border-blue-400 dark:border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                                &#9889; {{ __('Publish Now') }}
+                                    title="{{ __('Publish Now') }}" aria-label="{{ __('Publish Now') }}"
+                                    class="flex items-center gap-1 rounded-lg border border-blue-400 dark:border-blue-600 px-2 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors sm:px-3">
+                                &#9889;<span class="hidden sm:inline">{{ __('Publish Now') }}</span>
                             </button>
                             <button type="button" data-rail-preview data-no-dirty
-                                    class="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                &#128065; {{ __('Preview') }}
+                                    title="{{ __('Preview') }}" aria-label="{{ __('Preview') }}"
+                                    class="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors sm:px-3">
+                                &#128065;<span class="hidden sm:inline">{{ __('Preview') }}</span>
                             </button>
                             <button type="button" data-rail-submit data-no-dirty
-                                    class="rounded-lg bg-gray-900 dark:bg-gray-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors">
+                                    class="rounded-lg bg-gray-900 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors sm:px-4">
                                 {{ __('Update') }}
                             </button>
                             <button type="button" data-rail-expand data-no-dirty
                                     title="{{ __('Expand Panels') }}"
-                                    class="flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z"/>
                                 </svg>

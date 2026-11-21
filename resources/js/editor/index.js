@@ -312,23 +312,32 @@ function vlMountEditor(textarea) {
     // Track last-focused editor so lpInsertVar() knows where to insert
     let pinnedToolbar = null;
     let pinnedWrapper = null;
-    let pinnedWidth = 0;
+
+    // The sticky rail action bar (collapsed right rail) owns the top edge of
+    // the viewport on edit screens, so the pinned toolbar parks underneath it.
+    function pinnedToolbarOffset() {
+      const bar = document.querySelector('[data-rail-bar]');
+      if (!bar || bar.offsetParent === null) return 0;
+      return Math.round(bar.getBoundingClientRect().height);
+    }
 
     function onScrollPin() {
       if (!pinnedToolbar || !pinnedWrapper) return;
+      const offset = pinnedToolbarOffset();
       const wrapRect = pinnedWrapper.getBoundingClientRect();
       const toolbarH = pinnedToolbar.offsetHeight;
-      if (wrapRect.top <= 0 && wrapRect.bottom > toolbarH) {
+      if (wrapRect.top <= offset && wrapRect.bottom > offset + toolbarH) {
         if (!pinnedToolbar.classList.contains('is-pinned')) {
-          pinnedWidth = pinnedWrapper.offsetWidth;
           pinnedToolbar.classList.add('is-pinned');
-          pinnedToolbar.style.width = pinnedWidth + 'px';
         }
+        pinnedToolbar.style.width = pinnedWrapper.offsetWidth + 'px';
+        pinnedToolbar.style.top = offset + 'px';
       } else {
         if (pinnedToolbar.classList.contains('is-pinned')) {
           pinnedToolbar.classList.remove('is-pinned');
-          pinnedToolbar.style.width = '';
         }
+        pinnedToolbar.style.width = '';
+        pinnedToolbar.style.top = '';
       }
     }
 
@@ -339,6 +348,7 @@ function vlMountEditor(textarea) {
         pinnedToolbar = toolbar;
         pinnedWrapper = wrapper;
         window.addEventListener('scroll', onScrollPin, { passive: true, capture: true });
+        window.addEventListener('resize', onScrollPin, { passive: true });
         onScrollPin();
       }
     });
@@ -346,10 +356,12 @@ function vlMountEditor(textarea) {
       if (pinnedToolbar) {
         pinnedToolbar.classList.remove('is-pinned');
         pinnedToolbar.style.width = '';
+        pinnedToolbar.style.top = '';
       }
       pinnedToolbar = null;
       pinnedWrapper = null;
       window.removeEventListener('scroll', onScrollPin, { capture: true });
+      window.removeEventListener('resize', onScrollPin);
     });
 
     // Ctrl+K → link dialog | Shift+F11 → fullscreen
