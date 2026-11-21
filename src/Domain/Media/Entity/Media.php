@@ -262,7 +262,11 @@ class Media extends BaseEntity
         $m->description     = $row['description'] ?? null;
         $m->altTextI18n     = self::decodeI18nMap($row['alt_text_i18n'] ?? null);
         $m->descriptionI18n = self::decodeI18nMap($row['description_i18n'] ?? null);
-        $m->thumbnails      = !empty($row['thumbnails']) ? json_decode($row['thumbnails'], true) : [];
+        $rawThumbnails      = $row['thumbnails'] ?? null;
+        $decodedThumbnails  = is_string($rawThumbnails) && trim($rawThumbnails) !== ''
+            ? json_decode($rawThumbnails, true)
+            : null;
+        $m->thumbnails      = is_array($decodedThumbnails) ? $decodedThumbnails : [];
         $m->contentHash     = $row['content_hash'] ?? '';
         if (!empty($row['created_at'])) {
             $m->createdAt = new \DateTimeImmutable($row['created_at']);
