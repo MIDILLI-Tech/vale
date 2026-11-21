@@ -105,33 +105,67 @@ final class ContentTypeController
         if ($name === '') {
             $this->session->set('flash_error', $this->translator->get('Content type name cannot be empty.'));
             return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
-                'type'     => null,
-                'is_edit'  => false,
-                'old'      => $body,
-                'settings' => $this->formSettings(),
+                'type'        => null,
+                'is_edit'     => false,
+                'old'         => $body,
+                'settings'    => $this->formSettings(),
+                'flash_error' => $this->session->get('flash_error'),
             ]);
         }
 
+        $slugWasGenerated = $slugStr === '';
+
         try {
-            $slugVo  = $slugStr !== '' ? new Slug($slugStr) : new Slug($name);
-            $slugStr = (string) $slugVo;
-        } catch (\InvalidArgumentException $e) {
+            $slugVo = $slugWasGenerated ? Slug::fromString($name) : new Slug($slugStr);
+        } catch (\Throwable $e) {
             $this->session->set('flash_error', $this->translator->get('Invalid slug.'));
             return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
-                'type'     => null,
-                'is_edit'  => false,
-                'old'      => $body,
-                'settings' => $this->formSettings(),
+                'type'        => null,
+                'is_edit'     => false,
+                'old'         => $body,
+                'settings'    => $this->formSettings(),
+                'flash_error' => $this->session->get('flash_error'),
             ]);
         }
+
+        // A slug generated from the name must not collide with another content
+        // type or with a routable path (a page, another CPT, ...). Suffix it
+        // instead of failing the save: "test" -> "test-2".
+        if ($slugWasGenerated) {
+            $generated = $slugVo;
+            $suffix    = 2;
+            while (
+                $this->contentTypes->slugExists((string) $generated)
+                || $this->routing->getConflictError(
+                    ContentType::buildPublicBasePath($urlPath !== '' ? $urlPath : null, (string) $generated)
+                ) !== null
+            ) {
+                $generated = $slugVo->withSuffix($suffix++);
+                if ($suffix > 100) {
+                    $this->session->set('flash_error', $this->translator->get('Slug already exists.'));
+                    return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
+                        'type'        => null,
+                        'is_edit'     => false,
+                        'old'         => $body,
+                        'settings'    => $this->formSettings(),
+                        'flash_error' => $this->session->get('flash_error'),
+                    ]);
+                }
+            }
+
+            $slugVo = $generated;
+        }
+
+        $slugStr = (string) $slugVo;
 
         if ($this->contentTypes->slugExists($slugStr)) {
             $this->session->set('flash_error', $this->translator->get('Slug already exists.'));
             return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
-                'type'     => null,
-                'is_edit'  => false,
-                'old'      => $body,
-                'settings' => $this->formSettings(),
+                'type'        => null,
+                'is_edit'     => false,
+                'old'         => $body,
+                'settings'    => $this->formSettings(),
+                'flash_error' => $this->session->get('flash_error'),
             ]);
         }
 
@@ -139,10 +173,11 @@ final class ContentTypeController
         if ($conflict = $this->routing->getConflictError($basePath)) {
             $this->session->set('flash_error', $conflict);
             return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
-                'type'     => null,
-                'is_edit'  => false,
-                'old'      => $body,
-                'settings' => $this->formSettings(),
+                'type'        => null,
+                'is_edit'     => false,
+                'old'         => $body,
+                'settings'    => $this->formSettings(),
+                'flash_error' => $this->session->get('flash_error'),
             ]);
         }
 
@@ -208,6 +243,18 @@ final class ContentTypeController
 
         // Validate slug if changed
         if ($newSlugStr !== '' && $newSlugStr !== $oldSlugStr) {
+            try {
+                new Slug($newSlugStr);
+            } catch (\Throwable $e) {
+                $this->session->set('flash_error', $this->translator->get('Invalid slug.'));
+                return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
+                    'type'     => $type,
+                    'is_edit'  => true,
+                    'old'      => $body,
+                    'settings' => $this->formSettings(),
+                ]);
+            }
+
             if ($this->contentTypes->slugExists($newSlugStr, $type->getId())) {
                 $this->session->set('flash_error', $this->translator->get('Slug already exists.'));
                 return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
@@ -229,10 +276,11 @@ final class ContentTypeController
         if ($newPrefix !== $oldPrefix && ($conflict = $this->routing->getConflictError($newPrefix, null, $type->getId()))) {
             $this->session->set('flash_error', $conflict);
             return $this->twig->render($response->withStatus(422), 'admin/content-types/form.twig', [
-                'type'     => $type,
-                'is_edit'  => true,
-                'old'      => $body,
-                'settings' => $this->formSettings(),
+                'type'        => $type,
+                'is_edit'     => true,
+                'old'         => $body,
+                'settings'    => $this->formSettings(),
+                'flash_error' => $this->session->get('flash_error'),
             ]);
         }
 
