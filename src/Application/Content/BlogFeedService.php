@@ -7,6 +7,7 @@ namespace ValeApp\Application\Content;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use ValeApp\Domain\Content\Entity\ContentType;
+use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Media\Repository\MediaRepositoryInterface;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
@@ -164,7 +165,7 @@ final class BlogFeedService
                     $descriptionContent = ContentSummary::plainTeaser($post->getBody(), null, 300);
                 }
                 if ($descriptionContent !== '') {
-                    $descriptionContent = $this->prepareFeedText($descriptionContent);
+                    $descriptionContent = $this->prepareFeedText($descriptionContent, $post);
                 }
                 if ($descriptionContent !== '') {
                     $desc = $doc->createElement('description');
@@ -174,7 +175,7 @@ final class BlogFeedService
 
                 $body = $post->getBody();
                 if ($body !== null && $body !== '') {
-                    $body = $this->prepareFeedText($body);
+                    $body = $this->prepareFeedText($body, $post);
                 }
                 if ($body !== null && $body !== '') {
                     $content = $doc->createElementNS('http://purl.org/rss/1.0/modules/content/', 'content:encoded');
@@ -302,10 +303,10 @@ final class BlogFeedService
         return (int) ($this->settings?->get('listing_teaser_words', '55') ?? '55');
     }
 
-    private function prepareFeedText(string $text): string
+    private function prepareFeedText(string $text, Post $post): string
     {
         if ($this->shortcodes !== null) {
-            $text = $this->shortcodes->stripForFeed($text);
+            $text = $this->shortcodes->stripForFeed($text, $post);
         }
 
         return $this->sanitize($text);

@@ -45,6 +45,31 @@ final class BlogFeedServiceTest extends TestCase
         return $repo;
     }
 
+    private function makeShortcodes(
+        PostRepositoryInterface $posts,
+        MediaRepositoryInterface $media,
+        DbalSettingsRepository $settings,
+    ): ShortcodeProcessor {
+        return new ShortcodeProcessor(
+            $this->createStub(FormRepositoryInterface::class),
+            $this->createStub(CsrfManager::class),
+            $this->createStub(SessionManager::class),
+            $posts,
+            $media,
+            $this->createStub(ProductRepositoryInterface::class),
+            $settings,
+            new FormAccessService(
+                $this->createStub(SessionManager::class),
+                $this->createStub(SubscriberRepositoryInterface::class),
+                $settings,
+            ),
+            new FormCaptchaService(
+                $this->createStub(FormRepositoryInterface::class),
+                $settings,
+            ),
+        );
+    }
+
     public function testGenerateRssFiltersByLocaleWhenMultiLanguageEnabled(): void
     {
         $settings = $this->settingsWithCache([
@@ -161,24 +186,7 @@ final class BlogFeedServiceTest extends TestCase
 
         $media = $this->createStub(MediaRepositoryInterface::class);
 
-        $shortcodes = new ShortcodeProcessor(
-            $this->createStub(FormRepositoryInterface::class),
-            $this->createStub(CsrfManager::class),
-            $this->createStub(SessionManager::class),
-            $posts,
-            $media,
-            $this->createStub(ProductRepositoryInterface::class),
-            $settings,
-            new FormAccessService(
-                $this->createStub(SessionManager::class),
-                $this->createStub(SubscriberRepositoryInterface::class),
-                $settings,
-            ),
-            new FormCaptchaService(
-                $this->createStub(FormRepositoryInterface::class),
-                $settings,
-            ),
-        );
+        $shortcodes = $this->makeShortcodes($posts, $media, $settings);
 
         $service = new BlogFeedService($posts, $media, 'http://example.test', 'Blog', settings: $settings, shortcodes: $shortcodes);
         $xml     = $service->generateRss();
@@ -188,6 +196,47 @@ final class BlogFeedServiceTest extends TestCase
         self::assertStringContainsString('Intro', $xml);
         self::assertStringContainsString('Outro', $xml);
         self::assertStringContainsString('/blog/hello-world', $xml);
+    }
+
+    public function testGenerateRssResolvesCustomFieldPlaceholders(): void
+    {
+        $settings = $this->settingsWithCache([
+            'multi_language_content' => '0',
+            'default_locale'         => 'en',
+            'routing_blog_prefix'    => '/blog',
+        ]);
+
+        $post = new Post('Custom item', new Slug('custom-item'), 1);
+        $post->publish();
+        $post->setBody('<p>Visit {{website}} on {{date}}.</p>');
+        $post->setMeta([
+            'website' => 'https://example.test/website',
+            'date'    => '2026-11-21',
+        ]);
+
+        $posts = $this->createStub(PostRepositoryInterface::class);
+        $posts->method('findAll')->willReturn([$post]);
+
+        $media = $this->createStub(MediaRepositoryInterface::class);
+
+        $service = new BlogFeedService(
+            $posts,
+            $media,
+            'http://example.test',
+            'Blog',
+            settings: $settings,
+            shortcodes: $this->makeShortcodes($posts, $media, $settings),
+        );
+
+        $xml = $service
+            ->setFeedSlug('custom-content')
+            ->setRoutePrefix('/custom-content')
+            ->generateRss();
+
+        self::assertStringContainsString('https://example.test/website', $xml);
+        self::assertStringContainsString('2026-11-21', $xml);
+        self::assertStringNotContainsString('{{website}}', $xml);
+        self::assertStringNotContainsString('{{date}}', $xml);
     }
 
     public function testGenerateRssPassesTagFilterToRepository(): void

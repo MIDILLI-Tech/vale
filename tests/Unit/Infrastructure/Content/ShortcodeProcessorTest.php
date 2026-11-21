@@ -2863,6 +2863,49 @@ class ShortcodeProcessorTest extends TestCase
         self::assertSame('', $this->processor->stripForFeed(''));
     }
 
+    public function testStripForFeedResolvesBareMetaFieldsWithPost(): void
+    {
+        $post = new Post('Title', new Slug('title'), 1);
+        $post->setMeta(['website' => 'https://example.test', 'date' => '2026-11-21']);
+
+        $stripped = $this->processor->stripForFeed(
+            '<p>Visit {{website}} on {{date}}.</p>',
+            $post,
+        );
+
+        self::assertStringContainsString('https://example.test', $stripped);
+        self::assertStringContainsString('2026-11-21', $stripped);
+        self::assertStringNotContainsString('{{website}}', $stripped);
+        self::assertStringNotContainsString('{{date}}', $stripped);
+    }
+
+    public function testStripForFeedLeavesBareMetaFieldsWithoutPost(): void
+    {
+        $stripped = $this->processor->stripForFeed('<p>{{website}}</p>');
+
+        self::assertStringContainsString('{{website}}', $stripped);
+    }
+
+    public function testStripForFeedRendersImageFieldsWithAbsoluteUrl(): void
+    {
+        $media = new Media(1, 'photo.jpg', 'photo.jpg', 'image/jpeg', 5000, '2026/photo.jpg');
+
+        $mediaRepo = $this->createStub(MediaRepositoryInterface::class);
+        $mediaRepo->method('findById')->willReturn($media);
+
+        $post = new Post('Title', new Slug('title'), 1);
+        $post->setMeta(['img' => '42']);
+
+        $processor = $this->createProcessor(media: $mediaRepo);
+        $stripped  = $processor->stripForFeed('<p>{{img}}</p>', $post);
+
+        self::assertStringContainsString(
+            'src="http://localhost/uploads/2026/photo.jpg"',
+            $stripped,
+        );
+        self::assertStringNotContainsString('{{img}}', $stripped);
+    }
+
     // ── Combined Shortcodes ─────────────────────────────────
 
     public function testMultipleShortcodesInSameContent(): void

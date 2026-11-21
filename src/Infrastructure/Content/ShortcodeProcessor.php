@@ -323,11 +323,20 @@ final class ShortcodeProcessor
 
     /**
      * Remove interactive/editor shortcodes from syndicated content (RSS, etc.).
+     *
+     * When a post is given, bare {{ field }} placeholders are resolved first,
+     * so custom content type fields render instead of leaking into the feed.
      */
-    public function stripForFeed(string $content): string
+    public function stripForFeed(string $content, ?Post $currentPost = null): string
     {
         if ($content === '') {
             return '';
+        }
+
+        $this->currentPost = $currentPost;
+
+        if ($currentPost !== null && str_contains($content, '{{')) {
+            $content = $this->processBareMetaFields($content, true);
         }
 
         $patterns = [
@@ -891,7 +900,7 @@ final class ShortcodeProcessor
      * Only fields that exist on the current post's meta are replaced — unknown
      * placeholders are left untouched.
      */
-    private function processBareMetaFields(string $content): string
+    private function processBareMetaFields(string $content, bool $absoluteUrls = false): string
     {
         $meta = $this->currentPost?->getMeta() ?? [];
 
@@ -900,13 +909,17 @@ final class ShortcodeProcessor
                 continue;
             }
             $pattern = '/\{\{\s*' . preg_quote($name, '/') . '\s*\}\}/';
-            $content = preg_replace($pattern, $this->resolveMetaValue($name), $content);
+            $content = preg_replace_callback(
+                $pattern,
+                fn (): string => $this->resolveMetaValue($name, $absoluteUrls),
+                $content,
+            ) ?? $content;
         }
 
         return $content;
     }
 
-    private function resolveMetaValue(string $name): string
+    private function resolveMetaValue(string $name, bool $absolute = false): string
     {
         if ($this->currentPost === null) {
             return '';
@@ -921,6 +934,9 @@ final class ShortcodeProcessor
             $media = $this->media->findById((int) $trimmed);
             if ($media !== null) {
                 $url = $this->basePath . ($media->getThumbnailUrl('webp') ?? $media->getUrl());
+                if ($absolute && function_exists('absolute_url')) {
+                    $url = absolute_url($url);
+                }
                 $url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
                 return '<img src="' . $url . '" alt="" class="w-full h-auto rounded-lg">';
             }
