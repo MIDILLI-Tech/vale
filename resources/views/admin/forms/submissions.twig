@@ -7,10 +7,20 @@
 {% set allIds = submissions|map(s => s.id) %}
 <div x-data="dataTable({perPage: 20})">
 
-<div class="mb-6 flex items-center gap-3">
+<div class="mb-6 flex flex-wrap items-center gap-3">
     <a href="{{ url('/admin/forms') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">← {{ __('Forms') }}</a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Submissions') }}: {{ form.name }}</h1>
     <span class="text-sm text-gray-400 dark:text-gray-500"><span x-text="visibleCount"></span> total</span>
+    <div class="ml-auto flex items-center gap-2">
+        <a href="{{ url('/admin/forms/' ~ form.id ~ '/submissions/export.csv', [], {lang: selected_lang}) }}"
+           class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+            {{ __('Export CSV') }}
+        </a>
+        <a href="{{ url('/admin/forms/' ~ form.id ~ '/submissions/export.json', [], {lang: selected_lang}) }}"
+           class="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+            {{ __('Export JSON') }}
+        </a>
+    </div>
 </div>
 
 {% if multi_language_content and group_forms|length > 1 %}

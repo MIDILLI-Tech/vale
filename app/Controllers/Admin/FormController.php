@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Views\Twig;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Domain\Form\Entity\Form;
+use ValeApp\Domain\Form\Entity\FormSubmission;
 use ValeApp\Domain\Form\Repository\FormRepositoryInterface;
 use ValeApp\Domain\Membership\Repository\PlanRepositoryInterface;
 use ValeApp\Domain\Newsletter\Repository\SubscriberRepositoryInterface;
@@ -541,6 +542,204 @@ final class FormController
             'counts'                 => $counts,
             'form_map'               => $groupFormsMap,
         ]);
+    }
+
+    /** GET /admin/forms/{id}/submissions/export.csv */
+    public function exportSubmissionsCsv(Request $request, Response $response, array $args): Response
+    {
+        $form = $this->forms->findById((int) $args['id']);
+        if ($form === null) {
+            return $response->withStatus(404);
+        }
+
+        $scope       = $this->resolveSubmissionExport($form, (string) ($request->getQueryParams()['lang'] ?? 'all'));
+        $fieldLabels = $this->exportFieldLabels($scope['forms']);
+
+        $headers = array_merge(['ID', 'Form', 'Language'], array_values($fieldLabels), ['Submitted At', 'IP Address', 'User Agent', 'Read']);
+
+        $stream = fopen('php://temp', 'r+');
+        // UTF-8 BOM so Excel opens the file with the right encoding.
+        fwrite($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, array_map($this->escapeCsvValue(...), $headers), ',', '"', '\\');
+
+        foreach ($scope['submissions'] as $submission) {
+            $submissionForm = $scope['form_map'][$submission->getFormId()] ?? $form;
+            $data           = $submission->getData();
+
+            $row   = [(string) ($submission->getId() ?? '')];
+            $row[] = $submissionForm->getName();
+            $row[] = $submissionForm->getLanguage();
+            foreach (array_keys($fieldLabels) as $name) {
+                $row[] = $this->stringifyExportValue($data[$name] ?? '');
+            }
+            $row[] = $submission->getCreatedAt()?->format('Y-m-d H:i:s') ?? '';
+            $row[] = (string) ($submission->getIpAddress() ?? '');
+            $row[] = (string) ($submission->getUserAgent() ?? '');
+            $row[] = $submission->isRead() ? '1' : '0';
+
+            fputcsv($stream, array_map($this->escapeCsvValue(...), $row), ',', '"', '\\');
+        }
+
+        rewind($stream);
+        $csv = (string) stream_get_contents($stream);
+        fclose($stream);
+
+        $response->getBody()->write($csv);
+        return $response
+            ->withHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $this->submissionExportFilename($form, 'csv') . '"');
+    }
+
+    /** GET /admin/forms/{id}/submissions/export.json */
+    public function exportSubmissionsJson(Request $request, Response $response, array $args): Response
+    {
+        $form = $this->forms->findById((int) $args['id']);
+        if ($form === null) {
+            return $response->withStatus(404);
+        }
+
+        $scope       = $this->resolveSubmissionExport($form, (string) ($request->getQueryParams()['lang'] ?? 'all'));
+        $fieldLabels = $this->exportFieldLabels($scope['forms']);
+
+        $fields = [];
+        foreach ($fieldLabels as $name => $label) {
+            $fields[] = ['name' => $name, 'label' => $label];
+        }
+
+        $submissions = [];
+        foreach ($scope['submissions'] as $submission) {
+            $submissionForm = $scope['form_map'][$submission->getFormId()] ?? $form;
+            $data           = [];
+            foreach (array_keys($fieldLabels) as $name) {
+                $data[$name] = $submission->getData()[$name] ?? null;
+            }
+
+            $submissions[] = [
+                'id'         => $submission->getId(),
+                'form'       => [
+                    'id'       => $submissionForm->getId(),
+                    'name'     => $submissionForm->getName(),
+                    'slug'     => (string) $submissionForm->getSlug(),
+                    'language' => $submissionForm->getLanguage(),
+                ],
+                'created_at' => $submission->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+                'is_read'    => $submission->isRead(),
+                'ip_address' => $submission->getIpAddress(),
+                'user_agent' => $submission->getUserAgent(),
+                'data'       => (object) $data,
+            ];
+        }
+
+        $payload = [
+            'form'        => [
+                'id'       => $form->getId(),
+                'name'     => $form->getName(),
+                'slug'     => (string) $form->getSlug(),
+                'language' => $form->getLanguage(),
+            ],
+            'exported_at' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
+            'fields'      => $fields,
+            'submissions' => $submissions,
+        ];
+
+        $response->getBody()->write(json_encode(
+            $payload,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+        ));
+        return $response
+            ->withHeader('Content-Type', 'application/json; charset=utf-8')
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $this->submissionExportFilename($form, 'json') . '"');
+    }
+
+    /**
+     * Submissions in the requested language scope, plus the forms they belong to.
+     *
+     * @return array{forms: Form[], form_map: array<int, Form>, submissions: FormSubmission[]}
+     */
+    private function resolveSubmissionExport(Form $form, string $lang): array
+    {
+        $groupForms = $this->settings->get('multi_language_content', '0') === '1'
+            ? $this->forms->findTranslations($form->getTranslationOf() ?? (int) $form->getId())
+            : [$form];
+
+        if ($lang !== 'all') {
+            $filtered = array_values(array_filter(
+                $groupForms,
+                static fn (Form $candidate): bool => $candidate->getLanguage() === $lang,
+            ));
+            if ($filtered !== []) {
+                $groupForms = $filtered;
+            }
+        }
+
+        $formMap = [];
+        foreach ($groupForms as $groupForm) {
+            $formMap[(int) $groupForm->getId()] = $groupForm;
+        }
+
+        return [
+            'forms'       => $groupForms,
+            'form_map'    => $formMap,
+            'submissions' => $this->forms->findAllSubmissionsForForms(array_keys($formMap)),
+        ];
+    }
+
+    /**
+     * Union of the form group's field keys in display order.
+     *
+     * @param Form[] $groupForms
+     * @return array<string, string>
+     */
+    private function exportFieldLabels(array $groupForms): array
+    {
+        $labels = [];
+        foreach ($groupForms as $groupForm) {
+            foreach ($groupForm->getFields() as $field) {
+                $type = (string) ($field['type'] ?? 'text');
+                if ($type === 'static_text') {
+                    continue;
+                }
+
+                $name = $type === 'email' ? 'email' : (string) ($field['name'] ?? '');
+                if ($name === '' || isset($labels[$name])) {
+                    continue;
+                }
+
+                $labels[$name] = (string) ($field['label'] ?? $name);
+            }
+        }
+
+        return $labels;
+    }
+
+    private function stringifyExportValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            $parts = [];
+            foreach ($value as $item) {
+                $parts[] = is_array($item) ? (string) json_encode($item) : (string) $item;
+            }
+
+            return implode(', ', $parts);
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+
+    private function escapeCsvValue(string $value): string
+    {
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+
+    private function submissionExportFilename(Form $form, string $extension): string
+    {
+        $slug = trim((string) preg_replace('/[^a-z0-9_-]+/i', '-', (string) $form->getSlug()), '-');
+
+        return 'form-' . ($slug !== '' ? $slug : 'export') . '-submissions-' . date('Y-m-d') . '.' . $extension;
     }
 
     /**

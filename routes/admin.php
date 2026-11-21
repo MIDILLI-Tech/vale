@@ -243,6 +243,10 @@ return function (App $app): void {
             $g->delete('/forms/{id}', [FormController::class, 'destroy']);
             $g->get('/forms/{id}/submissions', [FormController::class, 'submissions'])
                 ->setName('admin.forms.submissions');
+            $g->get('/forms/{id}/submissions/export.csv', [FormController::class, 'exportSubmissionsCsv'])
+                ->setName('admin.forms.submissions.export_csv');
+            $g->get('/forms/{id}/submissions/export.json', [FormController::class, 'exportSubmissionsJson'])
+                ->setName('admin.forms.submissions.export_json');
             $g->delete('/forms/{id}/submissions/{subId}', [FormController::class, 'destroySubmission']);
         })->add(new PermissionMiddleware($session, ['forms.manage']));
 
