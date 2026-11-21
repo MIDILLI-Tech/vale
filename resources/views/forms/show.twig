@@ -112,7 +112,7 @@
                 {% if field.required %}<span class="text-red-500">*</span>{% endif %}
             </label>
 
-            {% if field.type == 'text' or field.type == 'email' or field.type == 'tel' or field.type == 'number' or field.type == 'url' %}
+            {% if field.type == 'text' or field.type == 'email' or field.type == 'tel' or field.type == 'number' or field.type == 'url' or field.type == 'date' %}
             <input type="{{ field.type }}" name="fields[{{ field.type == 'email' ? 'email' : field.name }}]"
                    placeholder="{{ field.placeholder|default('') }}"
                    {{ field.required ? 'required' : '' }}

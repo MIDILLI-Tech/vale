@@ -98,6 +98,7 @@
                                             <option value="checkbox">Checkbox</option>
                                             <option value="radio">Radio</option>
                                             <option value="tel">Phone</option>
+                                            <option value="date">Date</option>
                                             <option value="static_text">Static Text</option>
                                             {% if newsletter_enabled %}<option value="newsletter_subscribe">Newsletter Subscribe</option>{% endif %}
                                         </select>
@@ -1103,6 +1104,7 @@ function formBuilder() {
                 } else {
                     var inputType = f.type === 'email' ? 'email'
                         : f.type === 'tel' ? 'tel'
+                        : f.type === 'date' ? 'date'
                         : f.type === 'number' ? 'number'
                         : f.type === 'url' ? 'url'
                         : 'text';
