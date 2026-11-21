@@ -66,8 +66,8 @@
                 <td class="whitespace-nowrap px-3 py-4 text-center text-sm tabular-nums text-gray-500 dark:text-gray-400 dark:text-gray-400">
                     <a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}" class="hover:underline" title="{{ __('View submissions') }}">{{ f.submissionCount }}</a>
                 </td>
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.createdAt ? f.createdAt.format('M j, Y') : '—' }}</td>
-                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.updatedAt ? f.updatedAt.format('M j, Y') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.createdAt ? f.createdAt|local_date('medium') : '—' }}</td>
+                <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.updatedAt ? f.updatedAt|local_date('medium') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                     <div class="inline-flex items-center justify-end gap-2">
                         <a href="{{ absolute_url(url('/form/' ~ f.slug)) }}" target="_blank" rel="noopener"

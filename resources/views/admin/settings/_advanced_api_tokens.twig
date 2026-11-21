@@ -162,9 +162,9 @@
                             {% endfor %}
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.last_used_at ? token.last_used_at|date('M j, Y') : '—' }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.expires_at ? token.expires_at|date('M j, Y') : '—' }}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.created_at|date('M j, Y') }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.last_used_at ? token.last_used_at|local_date('medium') : '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.expires_at ? token.expires_at|local_date('medium') : '—' }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ token.created_at|local_date('medium') }}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="inline-flex items-center justify-end gap-2">
                             <form method="post" action="{{ url('/admin/api-tokens/' ~ token.id ~ '') }}"

@@ -88,10 +88,10 @@
                     {% endif %}
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {{ p.createdAt ? p.createdAt.format('M j, Y') : '—' }}
+                    {{ p.createdAt ? p.createdAt|local_date('medium') : '—' }}
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    {{ p.updatedAt ? p.updatedAt.format('M j, Y') : '—' }}
+                    {{ p.updatedAt ? p.updatedAt|local_date('medium') : '—' }}
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
                     <div class="inline-flex items-center gap-2">

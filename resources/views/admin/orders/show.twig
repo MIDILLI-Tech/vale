@@ -775,7 +775,7 @@
                 <div class="flex justify-between gap-2"><span class="text-gray-500 dark:text-gray-400">{{ __('Branch') }}:</span><span class="font-medium text-right text-gray-900 dark:text-gray-100">{{ bank_details.banktransfer_branch }}</span></div>
                 {% endif %}
                 <div class="pt-1.5 mt-1.5 border-t border-amber-200 dark:border-yellow-800 text-xs text-gray-500 dark:text-gray-400">
-                    {{ __('Please complete your transfer within :days days (by :date).', {':days': bank_details.banktransfer_max_days, ':date': due_date|date('M j, Y')}) }}
+                    {{ __('Please complete your transfer within :days days (by :date).', {':days': bank_details.banktransfer_max_days, ':date': due_date|local_date('medium')}) }}
                 </div>
             </div>
             {% else %}

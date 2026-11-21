@@ -202,7 +202,7 @@
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ item.mimeType }}</td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ (item.size / 1024)|round(1) }} KB</td>
-                <td class="px-6 py-4 text-sm text-gray-500">{{ item.createdAt ? item.createdAt.format('M j, Y') : '—' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ item.createdAt ? item.createdAt|local_date('medium') : '—' }}</td>
                 <td class="px-6 py-4 text-right">
                     <div class="flex items-center justify-end gap-2">
                         {% include 'admin/components/_copy_button.twig' with {
