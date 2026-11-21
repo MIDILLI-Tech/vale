@@ -305,6 +305,9 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
       const textCol = document.createElement('div');
       textCol.className = 'vl-media-text-content';
       textCol.contentEditable = 'true';
+      // An explicitly focusable nested editable keeps document.activeElement
+      // on the column instead of the outer ProseMirror element.
+      textCol.tabIndex = 0;
       textCol.style.flex = '1';
       textCol.style.minWidth = '0';
       textCol.style.background = 'transparent';
@@ -337,6 +340,33 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
             return true;
           });
         }
+      }
+
+      // Native editing must stay native: the outer editor must not process
+      // mouse/keyboard selection inside the nested editable, otherwise its
+      // stale ProseMirror selection is applied back over the DOM selection.
+      ['mousedown', 'mouseup', 'selectstart'].forEach((type) => {
+        textCol.addEventListener(type, (e) => e.stopPropagation());
+      });
+      textCol.addEventListener('keydown', (e) => {
+        if (e.shiftKey && e.key.startsWith('Arrow')) e.stopPropagation();
+      }, true);
+
+      function insertListFromMarker(anchor, offset, ordered) {
+        // Remove the marker through the text node itself and restore a
+        // collapsed range, so execCommand cannot fall back to the outer
+        // editor's (stale) selection and format another block.
+        textCol.focus({ preventScroll: true });
+        anchor.deleteData(0, offset);
+        const selection = window.getSelection();
+        if (!selection) return;
+        const range = document.createRange();
+        range.setStart(anchor, 0);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand(ordered ? 'insertOrderedList' : 'insertUnorderedList', false, null);
+        syncContentToNode();
       }
 
       textCol.addEventListener('focus', () => { isEditing = true; textCol.classList.remove('vl-mt-empty'); });
@@ -416,6 +446,10 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
             interactive: true,
             trigger: 'manual',
             animation: false,
+            // Keep the interactive popper out of the atom NodeView: Tippy's
+            // default parentNode insertion is a foreign DOM mutation that
+            // makes ProseMirror reset the nested selection.
+            appendTo: () => document.body,
             getReferenceClientRect: () => {
               const currentSel = window.getSelection();
               if (currentSel && currentSel.rangeCount > 0) {
@@ -514,14 +548,14 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
               const before = text.slice(0, offset);
               if (before === '-' || before === '*') {
                 e.preventDefault();
-                anchor.textContent = text.slice(offset);
-                document.execCommand('insertUnorderedList', false, null);
+                e.stopPropagation();
+                insertListFromMarker(anchor, offset, false);
                 return;
               }
               if (before === '1.' || before === '1') {
                 e.preventDefault();
-                anchor.textContent = text.slice(offset);
-                document.execCommand('insertOrderedList', false, null);
+                e.stopPropagation();
+                insertListFromMarker(anchor, offset, true);
                 return;
               }
             }
@@ -583,6 +617,11 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
           }
         },
         ignoreMutation(mutation) {
+          // A selection within this node view belongs to the nested editable.
+          // ProseMirror's ignoreSelectionChange uses the selection's common
+          // ancestor as target, which can be an element outside textCol, so
+          // ignore every selection mutation for this atom.
+          if (mutation.type === 'selection') return true;
           if (textCol.contains(mutation.target)) return true;
           return false;
         },
