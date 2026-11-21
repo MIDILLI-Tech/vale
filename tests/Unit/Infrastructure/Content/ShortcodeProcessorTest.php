@@ -1425,6 +1425,27 @@ class ShortcodeProcessorTest extends TestCase
         self::assertStringNotContainsString('href="#h2"', $processed);
     }
 
+    public function testTocExactLevelOnlyH2(): void
+    {
+        $content   = '[toc level="2"]<h1>Title</h1><h2>Section</h2><h3>Subsection</h3>';
+        $processed = $this->processor->process($content);
+
+        self::assertStringContainsString('href="#section"', $processed);
+        self::assertStringNotContainsString('href="#title"', $processed);
+        self::assertStringNotContainsString('href="#subsection"', $processed);
+    }
+
+    public function testTocExactLevelOnlyH3(): void
+    {
+        $content   = '[toc level="3"]<h1>Title</h1><h2>Section</h2><h3>Subsection</h3>';
+        $processed = $this->processor->process($content);
+
+        self::assertStringContainsString('href="#subsection"', $processed);
+        self::assertStringNotContainsString('href="#title"', $processed);
+        self::assertStringNotContainsString('href="#section"', $processed);
+        self::assertStringContainsString('vl-toc-item vl-toc-h1', $processed);
+    }
+
     public function testTocGeneratesNavElement(): void
     {
         $content   = '[toc]<h2>Section</h2>';

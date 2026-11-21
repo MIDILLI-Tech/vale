@@ -652,15 +652,20 @@ final class ShortcodeProcessor
     }
 
     /**
-     * Scan the content for headings up to max_level, inject id="…" anchors into each
-     * heading tag, then replace [toc] / [toc max_level="N"] with a <nav> list.
+     * Scan the content for headings and inject id="…" anchors into each heading tag,
+     * then replace [toc] / [toc max_level="N"] / [toc level="N"] with a <nav> list.
+     * max_level includes every heading up to N; level includes exactly level N.
      */
     private function processToc(string $content): string
     {
-        // Parse max_level from shortcode attribute (default 3 = h1–h3)
-        $maxLevel = 3;
-        if (preg_match('/\[toc\s+max_level=["\']?(\d)["\']?\]/', $content, $attrMatch)) {
+        // max_level (default 3 = h1–h3) or an exact level (h2-only / h3-only)
+        $maxLevel  = 3;
+        $onlyLevel = 0;
+        if (preg_match('/\[toc[^\]]*?\bmax_level=["\']?(\d)["\']?/', $content, $attrMatch)) {
             $maxLevel = max(1, min(3, (int) $attrMatch[1]));
+        }
+        if (preg_match('/\[toc[^\]]*?\blevel=["\']?(\d)["\']?/', $content, $attrMatch)) {
+            $onlyLevel = max(1, min(3, (int) $attrMatch[1]));
         }
 
         $headings = [];
@@ -689,7 +694,7 @@ final class ShortcodeProcessor
                     $text  = html_entity_decode(strip_tags($m[3]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     $level = (int) substr($tag, 1);
 
-                    if ($level > $maxLevel) {
+                    if (!$this->tocIncludesLevel($level, $maxLevel, $onlyLevel)) {
                         continue;
                     }
 
@@ -757,7 +762,7 @@ final class ShortcodeProcessor
             // Single page content (standard processing)
             $content = preg_replace_callback(
                 '/<(h[1-3])([^>]*)>(.*?)<\/h[1-3]>/si',
-                function (array $m) use (&$headings, &$usedIds, $maxLevel): string {
+                function (array $m) use (&$headings, &$usedIds, $maxLevel, $onlyLevel): string {
                     $tag   = $m[1];
                     $attrs = $m[2];
                     $text  = html_entity_decode(strip_tags($m[3]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -775,7 +780,7 @@ final class ShortcodeProcessor
                     }
                     $usedIds[$id] = true;
 
-                    if ($level <= $maxLevel) {
+                    if ($this->tocIncludesLevel($level, $maxLevel, $onlyLevel)) {
                         $headings[] = [
                             'tag'   => $tag,
                             'id'    => $id,
@@ -820,6 +825,11 @@ final class ShortcodeProcessor
 
         // Replace <p>[toc ...]</p> or bare [toc ...] with the generated nav
         return preg_replace('/<p>\s*\[toc(?:[^\]]*)\]\s*<\/p>|\[toc(?:[^\]]*)\]/', $tocHtml, $content);
+    }
+
+    private function tocIncludesLevel(int $level, int $maxLevel, int $onlyLevel): bool
+    {
+        return $onlyLevel > 0 ? $level === $onlyLevel : $level <= $maxLevel;
     }
 
     /**

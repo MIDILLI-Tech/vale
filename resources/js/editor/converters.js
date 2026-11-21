@@ -169,6 +169,8 @@ function formEmbedToShortcode(html) {
   html = html.replace(
     /<div[^>]*data-toc="[^"]*"[^>]*>.*?<\/div>/gs,
     (match) => {
+      const only = match.match(/data-toc-level="(\d)"/);
+      if (only) return `[toc level="${only[1]}"]`;
       const m = match.match(/data-toc-max="(\d)"/);
       const max = m ? m[1] : '3';
       return max !== '3' ? `[toc max_level="${max}"]` : '[toc]';
@@ -398,10 +400,15 @@ function shortcodeToFormEmbed(html) {
     /(?:<p>\s*)?\[form\s+slug=(?:["']|&quot;)([a-z0-9_-]+)(?:["']|&quot;)\s*\](?:\s*<\/p>)?/g,
     (_, slug) => `<div data-form-slug="${slug}" data-form-name="${slug}"></div>`,
   );
-  // [toc] or [toc max_level="N"]
+  // [toc], [toc max_level="N"] or [toc level="N"] (exactly that heading level)
   html = html.replace(
-    /(?:<p>\s*)?\[toc(?:\s+max_level=["'](\d)["'])?\](?:\s*<\/p>)?/g,
-    (_, max) => `<div data-toc="1" data-toc-max="${max || '3'}"></div>`,
+    /(?:<p>\s*)?\[toc(?:\s+([^\]]*))?\](?:\s*<\/p>)?/g,
+    (_, attrs) => {
+      const only = (attrs || '').match(/\blevel=["'](\d)["']/);
+      if (only) return `<div data-toc="1" data-toc-max="3" data-toc-level="${only[1]}"></div>`;
+      const max = (attrs || '').match(/max_level=["'](\d)["']/);
+      return `<div data-toc="1" data-toc-max="${max ? max[1] : '3'}"></div>`;
+    },
   );
   // [pages] or [pages max_level="N" parent="slug"]
   html = html.replace(

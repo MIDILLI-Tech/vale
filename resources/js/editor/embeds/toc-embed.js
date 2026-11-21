@@ -13,6 +13,19 @@ const TOC_LEVEL_LABELS = {
     3: tjs('H1–H3 (all)')
 };
 
+const TOC_ONLY_LEVEL_LABELS = {
+    2: tjs('H2 only'),
+    3: tjs('H3 only')
+};
+
+const tocDepthLabel = attrs => attrs.onlyLevel
+  ? (TOC_ONLY_LEVEL_LABELS[attrs.onlyLevel] || 'H2 only')
+  : (TOC_LEVEL_LABELS[attrs.maxLevel] || 'H1–H3');
+
+const tocDepthValue = attrs => attrs.onlyLevel
+  ? `only-${attrs.onlyLevel}`
+  : `range-${attrs.maxLevel}`;
+
 const TocEmbed = Node.create({
   name: 'tocEmbed',
   group: 'block',
@@ -26,6 +39,11 @@ const TocEmbed = Node.create({
         parseHTML: el => parseInt(el.getAttribute('data-toc-max') || '3', 10),
         renderHTML: attrs => ({ 'data-toc-max': String(attrs.maxLevel) }),
       },
+      onlyLevel: {
+        default: 0,
+        parseHTML: el => parseInt(el.getAttribute('data-toc-level') || '0', 10),
+        renderHTML: attrs => (attrs.onlyLevel ? { 'data-toc-level': String(attrs.onlyLevel) } : {}),
+      },
     };
   },
 
@@ -38,7 +56,7 @@ const TocEmbed = Node.create({
       'class': 'vl-toc-embed-block',
       'data-toc': '1',
       'contenteditable': 'false',
-    }), `📑 ${tjs('Table of Contents')} — ${TOC_LEVEL_LABELS[node.attrs.maxLevel] || 'H1–H3'}` ];
+    }), `📑 ${tjs('Table of Contents')} — ${tocDepthLabel(node.attrs)}` ];
   },
 
   addNodeView() {
@@ -57,21 +75,32 @@ const TocEmbed = Node.create({
       const sel = document.createElement('select');
       sel.className = 'vl-select text-xs py-1 px-2';
       sel.title = tjs('Select heading depth');
-      [1, 2, 3].forEach(lvl => {
+      [
+        ['range-1', TOC_LEVEL_LABELS[1]],
+        ['range-2', TOC_LEVEL_LABELS[2]],
+        ['range-3', TOC_LEVEL_LABELS[3]],
+        ['only-2', TOC_ONLY_LEVEL_LABELS[2]],
+        ['only-3', TOC_ONLY_LEVEL_LABELS[3]],
+      ].forEach(([value, text]) => {
         const opt = document.createElement('option');
-        opt.value = String(lvl);
-        opt.textContent = TOC_LEVEL_LABELS[lvl];
-        if (lvl === node.attrs.maxLevel) opt.selected = true;
+        opt.value = value;
+        opt.textContent = text;
+        if (value === tocDepthValue(node.attrs)) opt.selected = true;
         sel.appendChild(opt);
       });
       sel.addEventListener('mousedown', e => e.stopPropagation());
       sel.addEventListener('change', () => {
         const pos = typeof getPos === 'function' ? getPos() : null;
         if (pos !== null) {
+          const [mode, level] = sel.value.split('-');
+          const attrs = mode === 'only'
+            ? { maxLevel: 3, onlyLevel: parseInt(level, 10) }
+            : { maxLevel: parseInt(level, 10), onlyLevel: 0 };
+
           editor.chain().focus()
             .setNodeSelection(pos)
-            .command(({ tr, state }) => {
-              tr.setNodeMarkup(pos, undefined, { maxLevel: parseInt(sel.value, 10) });
+            .command(({ tr }) => {
+              tr.setNodeMarkup(pos, undefined, attrs);
               return true;
             })
             .run();
@@ -100,7 +129,7 @@ const TocEmbed = Node.create({
         dom,
         update(updatedNode) {
           if (updatedNode.type.name !== 'tocEmbed') return false;
-          sel.value = String(updatedNode.attrs.maxLevel);
+          sel.value = tocDepthValue(updatedNode.attrs);
           return true;
         },
       };
@@ -110,4 +139,4 @@ const TocEmbed = Node.create({
 
 // ── Pages embed node ───────────────────────────────────────────────────────
 
-export { TOC_LEVEL_LABELS, TocEmbed };
+export { TOC_LEVEL_LABELS, TOC_ONLY_LEVEL_LABELS, TocEmbed };
