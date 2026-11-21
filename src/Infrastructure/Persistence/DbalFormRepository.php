@@ -82,7 +82,12 @@ final class DbalFormRepository implements FormRepositoryInterface
 
     public function delete(int $id): void
     {
-        $this->db->delete(VL_DB_PREFIX . 'forms', ['id' => $id]);
+        // Submissions are removed explicitly: SQLite only honours the schema's
+        // ON DELETE CASCADE when foreign_keys is enabled on the connection.
+        $this->db->transactional(function () use ($id): void {
+            $this->db->delete(VL_DB_PREFIX . 'form_submissions', ['form_id' => $id]);
+            $this->db->delete(VL_DB_PREFIX . 'forms', ['id' => $id]);
+        });
     }
 
     public function saveSubmission(FormSubmission $submission): FormSubmission

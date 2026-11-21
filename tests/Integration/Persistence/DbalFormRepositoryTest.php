@@ -148,4 +148,27 @@ final class DbalFormRepositoryTest extends TestCase
 
         self::assertFalse($this->repo()->hasSubmissionWithEmail($otherFormId, 'alice@example.com'));
     }
+
+    public function testDeleteRemovesOnlyThatFormsSubmissions(): void
+    {
+        $formId      = $this->createForm('contact');
+        $otherFormId = $this->createForm('survey');
+        $this->submit($formId, ['email' => 'alice@example.com']);
+        $this->submit($otherFormId, ['email' => 'bob@example.com']);
+
+        $this->repo()->delete($formId);
+
+        self::assertSame(0, (int) self::$db->fetchOne(
+            'SELECT COUNT(*) FROM ' . VL_DB_PREFIX . 'form_submissions WHERE form_id = ?',
+            [$formId]
+        ));
+        self::assertSame(1, (int) self::$db->fetchOne(
+            'SELECT COUNT(*) FROM ' . VL_DB_PREFIX . 'form_submissions WHERE form_id = ?',
+            [$otherFormId]
+        ));
+        self::assertFalse(self::$db->fetchOne(
+            'SELECT 1 FROM ' . VL_DB_PREFIX . 'forms WHERE id = ?',
+            [$formId]
+        ));
+    }
 }
