@@ -11,6 +11,7 @@ use Slim\Views\Twig;
 use ValeApp\App\Controllers\Admin\FormController;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Domain\Form\Entity\Form;
+use ValeApp\Domain\Form\Entity\FormSubmission;
 use ValeApp\Domain\Form\Repository\FormRepositoryInterface;
 use ValeApp\Domain\Membership\Repository\PlanRepositoryInterface;
 use ValeApp\Domain\Newsletter\Repository\SubscriberRepositoryInterface;
@@ -150,6 +151,42 @@ final class FormControllerTest extends TestCase
 
         self::assertSame(302, $response->getStatusCode());
         self::assertStringContainsString('/admin/forms', $response->getHeaderLine('Location'));
+    }
+
+    public function testSubmissionsPassFieldLabelsForTheDataPreview(): void
+    {
+        $form = new Form('Test', new Slug('test'));
+        $form->setId(1);
+        $form->setFields([
+            ['type' => 'email', 'name' => 'email', 'label' => 'E-posta'],
+            ['type' => 'text', 'name' => 'name', 'label' => 'Ad Soyad'],
+        ]);
+
+        $submission = FormSubmission::fromRow([
+            'id'         => 5,
+            'form_id'    => 1,
+            'data'       => json_encode(['email' => 'a@b.com', 'name' => 'Alice']),
+            'ip_address' => null,
+            'user_agent' => null,
+            'is_read'    => 0,
+            'created_at' => '2026-11-20 10:00:00',
+        ]);
+
+        $this->forms      = $this->createStub(FormRepositoryInterface::class);
+        $this->forms->method('findById')->willReturn($form);
+        $this->forms->method('findAllSubmissionsForForms')->willReturn([$submission]);
+        $this->twig       = $this->createMock(Twig::class);
+        $this->controller = $this->buildController();
+
+        $this->twig->expects(self::once())->method('render')->with(
+            self::anything(),
+            'admin/forms/submissions.twig',
+            self::callback(static fn (array $data): bool => ($data['field_labels'][1]['email'] ?? null) === 'E-posta'
+                && ($data['field_labels'][1]['name'] ?? null)                                           === 'Ad Soyad')
+        );
+
+        $request = (new RequestFactory())->createRequest('GET', '/admin/forms/1/submissions');
+        $this->controller->submissions($request, (new ResponseFactory())->createResponse(), ['id' => '1']);
     }
 
     public function testDestroyForm(): void

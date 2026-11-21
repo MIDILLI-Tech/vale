@@ -532,6 +532,11 @@ final class FormController
             $counts[$gf->getLanguage()] = count($this->forms->findAllSubmissionsForForms([$gf->getId()]));
         }
 
+        $fieldLabels = [];
+        foreach ($groupFormsMap as $formId => $groupForm) {
+            $fieldLabels[$formId] = $this->exportFieldLabels([$groupForm]);
+        }
+
         return $this->twig->render($response, 'admin/forms/submissions.twig', [
             'form'                   => $form,
             'submissions'            => $submissions,
@@ -541,6 +546,7 @@ final class FormController
             'selected_lang'          => $selectedLang,
             'counts'                 => $counts,
             'form_map'               => $groupFormsMap,
+            'field_labels'           => $fieldLabels,
         ]);
     }
 
