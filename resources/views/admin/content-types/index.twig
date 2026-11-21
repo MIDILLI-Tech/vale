@@ -26,7 +26,7 @@
                 <td class="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
                     <div class="flex items-center gap-2">
                         <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ resolveIcon(ct.icon) }}"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ resolveIcon(ct.isSystem and ct.slug in ['post', 'page'] ? ct.slug : ct.icon) }}"/>
                         </svg>
                         <a href="{{ url('/admin/content-types/' ~ ct.id ~ '/edit') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ ct.name }}</a>
                         {% if ct.isSystem %}
