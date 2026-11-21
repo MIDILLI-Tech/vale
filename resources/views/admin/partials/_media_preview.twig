@@ -17,7 +17,11 @@
 {% set _mime = item.mimeType %}
 {% set _ext = item.originalName|lower|split('.')|last %}
 {% set _editUrl = url('/admin/media/' ~ item.id ~ '/edit') %}
-{% set _fileUrl = url('/uploads/' ~ item.path) %}
+{% set _mediaVersion = '' %}
+{% if item.contentHash|default('') %}
+    {% set _mediaVersion = '?v=' ~ item.contentHash|slice(0, 12) %}
+{% endif %}
+{% set _fileUrl = url('/uploads/' ~ item.path) ~ _mediaVersion %}
 {% set _isAudio = _mime starts with 'audio/' %}
 {% set _isVideo = item.isVideo %}
 {% set _docColor = _ext in ['zip', 'rar', '7z', 'gz', 'tar'] ? 'text-amber-500'
@@ -31,11 +35,11 @@
 
 {% if item.isImage %}
     {% if variant == 'list' %}
-        <img src="{{ url('/uploads/') }}{{ item.thumbnails.small|default(item.path) }}"
+        <img src="{{ url('/uploads/') }}{{ item.thumbnails.small|default(item.path) }}{{ _mediaVersion }}"
              alt="{{ item.altText|default(item.originalName) }}"
              class="h-10 w-10 rounded-sm object-cover">
     {% else %}
-        <img src="{{ url('/uploads/') }}{{ item.thumbnails.medium|default(item.path) }}"
+        <img src="{{ url('/uploads/') }}{{ item.thumbnails.medium|default(item.path) }}{{ _mediaVersion }}"
              alt="{{ item.altText|default(item.originalName) }}"
              class="aspect-square w-full object-cover">
     {% endif %}

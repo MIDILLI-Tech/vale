@@ -752,7 +752,12 @@ final class MediaController
             if (!is_string($relPath) || $relPath === '') {
                 continue;
             }
-            $out[$sizeName] = $base . '/' . ltrim($relPath, '/');
+            $url  = $base . '/' . ltrim($relPath, '/');
+            $hash = $media->getContentHash();
+            if ($hash !== '') {
+                $url .= '?v=' . substr($hash, 0, 12);
+            }
+            $out[$sizeName] = $url;
         }
         return $out;
     }

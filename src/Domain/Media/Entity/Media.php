@@ -231,7 +231,17 @@ class Media extends BaseEntity
     public function getThumbnailUrl(string $size = 'medium', string $baseUrl = '/uploads'): ?string
     {
         $thumb = $this->thumbnails[$size] ?? null;
-        return $thumb ? rtrim($baseUrl, '/') . '/' . ltrim($thumb, '/') : null;
+        if ($thumb === null || $thumb === '') {
+            return null;
+        }
+
+        $url = rtrim($baseUrl, '/') . '/' . ltrim($thumb, '/');
+
+        // Replacing a file keeps its path (and thumbnail names), so browsers
+        // would serve the old rendition from cache. Version by content hash.
+        return $this->contentHash !== ''
+            ? $url . '?v=' . substr($this->contentHash, 0, 12)
+            : $url;
     }
 
     /** @param array<string, mixed> $row */

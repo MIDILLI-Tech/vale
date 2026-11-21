@@ -159,6 +159,18 @@ final class MediaTest extends TestCase
         self::assertNull($media->getThumbnailUrl('large'));
     }
 
+    public function testGetThumbnailUrlVersionsByContentHash(): void
+    {
+        $media = new Media(1, 'a.jpg', 'a.jpg', 'image/jpeg', 100, '2026/a.jpg');
+        $media->setThumbnails(['medium' => '2026/a_med.jpg']);
+        $media->setContentHash('abcdef1234567890');
+
+        self::assertSame(
+            '/uploads/2026/a_med.jpg?v=abcdef123456',
+            $media->getThumbnailUrl('medium'),
+        );
+    }
+
     public function testFromRow(): void
     {
         $media = Media::fromRow([
