@@ -224,8 +224,8 @@ const LinkButtonGroup = Node.create({
             || t === layoutBtn
             || Boolean(t?.closest?.('.vl-link-button-group-header'));
         },
-        ignoreMutation() {
-          return true;
+        ignoreMutation(mutation) {
+          return !listDOM.contains(mutation.target);
         },
         update(updatedNode) {
           if (updatedNode.type.name !== 'linkButtonGroup') return false;

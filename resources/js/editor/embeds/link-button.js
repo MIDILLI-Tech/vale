@@ -178,8 +178,8 @@ const LinkButton = Node.create({
         stopEvent(event) {
           return false;
         },
-        ignoreMutation() {
-          return true;
+        ignoreMutation(mutation) {
+          return !contentDOM.contains(mutation.target);
         },
         update(updatedNode) {
           if (updatedNode.type.name !== 'linkButton') return false;

@@ -242,8 +242,8 @@ const CardGroup = Node.create({
             || t === addBtn
             || Boolean(t?.closest?.('.vl-card-group-header'));
         },
-        ignoreMutation() {
-          return true;
+        ignoreMutation(mutation) {
+          return !listDOM.contains(mutation.target);
         },
         update(updatedNode) {
           if (updatedNode.type.name !== 'cardGroup') return false;

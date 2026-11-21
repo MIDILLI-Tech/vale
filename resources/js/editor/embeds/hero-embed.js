@@ -538,10 +538,10 @@ const HeroEmbed = Node.create({
             || Boolean(buttonsRow.contains(t))
             || t === badgeEl || badgeEl.contains(t);
         },
-        ignoreMutation() {
-          // ProseMirror handles input events inside contentDOM itself. Ignore its
-          // resulting DOM mutations, as in the other editor block node views.
-          return true;
+        ignoreMutation(mutation) {
+          // Only chrome outside the contentDOM is opaque to ProseMirror;
+          // mutations and selection changes inside it belong to the editor.
+          return !textCol.contains(mutation.target);
         },
         update(updatedNode) {
           if (updatedNode.type.name !== 'heroEmbed') return false;

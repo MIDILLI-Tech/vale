@@ -340,8 +340,8 @@ const CardItem = Node.create({
             || Boolean(t?.closest?.('.vl-card-item-tools'))
             || Boolean(imgWrap.contains(t));
         },
-        ignoreMutation() {
-          return true;
+        ignoreMutation(mutation) {
+          return !body.contains(mutation.target);
         },
         update(updatedNode) {
           if (updatedNode.type.name !== 'cardItem') return false;
