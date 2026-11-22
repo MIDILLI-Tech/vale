@@ -93,6 +93,7 @@ final class CronGoPublicTest extends TestCase
         $post = new Post('Gizli', new Slug('gizli'), 1);
         $post->setContentType('post');
         $post->setStatus('unlisted');
+        $post->setPublishScheduled(true);
         $post->setPublishedAt(new \DateTimeImmutable('-1 hour'));
 
         $posts = $this->createMock(PostRepositoryInterface::class);
@@ -119,6 +120,7 @@ final class CronGoPublicTest extends TestCase
         $post = new Post('Sayfa', new Slug('sayfa'), 1);
         $post->setContentType('page');
         $post->setStatus('unlisted');
+        $post->setPublishScheduled(true);
         $post->setPublishedAt(new \DateTimeImmutable('-1 hour'));
 
         $posts = $this->createMock(PostRepositoryInterface::class);
@@ -152,6 +154,7 @@ final class CronGoPublicTest extends TestCase
     {
         $product = new Product('Gizli Ürün', new Slug('gizli-urun'));
         $product->setStatus('unlisted');
+        $product->setPublishScheduled(true);
         $product->setPublishedAt(new \DateTimeImmutable('-1 hour'));
 
         $posts = $this->createStub(PostRepositoryInterface::class);

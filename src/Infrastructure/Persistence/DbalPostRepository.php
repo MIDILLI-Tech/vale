@@ -914,8 +914,16 @@ final class DbalPostRepository implements PostRepositoryInterface
     /** @return Post[] */
     public function findDueForGoPublic(): array
     {
-        $sql  = 'SELECT * FROM ' . VL_DB_PREFIX . 'posts' . " WHERE status = 'unlisted' AND published_at IS NOT NULL AND published_at <= ?";
-        $rows = $this->db->fetchAllAssociative($sql, [(new \DateTimeImmutable())->format('Y-m-d H:i:s')], [ParameterType::STRING]);
+        $sql  = 'SELECT p.* FROM ' . VL_DB_PREFIX . 'posts p'
+            . " WHERE p.status = 'unlisted'"
+            . ' AND p.published_at IS NOT NULL AND p.published_at <= ?'
+            . ' AND EXISTS (SELECT 1 FROM ' . VL_DB_PREFIX . 'post_meta m'
+            . ' WHERE m.post_id = p.id AND m.meta_key = ? AND m.meta_value = ?)';
+        $rows = $this->db->fetchAllAssociative(
+            $sql,
+            [(new \DateTimeImmutable())->format('Y-m-d H:i:s'), Post::META_PUBLISH_SCHEDULED, '1'],
+            [ParameterType::STRING, ParameterType::STRING, ParameterType::STRING],
+        );
         return $this->hydratePostRows($rows);
     }
 

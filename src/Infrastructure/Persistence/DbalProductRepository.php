@@ -147,6 +147,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
             'dimensions'                 => $product->getDimensions(),
             'featured_image_id'          => $product->getFeaturedImageId(),
             'status'                     => $product->getStatus(),
+            'publish_scheduled'          => $product->isPublishScheduled() ? 1 : 0,
             'published_at'               => $product->getPublishedAt()?->format('Y-m-d H:i:s'),
             'expires_at'                 => $product->getExpiresAt()?->format('Y-m-d H:i:s'),
             'comment_status'             => $product->getCommentStatus(),
@@ -254,7 +255,9 @@ final class DbalProductRepository implements ProductRepositoryInterface
     public function findDueForGoPublic(): array
     {
         $rows = $this->db->fetchAllAssociative(
-            "SELECT * FROM " . VL_DB_PREFIX . 'products' . " WHERE status = 'unlisted' AND published_at IS NOT NULL AND published_at <= ?",
+            "SELECT * FROM " . VL_DB_PREFIX . 'products'
+            . " WHERE status = 'unlisted' AND publish_scheduled = TRUE"
+            . ' AND published_at IS NOT NULL AND published_at <= ?',
             [(new \DateTimeImmutable())->format('Y-m-d H:i:s')],
             [ParameterType::STRING]
         );

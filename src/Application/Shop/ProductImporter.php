@@ -887,6 +887,7 @@ final class ProductImporter
 
                 // Insert Parent Product
                 $this->db->insert(VL_DB_PREFIX . 'products', [
+                    'publish_scheduled' => 0,
                     'name'              => $title,
                     'slug'              => $uniqueSlug,
                     'language'          => 'en',
@@ -1011,9 +1012,10 @@ final class ProductImporter
 
                     // Update parent with aggregates
                     $this->db->update(VL_DB_PREFIX . 'products', [
-                        'price'          => $lowestPrice ?? 0.00,
-                        'stock_quantity' => $totalStock,
-                        'stock_status'   => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
+                        'publish_scheduled' => 0,
+                        'price'             => $lowestPrice ?? 0.00,
+                        'stock_quantity'    => $totalStock,
+                        'stock_status'      => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
                     ], ['id' => $productId]);
                 } else {
                     // Simple Product
@@ -1035,12 +1037,13 @@ final class ProductImporter
                     $stock = (int) ($firstRow['Variant Inventory Qty'] ?? 0);
 
                     $this->db->update(VL_DB_PREFIX . 'products', [
-                        'sku'            => $sku ?: null,
-                        'price'          => $price,
-                        'sale_price'     => $salePrice,
-                        'stock_quantity' => $stock,
-                        'stock_status'   => ($stock > 0) ? 'in_stock' : 'out_of_stock',
-                        'weight'         => $weight,
+                        'publish_scheduled' => 0,
+                        'sku'               => $sku ?: null,
+                        'price'             => $price,
+                        'sale_price'        => $salePrice,
+                        'stock_quantity'    => $stock,
+                        'stock_status'      => ($stock > 0) ? 'in_stock' : 'out_of_stock',
+                        'weight'            => $weight,
                     ], ['id' => $productId]);
                 }
 
@@ -1152,6 +1155,7 @@ final class ProductImporter
 
                 try {
                     $this->db->insert(VL_DB_PREFIX . 'products', [
+                        'publish_scheduled' => 0,
                         'name'              => $title,
                         'slug'              => $slug,
                         'language'          => 'en',
@@ -1376,6 +1380,7 @@ final class ProductImporter
 
                 try {
                     $this->db->insert(VL_DB_PREFIX . 'products', [
+                        'publish_scheduled' => 0,
                         'name'              => $title,
                         'slug'              => $slug,
                         'language'          => 'en',
@@ -1454,9 +1459,10 @@ final class ProductImporter
 
                         // Update parent aggregates
                         $this->db->update(VL_DB_PREFIX . 'products', [
-                            'price'          => $lowestPrice ?? 0.00,
-                            'stock_quantity' => $totalStock,
-                            'stock_status'   => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
+                            'publish_scheduled' => 0,
+                            'price'             => $lowestPrice ?? 0.00,
+                            'stock_quantity'    => $totalStock,
+                            'stock_status'      => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
                         ], ['id' => $productId]);
                     } else {
                         // Simple product
@@ -1465,10 +1471,11 @@ final class ProductImporter
                         $stock = (int) ($parentRow['Available quantity'] ?? $parentRow['AvailableQuantity'] ?? $parentRow['QuantityAvailable'] ?? $parentRow['Quantity'] ?? 0);
 
                         $this->db->update(VL_DB_PREFIX . 'products', [
-                            'sku'            => $sku ?: null,
-                            'price'          => $price,
-                            'stock_quantity' => $stock,
-                            'stock_status'   => ($stock > 0) ? 'in_stock' : 'out_of_stock',
+                            'publish_scheduled' => 0,
+                            'sku'               => $sku ?: null,
+                            'price'             => $price,
+                            'stock_quantity'    => $stock,
+                            'stock_status'      => ($stock > 0) ? 'in_stock' : 'out_of_stock',
                         ], ['id' => $productId]);
                     }
 
@@ -1609,6 +1616,7 @@ final class ProductImporter
 
         try {
             $this->db->insert(VL_DB_PREFIX . 'products', [
+                'publish_scheduled' => 0,
                 'name'              => $title,
                 'slug'              => $slug,
                 'language'          => 'en',
@@ -1659,6 +1667,7 @@ final class ProductImporter
 
         try {
             $this->db->insert(VL_DB_PREFIX . 'products', [
+                'publish_scheduled' => 0,
                 'name'              => $title,
                 'slug'              => $slug,
                 'language'          => 'en',
@@ -1737,9 +1746,10 @@ final class ProductImporter
         }
 
         $this->db->update(VL_DB_PREFIX . 'products', [
-            'price'          => $lowestPrice ?? 0.00,
-            'stock_quantity' => $totalStock,
-            'stock_status'   => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
+            'publish_scheduled' => 0,
+            'price'             => $lowestPrice ?? 0.00,
+            'stock_quantity'    => $totalStock,
+            'stock_status'      => ($totalStock > 0) ? 'in_stock' : 'out_of_stock',
         ], ['id' => $productId]);
 
         return ['imported' => 1, 'variants' => $variantsCount, 'skipped' => 0, 'errors' => []];
@@ -1942,6 +1952,7 @@ final class ProductImporter
             'dimensions'                            => $this->nullIfEmpty($row['dimensions'] ?? ''),
             'featured_image_id'                     => $this->resolveFeaturedImageId($row, $importMedia),
             'status'                                => $this->toEnum($row['status'] ?? '', 'draft', ['draft', 'published', 'unlisted', 'scheduled', 'trash']),
+            'publish_scheduled'                     => 0,
             'published_at'                          => $this->parseDate($row['published_at'] ?? ''),
             'comment_status'                        => $this->toEnum($row['comment_status'] ?? '', 'use_global', ['use_global', 'enabled', 'disabled']),
             'vote_status'                           => $this->toEnum($row['vote_status'] ?? '', 'use_global', ['use_global', 'enabled', 'disabled']),
@@ -2018,6 +2029,7 @@ final class ProductImporter
             'dimensions'                            => $this->nullIfEmpty($row['dimensions'] ?? ''),
             'featured_image_id'                     => $this->resolveFeaturedImageId($row, $importMedia),
             'status'                                => $this->toEnum($row['status'] ?? '', 'draft', ['draft', 'published', 'unlisted', 'scheduled', 'trash']),
+            'publish_scheduled'                     => 0,
             'published_at'                          => $this->parseDate($row['published_at'] ?? ''),
             'comment_status'                        => $this->toEnum($row['comment_status'] ?? '', 'use_global', ['use_global', 'enabled', 'disabled']),
             'vote_status'                           => $this->toEnum($row['vote_status'] ?? '', 'use_global', ['use_global', 'enabled', 'disabled']),

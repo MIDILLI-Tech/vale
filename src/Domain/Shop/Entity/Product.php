@@ -28,6 +28,7 @@ class Product extends BaseEntity
     private ?string $dimensions                 = null;
     private ?int $featuredImageId               = null;
     private string $status                      = 'draft'; // draft|published|unlisted|scheduled|trash
+    private bool $publishScheduled              = false;
     private ?\DateTimeImmutable $publishedAt    = null;
     private ?\DateTimeImmutable $expiresAt      = null;
     private string $commentStatus               = 'use_global'; // use_global|enabled|disabled
@@ -403,6 +404,12 @@ class Product extends BaseEntity
     {
         return $this->status === 'scheduled';
     }
+
+    /** Explicit admin intent: this unlisted product should go public at its publish date. */
+    public function isPublishScheduled(): bool
+    {
+        return $this->publishScheduled;
+    }
     public function isCommentsOpen(): bool
     {
         return $this->commentStatus !== 'disabled';
@@ -518,7 +525,8 @@ class Product extends BaseEntity
     }
     public function setStatus(string $status): void
     {
-        $this->status = $status;
+        $this->status           = $status;
+        $this->publishScheduled = false;
     }
     public function setExpiresAt(?\DateTimeImmutable $expiresAt): void
     {
@@ -719,21 +727,29 @@ class Product extends BaseEntity
     }
     public function publish(): void
     {
-        $this->status = 'published';
-        $this->publishedAt ??= new \DateTimeImmutable();
+        $this->status           = 'published';
+        $this->publishScheduled = false;
+        $this->publishedAt    ??= new \DateTimeImmutable();
     }
     public function trash(): void
     {
-        $this->status = 'trash';
+        $this->status           = 'trash';
+        $this->publishScheduled = false;
     }
     public function schedule(\DateTimeImmutable $at): void
     {
-        $this->status      = 'scheduled';
-        $this->publishedAt = $at;
+        $this->status           = 'scheduled';
+        $this->publishScheduled = false;
+        $this->publishedAt      = $at;
     }
     public function setPublishedAt(?\DateTimeImmutable $at): void
     {
         $this->publishedAt = $at;
+    }
+
+    public function setPublishScheduled(bool $scheduled): void
+    {
+        $this->publishScheduled = $scheduled;
     }
 
     /** @param array<string, mixed> $row */
@@ -760,6 +776,7 @@ class Product extends BaseEntity
         $product->dimensions         = $row['dimensions'] ?? null;
         $product->featuredImageId    = isset($row['featured_image_id']) ? (int) $row['featured_image_id'] : null;
         $product->status             = $row['status'] ?? 'draft';
+        $product->publishScheduled   = (bool) ($row['publish_scheduled'] ?? false);
         $product->publishedAt        = !empty($row['published_at']) ? new \DateTimeImmutable($row['published_at']) : null;
         $product->expiresAt          = !empty($row['expires_at']) ? new \DateTimeImmutable($row['expires_at']) : null;
         $product->commentStatus      = $row['comment_status'] ?? 'use_global';

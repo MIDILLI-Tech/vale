@@ -953,6 +953,7 @@ final class ProductController
         } elseif ($scheduling && $publishAt !== null && $status === 'unlisted') {
             $product->setStatus('unlisted');
             $product->setPublishedAt($publishAt);
+            $product->setPublishScheduled(true);
         } elseif ($status === 'scheduled' && $publishAt !== null) {
             $product->schedule($publishAt);
         } else {
@@ -967,6 +968,7 @@ final class ProductController
             if ($current !== null && $current > new \DateTimeImmutable()) {
                 $product->setPublishedAt(null);
             }
+            $product->setPublishScheduled(false);
         }
 
         if (!$scheduling && $status !== 'scheduled') {

@@ -47,7 +47,8 @@ interface ProductRepositoryInterface
     public function findDueForExpiry(): array;
 
     /**
-     * Products with status='unlisted' AND published_at IS NOT NULL AND <= NOW().
+     * Unlisted products explicitly scheduled to go public whose publish date
+     * has been reached. A normal unlisted product is never auto-published.
      * @return Product[]
      */
     public function findDueForGoPublic(): array;

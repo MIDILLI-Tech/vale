@@ -91,8 +91,8 @@ interface PostRepositoryInterface
     public function findDueForExpiry(): array;
 
     /**
-     * Return unlisted posts with a reached publish date
-     * (published_at IS NOT NULL AND <= NOW()).
+     * Return unlisted posts explicitly scheduled to go public whose publish
+     * date has been reached (schedule marker present AND published_at <= NOW()).
      *
      * @return Post[]
      */

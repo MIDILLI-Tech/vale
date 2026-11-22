@@ -10,7 +10,8 @@ use ValeApp\Domain\Shared\ValueObject\Slug;
 
 class Post extends BaseEntity
 {
-    public const int MAX_PAGE_TEMPLATE_LENGTH = 50;
+    public const int MAX_PAGE_TEMPLATE_LENGTH  = 50;
+    public const string META_PUBLISH_SCHEDULED = '_vl_publish_scheduled';
 
     private string $contentType              = 'post';
     private string $language                 = 'en';
@@ -161,6 +162,10 @@ class Post extends BaseEntity
     {
         return $this->publishedAt;
     }
+    public function isPublishScheduled(): bool
+    {
+        return ($this->meta[self::META_PUBLISH_SCHEDULED] ?? null) === '1';
+    }
     public function getExpiresAt(): ?\DateTimeImmutable
     {
         return $this->expiresAt;
@@ -291,6 +296,14 @@ class Post extends BaseEntity
     {
         $this->publishedAt = $at;
     }
+    public function setPublishScheduled(bool $scheduled): void
+    {
+        if ($scheduled) {
+            $this->meta[self::META_PUBLISH_SCHEDULED] = '1';
+        } else {
+            unset($this->meta[self::META_PUBLISH_SCHEDULED]);
+        }
+    }
     public function setExpiresAt(?\DateTimeImmutable $at): void
     {
         $this->expiresAt = $at;
@@ -362,18 +375,21 @@ class Post extends BaseEntity
     public function makeUnlisted(): void
     {
         $this->status = 'unlisted';
+        $this->setPublishScheduled(false);
         $this->publishedAt ??= new \DateTimeImmutable();
     }
 
     public function publish(): void
     {
         $this->status = 'published';
+        $this->setPublishScheduled(false);
         $this->publishedAt ??= new \DateTimeImmutable();
     }
 
     public function trash(): void
     {
         $this->status = 'trash';
+        $this->setPublishScheduled(false);
     }
 
     public function isExpired(?\DateTimeImmutable $now = null): bool
@@ -401,6 +417,7 @@ class Post extends BaseEntity
         $this->status     = 'expired';
         $this->expiresAt  = null;
         $this->swapPostId = null;
+        $this->setPublishScheduled(false);
     }
 
     public function isExpiredStatus(): bool

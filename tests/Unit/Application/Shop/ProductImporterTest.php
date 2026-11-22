@@ -88,8 +88,10 @@ final class ProductImporterTest extends TestCase
         $this->assertCount(1, $insertedProducts);
         $this->assertSame('Test Product', $insertedProducts[0]['name']);
         $this->assertSame('simple', $insertedProducts[0]['type']);
+        $this->assertSame(0, $insertedProducts[0]['publish_scheduled']);
 
         $this->assertCount(1, $updatedProducts);
+        $this->assertSame(0, $updatedProducts[0]['publish_scheduled']);
         $this->assertSame('TEST-SKU', $updatedProducts[0]['sku']);
         $this->assertEquals(19.99, $updatedProducts[0]['price']);
         $this->assertSame(10, $updatedProducts[0]['stock_quantity']);

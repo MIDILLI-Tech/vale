@@ -85,6 +85,7 @@ final class SavePostScheduleTest extends TestCase
         $posts->expects(self::once())->method('save')->willReturnCallback(
             static function (Post $post): Post {
                 self::assertSame('unlisted', $post->getStatus());
+                self::assertTrue($post->isPublishScheduled());
                 self::assertNotNull($post->getPublishedAt());
                 self::assertTrue($post->getPublishedAt() > new \DateTimeImmutable());
                 return $post;
@@ -142,6 +143,7 @@ final class SavePostScheduleTest extends TestCase
     {
         $existing = $this->existingPost('unlisted');
         $existing->setPublishedAt(new \DateTimeImmutable('+2 days'));
+        $existing->setPublishScheduled(true);
         $existing->setExpiresAt(new \DateTimeImmutable('+30 days'));
         $existing->setSwapPostId(9);
 
@@ -150,6 +152,7 @@ final class SavePostScheduleTest extends TestCase
         $posts->expects(self::once())->method('save')->willReturnCallback(
             static function (Post $post): Post {
                 self::assertSame('unlisted', $post->getStatus());
+                self::assertFalse($post->isPublishScheduled());
                 self::assertNull($post->getPublishedAt());
                 self::assertNull($post->getExpiresAt());
                 self::assertNull($post->getSwapPostId());
@@ -160,6 +163,34 @@ final class SavePostScheduleTest extends TestCase
 
         $this->buildUseCase()->execute([
             'title'           => 'Vazgeçildi',
+            'slug'            => 'mevcut',
+            'content_type'    => 'post',
+            'author_id'       => 1,
+            'status'          => 'unlisted',
+            'clear_schedule'  => '1',
+        ], 5);
+    }
+
+    public function testExistingUnlistedWithoutScheduleIsNotGoPublicCandidate(): void
+    {
+        $existing = $this->existingPost('unlisted');
+        $existing->setPublishedAt(new \DateTimeImmutable('-2 days'));
+        $existing->setPublishScheduled(true);
+
+        $posts = $this->createMock(PostRepositoryInterface::class);
+        $posts->method('findById')->willReturn($existing);
+        $posts->expects(self::once())->method('save')->willReturnCallback(
+            static function (Post $post): Post {
+                self::assertSame('unlisted', $post->getStatus());
+                self::assertFalse($post->isPublishScheduled());
+                self::assertNotNull($post->getPublishedAt());
+                return $post;
+            }
+        );
+        $this->posts = $posts;
+
+        $this->buildUseCase()->execute([
+            'title'           => 'Listede Kalacak',
             'slug'            => 'mevcut',
             'content_type'    => 'post',
             'author_id'       => 1,
@@ -213,6 +244,31 @@ final class SavePostScheduleTest extends TestCase
             'status'        => 'scheduled',
             'published_at'  => (new \DateTimeImmutable('+2 days'))->format('Y-m-d\TH:i'),
         ]);
+    }
+
+    public function testUnlistedWithoutScheduleDoesNotEnableGoPublic(): void
+    {
+        $existing = $this->existingPost('draft');
+
+        $posts = $this->createMock(PostRepositoryInterface::class);
+        $posts->method('findById')->willReturn($existing);
+        $posts->expects(self::once())->method('save')->willReturnCallback(
+            static function (Post $post): Post {
+                self::assertSame('unlisted', $post->getStatus());
+                self::assertFalse($post->isPublishScheduled());
+                return $post;
+            }
+        );
+        $this->posts = $posts;
+
+        $this->buildUseCase()->execute([
+            'title'           => 'Sadece Gizli',
+            'slug'            => 'mevcut',
+            'content_type'    => 'post',
+            'author_id'       => 1,
+            'status'          => 'unlisted',
+            'clear_schedule'  => '1',
+        ], 5);
     }
 
     public function testLegacyScheduledWithoutDateIsRejected(): void

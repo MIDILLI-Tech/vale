@@ -37,6 +37,7 @@ final class ProductTest extends TestCase
         $this->assertNull($product->getDimensions());
         $this->assertNull($product->getFeaturedImageId());
         $this->assertSame('draft', $product->getStatus());
+        $this->assertFalse($product->isPublishScheduled());
         $this->assertNull($product->getPublishedAt());
         $this->assertSame('use_global', $product->getCommentStatus());
         $this->assertSame('use_global', $product->getVoteStatus());
@@ -536,11 +537,29 @@ final class ProductTest extends TestCase
     public function testPublishSetsStatusAndPublishedAt(): void
     {
         $product = new Product('P', new Slug('p'));
+        $product->setPublishScheduled(true);
         $product->publish();
 
         $this->assertSame('published', $product->getStatus());
+        $this->assertFalse($product->isPublishScheduled());
         $this->assertNotNull($product->getPublishedAt());
         $this->assertInstanceOf(\DateTimeImmutable::class, $product->getPublishedAt());
+    }
+
+    public function testPublishScheduledFlagIsClearedByStatusTransitions(): void
+    {
+        $product = new Product('P', new Slug('p'));
+        $product->setPublishScheduled(true);
+        $product->trash();
+        $this->assertFalse($product->isPublishScheduled());
+
+        $product->setPublishScheduled(true);
+        $product->schedule(new \DateTimeImmutable('2027-01-01'));
+        $this->assertFalse($product->isPublishScheduled());
+
+        $product->setPublishScheduled(true);
+        $product->setStatus('draft');
+        $this->assertFalse($product->isPublishScheduled());
     }
 
     public function testPublishDoesNotOverwriteExistingPublishedAt(): void
@@ -575,6 +594,18 @@ final class ProductTest extends TestCase
     }
 
     // ── fromRow ─────────────────────────────────────────────────────
+
+    public function testFromRowHydratesPublishScheduled(): void
+    {
+        $product = Product::fromRow([
+            'id'                => 1,
+            'name'              => 'Test',
+            'slug'              => 'test',
+            'publish_scheduled' => 1,
+        ]);
+
+        $this->assertTrue($product->isPublishScheduled());
+    }
 
     public function testFromRowMinimal(): void
     {

@@ -114,6 +114,29 @@ final class DbalPostExpirySwapTest extends TestCase
         self::assertSame([$due->getId()], $ids);
     }
 
+    public function testFindDueForGoPublicRequiresExplicitSchedule(): void
+    {
+        $normal = $this->makePage('Normal Unlisted', 'normal-unlisted', 'unlisted');
+        $normal->setPublishedAt(new \DateTimeImmutable('-1 hour'));
+        $this->repo()->save($normal);
+
+        $scheduled = $this->makePage('Scheduled Unlisted', 'scheduled-unlisted', 'unlisted');
+        $scheduled->setPublishedAt(new \DateTimeImmutable('-1 hour'));
+        $scheduled->setPublishScheduled(true);
+        $this->repo()->save($scheduled);
+
+        $future = $this->makePage('Future Unlisted', 'future-unlisted', 'unlisted');
+        $future->setPublishedAt(new \DateTimeImmutable('+1 hour'));
+        $future->setPublishScheduled(true);
+        $this->repo()->save($future);
+
+        $ids = array_map(static fn (Post $p): int => $p->getId(), $this->repo()->findDueForGoPublic());
+
+        self::assertSame([$scheduled->getId()], $ids);
+        self::assertFalse($this->repo()->findById($normal->getId())->isPublishScheduled());
+        self::assertTrue($this->repo()->findById($scheduled->getId())->isPublishScheduled());
+    }
+
     public function testPerformSwapHandsOverSlugAtomically(): void
     {
         $live = $this->makePage('Kampanya', 'kampanya', 'published');

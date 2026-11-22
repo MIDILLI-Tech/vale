@@ -263,6 +263,12 @@ final class SavePostUseCase
             }
         }
 
+        if ($newStatus === 'unlisted' && $takeSchedulePath) {
+            $post->setPublishScheduled(true);
+        } elseif ($newStatus !== 'unlisted' || !empty($data['clear_schedule']) || $scheduling) {
+            $post->setPublishScheduled(false);
+        }
+
         $this->applyExpiryAndSwap($post, $data, $contentType);
 
         $saved = $this->posts->save($post);

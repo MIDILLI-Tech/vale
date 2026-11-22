@@ -27,13 +27,16 @@ final class PostTest extends TestCase
         $post = new Post('Title', new Slug('slug'), 1);
 
         self::assertNull($post->getPublishedAt());
+        self::assertFalse($post->isPublishScheduled());
 
         $post->publish();
         self::assertTrue($post->isPublished());
         self::assertInstanceOf(\DateTimeImmutable::class, $post->getPublishedAt());
 
+        $post->setPublishScheduled(true);
         $post->makeUnlisted();
         self::assertTrue($post->isUnlisted());
+        self::assertFalse($post->isPublishScheduled());
 
         $post->trash();
         self::assertSame('trash', $post->getStatus());
@@ -47,7 +50,7 @@ final class PostTest extends TestCase
             'slug'         => 'row-post',
             'author_id'    => '2',
             'status'       => 'published',
-            'published_at' => '2023-05-01 00:00:00'
+            'published_at' => '2023-05-01 00:00:00',
         ];
 
         $post = Post::fromRow($row, [1, 2], [3]);
@@ -59,6 +62,22 @@ final class PostTest extends TestCase
         self::assertSame([1, 2], $post->getCategoryIds());
         self::assertSame([3], $post->getTagIds());
         self::assertSame(0, $post->getViewCount());
+        self::assertFalse($post->isPublishScheduled());
+    }
+
+    public function testFromRowHydratesPublishScheduled(): void
+    {
+        $post = Post::fromRow(
+            [
+                'id'        => '13',
+                'title'     => 'Scheduled Page',
+                'slug'      => 'scheduled-page',
+                'author_id' => '2',
+            ],
+            meta: [Post::META_PUBLISH_SCHEDULED => '1'],
+        );
+
+        self::assertTrue($post->isPublishScheduled());
     }
 
     public function testFromRowHydratesViewCount(): void
