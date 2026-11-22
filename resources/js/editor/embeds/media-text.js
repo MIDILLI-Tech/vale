@@ -1,4 +1,5 @@
 import { Node } from '@tiptap/core';
+import { NodeSelection, Selection } from '@tiptap/pm/state';
 import tippy from 'tippy.js';
 
 import { openMediaPickerExtended } from '../media/browse.js';
@@ -221,6 +222,7 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
       rmMediaBtn.className = 'vl-mt-remove-img';
       rmMediaBtn.textContent = '✕';
       rmMediaBtn.title = tjs('Remove media');
+      rmMediaBtn.setAttribute('aria-label', tjs('Remove media'));
       rmMediaBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         updateNode({ imageSrc: '', imageAlt: '' });
@@ -369,7 +371,32 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
         syncContentToNode();
       }
 
-      textCol.addEventListener('focus', () => { isEditing = true; textCol.classList.remove('vl-mt-empty'); });
+      function clearOuterNodeSelection() {
+        const view = editor.view;
+        const selection = view.state.selection;
+        if (!(selection instanceof NodeSelection)) return;
+        const pos = getPos();
+        if (typeof pos !== 'number') return;
+        const docEnd = view.state.doc.content.size;
+        const textSelection = Selection.findFrom(
+          view.state.doc.resolve(Math.min(pos + node.nodeSize, docEnd)),
+          1,
+          true,
+        ) || Selection.findFrom(view.state.doc.resolve(pos), -1, true);
+        if (textSelection) {
+          view.dispatch(view.state.tr.setSelection(textSelection));
+        }
+      }
+
+      textCol.addEventListener('focus', () => {
+        // Selecting the block header leaves a NodeSelection on the outer
+        // editor. ProseMirror marks that state with `ProseMirror-hideselection`
+        // (caret-color: transparent), which hides the native caret in this
+        // nested editable until an unrelated click changes the outer selection.
+        clearOuterNodeSelection();
+        isEditing = true;
+        textCol.classList.remove('vl-mt-empty');
+      });
       textCol.addEventListener('input', () => {
         node.attrs.content = textCol.innerHTML;
         syncPlaceholder();

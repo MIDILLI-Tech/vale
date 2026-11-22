@@ -100,8 +100,9 @@
     .vl-media-text-content p { margin: 0.4rem 0; }
     .vl-media-text-content a { color: #3b82f6; text-decoration: underline; }
     .dark .vl-media-text-image { background: transparent; }
-    .vl-mt-remove-img { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; z-index: 5; }
-    .vl-media-text-image:hover .vl-mt-remove-img { opacity: 1; }
+    .vl-mt-remove-img { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; background: rgba(17, 24, 39, 0.78); color: #fff; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 9999px; cursor: pointer; font-size: 12px; line-height: 1; display: flex; align-items: center; justify-content: center; opacity: 1; transition: background 0.2s, border-color 0.2s; z-index: 5; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+    .vl-mt-remove-img:hover { background: #dc2626; border-color: #dc2626; }
+    .dark .vl-mt-remove-img { background: rgba(17, 24, 39, 0.9); border-color: rgba(255, 255, 255, 0.5); }
     /* Media + Text: stack columns on narrow screens. The row layout is inline,
        so the override needs !important. Structural selector (no classes) also
        covers legacy saved markup. */

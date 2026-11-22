@@ -180,6 +180,23 @@ function browseUrl(type, page, q) {
   );
 }
 
+function acceptForFilter(filter) {
+  const parts = String(filter || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const accepts = [];
+  if (parts.some((part) => part.startsWith("image/"))) accepts.push("image/*");
+  if (parts.some((part) => part.startsWith("video/"))) accepts.push("video/*");
+  if (parts.some((part) => part.startsWith("text/vtt") || part.startsWith("application/x-subrip"))) {
+    accepts.push(".vtt,.srt,.sub");
+  }
+  if (parts.some((part) => part === "application/" || part === "audio/" || part === "text/")) {
+    accepts.push("audio/*,.pdf,.zip,.rar,.7z,.gz,.tar,.bz2,.txt,.rtf,.srt,.sub,.vtt,.docx,.xlsx");
+  }
+  return accepts.join(",");
+}
+
 function loadingHtml() {
   return `<p class="vl-empty flex items-center justify-center gap-2 min-h-[200px]"><span class="vl-icon-refresh vl-icon-spin w-5 h-5"></span> ${tjs("Loading...")}</p>`;
 }
@@ -315,6 +332,10 @@ function openBrowser({
   errorTextKey = tjs("Failed to load media."),
 }) {
   const m = createModal({});
+  const canUploadMedia =
+    !!window.vlMediaUpload &&
+    typeof window.vlMediaUpload.upload === "function" &&
+    window.VL_CAN_UPLOAD_MEDIA !== false;
 
   const header = document.createElement("div");
   header.className = "vl-modal-header";
@@ -325,6 +346,11 @@ function openBrowser({
         ? `<div class="flex-1 flex gap-2 ml-4">
       <button type="button" class="vl-ext-btn vl-btn vl-btn-sm vl-btn-secondary">🔗 ${tjs("External Media")}</button>
     </div>`
+        : ""
+    }
+    ${
+      canUploadMedia
+        ? `<button type="button" class="vl-media-upload-btn vl-btn vl-btn-sm vl-btn-secondary">⬆ ${tjs("Upload")}</button>`
         : ""
     }
     ${
@@ -381,6 +407,95 @@ function openBrowser({
   if (!currentMime && Array.isArray(typeOptions) && typeOptions.length > 0) {
     currentMime = typeOptions[0].value;
   }
+
+  // Upload button beside the library filters: same upload-json-multi
+  // transport as drag-and-drop, but with an explicit file picker for users
+  // who don't want to drag files onto the modal.
+  const uploadBtn = header.querySelector(".vl-media-upload-btn");
+  if (uploadBtn && canUploadMedia) {
+    const uploadInput = document.createElement("input");
+    uploadInput.type = "file";
+    uploadInput.multiple = true;
+    uploadInput.style.display = "none";
+    m.modal.appendChild(uploadInput);
+
+    uploadBtn.addEventListener("click", () => {
+      uploadInput.value = "";
+      uploadInput.accept = acceptForFilter(currentMime);
+      uploadInput.click();
+    });
+
+    uploadInput.addEventListener("change", async () => {
+      const files = Array.from(uploadInput.files || []);
+      if (files.length === 0) return;
+
+      const allowed = files.filter((file) =>
+        window.vlMediaUpload.matchesFilter(file, currentMime),
+      );
+      const rejected = files.length - allowed.length;
+      if (allowed.length === 0) {
+        window.alert(
+          tjs(":count file(s) not allowed here.", { ":count": String(rejected) }),
+        );
+        return;
+      }
+
+      const originalLabel = uploadBtn.innerHTML;
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = tjs("Uploading...");
+      try {
+        const result = await window.vlMediaUpload.upload(allowed);
+        const uploaded = (result && result.uploaded) || [];
+        const errors = (result && result.errors) || [];
+
+        if (uploaded.length === 0) {
+          const fatal = errors.find((entry) => entry.file === "*") || errors[0];
+          window.alert((fatal && fatal.error) || tjs("Upload failed."));
+          return;
+        }
+
+        if (useCache) {
+          clearCachedPages(currentMime);
+          _clientMediaStore.reset();
+        }
+        currentPage = 1;
+
+        if (mode === "multi") {
+          uploaded.forEach((item) => {
+            if (item.url && !selectedUrls.includes(item.url)) {
+              selectedUrls.push(item.url);
+            }
+          });
+          updateSelectionUi();
+          await loadPage();
+        } else {
+          await loadPage();
+          if (uploaded[0]) {
+            m.close();
+            onPickItem(uploaded[0]);
+          }
+        }
+
+        const rowErrors = errors.filter(
+          (entry) => entry && entry.file && entry.file !== "*",
+        );
+        if (rowErrors.length > 0) {
+          window.alert(rowErrors.map((entry) => `${entry.file}: ${entry.error}`).join("\n"));
+        }
+        if (rejected > 0) {
+          window.alert(
+            tjs(":count file(s) not allowed here.", { ":count": String(rejected) }),
+          );
+        }
+      } catch (err) {
+        window.alert(err && err.message ? err.message : tjs("Upload failed."));
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalLabel;
+      }
+    });
+  }
+
   // Generation counter: overlapping loadPage() calls (type change, search,
   // pager, refresh) must not overwrite each other — only the latest request
   // may render. Same token pattern as the external-media probes below.
