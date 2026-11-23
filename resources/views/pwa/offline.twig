@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="{{ current_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>{{ pwa_name }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: {{ pwa_background_color }};
+            color: {{ pwa_theme_color }};
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            text-align: center;
+        }
+        .card { max-width: 420px; }
+        img { max-width: 120px; max-height: 120px; margin-bottom: 24px; }
+        h1 { font-size: 24px; margin: 0 0 12px; }
+        p { margin: 0 0 24px; opacity: .75; line-height: 1.5; }
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font: inherit;
+            font-weight: 600;
+            color: #fff;
+            background: {{ pwa_theme_color }};
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        {% if pwa_logo %}<img src="{{ pwa_logo }}" alt="">{% endif %}
+        <h1>{{ __('You are offline') }}</h1>
+        <p>{{ __('Reconnect to the internet and try again.') }}</p>
+        <button type="button" onclick="window.location.reload()">{{ __('Try again') }}</button>
+    </main>
+</body>
+</html>

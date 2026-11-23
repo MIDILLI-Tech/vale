@@ -160,6 +160,7 @@
     <meta name="description" content="{% block meta_description %}{{ effective_desc|default('') }}{% endblock %}">
 
     {% if site_logo %}<link rel="icon" href="{{ site_logo }}">{% endif %}
+    {% include 'partials/_pwa_head.twig' %}
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800&family=space-grotesk:600,700" rel="stylesheet">

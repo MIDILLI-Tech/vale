@@ -67,6 +67,8 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
             . "style-src 'self' 'unsafe-inline' https:; "
             . "img-src 'self' data: https: blob:; "
+            . "manifest-src 'self'; "
+            . "worker-src 'self'; "
             . "font-src 'self' data: https:; "
             . 'connect-src ' . implode(' ', $connectSources) . '; '
             . 'frame-src ' . implode(' ', $frameSources) . '; '

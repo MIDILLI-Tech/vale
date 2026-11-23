@@ -1,0 +1,21 @@
+{% if pwa_enabled %}
+<link rel="manifest" href="{{ base_path }}/manifest.webmanifest">
+<meta name="theme-color" content="{{ pwa_theme_color }}">
+<meta name="application-name" content="{{ pwa_app_name }}">
+<meta name="apple-mobile-web-app-title" content="{{ pwa_short_name }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+{% if pwa_has_raster_icon %}
+<link rel="apple-touch-icon" href="{{ base_path }}/pwa/icon-180.png">
+{% endif %}
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register(
+                '{{ (base_path ~ '/sw.js')|e('js') }}',
+                { scope: '{{ (base_path ~ '/')|e('js') }}' }
+            ).catch(function () {});
+        });
+    }
+</script>
+{% endif %}

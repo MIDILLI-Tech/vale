@@ -160,6 +160,7 @@
     <meta name="description" content="{% block meta_description %}{{ effective_desc|default('') }}{% endblock %}">
 
     {% if site_logo %}<link rel="icon" href="{{ site_logo }}">{% endif %}
+    {% include 'partials/_pwa_head.twig' %}
     {% if assets_use_cdn %}
     <link rel="preconnect" href="https://fonts.bunny.net">
     {% set font_family_setting = font_family|default('inter') %}

@@ -1120,6 +1120,7 @@ Toggles live in **Settings → General → Features** (`resources/views/admin/se
 | `registration_enabled` | `registration` | Registration settings tab + nav entry |
 | `seo_enabled` | `seo` | SEO settings tab + nav entry, SEO panels/fields (posts, content types) |
 | `analytics_enabled` | `analytics` | Analytics settings tab + nav entry |
+| `pwa_enabled` | `pwa` | PWA settings panel in General → Site (needs a site logo) |
 
 ### The four places a feature is gated
 

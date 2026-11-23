@@ -43,6 +43,7 @@ use ValeApp\App\Controllers\Front\CurrencyController;
 use ValeApp\App\Controllers\Front\FormFrontController;
 use ValeApp\App\Controllers\Front\MembershipCheckoutController;
 use ValeApp\App\Controllers\Front\PluginAssetController;
+use ValeApp\App\Controllers\Front\PwaController;
 use ValeApp\App\Controllers\Front\WebhookController;
 use ValeApp\App\Middleware\AdminCacheBustMiddleware;
 use ValeApp\App\Middleware\AdminMiddleware;
@@ -82,6 +83,7 @@ use ValeApp\Application\Plugin\PluginManager;
 use ValeApp\Application\Plugin\PluginMigrator;
 use ValeApp\Application\Plugin\PluginSecurityScanner;
 use ValeApp\Application\Plugin\PluginUpdateService;
+use ValeApp\Application\Pwa\PwaSettings;
 use ValeApp\Application\Seo\AiRobotsTxtUseCase;
 use ValeApp\Application\Seo\GenerateSitemapUseCase;
 use ValeApp\Application\Seo\RobotsTxtUseCase;
@@ -201,6 +203,7 @@ use ValeApp\Infrastructure\Persistence\DbalSubscriberRepository;
 use ValeApp\Infrastructure\Persistence\DbalTagRepository;
 use ValeApp\Infrastructure\Persistence\DbalUserRepository;
 use ValeApp\Infrastructure\Persistence\DbalWebhookRepository;
+use ValeApp\Infrastructure\Pwa\PwaIconGenerator;
 use ValeApp\Infrastructure\Security\CsrfManager;
 use ValeApp\Infrastructure\Security\Encrypter;
 use ValeApp\Infrastructure\Security\IpAnonymizer;
@@ -506,6 +509,27 @@ return [
         $env->addGlobal('site_tagline', $settings->get('site_tagline', ''));
         $env->addGlobal('font_family', $settings->get('font_family', 'inter'));
         $env->addGlobal('site_logo', $settings->get('site_logo', ''));
+
+        // Progressive Web App (Settings -> General -> Features). Resolve the
+        // icon/color globals only while the feature is on; the head partial
+        // does not consume them otherwise.
+        $pwa        = $c->get(PwaSettings::class);
+        $pwaEnabled = $pwa->isEnabled();
+        $env->addGlobal('pwa_enabled', $pwaEnabled);
+        $env->addGlobal('pwa_app_name', '');
+        $env->addGlobal('pwa_short_name', '');
+        $env->addGlobal('pwa_theme_color', '');
+        $env->addGlobal('pwa_background_color', '');
+        $env->addGlobal('pwa_has_raster_icon', false);
+        if ($pwaEnabled) {
+            $pwaIcons = $c->get(PwaIconGenerator::class);
+            $env->addGlobal('pwa_app_name', $pwa->appName());
+            $env->addGlobal('pwa_short_name', $pwa->shortName());
+            $env->addGlobal('pwa_theme_color', $pwa->themeColor());
+            $env->addGlobal('pwa_background_color', $pwa->backgroundColor());
+            $env->addGlobal('pwa_has_raster_icon', $pwa->hasRasterLogo() && $pwaIcons->supports($pwa->logo()));
+        }
+
         $env->addGlobal('default_locale', $settings->get('default_locale', 'en'));
         $env->addGlobal('current_locale', $translator->getLocale());
         $env->addGlobal('locale', $translator->getLocale());
@@ -1389,8 +1413,11 @@ return [
 
     SettingsRepositoryInterface::class => get(DbalSettingsRepository::class),
 
-    ImageProcessor::class => create(ImageProcessor::class),
-    AvatarStorage::class  => factory(function ($c) {
+    ImageProcessor::class   => create(ImageProcessor::class),
+    PwaSettings::class      => autowire(),
+    PwaIconGenerator::class => autowire(),
+    PwaController::class    => autowire(),
+    AvatarStorage::class    => factory(function ($c) {
         $settings = $c->get(DbalSettingsRepository::class);
 
         return new AvatarStorage(

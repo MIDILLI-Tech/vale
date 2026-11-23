@@ -1158,6 +1158,7 @@ document.addEventListener('alpine:init', () => {
         registration: {{ settings.registration_enabled|default('1') == '1' ? 'true' : 'false' }},
         seo: {{ settings.seo_enabled|default('1') == '1' ? 'true' : 'false' }},
         analytics: {{ settings.analytics_enabled|default('1') == '1' ? 'true' : 'false' }},
+        pwa: {{ settings.pwa_enabled|default('0') == '1' and settings.site_logo|default('')|trim != '' ? 'true' : 'false' }},
     });
 
     // Re-sync content sub-tab after x-show toggles apply (Alpine init runs after DOMContentLoaded).

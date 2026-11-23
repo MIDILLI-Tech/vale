@@ -1,5 +1,6 @@
 {# General › Features — feature enable switches (configs stay under Content) #}
 {% import 'admin/macros/vl-setting.twig' as vl %}
+{% set pwa_logo_ready = (settings.site_logo|default(''))|trim != '' %}
 <div id="general-tab-features" class="general-tab-panel hidden">
     <form method="post" action="{{ url('/admin/settings') }}" class="space-y-5 rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
         {{ csrf_field() }}
@@ -199,6 +200,29 @@
                     <span>
                         <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable analytics') }}</span>
                         <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Track pageviews, referrers, browser, and device information. No cookies required.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            {# Progressive Web App #}
+            <div {{ vl.attrs('general', __('Enable progressive web app'), 'pwa_enabled', 'features', __('Features'), 'pwa progressive web app install offline mobile desktop manifest') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-950/30">
+                <label class="flex items-center gap-3">
+                    <input type="hidden" name="pwa_enabled" value="0">
+                    <input type="checkbox" name="pwa_enabled" value="1"
+                           :checked="$store.vlFeatures.pwa"
+                           @change="$store.vlFeatures.pwa = $event.target.checked"
+                           {{ settings.pwa_enabled|default('0') == '1' ? 'checked' }}
+                           {{ pwa_logo_ready ? '' : 'disabled' }}
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500 disabled:opacity-40">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">{{ __('Enable progressive web app') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ __('Makes the site installable on phones and desktops and adds an offline page.') }}</span>
+                        {% if not pwa_logo_ready %}
+                        {% set pwa_site_link %}<a href="?tab=general&amp;subtab=site"
+                           @click.stop.prevent="window.vlSettingsNav.activateGeneralTab('site')"
+                           class="font-semibold underline hover:text-amber-800 dark:hover:text-amber-300">{{ __('General → Site') }}</a>{% endset %}
+                        <span class="mt-1 block text-xs font-medium text-amber-700 dark:text-amber-400">{{ __('Select a site logo under :link before enabling this.', {':link': pwa_site_link})|raw }}</span>
+                        {% endif %}
                     </span>
                 </label>
             </div>

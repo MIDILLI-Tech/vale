@@ -192,7 +192,67 @@
             </div>
         </div>
 
-        <hr class="border-gray-200">
+        <hr class="border-gray-200" x-show="$store.vlFeatures.pwa" x-cloak>
+
+        <div x-show="$store.vlFeatures.pwa" x-cloak
+             x-data="{ useThemeColors: {{ settings.pwa_use_theme_colors|default('1') == '1' ? 'true' : 'false' }} }">
+            <fieldset :disabled="!$store.vlFeatures.pwa" class="m-0 min-w-0 border-0 p-0">
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Progressive Web App') }}</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The Site Logo is used as the app icon. A square image of at least 512×512 px gives the best result.') }}</p>
+
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div {{ vl.attrs('general', __('App name'), 'pwa_app_name', 'site', __('Progressive Web App'), 'pwa name title install') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('App name') }}</label>
+                    <input type="text" name="pwa_app_name" maxlength="60"
+                           value="{{ settings.pwa_app_name|default('') }}"
+                           placeholder="{{ settings.site_name|default(site_name) }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+                    <p class="mt-1.5 text-xs text-gray-400">{{ __('Shown on the install prompt and home screen. Defaults to the site name.') }}</p>
+                </div>
+
+                <div {{ vl.attrs('general', __('Short name'), 'pwa_short_name', 'site', __('Progressive Web App'), 'pwa short name home screen') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Short name') }}</label>
+                    <input type="text" name="pwa_short_name" maxlength="30"
+                           value="{{ settings.pwa_short_name|default('') }}"
+                           placeholder="{{ settings.pwa_app_name|default(settings.site_name|default(site_name)) }}"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100">
+                    <p class="mt-1.5 text-xs text-gray-400">{{ __('Used where space is tight, such as under the home screen icon. 12 characters or fewer works best.') }}</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <input type="hidden" name="pwa_use_theme_colors" value="0">
+                    <input type="checkbox" name="pwa_use_theme_colors" value="1" x-model="useThemeColors"
+                           class="h-4 w-4 rounded-sm border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500">
+                    {{ __('Use theme colors') }}
+                </label>
+                <p class="mt-1.5 text-xs text-gray-400">{{ __('Uses the active theme primary and background colors. Turn this off to pick custom app colors.') }}</p>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="!useThemeColors" x-cloak>
+                <div {{ vl.attrs('general', __('Theme color'), 'pwa_theme_color', 'site', __('Progressive Web App'), 'pwa color toolbar theme') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Theme color') }}</label>
+                    <input type="color" name="pwa_theme_color"
+                           value="{{ settings.pwa_theme_color|default(vl_theme_colors['--theme-primary'].value ?? '#111827') }}"
+                           class="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-1">
+                    <p class="mt-1.5 text-xs text-gray-400">{{ __('Browser toolbar and splash screen color.') }}</p>
+                </div>
+
+                <div {{ vl.attrs('general', __('Background color'), 'pwa_background_color', 'site', __('Progressive Web App'), 'pwa color splash background') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Background color') }}</label>
+                    <input type="color" name="pwa_background_color"
+                           value="{{ settings.pwa_background_color|default(vl_theme_colors['--theme-bg'].value ?? '#f9fafb') }}"
+                           class="h-10 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-1">
+                    <p class="mt-1.5 text-xs text-gray-400">{{ __('Splash screen background while the app starts.') }}</p>
+                </div>
+            </div>
+
+            <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">{{ __('On iPhone and iPad, install the app from Share → Add to Home Screen.') }}</p>
+            </fieldset>
+        </div>
+
+        <hr class="border-gray-200" x-show="$store.vlFeatures.pwa" x-cloak>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {# Maintenance #}
             <div x-data="{ maintenanceEnabled: {{ settings.maintenance_mode|default('0') == '1' ? 'true' : 'false' }} }">

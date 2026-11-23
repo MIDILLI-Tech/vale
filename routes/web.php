@@ -32,6 +32,7 @@ use ValeApp\App\Controllers\Front\MembershipCheckoutController;
 use ValeApp\App\Controllers\Front\NewsletterFrontController;
 use ValeApp\App\Controllers\Front\PluginAssetController;
 use ValeApp\App\Controllers\Front\PostController;
+use ValeApp\App\Controllers\Front\PwaController;
 use ValeApp\App\Controllers\Front\SeoController;
 use ValeApp\App\Controllers\Front\ShopController;
 use ValeApp\App\Controllers\Front\WebhookController;
@@ -55,6 +56,12 @@ return function (App $app): void {
     $app->get('/sitemap.xml', [SeoController::class, 'sitemap'])->setName('sitemap');
     $app->get('/robots.txt', [SeoController::class, 'robots'])->setName('robots');
     $app->get('/ai-robots.txt', [SeoController::class, 'aiRobots'])->setName('ai-robots');
+
+    // Progressive Web App (installable manifest, service worker, icons, offline page)
+    $app->get('/manifest.webmanifest', [PwaController::class, 'manifest'])->setName('pwa.manifest');
+    $app->get('/sw.js', [PwaController::class, 'serviceWorker'])->setName('pwa.service-worker');
+    $app->get('/pwa/icon-{size:[0-9]+}.png', [PwaController::class, 'icon'])->setName('pwa.icon');
+    $app->get('/pwa/offline', [PwaController::class, 'offline'])->setName('pwa.offline');
 
     // Auth routes (dynamic prefixes from settings, localized per locale)
     $loginPrefix          = '/' . ltrim($c->get(DbalSettingsRepository::class)->get('routing_login_prefix', '/login'), '/');

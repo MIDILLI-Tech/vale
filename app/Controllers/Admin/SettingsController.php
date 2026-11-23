@@ -43,6 +43,7 @@ use ValeApp\Infrastructure\Payment\HttpTransport;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Security\Encrypter;
 use ValeApp\Infrastructure\Session\SessionManager;
+use ValeApp\Infrastructure\Theme\ColorValueValidator;
 use ValeApp\Infrastructure\Theme\ThemeManager;
 use ValeApp\Infrastructure\Translation\Translator;
 
@@ -653,6 +654,39 @@ final class SettingsController
             $body['avatar_upload_limit'] = (string) max(0, min(1000, (int) $body['avatar_upload_limit']));
         }
 
+        // Progressive Web App: the site logo is the install icon, so the
+        // feature cannot be switched on without one. Empty color fields fall
+        // back to the active theme's primary/background colors.
+        $pwaLogoMissing = false;
+        if ($group === 'general' && $subtab === 'features') {
+            $body['pwa_enabled'] = ($body['pwa_enabled'] ?? '0') === '1' ? '1' : '0';
+
+            if ($body['pwa_enabled'] === '1' && trim((string) ($this->settings->get('site_logo', '') ?? '')) === '') {
+                $body['pwa_enabled'] = '0';
+                $pwaLogoMissing      = true;
+            }
+        } elseif ($group === 'general' && $subtab === 'site') {
+            if (array_key_exists('pwa_use_theme_colors', $body)) {
+                $body['pwa_use_theme_colors'] = $body['pwa_use_theme_colors'] === '1' ? '1' : '0';
+            }
+
+            foreach (['pwa_app_name' => 60, 'pwa_short_name' => 30] as $key => $limit) {
+                if (array_key_exists($key, $body)) {
+                    $body[$key] = mb_substr(trim((string) $body[$key]), 0, $limit);
+                }
+            }
+
+            foreach (['pwa_theme_color', 'pwa_background_color'] as $colorKey) {
+                if (!array_key_exists($colorKey, $body)) {
+                    continue;
+                }
+                $colorValue      = trim((string) $body[$colorKey]);
+                $body[$colorKey] = ColorValueValidator::isValid($colorValue) && str_starts_with($colorValue, '#')
+                    ? $colorValue
+                    : '';
+            }
+        }
+
         $this->settings->setMany($body, $group);
 
         // Flush page cache and clear template/data caches so setting changes take effect immediately
@@ -662,7 +696,14 @@ final class SettingsController
         $this->clearCacheDir('storage/cache/data');
         $this->clearCacheDir('storage/cache/views');
 
-        $this->session->set('flash_success', $this->translator->get('Settings saved.'));
+        if ($pwaLogoMissing) {
+            $this->session->set(
+                'flash_error',
+                $this->translator->get('The progressive web app needs a site logo. Select one under General → Site first.'),
+            );
+        } else {
+            $this->session->set('flash_success', $this->translator->get('Settings saved.'));
+        }
         $redirectTab = $this->settingsTab($group);
         $redirectUrl = '/settings?tab=' . urlencode($redirectTab);
         if ($subtab !== '') {
