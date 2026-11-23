@@ -924,7 +924,7 @@
             {% set footer_top = footer_items|filter(v => v.parentId is null) %}
             {% set footer_headings = footer_top|filter(v => v.url is empty or v.url == '#' or v.url == 'javascript:void(0)' or v.url == 'javascript:;') %}
             {% if footer_headings|length > 0 %}
-            <nav class="mb-8 grid grid-cols-2 gap-8 text-left sm:grid-cols-3 lg:grid-cols-4">
+            <nav class="mb-8 grid grid-cols-2 justify-items-center gap-8 text-center sm:grid-cols-3 lg:grid-cols-4">
                 {% for item in footer_top %}
                     {{ nav.footer_column(footer_items, item) }}
                 {% endfor %}
