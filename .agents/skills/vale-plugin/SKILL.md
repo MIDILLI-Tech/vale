@@ -267,7 +267,7 @@ Serving rules, enforced by `PluginAssetResolver` — do not try to bypass them:
 
 | Rule | Detail |
 |---|---|
-| Enabled only | A disabled plugin serves nothing (404), including when `VL_DISABLE_PLUGINS` / `.disabled` is active |
+| Enabled only | A disabled plugin serves nothing (404), including when `DISABLE_PLUGINS` / `.disabled` is active |
 | Whitelist | `css`, `js`, `mjs`, `json`, `map`, `txt`, `vtt`, `svg`, `png`, `jpg`, `jpeg`, `gif`, `webp`, `avif`, `ico`, `woff`, `woff2`, `ttf`, `otf`, `eot`, `mp4`, `webm`, `mp3`, `wasm` |
 | No code / markup | `php`, `html`, `htaccess`, … are refused by the whitelist — a plugin must never serve executable or renderable markup from its assets |
 | Contained | Traversal (`..`), dotfiles and symlink escapes return 404 |
@@ -351,7 +351,7 @@ A **Global switch** card at the top (`plugins_enabled` setting, default on) skip
 every plugin and mu-plugin and 404s their assets without changing
 `enabled_plugins`. While it is off the sidebar entry is hidden (`FlashMiddleware::hidePluginsNav`),
 but the screen stays reachable from Settings → Features and shows the warning.
-The operator kill switch (`.disabled` / `VL_DISABLE_PLUGINS`) still overrides it.
+The operator kill switch (`.disabled` / `DISABLE_PLUGINS`) still overrides it.
 
 Enabling and disabling flush the full-page cache (web toggle and CLI), so a
 disabled plugin's cached guest pages disappear immediately.
@@ -464,10 +464,10 @@ disk. Updates never remove `content/`, so the list and the code both survive.
 
 ```bash
 touch content/plugins/.disabled      # every plugin off, mu-plugins included
-VL_DISABLE_PLUGINS=1 php vale plugin:list
+DISABLE_PLUGINS=1 php vale plugin:list
 ```
 
-or set `VL_DISABLE_PLUGINS=1` in the environment. The marker check happens
+or set `DISABLE_PLUGINS=1` in the environment. The marker check happens
 before any plugin file is included, so it works even when `register()` is what
 crashes.
 

@@ -33,7 +33,7 @@ final class PluginListCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if ($this->plugins->isDisabledByOperator()) {
-            $output->writeln('<comment>All plugins are disabled by the operator (VL_DISABLE_PLUGINS or content/plugins/.disabled).</comment>');
+            $output->writeln('<comment>All plugins are disabled by the operator (DISABLE_PLUGINS or content/plugins/.disabled).</comment>');
         } elseif (!$this->plugins->isGloballyEnabled()) {
             $output->writeln('<comment>All plugins are switched off globally (Plugins screen). Activation state is kept.</comment>');
         }

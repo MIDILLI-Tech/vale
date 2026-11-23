@@ -49,7 +49,7 @@ final class PluginManager
 
     /**
      * Site owner kill switch: `.disabled` marker in content/plugins/ or the
-     * VL_DISABLE_PLUGINS env var. Checked before any plugin code runs, so a
+     * DISABLE_PLUGINS env var. Checked before any plugin code runs, so a
      * broken plugin can never lock the operator out of the admin panel.
      */
     public function isDisabledByOperator(): bool

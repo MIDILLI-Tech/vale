@@ -613,6 +613,15 @@
       <div class="section-title">Emergency Security</div>
 
       <div class="field-group">
+        <label for="DISABLE_PLUGINS">Disable All Plugins (DISABLE_PLUGINS)</label>
+        <p class="hint">Emergency brake: load no plugins or mu-plugins at all, even enabled ones. Same as creating <code>content/plugins/.disabled</code>.</p>
+        <select id="DISABLE_PLUGINS" name="DISABLE_PLUGINS">
+          <option value="false" selected>false (plugins load normally)</option>
+          <option value="true">true (all plugins off)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
         <label for="EMERGENCY_RESET_TOKEN">Emergency Reset Token (EMERGENCY_RESET_TOKEN)</label>
         <p class="hint">Set a random secret token to enable emergency password reset at <code>/emergency-reset/&lt;token&gt;</code>. Leave blank to disable.</p>
         <div class="input-with-btn">
@@ -835,6 +844,7 @@
       var updateSig = val('UPDATE_REQUIRE_SIGNATURE') || 'true';
       var updateKeyGpg = val('UPDATE_PUBLIC_KEY_GPG');
       var emergencyToken = val('EMERGENCY_RESET_TOKEN');
+      var disablePlugins = val('DISABLE_PLUGINS') || 'false';
 
       rawEntries.push(
         { type: 'blank' },
@@ -882,6 +892,10 @@
         { key: 'UPDATE_MANIFEST_URL', val: updateUrl, comment: '' },
         { key: 'UPDATE_REQUIRE_SIGNATURE', val: updateSig, comment: 'Require signature for updates: true | false' },
         { key: 'UPDATE_PUBLIC_KEY_GPG', val: updateKeyGpg, comment: '' },
+
+        { type: 'blank' },
+        { type: 'comment', text: '# Plugins' },
+        { key: 'DISABLE_PLUGINS', val: disablePlugins, comment: 'Emergency: load no plugins or mu-plugins at all (same as content/plugins/.disabled)' },
 
         { type: 'blank' },
         { type: 'comment', text: '# Emergency Password Reset' },

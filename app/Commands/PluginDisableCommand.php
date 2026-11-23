@@ -16,7 +16,7 @@ use ValeApp\Infrastructure\Cache\PageCache;
  * Deactivate a plugin without deleting its files.
  *
  * Works from the CLI even when a plugin breaks the admin panel — the reason
- * this command exists. `content/plugins/.disabled` (or VL_DISABLE_PLUGINS=1)
+ * this command exists. `content/plugins/.disabled` (or DISABLE_PLUGINS=1)
  * is the heavier hammer that disables every plugin at once.
  *
  * Usage:  php vale plugin:disable my-plugin [--dry-run]

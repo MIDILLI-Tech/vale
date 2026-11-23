@@ -415,7 +415,7 @@ return [
             $c->get(SettingsRepositoryInterface::class),
             $cfg['paths']['root'] . '/content/plugins',
             $version,
-            filter_var(env('VL_DISABLE_PLUGINS', ''), FILTER_VALIDATE_BOOLEAN),
+            filter_var(env('DISABLE_PLUGINS', ''), FILTER_VALIDATE_BOOLEAN),
             $c->get(PluginSecurityScanner::class),
         );
     }),
