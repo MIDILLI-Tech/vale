@@ -139,7 +139,7 @@
 {% macro footer_column(items, item) %}
     {% import _self as nav %}
     {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
-    <div class="min-w-0">
+    <div class="min-w-44">
         {% if has_link %}
         <a href="{{ item.url }}" target="{{ item.target }}" class="text-sm font-semibold text-gray-300 hover:text-indigo-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
         {% else %}
@@ -841,7 +841,7 @@
             {% set footer_top = menu_footer|filter(v => v.parentId is null) %}
             {% set footer_headings = footer_top|filter(v => v.url is empty or v.url == '#' or v.url == 'javascript:void(0)' or v.url == 'javascript:;') %}
             {% if footer_headings|length > 0 %}
-            <nav class="mb-8 grid grid-cols-2 justify-items-center gap-8 text-center sm:grid-cols-3 lg:grid-cols-4">
+            <nav class="mb-8 flex flex-wrap justify-center gap-x-20 gap-y-12 text-center">
                 {% for item in footer_top %}
                     {{ nav.footer_column(menu_footer, item) }}
                 {% endfor %}
