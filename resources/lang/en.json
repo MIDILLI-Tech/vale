@@ -734,6 +734,7 @@
     "Cron is currently disabled. Scheduled emails and automations will not be sent until a cron job is configured.": "Cron is currently disabled. Scheduled emails and automations will not be sent until a cron job is configured.",
     "Cron is disabled — scheduled publishing will not run automatically.": "Cron is disabled — scheduled publishing will not run automatically.",
     "Cross-sells": "Cross-sells",
+    "Ctrl/Cmd+Click to open link": "Ctrl/Cmd+Click to open link",
     "Currency": "Currency",
     "Current": "Current",
     "Current Password": "Current Password",

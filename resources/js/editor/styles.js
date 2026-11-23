@@ -14,6 +14,14 @@
     .vl-btn-spin{animation:editorSpin .8s linear infinite;display:inline-block;vertical-align:middle;transform-origin:center}
     .vl-icon-spin{animation:editorSpin .8s linear infinite;display:inline-block;vertical-align:middle;transform-origin:center}
 
+    /* Link hover tooltip: href plus the modifier-click hint */
+    .vl-link-hover-tip { position: fixed; z-index: 100000; max-width: 320px; padding: 6px 10px; border-radius: 8px; background: #111827; color: #f9fafb; font-size: 12px; line-height: 1.45; box-shadow: 0 10px 15px -3px rgba(0,0,0,.25); pointer-events: none; opacity: 0; transform: translateY(2px); transition: opacity .1s ease, transform .1s ease; }
+    .vl-link-hover-tip.is-visible { opacity: 1; transform: translateY(0); }
+    .vl-link-hover-tip .vl-link-hover-url { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vl-link-hover-tip .vl-link-hover-hint { display: block; color: #9ca3af; font-size: 11px; }
+    .dark .vl-link-hover-tip { background: #f3f4f6; color: #111827; }
+    .dark .vl-link-hover-tip .vl-link-hover-hint { color: #4b5563; }
+
     /* Shared block chrome. Contains matching keeps the style active after
        ProseMirror appends its selection class to the wrapper. */
     [class*="embed-block"], .vl-link-button-group-block, .vl-link-button-block, .vl-card-group-block, .vl-more-divider, .vl-nextpage-divider, .vl-spacer-block { cursor: grab; border-radius: 12px; }

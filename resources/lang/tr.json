@@ -734,6 +734,7 @@
     "Cron is currently disabled. Scheduled emails and automations will not be sent until a cron job is configured.": "Cron şu anda devre dışı. Bir cron görevi yapılandırılana kadar zamanlanmış e-postalar ve otomasyonlar gönderilmeyecek.",
     "Cron is disabled — scheduled publishing will not run automatically.": "Cron devre dışı — zamanlanmış yayınlama otomatik çalışmayacak.",
     "Cross-sells": "Çapraz Satışlar",
+    "Ctrl\/Cmd+Click to open link": "",
     "Currency": "Para Birimi",
     "Current": "Mevcut",
     "Current Password": "Mevcut Parola",

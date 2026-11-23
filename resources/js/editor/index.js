@@ -268,6 +268,17 @@ function vlMountEditor(textarea) {
           if (target.closest('[data-media-text]')) return;
           const a = target.closest('a[href]');
           if (!a || !a.closest('.ProseMirror')) return;
+
+          // Ctrl/Cmd+Click follows the link in a new tab without leaving the editor.
+          if (e.ctrlKey || e.metaKey) {
+            const href = a.getAttribute('href') || '';
+            if (/^\s*(javascript|data):/i.test(href)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(a.href, '_blank', 'noopener');
+            return;
+          }
+
           e.preventDefault();
           e.stopPropagation();
           const view = editor.view;
@@ -281,6 +292,62 @@ function vlMountEditor(textarea) {
           } else {
             editor.chain().focus();
           }
+        });
+
+        // Hovering a link shows its href and how to open it in a new tab.
+        const linkTip = document.createElement('div');
+        linkTip.className = 'vl-link-hover-tip';
+        linkTip.setAttribute('role', 'tooltip');
+        const linkTipUrl = document.createElement('span');
+        linkTipUrl.className = 'vl-link-hover-url';
+        const linkTipHint = document.createElement('span');
+        linkTipHint.className = 'vl-link-hover-hint';
+        linkTipHint.textContent = '(' + tjs('Ctrl/Cmd+Click to open link') + ')';
+        linkTip.append(linkTipUrl, linkTipHint);
+        document.body.appendChild(linkTip);
+        let tipLink = null;
+
+        function hideLinkTip() {
+          tipLink = null;
+          linkTip.classList.remove('is-visible');
+        }
+
+        function showLinkTip(a) {
+          tipLink = a;
+          linkTipUrl.textContent = a.getAttribute('href') || '';
+          linkTip.classList.add('is-visible');
+          const rect = a.getBoundingClientRect();
+          const tipRect = linkTip.getBoundingClientRect();
+          const margin = 8;
+          let top = rect.top - tipRect.height - 6;
+          if (top < margin) top = rect.bottom + 6;
+          const left = rect.left + rect.width / 2 - tipRect.width / 2;
+          linkTip.style.top = top + 'px';
+          linkTip.style.left = Math.min(Math.max(left, margin), window.innerWidth - tipRect.width - margin) + 'px';
+        }
+
+        editor.view.dom.addEventListener('mouseover', (e) => {
+          const target = e.target;
+          if (!(target instanceof Element)) return;
+          if (target.closest('[data-media-text]')) return;
+          const a = target.closest('a[href]');
+          if (!a || !a.closest('.ProseMirror') || a === tipLink) return;
+          showLinkTip(a);
+        });
+        editor.view.dom.addEventListener('mouseout', (e) => {
+          const target = e.target;
+          if (!(target instanceof Element)) return;
+          const a = target.closest('a[href]');
+          if (!a) return;
+          const next = e.relatedTarget;
+          if (next instanceof Node && a.contains(next)) return;
+          if (a === tipLink) hideLinkTip();
+        });
+        editor.view.dom.addEventListener('mousedown', hideLinkTip);
+        window.addEventListener('scroll', hideLinkTip, true);
+        editor.on('destroy', () => {
+          window.removeEventListener('scroll', hideLinkTip, true);
+          linkTip.remove();
         });
       },
       onUpdate({ editor }) {
