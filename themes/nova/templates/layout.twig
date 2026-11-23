@@ -7,38 +7,67 @@
     {% for item in menu_items %}
         {% if item.parentId == parent_id %}
         {% set kids = menu_items|filter(v => v.parentId == item.id) %}
+        {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
         {% if depth == 0 and kids|length > 0 %}
         <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            {% if has_link %}
             <a href="{{ item.url }}" target="{{ item.target }}"
-               class="nav-link inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors">
+               class="nav-link inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
                 {{ item.label }}
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </a>
+            {% else %}
+            <button type="button" aria-haspopup="true" :aria-expanded="open"
+                    class="nav-link inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors cursor-default{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                {{ item.label }}
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            {% endif %}
             <div x-show="open" x-cloak class="absolute left-0 top-full z-50 w-52 rounded-xl bg-slate-800 border border-slate-600 shadow-xl py-2">
                 {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
             </div>
         </div>
         {% elseif depth == 0 %}
+        {% if has_link %}
         <a href="{{ item.url }}" target="{{ item.target }}"
            class="nav-link px-3 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
             {{ item.label }}
         </a>
+        {% else %}
+        <span class="px-3 py-2 text-sm font-medium text-slate-300{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+            {{ item.label }}
+        </span>
+        {% endif %}
         {% elseif kids|length > 0 %}
         <div class="relative" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+            {% if has_link %}
             <a href="{{ item.url }}" target="{{ item.target }}"
-               class="flex items-center justify-between gap-1 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+               class="flex items-center justify-between gap-1 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
                 <span>{{ item.label }}</span>
                 <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
+            {% else %}
+            <button type="button" aria-haspopup="true" :aria-expanded="open"
+                    class="flex w-full items-center justify-between gap-1 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors cursor-default{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+                <span>{{ item.label }}</span>
+                <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            {% endif %}
             <div x-show="open" x-cloak class="absolute left-full top-0 z-50 w-52 rounded-xl bg-slate-800 border border-slate-600 shadow-xl py-2">
                 {{ nav.nav_desktop(menu_items, item.id, depth + 1) }}
             </div>
         </div>
         {% else %}
+        {% if has_link %}
         <a href="{{ item.url }}" target="{{ item.target }}"
-           class="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors">
+           class="block px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
             {{ item.label }}
         </a>
+        {% else %}
+        <span class="block px-4 py-2.5 text-sm text-slate-300{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">
+            {{ item.label }}
+        </span>
+        {% endif %}
         {% endif %}
         {% endif %}
     {% endfor %}
@@ -77,12 +106,51 @@
             </div>
         </div>
         {% else %}
+        {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+        {% if has_link %}
         <a href="{{ item.url }}" target="{{ item.target }}"
            class="block rounded-lg px-3 {{ depth == 0 ? 'py-3 text-lg font-medium text-slate-200' : 'py-2.5 text-base text-slate-300' }} hover:bg-slate-800/50 hover:text-blue-400 transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% else %}
+        <span class="block rounded-lg px-3 {{ depth == 0 ? 'py-3 text-lg font-medium text-slate-200' : 'py-2.5 text-base text-slate-300' }}{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</span>
+        {% endif %}
         {% endif %}
         {% endif %}
     {% endfor %}
     {% endif %}
+{% endmacro %}
+{# ── Footer columns: top-level items without a link act as column headings ── #}
+{% macro footer_tree(items, parent_id, depth) %}
+    {% import _self as nav %}
+    {% if depth <= 5 %}
+    {% set kids = items|filter(v => v.parentId == parent_id) %}
+    {% if kids|length > 0 %}
+    <ul class="mt-3 space-y-2">
+        {% for item in kids %}
+        {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+        <li>
+            {% if has_link %}
+            <a href="{{ item.url }}" target="{{ item.target }}" class="text-sm text-slate-400 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+            {% else %}
+            <span class="block text-sm text-slate-400{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</span>
+            {% endif %}
+            {{ nav.footer_tree(items, item.id, depth + 1) }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endif %}
+{% endmacro %}
+{% macro footer_column(items, item) %}
+    {% import _self as nav %}
+    {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+    <div class="min-w-0">
+        {% if has_link %}
+        <a href="{{ item.url }}" target="{{ item.target }}" class="text-white font-bold hover:text-blue-400 transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a>
+        {% else %}
+        <span class="block text-white font-bold{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</span>
+        {% endif %}
+        {{ nav.footer_tree(items, item.id, 1) }}
+    </div>
 {% endmacro %}
 <head>
     <meta charset="UTF-8">
@@ -755,11 +823,24 @@
 
                 <div>
                     <h4 class="text-white font-bold mb-6">{{ __('Links') }}</h4>
+                    {% set footer_top = menu_footer is defined ? menu_footer|filter(v => v.parentId is null) : [] %}
+                    {% set footer_headings = footer_top|filter(v => v.url is empty or v.url == '#' or v.url == 'javascript:void(0)' or v.url == 'javascript:;') %}
+                    {% if menu_footer is defined and menu_footer|length > 0 and footer_headings|length == 0 %}
+                    <ul class="space-y-4">
+                        {% for item in menu_footer %}
+                        {% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}
+                        {% if has_link %}
+                        <li><a href="{{ item.url }}" target="{{ item.target }}" class="text-slate-400 hover:text-white transition-colors{{ item.cssClass ? ' ' ~ item.cssClass : '' }}">{{ item.label }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                    {% else %}
                     <ul class="space-y-4">
                         <li><a href="{{ url('/') }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Home') }}</a></li>
                         <li><a href="{{ url(routing_blog_prefix) }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Blog') }}</a></li>
                         <li><a href="{{ url(routing_shop_prefix) }}" class="text-slate-400 hover:text-white transition-colors">{{ __('Shop') }}</a></li>
                     </ul>
+                    {% endif %}
                 </div>
 
                 <div>
@@ -771,6 +852,17 @@
                     </ul>
                 </div>
             </div>
+
+            {% set footer_top = menu_footer is defined ? menu_footer|filter(v => v.parentId is null) : [] %}
+            {% set footer_headings = footer_top|filter(v => v.url is empty or v.url == '#' or v.url == 'javascript:void(0)' or v.url == 'javascript:;') %}
+            {% if footer_headings|length > 0 %}
+            {% import _self as nav %}
+            <div class="mt-12 grid grid-cols-2 gap-8 text-left sm:grid-cols-3 md:grid-cols-4">
+                {% for item in footer_top %}
+                    {{ nav.footer_column(menu_footer, item) }}
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <div class="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-slate-500 text-sm">

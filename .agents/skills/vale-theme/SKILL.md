@@ -161,6 +161,8 @@ Notes: drop `"parent"` (or omit) for standalone. If no `color_variables` is decl
 
 Only include the language-switcher partial when requested; remove `menu_primary`/`menu_footer` loops for undeclared locations.
 
+**Menu items without a URL are headings, not links.** Compute `{% set has_link = item.url is not empty and item.url != '#' and item.url != 'javascript:void(0)' and item.url != 'javascript:;' %}` and render a `<button type="button" aria-haspopup="true" :aria-expanded="open">` for a parent with children, or a `<span>` for a standalone heading — never `<a href="">`, which navigates to the current page. The mobile toggle already follows this branch. In the footer, a top-level heading becomes a column: render a grid of top-level items where each heading is the column title and its children (recursively) are the links below it, keeping the flat link row only when the footer menu has no headings.
+
 ### Content templates
 
 - `home.twig` / `blog.twig`: `{% extends "layout.twig" %}`, loop over posts global, link with each post's URL, show title/excerpt/date.
