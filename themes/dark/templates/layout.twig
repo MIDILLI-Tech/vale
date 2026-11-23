@@ -135,6 +135,7 @@
         html.dark {
             --theme-primary: #0ea5e9;
             --theme-primary-hover: #0284c7;
+            --theme-primary-text: #ffffff;
             --theme-secondary: #1e293b;
             --theme-secondary-hover: #334155;
             --theme-bg: #030712;
@@ -378,7 +379,7 @@
         table[style*="--vl-cell-border"] th { background: #1e293b; font-weight: 600; }
 
         /* ── Buttons ── */
-        .btn-primary { background-color: var(--theme-primary); color: #fff; }
+        .btn-primary { background-color: var(--theme-primary); color: var(--theme-primary-text); }
         .btn-primary:hover { background-color: var(--theme-primary-hover); }
         .btn-primary:focus { outline: none; box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px rgba(14,165,233,.6); }
         .btn-secondary { background-color: var(--theme-secondary); color: #cbd5e1; border: 1px solid #475569; }

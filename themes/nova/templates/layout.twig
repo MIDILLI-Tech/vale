@@ -131,6 +131,7 @@
         :root {
             --theme-primary: #3b82f6;
             --theme-primary-hover: #2563eb;
+            --theme-primary-text: #ffffff;
             --theme-secondary: #818cf8;
             --theme-cyan: #22d3ee;
             --theme-bg: #020617;
@@ -214,7 +215,7 @@
             background: var(--neon-gradient);
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
             transition: all 0.3s ease;
-            color: #fff;
+            color: var(--theme-primary-text);
         }
 
         .btn-neon:hover, .btn-primary:hover {
@@ -437,7 +438,7 @@
         main .btn-primary {
             background: var(--neon-gradient) !important;
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
-            color: #fff !important;
+            color: var(--theme-primary-text) !important;
         }
         main .btn-primary:hover {
             background: linear-gradient(45deg, var(--theme-primary-hover), var(--theme-secondary)) !important;

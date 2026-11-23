@@ -155,6 +155,7 @@
         :root {
             --theme-primary: #111827;
             --theme-primary-hover: #374151;
+            --theme-primary-text: #ffffff;
             --theme-secondary: #f3f4f6;
             --theme-secondary-hover: #e5e7eb;
             --theme-bg: #f9fafb;
@@ -314,7 +315,7 @@
         table[style*="--vl-cell-border"] th { background: #f3f4f6; font-weight: 600; }
 
         /* ── Primary & Secondary buttons ── */
-        .btn-primary { background-color: var(--theme-primary); color: #fff; }
+        .btn-primary { background-color: var(--theme-primary); color: var(--theme-primary-text); }
         .btn-primary:hover { background-color: var(--theme-primary-hover); }
         .btn-primary:focus { outline: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(17,24,39,.5); }
         .btn-secondary { background-color: var(--theme-secondary); color: #374151; border: 1px solid #d1d5db; }

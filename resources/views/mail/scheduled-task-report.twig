@@ -47,7 +47,7 @@
 {% endif %}
 
 <p style="margin:24px 0 8px;">
-    <a href="{{ content_url }}" class="btn">{{ __('View content in admin') }}</a>
+    <a href="{{ content_url }}" class="btn" style="display:inline-block; margin:0; padding:12px 28px; background-color:{{ email_primary }}; color:{{ email_primary_text }} !important; border-radius:6px; text-decoration:none; font-weight:600; font-size:15px;">{{ __('View content in admin') }}</a>
 </p>
 <p style="margin:0; color:{{ email_text_muted }}; font-size:13px;">{{ __('Generated at :time.', {':time': generated_at}) }}</p>
 {% endblock %}

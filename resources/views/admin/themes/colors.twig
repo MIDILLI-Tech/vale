@@ -136,7 +136,7 @@
                 </div>
                 {% else %}
                 <div class="rounded-lg p-3 flex items-center justify-between shadow-xs transition-colors"
-                     :style="{ backgroundColor: colors['--theme-primary'] || '#111827', color: '#ffffff' }">
+                     :style="{ backgroundColor: colors['--theme-primary'] || '#111827', color: colors['--theme-primary-text'] || '#ffffff' }">
                     <span class="font-bold text-sm">{{ theme_meta.name ?? theme_slug }}</span>
                     <span class="text-xs opacity-80">{{ __('Navigation') }}</span>
                 </div>
@@ -147,7 +147,7 @@
                 <div class="space-y-1">
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Hero / Banner Area') }}</p>
                     <div class="rounded-lg p-4 text-center shadow-xs transition-all"
-                         :style="{ background: colors['--theme-hero-bg'] || colors['--theme-primary'] || '#111827', color: '#ffffff' }">
+                         :style="{ background: colors['--theme-hero-bg'] || colors['--theme-primary'] || '#111827', color: colors['--theme-primary-text'] || '#ffffff' }">
                         <span class="font-bold text-xs block">{{ __('Hero Banner Title') }}</span>
                         <span class="text-[10px] opacity-80">{{ __('Customizable hero gradient background') }}</span>
                     </div>
@@ -174,7 +174,10 @@
                             @mouseenter="primaryHover = true"
                             @mouseleave="primaryHover = false"
                             class="w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-xs transition-all duration-200"
-                            :style="{ backgroundColor: primaryHover ? (colors['--theme-primary-hover'] || colors['--theme-primary'] || '#374151') : (colors['--theme-primary'] || '#111827') }">
+                            :style="{
+                                backgroundColor: primaryHover ? (colors['--theme-primary-hover'] || colors['--theme-primary'] || '#374151') : (colors['--theme-primary'] || '#111827'),
+                                color: colors['--theme-primary-text'] || '#ffffff'
+                            }">
                         {{ __('Action Button') }}
                     </button>
                 </div>

@@ -175,6 +175,7 @@ Rules: keep `{{ theme_hook('head') }}` in `<head>` (SEO meta + saved colors inje
 ```css
 :root {
     --theme-primary: #111827;
+    --theme-primary-text: #ffffff;
     --theme-bg: #f9fafb;
     --theme-surface: #ffffff;
     --theme-text: #111827;
@@ -184,8 +185,10 @@ Rules: keep `{{ theme_hook('head') }}` in `<head>` (SEO meta + saved colors inje
 
 main .bg-white   { background-color: var(--theme-surface) !important; }
 main .text-gray-900 { color: var(--theme-text) !important; }
-.btn-primary { background-color: var(--theme-primary); color: #fff; }
+.btn-primary { background-color: var(--theme-primary); color: var(--theme-primary-text); }
 ```
+
+`--theme-primary-text` is the text color used on primary-colored surfaces: front-end `.btn-primary`, the mail header and every transactional-mail button. Always declare it in `theme.json` `color_variables` (default `#ffffff`) so it is editable in Settings → Themes → Colors and Settings → Mail → Email Colors.
 
 Map generic Tailwind utilities inside `<main>` so page background and card surfaces stay independently stylable while header/footer remain under theme control.
 

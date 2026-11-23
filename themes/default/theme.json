@@ -32,6 +32,10 @@
             "label": "Primary Hover",
             "default": "#374151"
         },
+        "--theme-primary-text": {
+            "label": "Text on Primary Color",
+            "default": "#ffffff"
+        },
         "--theme-secondary": {
             "label": "Secondary Color",
             "default": "#f3f4f6"
