@@ -6,6 +6,55 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.79.0] - 2026-11-23
+
+This version adds profile pages, new field types on custom contents and forms, new interface languages, and fixes some issues on cron, email sending, and editor.
+
+### Added
+- add media picker uploads and improve media-text controls
+- export form submissions as CSV or JSON
+- suggest tags in automation rule inputs
+- add a date field to the form builder
+- add required and phone options to custom content type fields
+- add H2-only and H3-only options to table of contents
+- default mail templates add site logo
+- rename the admin Publish label to Publish Now
+- complete Turkish interface translation
+- complete German interface translation
+- German, French, Spanish and Italian interface translation files
+- add public author pages with bios, display names and profile SEO
+- add user profile pictures across account, posts and admin
+- commit release metadata and push master before tagging
+- local version bump script for version.php, README badge and CHANGELOG
+- email the admin a digest of cron-published content
+
+### Fixed
+- render mail buttons with theme-driven text color
+- require explicit schedule before unlisted content goes public
+- let ProseMirror track selections inside contentDOM blocks
+- default invalid media thumbnails to an empty array
+- keep media+text selection and lists in the nested editor
+- bust cached media thumbnails after replacing a file
+- render custom fields in content feeds
+- show admin dates in the current language
+- show field labels in the submission preview
+- delete a form's submissions with the form
+- keep the pinned editor toolbar below the rail bar
+- use the navigation icons for system content types
+- render the content preview with a real post entity
+- suffix generated content type slugs when the path is taken
+- keep the README badge alt text in sync during release builds
+- report the real app version from version.php in the health endpoint
+- use a neutral gray for editor focus and selection rings
+- drop leftover blue hover state on settings sub-tabs
+- remove stray quote from mail template editor buttons
+
+### Changed
+- update environment generator languages
+- derive supported locales from resources/lang files
+- update dependencies
+- bump version
+
 ### Added
 - plugin drop-in system: `content/plugins/<slug>/plugin.php` manifests and always-on `content/mu-plugins/*.php`, loaded after the container and before routes
 - `php vale plugin:list`, `plugin:install`, `plugin:check-updates`, `plugin:update`, `plugin:enable` and `plugin:disable` commands
