@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded',function(){
     function activateSubTab(btnSelector, panelPrefix, name, attr) {
         document.querySelectorAll(btnSelector).forEach(function(t){
             t.classList.remove('border-blue-600','text-blue-600','dark:border-blue-400','dark:text-blue-400','border-gray-900','text-gray-900','dark:text-gray-100');
-            t.classList.add('border-transparent','text-gray-500','dark:text-gray-400');
+            t.classList.add('border-transparent','text-gray-500','dark:text-gray-400','hover:text-gray-700','dark:hover:text-gray-200');
         });
         document.querySelectorAll('[id^="' + panelPrefix + '"]').forEach(function(p){
             p.classList.add('hidden');
