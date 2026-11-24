@@ -249,6 +249,21 @@ final class AccountController
         $secret = $body['secret'] ?? '';
         $code   = $body['code']   ?? '';
 
+        if ($user->isTwoFactorEnabled()) {
+            $this->session->flash('info', __('Two-factor authentication is already enabled.'));
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
+        $currentPassword = (string) ($body['current_password'] ?? '');
+        if ($currentPassword === '') {
+            $this->session->flash('error', __('Current password is required to enable two-factor authentication.'));
+            return $response->withHeader('Location', site_url($this->accountPrefix() . '/two-factor/setup'))->withStatus(302);
+        }
+        if (!$this->hasher->verify($currentPassword, $user->getPassword())) {
+            $this->session->flash('error', __('Current password is incorrect.'));
+            return $response->withHeader('Location', site_url($this->accountPrefix() . '/two-factor/setup'))->withStatus(302);
+        }
+
         $slice = $this->twoFactorService->verifyCodeSlice($secret, $code);
         if ($slice !== null) {
             $codes = $this->twoFactorService->generateRecoveryCodes();
@@ -385,6 +400,17 @@ final class AccountController
         $user   = $this->users->findById($userId);
 
         if ($user === null || !$user->isTwoFactorEnabled()) {
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
+        $body            = (array) $request->getParsedBody();
+        $currentPassword = (string) ($body['current_password'] ?? '');
+        if ($currentPassword === '') {
+            $this->session->flash('error', __('Current password is required to regenerate recovery codes.'));
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+        if (!$this->hasher->verify($currentPassword, $user->getPassword())) {
+            $this->session->flash('error', __('Current password is incorrect.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
