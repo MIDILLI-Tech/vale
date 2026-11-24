@@ -15,7 +15,7 @@
 
 <div x-data="dataTable({perPage: 20, serverSide: false, sortBy: '', sortDir: 'desc', search: '', perPage: 20})">
     <div class="mb-4 flex items-center gap-3">
-        {{ table.search('Search roles…') }}
+        {{ table.search('Search roles by name…') }}
         {{ table.columnsToggle() }}
     </div>
     <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-x-auto">

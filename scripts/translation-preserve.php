@@ -201,9 +201,9 @@ return [
     'Membership Status',
     'Subscribed',
     'Stock',
-    'Search roles…',
 
     // ── Editor block settings labels resolved through tjs() helpers ──
     'Category (optional)',
     'Tags (optional)',
+    'Search roles by name…',
 ];
