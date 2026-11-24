@@ -110,7 +110,7 @@
                     <option value="hcaptcha">hCaptcha</option>
                     <option value="recaptcha">Google reCAPTCHA v3</option>
                     <option value="turnstile">Cloudflare Turnstile</option>
-                    <option value="honeypot">Honeypot (hidden field)</option>
+                    <option value="honeypot">{{ __('Honeypot (hidden field)') }}</option>
                 </select>
                 <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
                    class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>

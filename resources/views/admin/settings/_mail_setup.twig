@@ -23,12 +23,12 @@
                                         if (this.value === 'log') { logCb.checked = true; logCb.disabled = true; } else { logCb.disabled = false; }
                                     ">
                                 <option value="log"     {{ mailConfig.mail_driver == 'log'     ? 'selected' }}>{{ __('Log (dev only)') }}</option>
-                                <option value="phpmail" {{ mailConfig.mail_driver == 'phpmail' ? 'selected' }}>PHP mail()</option>
+                                <option value="phpmail" {{ mailConfig.mail_driver == 'phpmail' ? 'selected' }}>{{ __('PHP mail()') }}</option>
                                 <option value="smtp"    {{ mailConfig.mail_driver == 'smtp'    ? 'selected' }}>SMTP</option>
-                                <option value="resend"  {{ mailConfig.mail_driver == 'resend'  ? 'selected' }}>Resend</option>
-                                <option value="unosend" {{ mailConfig.mail_driver == 'unosend' ? 'selected' }}>Unosend</option>
-                                <option value="mailgun" {{ mailConfig.mail_driver == 'mailgun' ? 'selected' }}>Mailgun</option>
-                                <option value="sendgrid" {{ mailConfig.mail_driver == 'sendgrid' ? 'selected' }}>SendGrid</option>
+                                <option value="resend"  {{ mailConfig.mail_driver == 'resend'  ? 'selected' }}>{{ __('Resend') }}</option>
+                                <option value="unosend" {{ mailConfig.mail_driver == 'unosend' ? 'selected' }}>{{ __('Unosend') }}</option>
+                                <option value="mailgun" {{ mailConfig.mail_driver == 'mailgun' ? 'selected' }}>{{ __('Mailgun') }}</option>
+                                <option value="sendgrid" {{ mailConfig.mail_driver == 'sendgrid' ? 'selected' }}>{{ __('SendGrid') }}</option>
                             </select>
                             <a href="{{ url('/admin/mail/logs') }}"
                                class="mt-2 inline-flex rounded-lg border px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -87,7 +87,7 @@
 
                         <div id="resend_fields_settings" {% if mailConfig.mail_driver != 'resend' %}style="display:none"{% endif %}
                              class="space-y-4 rounded-lg border border-purple-100 bg-purple-50 p-4 dark:border-purple-900/50 dark:bg-purple-950/30">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Resend</p>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">{{ __('Resend') }}</p>
                             <div {{ vl.attrs('mail', __('API Key'), 'mail_resend_api_key', 'setup', 'Resend', 'resend api key email') }}>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
                                 <input type="password" name="mail_resend_api_key" value="{{ mailConfig.mail_resend_api_key }}"
@@ -101,7 +101,7 @@
 
                         <div id="unosend_fields_settings" {% if mailConfig.mail_driver != 'unosend' %}style="display:none"{% endif %}
                              class="space-y-4 rounded-lg border border-orange-100 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-950/30">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">Unosend</p>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">{{ __('Unosend') }}</p>
                             <div {{ vl.attrs('mail', __('API Key'), 'mail_unosend_api_key', 'setup', 'Unosend', 'unosend api key email') }}>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
                                 <input type="password" name="mail_unosend_api_key" value="{{ mailConfig.mail_unosend_api_key }}"
@@ -115,7 +115,7 @@
 
                         <div id="mailgun_fields_settings" {% if mailConfig.mail_driver != 'mailgun' %}style="display:none"{% endif %}
                              class="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Mailgun</p>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">{{ __('Mailgun') }}</p>
                             <div {{ vl.attrs('mail', __('API Key'), 'mail_mailgun_api_key', 'setup', 'Mailgun', 'mailgun api key email') }}>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
                                 <input type="password" name="mail_mailgun_api_key" value="{{ mailConfig.mail_mailgun_api_key }}"
@@ -135,7 +135,7 @@
 
                         <div id="sendgrid_fields_settings" {% if mailConfig.mail_driver != 'sendgrid' %}style="display:none"{% endif %}
                              class="space-y-4 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">SendGrid</p>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">{{ __('SendGrid') }}</p>
                             <div {{ vl.attrs('mail', __('API Key'), 'mail_sendgrid_api_key', 'setup', 'SendGrid', 'sendgrid api key email') }}>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('API Key') }}</label>
                                 <input type="password" name="mail_sendgrid_api_key" value="{{ mailConfig.mail_sendgrid_api_key }}"
@@ -218,13 +218,13 @@
                 </div>
                 <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p class="font-semibold text-gray-700 dark:text-gray-300">{{ __('Driver guide') }}</p>
-                    <p><strong class="text-gray-500 dark:text-gray-400">Log</strong> — {{ __('saves full email to') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">storage/logs/mail.log</code>. {{ __('No mail sent.') }}</p>
-                    <p><strong class="text-gray-500 dark:text-gray-400">PHP mail()</strong> — {{ __('native PHP') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">mail()</code>. {{ __('Requires server sendmail / MTA.') }}</p>
+                    <p><strong class="text-gray-500 dark:text-gray-400">{{ __('Log') }}</strong> — {{ __('saves full email to') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">storage/logs/mail.log</code>. {{ __('No mail sent.') }}</p>
+                    <p><strong class="text-gray-500 dark:text-gray-400">{{ __('PHP mail()') }}</strong> — {{ __('native PHP') }} <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">mail()</code>. {{ __('Requires server sendmail / MTA.') }}</p>
                     <p><strong class="text-indigo-600 dark:text-indigo-400">SMTP</strong> — {{ __('any SMTP server (Gmail, Mailgun, etc.).') }}</p>
-                    <p><strong class="text-purple-600 dark:text-purple-400">Resend</strong> — <a href="{{ mail_drivers.resend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">resend.com</a> API.</p>
-                    <p><strong class="text-orange-600 dark:text-orange-400">Unosend</strong> — <a href="{{ mail_drivers.unosend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">unosend.co</a> API.</p>
-                    <p><strong class="text-red-600 dark:text-red-400">Mailgun</strong> — <a href="{{ mail_drivers.mailgun.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">mailgun.com</a> API. {{ __('Requires a verified domain.') }}</p>
-                    <p><strong class="text-blue-600 dark:text-blue-400">SendGrid</strong> — <a href="{{ mail_drivers.sendgrid.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">sendgrid.com</a> API.</p>
+                    <p><strong class="text-purple-600 dark:text-purple-400">{{ __('Resend') }}</strong> — <a href="{{ mail_drivers.resend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">resend.com</a> API.</p>
+                    <p><strong class="text-orange-600 dark:text-orange-400">{{ __('Unosend') }}</strong> — <a href="{{ mail_drivers.unosend.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">unosend.co</a> API.</p>
+                    <p><strong class="text-red-600 dark:text-red-400">{{ __('Mailgun') }}</strong> — <a href="{{ mail_drivers.mailgun.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">mailgun.com</a> API. {{ __('Requires a verified domain.') }}</p>
+                    <p><strong class="text-blue-600 dark:text-blue-400">{{ __('SendGrid') }}</strong> — <a href="{{ mail_drivers.sendgrid.signup_url }}" target="_blank" rel="noopener" class="text-gray-900 dark:text-gray-100 hover:underline">sendgrid.com</a> API.</p>
                 </div>
             </div>
         </div>

@@ -19,7 +19,7 @@
                     {% if t b-and 1 %}Open{% endif %}{% if t == 3 %}&amp;{% endif %}{% if t b-and 2 %}Click{% endif %}
                 </span>
                 {% else %}
-                <span class="inline-flex rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500 dark:text-gray-400">No tracking</span>
+                <span class="inline-flex rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-400 dark:text-gray-500 dark:text-gray-400">{{ __('No tracking') }}</span>
                 {% endif %}
                 <span x-text="visibleCount + ' recipients'"></span>
             </span>
@@ -42,11 +42,11 @@
 
 <div class="mb-6 grid grid-cols-3 gap-4">
     <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
-        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Sent</p>
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __('Sent') }}</p>
         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ total }}</p>
     </div>
     <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
-        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Opened</p>
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __('Opened') }}</p>
         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">
             {% if campaign.opensCount %}
             <a href="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/recipients?filter=opened') }}" class="hover:underline">{{ campaign.opensCount }}</a>
@@ -57,7 +57,7 @@
         </p>
     </div>
     <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 px-5 py-4 transition-colors">
-        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Clicked</p>
+        <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ __('Clicked') }}</p>
         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">
             {% if campaign.clicksCount %}
             <a href="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/recipients?filter=clicked') }}" class="hover:underline">{{ campaign.clicksCount }}</a>
@@ -97,7 +97,7 @@
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.clicks_count ?: '—' }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">No recipients recorded yet.</td></tr>
+            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">{{ __('No recipients recorded yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

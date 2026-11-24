@@ -80,7 +80,7 @@
 {# Floating / sticky save bar — always visible bottom-right, shows active category #}
 <div id="floating-save-bar"
      class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-gray-200 bg-white/95 p-1.5 pl-3 shadow-lg backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
-    <div id="floating-save-category" class="text-xs font-medium text-gray-500 dark:text-gray-400">General</div>
+    <div id="floating-save-category" class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('General') }}</div>
     <button type="button" id="floating-save-btn" title="{{ __('Save (:shortcut)', {':shortcut': 'Ctrl+S / Cmd+S'}) }}"
             data-title-save="{{ __('Save (:shortcut)', {':shortcut': 'Ctrl+S / Cmd+S'})|e('html_attr') }}"
             data-title-idle="{{ __('No changed settings to save')|e('html_attr') }}"

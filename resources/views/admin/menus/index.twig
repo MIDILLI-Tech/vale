@@ -160,7 +160,7 @@
                                 class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
                         <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '/clone') }}">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:bg-gray-800/50 dark:text-gray-400">Clone</button>
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:bg-gray-800/50 dark:text-gray-400">{{ __('Clone') }}</button>
                         </form>
                         <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '') }}"
                               onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">

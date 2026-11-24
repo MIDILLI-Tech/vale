@@ -18,12 +18,12 @@
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="import_platform_picker" value="shopify" x-model="importPlatform"
                                class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
-                        Shopify
+                        {{ __('Shopify') }}
                     </label>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="import_platform_picker" value="etsy" x-model="importPlatform"
                                class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
-                        Etsy
+                        {{ __('Etsy') }}
                     </label>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="import_platform_picker" value="ebay" x-model="importPlatform"
@@ -33,7 +33,7 @@
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="import_platform_picker" value="amazon" x-model="importPlatform"
                                class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
-                        Amazon
+                        {{ __('Amazon') }}
                     </label>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="import_platform_picker" value="products" x-model="importPlatform"
@@ -47,7 +47,7 @@
                 {# Shopify Import #}
                 <div x-show="importPlatform === 'shopify'" x-cloak
                      class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Shopify</h4>
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{{ __('Shopify') }}</h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                         {{ __('Import products with handle-based grouping, multiple options, full product variations, and media downloads.') }}
                         {% if import_export_urls.shopify %}
@@ -85,7 +85,7 @@
                 {# Etsy Import #}
                 <div x-show="importPlatform === 'etsy'" x-cloak
                      class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Etsy</h4>
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{{ __('Etsy') }}</h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                         {{ __('Import products from Etsy Listings CSV, including descriptions, sections/categories, pricing, stock, and up to 10 listing images.') }}
                         {{ __('Note: Etsy exports carry a single price per listing, so per-variation prices cannot be imported — adjust them in the product editor after import.') }}
@@ -162,7 +162,7 @@
                 {# Amazon Import #}
                 <div x-show="importPlatform === 'amazon'" x-cloak
                      class="flex flex-col h-full border dark:border-gray-800 rounded-lg p-5 bg-gray-50/50 dark:bg-gray-800/20">
-                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">Amazon</h4>
+                    <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{{ __('Amazon') }}</h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                         {{ __('Import products from Amazon Seller Central Inventory Reports (CSV/TXT/XLSM/XLSX). Includes SKU, Title, Price, Stock, and ASIN as GTIN.') }}
                         {% if import_export_urls.amazon %}

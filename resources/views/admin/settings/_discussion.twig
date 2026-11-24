@@ -36,12 +36,12 @@
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="comment_system" value="disqus" x-model="commentSystem"
                                class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
-                        Disqus
+                        {{ __('Disqus') }}
                     </label>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="comment_system" value="giscus" x-model="commentSystem"
                                class="text-gray-900 focus:ring-gray-500 border-gray-300 dark:border-gray-700">
-                        Giscus (GitHub)
+                        {{ __('Giscus (GitHub)') }}
                     </label>
                     <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                         <input type="radio" name="comment_system" value="facebook" x-model="commentSystem"
@@ -132,7 +132,7 @@
                         <option value="hcaptcha"  {{ comment_captcha_type == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
                         <option value="recaptcha" {{ comment_captcha_type == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
                         <option value="turnstile" {{ comment_captcha_type == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
-                        <option value="honeypot"  {{ comment_captcha_type == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                        <option value="honeypot"  {{ comment_captcha_type == 'honeypot'   ? 'selected' }}>{{ __('Honeypot (hidden field)') }}</option>
                     </select>
                     <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
                        class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
@@ -172,22 +172,22 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div {{ vl.attrs('discussion', 'GitHub Repository', 'giscus_repo', '', __('Comment System'), 'giscus github repository') }}>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GitHub Repository</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('GitHub Repository') }}</label>
                         <input type="text" name="giscus_repo" value="{{ settings.giscus_repo|default('') }}" placeholder="owner/repo"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     </div>
                     <div {{ vl.attrs('discussion', 'Repository ID', 'giscus_repo_id', '', __('Comment System'), 'giscus repo id') }}>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Repository ID</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Repository ID') }}</label>
                         <input type="text" name="giscus_repo_id" value="{{ settings.giscus_repo_id|default('') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     </div>
                     <div {{ vl.attrs('discussion', 'Category Name', 'giscus_category', '', __('Comment System'), 'giscus category') }}>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category Name</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Category Name') }}</label>
                         <input type="text" name="giscus_category" value="{{ settings.giscus_category|default('Announcements') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     </div>
                     <div {{ vl.attrs('discussion', 'Category ID', 'giscus_category_id', '', __('Comment System'), 'giscus category id') }}>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category ID</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Category ID') }}</label>
                         <input type="text" name="giscus_category_id" value="{{ settings.giscus_category_id|default('') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     </div>
@@ -197,10 +197,10 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Mapping') }}</label>
                         <select name="giscus_mapping" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                             {% set g_map = settings.giscus_mapping|default('pathname') %}
-                            <option value="pathname" {{ g_map == 'pathname' ? 'selected' }}>Pathname</option>
+                            <option value="pathname" {{ g_map == 'pathname' ? 'selected' }}>{{ __('Pathname') }}</option>
                             <option value="url" {{ g_map == 'url' ? 'selected' }}>URL</option>
-                            <option value="title" {{ g_map == 'title' ? 'selected' }}>Title</option>
-                            <option value="og:title" {{ g_map == 'og:title' ? 'selected' }}>OG:Title</option>
+                            <option value="title" {{ g_map == 'title' ? 'selected' }}>{{ __('Title') }}</option>
+                            <option value="og:title" {{ g_map == 'og:title' ? 'selected' }}>{{ __('OG:Title') }}</option>
                         </select>
                     </div>
                     <div {{ vl.attrs('discussion', __('Theme'), 'giscus_theme', '', __('Comment System'), 'giscus dark light theme') }}>
@@ -208,9 +208,9 @@
                         <select name="giscus_theme" class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                             {% set g_theme = settings.giscus_theme|default('') %}
                             <option value="" {{ g_theme == '' ? 'selected' }}>{{ __('Automatic (theme default)') }}</option>
-                            <option value="light" {{ g_theme == 'light' ? 'selected' }}>Light</option>
-                            <option value="dark" {{ g_theme == 'dark' ? 'selected' }}>Dark</option>
-                            <option value="preferred_color_scheme" {{ g_theme == 'preferred_color_scheme' ? 'selected' }}>Preferred Color Scheme</option>
+                            <option value="light" {{ g_theme == 'light' ? 'selected' }}>{{ __('Light') }}</option>
+                            <option value="dark" {{ g_theme == 'dark' ? 'selected' }}>{{ __('Dark') }}</option>
+                            <option value="preferred_color_scheme" {{ g_theme == 'preferred_color_scheme' ? 'selected' }}>{{ __('Preferred Color Scheme') }}</option>
                         </select>
                     </div>
                 </div>
@@ -227,7 +227,7 @@
                     </ul>
                 </div>
                 <div {{ vl.attrs('discussion', 'Facebook App ID', 'facebook_app_id', '', __('Comment System'), 'facebook comments plugin') }}>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Facebook App ID</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Facebook App ID') }}</label>
                     <input type="text" name="facebook_app_id" value="{{ settings.facebook_app_id|default('') }}"
                            class="w-full max-w-md rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Your Facebook App ID for the Comments plugin.') }}</p>

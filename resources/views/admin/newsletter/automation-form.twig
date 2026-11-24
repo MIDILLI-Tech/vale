@@ -55,9 +55,9 @@
                     <template x-if="steps.length > 1">
                         <div class="flex gap-1 mr-20">
                             <button type="button" @click="collapseAll"
-                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">Collapse all</button>
+                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">{{ __('Collapse all') }}</button>
                             <button type="button" @click="expandAll"
-                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">Expand all</button>
+                                    class="text-xs text-gray-400 hover:text-gray-700 px-2">{{ __('Expand all') }}</button>
                         </div>
                     </template>
                 </div>
@@ -106,7 +106,7 @@
                                             class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">⇊</button>
                                     <span class="mx-1 text-gray-300">|</span>
                                     <button type="button" @click="removeStep(i)"
-                                            class="text-xs text-red-500 hover:text-red-700">Remove</button>
+                                            class="text-xs text-red-500 hover:text-red-700">{{ __('Remove') }}</button>
                                 </div>
                             </div>
 
@@ -134,10 +134,10 @@
                                     <div class="flex flex-col items-end gap-2">
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" x-model="step.ab_test_enabled" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
-                                            <span class="text-sm font-medium text-gray-700">A/B Test Step</span>
+                                            <span class="text-sm font-medium text-gray-700">{{ __('A/B Test Step') }}</span>
                                         </label>
                                         <div x-show="step.ab_test_enabled" class="flex items-center gap-3 bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
-                                            <span class="text-[10px] font-bold text-gray-400 uppercase">Weight:</span>
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase">{{ __('Weight:') }}</span>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-xs text-gray-500">A: <span x-text="100 - (step.variation_b_weight || 50)"></span>%</span>
                                                 <input type="range" min="1" max="99" x-model.number="step.variation_b_weight" class="w-24 accent-indigo-600">
@@ -151,29 +151,29 @@
                             {# Stats display in expanded mode #}
                             <div class="mb-4 flex gap-8 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase mb-1" x-text="step.ab_test_enabled ? 'Variant A Stats' : 'Step Stats'">Stats</h5>
+                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase mb-1" x-text="step.ab_test_enabled ? 'Variant A Stats' : 'Step Stats'">{{ __('Stats') }}</h5>
                                     <div class="flex gap-4">
                                         <div class="flex flex-col">
                                             <span class="text-lg font-bold text-gray-700 dark:text-gray-200" x-text="step.opens_count || 0"></span>
-                                            <span class="text-[10px] text-gray-400 uppercase">Opens</span>
+                                            <span class="text-[10px] text-gray-400 uppercase">{{ __('Opens') }}</span>
                                         </div>
                                         <div class="flex flex-col">
                                             <span class="text-lg font-bold text-gray-700 dark:text-gray-200" x-text="step.clicks_count || 0"></span>
-                                            <span class="text-[10px] text-gray-400 uppercase">Clicks</span>
+                                            <span class="text-[10px] text-gray-400 uppercase">{{ __('Clicks') }}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <template x-if="step.ab_test_enabled">
                                     <div class="border-l border-gray-100 dark:border-gray-800 pl-8">
-                                        <h5 class="text-[10px] font-bold text-indigo-400 uppercase mb-1">Variant B Stats</h5>
+                                        <h5 class="text-[10px] font-bold text-indigo-400 uppercase mb-1">{{ __('Variant B Stats') }}</h5>
                                         <div class="flex gap-4">
                                             <div class="flex flex-col">
                                                 <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="step.opens_count_b || 0"></span>
-                                                <span class="text-[10px] text-indigo-300 uppercase">Opens</span>
+                                                <span class="text-[10px] text-indigo-300 uppercase">{{ __('Opens') }}</span>
                                             </div>
                                             <div class="flex flex-col">
                                                 <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="step.clicks_count_b || 0"></span>
-                                                <span class="text-[10px] text-indigo-300 uppercase">Clicks</span>
+                                                <span class="text-[10px] text-indigo-300 uppercase">{{ __('Clicks') }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -185,52 +185,52 @@
                                         class="flex items-center gap-2 mb-3 w-full text-left">
                                     <span class="text-xs text-gray-400 w-4 text-center leading-none select-none"
                                           x-html="step.segmentationCollapsed ? '&#9654;' : '&#9660;'"></span>
-                                    <span class="text-xs font-bold uppercase text-gray-500">Segmentation</span>
+                                    <span class="text-xs font-bold uppercase text-gray-500">{{ __('Segmentation') }}</span>
                                     <span class="text-[10px] text-gray-400 ml-1"
                                           x-text="_hasActiveFilters(step) ? '(filters active)' : '(no filters)'"></span>
                                 </button>
                                 <div x-show="!step.segmentationCollapsed" x-cloak class="grid grid-cols-2 gap-8">
                                     <template x-if="window._VL_SHOP_ENABLED"><div class="space-y-4">
                                         <div class="mb-3">
-                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Order Count</label>
+                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">{{ __('Order Count') }}</label>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
                                                     <input type="number" min="0" x-model.number="step.min_orders_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
                                                     <input type="number" min="0" x-model.number="step.max_orders_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                             </div>
                                         </div>
 <div class="mb-3">
-                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Total Spent</label>
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">{{ __('Total Spent') }}</label>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
                                                     <input type="number" min="0" step="0.01" x-model.number="step.min_total_spend_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
                                                     <input type="number" min="0" step="0.01" x-model.number="step.max_total_spend_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Last Purchase (days ago)</label>
+                                            <label class="block text-xs font-bold uppercase text-gray-500 mb-2">{{ __('Last Purchase (days ago)') }}</label>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Min:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
                                                     <input type="number" min="0" x-model.number="step.min_days_since_last_purchase_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-xs text-gray-500">Max:</span>
+                                                    <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
                                                     <input type="number" min="0" x-model.number="step.max_days_since_last_purchase_filter" placeholder="any"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
@@ -238,7 +238,7 @@
                                         </div>
                                     </div></template>
                                     <div>
-                                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">Engagement Rates</label>
+                                        <label class="block text-xs font-bold uppercase text-gray-500 mb-2">{{ __('Engagement Rates') }}</label>
                                         <div class="grid grid-cols-2 gap-4">
                                             <div class="flex items-center gap-2">
                                                 <span class="text-[10px] text-gray-500 uppercase">Min Open %:</span>
@@ -277,17 +277,17 @@
                                     <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-2">
                                         <button type="button" @click="step.variantTab = 'a'"
                                                 :class="step.variantTab === 'a' ? 'border-b-2 border-gray-900 dark:border-white text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600'"
-                                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant A</button>
+                                                class="pb-2 text-sm font-medium -mb-px transition-colors">{{ __('Variant A') }}</button>
                                         <button type="button" @click="step.variantTab = 'b'"
                                                 :class="step.variantTab === 'b' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
-                                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant B</button>
+                                                class="pb-2 text-sm font-medium -mb-px transition-colors">{{ __('Variant B') }}</button>
                                     </div>
                                 </template>
 
                                 {# Variant A content #}
                                 <div :class="step.ab_test_enabled && step.variantTab !== 'a' ? 'hidden' : ''">
                                     <template x-if="step.ab_test_enabled">
-                                        <h4 class="text-xs font-bold uppercase text-gray-500">Variant A</h4>
+                                        <h4 class="text-xs font-bold uppercase text-gray-500">{{ __('Variant A') }}</h4>
                                     </template>
                                     {# Subject #}
                                     <div class="mb-4">
@@ -299,7 +299,7 @@
 
                                     {# Body #}
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Email Body') }}</label>
 {% include 'admin/newsletter/_template_vars.twig' %}
                                     {#
                                         x-init + $nextTick ensures the textarea exists in the DOM

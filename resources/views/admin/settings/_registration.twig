@@ -128,7 +128,7 @@
                             {% if key == 'steam' %}
                             {# Steam uses OpenID — no OAuth client credentials needed, only optional Web API key #}
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Steam Web API Key</label>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Steam Web API Key') }}</label>
                                 <input type="text" name="steam_api_key"
                                        value="{{ settings.steam_api_key|default('') }}"
                                        placeholder="Get key at https://steamcommunity.com/dev"
@@ -141,14 +141,14 @@
                             {% else %}
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Client ID</label>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Client ID') }}</label>
                                     <input type="text" name="sso_{{ key }}_client_id"
                                            value="{{ attribute(settings, 'sso_' ~ key ~ '_client_id')|default('') }}"
                                            placeholder="{{ info.label }} Client ID"
                                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Client Secret</label>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Client Secret') }}</label>
                                     <input type="password" name="sso_{{ key }}_client_secret"
                                            value="{{ has_secret ? '••••••••' : '' }}"
                                            autocomplete="new-password"
@@ -213,7 +213,7 @@
                     <option value="hcaptcha"  {{ settings.login_captcha_type|default('none') == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
                     <option value="recaptcha" {{ settings.login_captcha_type|default('none') == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
                     <option value="turnstile" {{ settings.login_captcha_type|default('none') == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
-                    <option value="honeypot"  {{ settings.login_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                    <option value="honeypot"  {{ settings.login_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>{{ __('Honeypot (hidden field)') }}</option>
                 </select>
                 <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
                    class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>
@@ -236,7 +236,7 @@
                     <option value="hcaptcha"  {{ settings.register_captcha_type|default('none') == 'hcaptcha'   ? 'selected' }}>hCaptcha</option>
                     <option value="recaptcha" {{ settings.register_captcha_type|default('none') == 'recaptcha'  ? 'selected' }}>Google reCAPTCHA v3</option>
                     <option value="turnstile" {{ settings.register_captcha_type|default('none') == 'turnstile'  ? 'selected' }}>Cloudflare Turnstile</option>
-                    <option value="honeypot"  {{ settings.register_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>Honeypot (hidden field)</option>
+                    <option value="honeypot"  {{ settings.register_captcha_type|default('none') == 'honeypot'   ? 'selected' }}>{{ __('Honeypot (hidden field)') }}</option>
                 </select>
                 <p x-show="['hcaptcha', 'recaptcha', 'turnstile'].includes(type) && !config[type]"
                    class="mt-1 text-xs text-red-600 dark:text-red-400 font-medium" x-cloak>

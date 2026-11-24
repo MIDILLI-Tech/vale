@@ -13,11 +13,11 @@
 {% endif %}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Email Campaigns</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Email Campaigns') }}</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> campaigns</p>
     </div>
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <a href="{{ url('/admin/newsletter/subscribers') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">Subscribers</a>
+        <a href="{{ url('/admin/newsletter/subscribers') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Subscribers') }}</a>
         <a href="{{ url('/admin/newsletter/campaigns/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ New Campaign</a>
     </div>
 </div>
@@ -144,19 +144,19 @@
                         <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
                               onsubmit="return confirm('{{ __('Send this campaign now to all matching subscribers?')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">Send Now</button>
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">{{ __('Send Now') }}</button>
                         </form>
                         {% elseif c.status == 'sent' %}
                         <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">Reports</a>
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">{{ __('Reports') }}</a>
                         <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/resend') }}"
                               onsubmit="return confirm('{{ __('Resend this campaign to all matching subscribers? Previous tracking data will be reset.')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">Resend</button>
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">{{ __('Resend') }}</button>
                         </form>
                         {% elseif c.status == 'queued' or c.status == 'processing' %}
                         <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">Reports</a>
+                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">{{ __('Reports') }}</a>
                         <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
                               onsubmit="return confirm('{{ __('Send the next batch of this campaign now? The rest will continue automatically by cron.')|e('js') }}')">
                             {{ csrf_field() }}
@@ -165,7 +165,7 @@
                         {% endif %}
                         <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/clone') }}">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">Clone</button>
+                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">{{ __('Clone') }}</button>
                         </form>
                         <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '') }}"
                               onsubmit="return confirm('{{ __('Delete campaign?')|e('js') }}')">

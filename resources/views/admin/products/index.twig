@@ -22,7 +22,7 @@
             {% for s in ['draft', 'published', 'scheduled', 'archived', 'expired'] %}
             <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
             {% endfor %}
-            <option value="on_sale" {{ filters.status|default('') == 'on_sale' ? 'selected' }}>On Sale</option>
+            <option value="on_sale" {{ filters.status|default('') == 'on_sale' ? 'selected' }}>{{ __('On Sale') }}</option>
         </select>
         {% if multi_language_content %}
         <select name="language" onchange="this.form.submit()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-200">
@@ -32,7 +32,7 @@
             {% endfor %}
         </select>
         {% endif %}
-        <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
+        <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">{{ __('Filter') }}</button>
     </form>
     {{ table.search(__('Search…')) }}
     {{ table.contentSearch() }}
@@ -173,7 +173,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="{{ multi_language_content ? 12 : 11 }}" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">No products yet.</td></tr>
+            <tr><td colspan="{{ multi_language_content ? 12 : 11 }}" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">{{ __('No products yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

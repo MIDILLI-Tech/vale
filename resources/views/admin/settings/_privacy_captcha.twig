@@ -84,7 +84,7 @@
                         {% if captcha_urls.recaptcha.signup_url is defined %}
                         <a href="{{ captcha_urls.recaptcha.signup_url }}" target="_blank" rel="noopener" class="underline font-medium">{{ __('Google reCAPTCHA Admin') }}</a>
                         {% else %}
-                        <strong>Google reCAPTCHA Admin</strong>
+                        <strong>{{ __('Google reCAPTCHA Admin') }}</strong>
                         {% endif %}
                         → reCAPTCHA v3 Admin Console
                     </p>
