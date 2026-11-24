@@ -67,7 +67,8 @@
             </table>
         </div>
         <div class="mt-4 flex items-center justify-between text-sm account-table-muted" x-show="filteredOrders.length > perPage">
-            <span x-text="'{{ __('Showing') }} ' + (((page - 1) * perPage) + 1) + '-' + Math.min(page * perPage, filteredOrders.length) + ' {{ __('of') }} ' + filteredOrders.length"></span>
+            <span x-data="{ rangeLabel: {{ __('Showing :from-:to of :total')|json_encode|raw }} }}"
+                  x-text="rangeLabel.replace(':from', ((page - 1) * perPage) + 1).replace(':to', Math.min(page * perPage, filteredOrders.length)).replace(':total', filteredOrders.length)"></span>
             <div class="flex items-center gap-2">
                 <button @click="page = Math.max(1, page - 1)" :disabled="page === 1"
                         class="account-secondary-button rounded-sm border px-3 py-1.5 text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed">{{ __('Previous') }}</button>

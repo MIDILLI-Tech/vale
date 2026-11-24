@@ -187,7 +187,7 @@
     <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
         <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Total Pageviews') }}</p>
         <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ total_views }}</p>
-        <p class="mt-0.5 text-xs text-gray-400">{% if range_from %}{{ range_from }} – {{ range_to }}{% else %}{{ __('in the last') }} {{ days }} {{ __('days') }}{% endif %}</p>
+        <p class="mt-0.5 text-xs text-gray-400">{% if range_from %}{{ range_from }} – {{ range_to }}{% else %}{{ __('in the last :days days', {':days': days}) }}{% endif %}</p>
     </div>
     <div class="rounded-xl border bg-white dark:bg-gray-900 p-4 shadow-xs">
         <p class="text-xs font-medium uppercase tracking-wider text-gray-400">{{ __('Pages / Session') }}</p>
