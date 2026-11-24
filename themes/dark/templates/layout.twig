@@ -783,7 +783,7 @@
     {% endif %}
 
     {# ── Main content ───────────────────────────────────── #}
-    <main class="py-8">
+    <main class="{{ (flash is defined and flash|length > 0) ? 'pb-8' : 'py-8' }}">
         {% block content %}{% endblock %}
     </main>
 
