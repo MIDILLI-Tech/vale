@@ -28,7 +28,7 @@
 <body>
 <div class="wrapper">
   <div class="header">
-    <a href="{{ site_url ~ '/' }}">
+    <a href="{{ absolute_url('/') }}">
       {% if site_logo|default('') %}
       <img src="{{ site_logo }}" alt="{{ site_name|default('Vale') }}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;">
       {% else %}

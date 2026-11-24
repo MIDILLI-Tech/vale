@@ -126,10 +126,26 @@ final class MailService
         }
 
         try {
-            return site_url('/' . ltrim($logo, '/'));
+            $absolute = absolute_url('/' . ltrim($logo, '/'));
         } catch (\Throwable) {
             return $logo;
         }
+
+        if (preg_match('~^https?://~i', $absolute)) {
+            return $absolute;
+        }
+
+        // APP_URL is not configured (common on dev): build the host from the
+        // current request so the header still resolves, instead of shipping a
+        // root-relative path that mail clients cannot fetch.
+        $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        if ($host === '' || !preg_match('~^[A-Za-z0-9.\-:\[\]]+$~', $host)) {
+            return $logo;
+        }
+
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+
+        return $scheme . '://' . $host . $absolute;
     }
 
     /**
