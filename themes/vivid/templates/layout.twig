@@ -169,14 +169,14 @@
                              (font_family_setting == 'open-sans' ? 'open-sans:400,600,700' :
                              (font_family_setting == 'montserrat' ? 'montserrat:400,600,700' : 'inter:400,500,600,700,800'))) %}
     <link href="https://fonts.bunny.net/css?family={{ bunny_font_query }}&family=playfair-display:600,700" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style type="text/tailwindcss">
         @custom-variant dark (&:where(.dark, .dark *));
     </style>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script nonce="{{ csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {# App logic (lightbox, visitor timezone) has no CDN copy:
        it always comes from the local bundle and uses the CDN globals above. #}
-    <script defer src="{{ asset('assets/build/app.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/app.js') }}"></script>
     {% else %}
     {% include 'partials/_build_assets.twig' %}
     {% endif %}
@@ -1043,7 +1043,7 @@
         <span class="vl-admin-bar-hint">Ctrl+E to edit</span>
         <button onclick="document.getElementById('vl-admin-bar').remove()" class="vl-admin-bar-close" title="Close">&times;</button>
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             var form = document.querySelector('form[data-autosave]');

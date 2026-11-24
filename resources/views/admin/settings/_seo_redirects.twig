@@ -1,6 +1,6 @@
 <div id="seo-tab-redirects" class="seo-tab-panel hidden">
 {% import 'admin/macros/vl-setting.twig' as vl %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     window.seoRedirectData = function() {
         return {
             autoRedirect: {{ settings.auto_redirect_enabled|default('1') == '1' ? 'true' : 'false' }},

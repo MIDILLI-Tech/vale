@@ -161,7 +161,7 @@
 {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         document.querySelectorAll('[id^="theme-modal-"]').forEach(function(modal) {

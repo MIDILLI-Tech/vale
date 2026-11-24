@@ -455,7 +455,7 @@
                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">{{ form and form.settings.allowed_domains ? form.settings.allowed_domains|join('\n') : '' }}</textarea>
                     <p id="allowed-domains-warning" class="mt-1 text-xs text-amber-500 hidden">Please enter host only, without https:// (e.g. example.com)</p>
                     <p class="mt-1 text-xs text-gray-400">{{ __('One domain per line. Leave empty to allow all (not recommended).') }}</p>
-                    <script>
+                    <script nonce="{{ csp_nonce }}">
                     (function(){
                       const ta = document.querySelector('textarea[name="allowed_domains"]');
                       const warn = document.getElementById('allowed-domains-warning');
@@ -533,7 +533,7 @@
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                         <p class="mt-1 text-xs text-gray-400">{{ __('Field name added to the form to trick bots. Pick something natural, e.g. website.') }}</p>
                     </div>
-                <script>
+                <script nonce="{{ csp_nonce }}">
                 (function(){
                     var sel = document.querySelector('select[name="captcha_type"]');
                     var hint = document.getElementById('captcha-type-hint');
@@ -634,7 +634,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function normalizeFieldOptions(options) {
     // Legacy forms store options as plain strings; newer ones as {value, title}.
     return (options || []).map(function(o) {

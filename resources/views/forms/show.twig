@@ -9,7 +9,7 @@
 {% set allowMultiple = form.settings.allow_multiple ?? true %}
 {% set alreadySubmitted = already_submitted|default(false) %}
 {% if (success or alreadySubmitted) and not allowMultiple %}
-<script>
+<script nonce="{{ csp_nonce }}">
     localStorage.setItem('vl_form_submitted_{{ form.id }}', '1');
 </script>
 {% endif %}
@@ -25,7 +25,7 @@
         {% endif %}
     </div>
     {% elseif not allowMultiple %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
         document.addEventListener('DOMContentLoaded', function() {
             if (localStorage.getItem('vl_form_submitted_{{ form.id }}')) {
                 var wrap = document.getElementById('vl-form-wrap');
@@ -183,11 +183,11 @@
                 </div>
             {% elseif captcha_type == 'hcaptcha' and captcha_site_key %}
                 <div class="h-captcha max-w-full" data-sitekey="{{ captcha_site_key }}"></div>
-                <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
             {% elseif captcha_type == 'recaptcha' and captcha_site_key %}
                 <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-form-response">
-                <script src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha_site_key }}"></script>
-                <script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha_site_key }}"></script>
+                <script nonce="{{ csp_nonce }}">
                     grecaptcha.ready(function() {
                         try {
                             grecaptcha.execute('{{ captcha_site_key }}', {action: 'form_submission'}).then(function(token) {
@@ -202,7 +202,7 @@
                 </script>
             {% elseif captcha_type == 'turnstile' and captcha_site_key %}
                 <div class="cf-turnstile max-w-full" data-sitekey="{{ captcha_site_key }}" data-theme="auto" data-size="flexible"></div>
-                <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
             {% endif %}
         </div>
         {% endif %}
@@ -216,5 +216,5 @@
     </div>
     {% endif %}
 </div>
-<script defer src="{{ asset('assets/js/form-conditions.js') }}"></script>
+<script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/js/form-conditions.js') }}"></script>
 {% endblock %}

@@ -4,9 +4,9 @@
 
 {% block head %}
 {% if assets_use_cdn %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% else %}
-<script src="{{ asset('assets/build/charts.js') }}"></script>
+<script nonce="{{ csp_nonce }}" src="{{ asset('assets/build/charts.js') }}"></script>
 {% endif %}
 {% endblock %}
 
@@ -230,7 +230,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('alpine:init', function () {
     Alpine.data('datePresets', function () {
         function fmt(d) {
@@ -277,7 +277,7 @@ document.addEventListener('alpine:init', function () {
     });
 });
 </script>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
     var dailyData  = {{ data.daily|json_encode|raw }};
     var statusData  = {{ data.status_breakdown|json_encode|raw }};

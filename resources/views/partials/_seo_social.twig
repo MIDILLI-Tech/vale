@@ -65,7 +65,7 @@
 
 {# Advertisement: Head #}
 {% if advertisement_enabled == '1' and advertisement_placement == 'head' and advertisement_code %}
-    {{ advertisement_code|raw }}
+    {{ advertisement_code|csp_nonce|raw }}
 {% endif %}
 
 {# Verification Codes #}
@@ -76,7 +76,7 @@
 {# Structured Data (JSON-LD) for LLMO & Search Engines #}
 {% if product %}
     {% set ld_image = get_media_url(product.featuredImageId) %}
-    <script type="application/ld+json">
+    <script nonce="{{ csp_nonce }}" type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -109,7 +109,7 @@
     </script>
 {% elseif post %}
     {% set ld_image = get_media_url(post.featuredImageId) %}
-    <script type="application/ld+json">
+    <script nonce="{{ csp_nonce }}" type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "{{ post.contentType == 'page' ? 'WebPage' : 'Article' }}",

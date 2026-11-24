@@ -1,4 +1,4 @@
-<script>
+<script nonce="{{ csp_nonce }}">
     function setLanguage(lang) {
         const translations = {{ seo_state.translations|default({})|json_encode|raw }};
         const basePath = '{{ base_path }}';

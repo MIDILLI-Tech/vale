@@ -166,14 +166,14 @@
                              (font_family_setting == 'montserrat' ? 'montserrat:400,600,700' :
                              (font_family_setting == 'playfair-display' ? 'playfair-display:600,700' : 'inter:400,500,600,700,800')))) %}
     <link href="https://fonts.bunny.net/css?family={{ bunny_font_query }}" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style type="text/tailwindcss">
         @custom-variant dark (&:where(.dark, .dark *));
     </style>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script nonce="{{ csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     {# App logic (lightbox, visitor timezone) has no CDN copy:
        it always comes from the local bundle and uses the CDN globals above. #}
-    <script defer src="{{ asset('assets/build/app.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/app.js') }}"></script>
     {% else %}
     {% include 'partials/_build_assets.twig' %}
     {% endif %}
@@ -541,7 +541,7 @@
     {% endif %}
 
     {% if settings.custom_header_scripts %}
-    {{ settings.custom_header_scripts|raw }}
+    {{ settings.custom_header_scripts|csp_nonce|raw }}
     {% endif %}
 </head>
 <body class="min-h-screen antialiased{{ theme_has_custom_colors is defined and theme_has_custom_colors ? ' vl-custom-colors' : '' }}" style="background-color: var(--theme-bg); color: var(--theme-text);">
@@ -549,7 +549,7 @@
     {# ── Advertisement: Header ── #}
     {% if advertisement_enabled == '1' and advertisement_placement == 'header' and advertisement_code %}
     <div class="vl-ad-header mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex justify-center">
-        {{ advertisement_code|raw }}
+        {{ advertisement_code|csp_nonce|raw }}
     </div>
     {% endif %}
 
@@ -909,7 +909,7 @@
     {# ── Advertisement: Footer ── #}
     {% if advertisement_enabled == '1' and advertisement_placement == 'footer' and advertisement_code %}
     <div class="vl-ad-footer mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 flex justify-center border-t" style="background-color: var(--theme-footer-bg);">
-        {{ advertisement_code|raw }}
+        {{ advertisement_code|csp_nonce|raw }}
     </div>
     {% endif %}
 
@@ -955,7 +955,7 @@
     {% block scripts %}{% endblock %}
 
     {% if settings.custom_footer_scripts %}
-    {{ settings.custom_footer_scripts|raw }}
+    {{ settings.custom_footer_scripts|csp_nonce|raw }}
     {% endif %}
 
     {# ── Admin edit bar ─────────────────────────────────── #}
@@ -966,7 +966,7 @@
         <span class="vl-admin-bar-hint">Ctrl+E to edit</span>
         <button onclick="document.getElementById('vl-admin-bar').remove()" class="vl-admin-bar-close" title="Close">&times;</button>
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             var form = document.querySelector('form[data-autosave]');

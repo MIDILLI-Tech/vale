@@ -59,6 +59,7 @@ $stubAny = static fn (): string => '';
 foreach ([
     'changelog', 'local_date', 'iso_date', 'price', 'num', 'read_time',
     'compact_count', 'more_teaser', 'post_teaser', 'meta_teaser', 'shortcodes',
+    'csp_nonce',
 ] as $filter) {
     $twig->addFilter(new TwigFilter($filter, $stubAny));
 }

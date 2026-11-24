@@ -358,7 +358,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function typeBuilder() {
     return {
         fields: ({{ type and type.fieldSchema|length > 0 ? type.fieldSchema|json_encode|raw : '[]' }}).map(function(f) {

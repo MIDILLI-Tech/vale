@@ -32,7 +32,7 @@
 {% block title %}{{ __('Categories') }}{% endblock %}
 
 {% block content %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copy-cat-original-btn');
     copyBtn?.addEventListener('click', async function() {

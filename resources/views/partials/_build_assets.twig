@@ -20,6 +20,6 @@
 {% endif %}
 <link rel="stylesheet" href="{{ asset('assets/build/app.css') }}">
 {% if include_js|default(true) %}
-<script defer src="{{ asset('assets/build/app-vendor.js') }}"></script>
-<script defer src="{{ asset('assets/build/app.js') }}"></script>
+<script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/app-vendor.js') }}"></script>
+<script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/app.js') }}"></script>
 {% endif %}

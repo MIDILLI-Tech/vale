@@ -121,7 +121,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function toggleGroup(id) {
     const group = document.getElementById(id);
     if (!group) return;

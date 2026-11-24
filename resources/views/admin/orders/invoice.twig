@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice {{ invoice.invoice_number|default('') }}</title>
     {% if assets_use_cdn %}
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     {% else %}
     {% include 'partials/_build_assets.twig' with { include_js: false, load_alt_fonts: false, load_display_fonts: false } %}
     {% endif %}

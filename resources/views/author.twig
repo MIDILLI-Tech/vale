@@ -5,7 +5,7 @@
 
 {% block head %}
 {% set ld_avatar = avatar_url(author.avatar) %}
-<script type="application/ld+json">
+<script nonce="{{ csp_nonce }}" type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Person",

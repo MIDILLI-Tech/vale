@@ -515,8 +515,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url('/assets/build/charts.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce }}" src="{{ url('/assets/build/charts.js') }}"></script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('alpine:init', function () {
     Alpine.data('analyticsDatePresets', function () {
         function fmt(d) {
@@ -558,7 +558,7 @@ document.addEventListener('alpine:init', function () {
     });
 });
 </script>
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
     const statusCard = document.querySelector('[data-card-id="status-codes"]');
     if (!statusCard) return;

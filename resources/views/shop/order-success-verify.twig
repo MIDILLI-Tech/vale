@@ -46,11 +46,11 @@
                 </div>
                 {% elseif captcha.captcha_type == 'hcaptcha' and captcha.captcha_site_key %}
                 <div class="h-captcha max-w-full" data-sitekey="{{ captcha.captcha_site_key }}"></div>
-                <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
                 {% elseif captcha.captcha_type == 'recaptcha' and captcha.captcha_site_key %}
                 <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
-                <script src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha.captcha_site_key }}"></script>
-                <script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.recaptcha.script_url }}?render={{ captcha.captcha_site_key }}"></script>
+                <script nonce="{{ csp_nonce }}">
                     grecaptcha.ready(function() {
                         try {
                             grecaptcha.execute('{{ captcha.captcha_site_key }}', {action: 'order_verify'}).then(function(token) {
@@ -65,7 +65,7 @@
                 </script>
                 {% elseif captcha.captcha_type == 'turnstile' and captcha.captcha_site_key %}
                 <div class="cf-turnstile max-w-full" data-sitekey="{{ captcha.captcha_site_key }}" data-theme="auto" data-size="flexible"></div>
-                <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+                <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
                 {% elseif captcha.captcha_type == 'honeypot' %}
                 <div style="display:none"><input type="text" name="_hp_name" tabindex="-1" autocomplete="off"></div>
                 {% elseif captcha.captcha_type != 'none' and not captcha.captcha_site_key %}

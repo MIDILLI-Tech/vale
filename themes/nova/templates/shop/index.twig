@@ -193,7 +193,7 @@
 
 {% block scripts %}
 {% include "partials/star-rating-card.twig" %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('alpine:init', () => {
     Alpine.data('shopPagination', () => ({
         currentCurrency: '{{ current_currency|e('js') }}',

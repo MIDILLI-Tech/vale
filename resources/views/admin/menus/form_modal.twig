@@ -218,7 +218,7 @@
     </div>
 </template>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 var _searchCache = {};
 var _definedMenus = {{ defined_menus|json_encode|raw }};
 var _menuFormDirty = false;

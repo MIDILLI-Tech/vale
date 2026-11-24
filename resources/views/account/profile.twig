@@ -8,7 +8,7 @@
 {% set active_tab = 'profile' %}
 
 {% block content %}
-<script>
+<script nonce="{{ csp_nonce }}">
 function vlPublicBio(initial) {
     return {
         bio: initial,

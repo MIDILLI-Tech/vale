@@ -11,6 +11,7 @@ use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Response;
 use ValeApp\App\Middleware\SecurityHeadersMiddleware;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
+use ValeApp\Infrastructure\Security\CspNonce;
 
 final class SecurityHeadersMiddlewareTest extends TestCase
 {
@@ -38,6 +39,13 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         );
 
         return $settings;
+    }
+
+    private function scriptSources(string $csp): string
+    {
+        preg_match('/script-src ([^;]+);/', $csp, $matches);
+
+        return $matches[1] ?? '';
     }
 
     public function testCspConnectSourcesAllowTheConfiguredCollaborationServer(): void
@@ -101,6 +109,58 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         self::assertStringContainsString('https://secure.2checkout.com', $csp);
     }
 
+    public function testScriptElementsRequireANonceInsteadOfInlineCode(): void
+    {
+        $csp    = $this->processRequest()->getHeaderLine('Content-Security-Policy');
+        $script = $this->scriptSources($csp);
+
+        self::assertMatchesRegularExpression("/'nonce-[A-Za-z0-9+\\/=]+'/", $script);
+        self::assertStringContainsString("'unsafe-eval'", $script);
+        self::assertDoesNotMatchRegularExpression('/(?:^|\s)https:(?:\s|$)/', $script);
+        self::assertStringContainsString('https://challenges.cloudflare.com', $script);
+        self::assertStringContainsString("script-src-attr 'unsafe-inline'", $csp);
+        self::assertStringContainsString("object-src 'none'", $csp);
+    }
+
+    public function testOperatorAuthoredScriptsKeepTheHttpsSource(): void
+    {
+        $settings = $this->createStub(SettingsRepositoryInterface::class);
+        $settings->method('get')->willReturnCallback(
+            static fn (string $key, ?string $default = null): ?string => $key === 'advertisement_code'
+                ? '<script async src="https://ads.example.com/loader.js"></script>'
+                : $default,
+        );
+
+        $csp = $this->processRequest('http://localhost/blog/hello', $settings)
+            ->getHeaderLine('Content-Security-Policy');
+
+        self::assertMatchesRegularExpression('/(?:^|\s)https:(?:\s|$)/', $this->scriptSources($csp));
+    }
+
+    public function testNoncePlaceholderIsReplacedInTheResponseBody(): void
+    {
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willReturnCallback(static function (): Response {
+            $response = (new Response())->withHeader('Content-Type', 'text/html; charset=UTF-8');
+            $response->getBody()->write(
+                '<html><head><script nonce="' . CspNonce::PLACEHOLDER . '"></script></head></html>',
+            );
+
+            return $response;
+        });
+
+        $request  = (new ServerRequestFactory())->createServerRequest('GET', 'http://localhost/blog/hello');
+        $response = (new SecurityHeadersMiddleware(null, new CspNonce()))->process($request, $handler);
+
+        $csp = $response->getHeaderLine('Content-Security-Policy');
+        preg_match("/'nonce-([A-Za-z0-9+\\/=]+)'/", $csp, $matches);
+        $nonce = $matches[1] ?? '';
+
+        self::assertNotSame('', $nonce);
+        self::assertStringNotContainsString(CspNonce::PLACEHOLDER, (string) $response->getBody());
+        self::assertStringContainsString('nonce="' . $nonce . '"', (string) $response->getBody());
+    }
+
     public function testSecurityHeadersAreAlwaysPresent(): void
     {
         $response = $this->processRequest();
@@ -108,5 +168,6 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         self::assertSame('SAMEORIGIN', $response->getHeaderLine('X-Frame-Options'));
         self::assertSame('nosniff', $response->getHeaderLine('X-Content-Type-Options'));
         self::assertSame('strict-origin-when-cross-origin', $response->getHeaderLine('Referrer-Policy'));
+        self::assertFalse($response->hasHeader('X-XSS-Protection'));
     }
 }

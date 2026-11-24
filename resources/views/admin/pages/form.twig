@@ -226,7 +226,7 @@
                         <option value="none" data-description="No header, footer or site styles — page body renders as-is." {{ cur_tpl == 'none' ? 'selected' }}>{{ __('None (blank canvas)') }}</option>
                     </select>
                     <p id="tpl-hint" class="mt-1 text-xs text-gray-400"{% if cur_tpl != 'none' %} style="display:none"{% endif %}>&#128247; No header, footer or site styles — page body renders as-is.</p>
-                    <script>
+                    <script nonce="{{ csp_nonce }}">
                         (function(){
                             var sel = document.getElementById('page_template');
                             var hintEl = document.getElementById('tpl-hint');
@@ -375,7 +375,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const copyBtn = document.getElementById('copy-original-btn');
     copyBtn?.addEventListener('click', async function() {
@@ -646,5 +646,5 @@ document.addEventListener('alpine:init', function() {
     });
 });
 </script>
-<script>vlDirtyGuard();</script>
+<script nonce="{{ csp_nonce }}">vlDirtyGuard();</script>
 {% endblock %}

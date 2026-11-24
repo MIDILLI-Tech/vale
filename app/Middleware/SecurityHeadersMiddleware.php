@@ -8,13 +8,20 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Slim\Psr7\Stream;
 use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
+use ValeApp\Infrastructure\Security\CspNonce;
 
 /**
  * Adds security-related HTTP response headers to every response.
  *
- * Configures Content-Security-Policy (CSP) compatible with inline Alpine.js expressions
- * and dynamic scripts, while enforcing strict frame, content-type, referrer, and HSTS headers.
+ * Scripts are whitelisted by nonce: templates render
+ * `nonce="{{ csp_nonce }}"`, which carries the placeholder value that this
+ * middleware replaces with a fresh per-request nonce. Inline event handlers
+ * keep working through `script-src-attr 'unsafe-inline'` (they cannot carry a
+ * nonce); migrating them to listeners is tracked separately.
+ *
+ * 'unsafe-eval' stays until Alpine.js moves to its CSP build.
  *
  * Captcha providers (Turnstile, reCAPTCHA, hCaptcha) challenge iframe origins are merged
  * from the `captcha_urls` catalog in config/reference-data.php, so new providers only need
@@ -25,12 +32,23 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
     /** Cached reference-data catalog — config does not change per request. */
     private static ?array $catalog = null;
 
-    public function __construct(private readonly ?SettingsRepositoryInterface $settings = null)
-    {
+    /** Settings holding operator-authored HTML that may pull remote scripts. */
+    private const OPERATOR_SCRIPT_SETTINGS = [
+        'custom_header_scripts',
+        'custom_footer_scripts',
+        'advertisement_code',
+    ];
+
+    public function __construct(
+        private readonly ?SettingsRepositoryInterface $settings = null,
+        private readonly ?CspNonce $nonce = null,
+    ) {
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $nonce = $this->nonceValue();
+
         $response = $handler->handle($request);
 
         if (self::$catalog === null) {
@@ -56,15 +74,18 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             $captchaFrameOrigins
         );
 
-        // Content-Security-Policy optimized for Alpine.js ('unsafe-eval' required for Alpine expression evaluation)
         // form-action allows 'self' plus the configured APP_URL origin so absolute
         // URLs produced by absolute_url() (e.g. checkout redirects) are never
         // blocked when the app is served from a different host than APP_URL.
         $formAction     = $this->buildFormActionSources($request);
         $connectSources = $this->buildConnectSources();
+        $scriptSources  = $this->buildScriptSources($nonce);
 
         $csp = "default-src 'self'; "
-            . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+            . 'script-src ' . implode(' ', $scriptSources) . '; '
+            // Inline handlers (onclick=, onsubmit=, onchange= …) cannot carry a
+            // nonce; they stay enabled here while <script> elements require one.
+            . "script-src-attr 'unsafe-inline'; "
             . "style-src 'self' 'unsafe-inline' https:; "
             . "img-src 'self' data: https: blob:; "
             . "manifest-src 'self'; "
@@ -73,6 +94,7 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             . 'connect-src ' . implode(' ', $connectSources) . '; '
             . 'frame-src ' . implode(' ', $frameSources) . '; '
             . "frame-ancestors 'self'; "
+            . "object-src 'none'; "
             . "base-uri 'self'; "
             . 'form-action ' . implode(' ', $formAction) . ';';
 
@@ -80,7 +102,6 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
             ->withHeader('Content-Security-Policy', $csp)
             ->withHeader('X-Frame-Options', 'SAMEORIGIN')
             ->withHeader('X-Content-Type-Options', 'nosniff')
-            ->withHeader('X-XSS-Protection', '1; mode=block')
             ->withHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->withHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
@@ -88,6 +109,109 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
         $uri = $request->getUri();
         if ($uri->getScheme() === 'https' || ($request->getHeaderLine('X-Forwarded-Proto') === 'https')) {
             $response = $response->withHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
+        return $this->applyNonceToBody($response, $nonce);
+    }
+
+    /**
+     * script-src sources: first-party scripts plus the request nonce.
+     *
+     * `https:` is only added when the operator authored raw script HTML in the
+     * settings — those snippets (and anything they inject at runtime) cannot be
+     * covered by a nonce, so removing their origin allowance would silently
+     * break analytics/ad code. Self-hosted builds never need it: every <script>
+     * tag in the templates carries the nonce.
+     *
+     * @return list<string>
+     */
+    private function buildScriptSources(string $nonce): array
+    {
+        $sources = ["'self'", "'nonce-" . $nonce . "'", "'unsafe-eval'"];
+
+        // Captcha widgets and Stripe Elements fetch further scripts from their
+        // own hosts after the nonced loader runs. List those exact origins
+        // instead of falling back to a blanket `https:` scheme.
+        $catalog = self::$catalog ?? [];
+        foreach (['captcha_urls', 'payment_api'] as $group) {
+            foreach ($catalog[$group] ?? [] as $provider) {
+                if (!is_array($provider) || empty($provider['script_src'])) {
+                    continue;
+                }
+                foreach (preg_split('/\s+/', (string) $provider['script_src']) ?: [] as $origin) {
+                    $origin = trim($origin);
+                    if ($origin !== '' && !in_array($origin, $sources, true)) {
+                        $sources[] = $origin;
+                    }
+                }
+            }
+        }
+
+        if ($this->hasOperatorAuthoredScripts()) {
+            $sources[] = 'https:';
+        }
+
+        return $sources;
+    }
+
+    private function hasOperatorAuthoredScripts(): bool
+    {
+        if ($this->settings === null) {
+            return false;
+        }
+
+        try {
+            foreach (self::OPERATOR_SCRIPT_SETTINGS as $key) {
+                if (trim((string) ($this->settings->get($key, '') ?? '')) !== '') {
+                    return true;
+                }
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return false;
+    }
+
+    private function nonceValue(): string
+    {
+        return $this->nonce?->value() ?? base64_encode(random_bytes(16));
+    }
+
+    /**
+     * Swap the render-time placeholder for this request's nonce.
+     *
+     * Cached HTML is stored with the placeholder intact, so the cache can serve
+     * every guest while each response still carries a matching nonce.
+     */
+    private function applyNonceToBody(ResponseInterface $response, string $nonce): ResponseInterface
+    {
+        $contentType = strtolower($response->getHeaderLine('Content-Type'));
+        if ($contentType !== '' && !str_contains($contentType, 'text/html')) {
+            return $response;
+        }
+
+        $body = $response->getBody();
+        if (!$body->isSeekable()) {
+            return $response;
+        }
+
+        $body->rewind();
+        $html = (string) $body;
+
+        if (!str_contains($html, CspNonce::PLACEHOLDER)) {
+            return $response;
+        }
+
+        $html   = str_replace(CspNonce::PLACEHOLDER, $nonce, $html);
+        $stream = new Stream(fopen('php://temp', 'r+'));
+        $stream->write($html);
+        $stream->rewind();
+
+        $response = $response->withBody($stream);
+
+        if ($response->hasHeader('Content-Length')) {
+            $response = $response->withHeader('Content-Length', (string) strlen($html));
         }
 
         return $response;

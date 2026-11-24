@@ -8,7 +8,7 @@
     {% if assets_use_cdn %}
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800|roboto:400,500,700|open-sans:400,600,700|montserrat:400,600,700" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style type="text/tailwindcss">
         @custom-variant dark (&:where(.dark, .dark *));
         @theme {
@@ -18,11 +18,11 @@
     {% else %}
     {% include 'partials/_build_assets.twig' with { include_js: false, load_alt_fonts: false, load_display_fonts: false, preload_font: false } %}
     {% endif %}
-    <script>window.APP_BASE_PATH = '{{ base_path|e('js') }}';</script>
-    <script>window.VL_CLIENT_SEARCH_FETCH_LIMIT = {{ client_search_fetch_limit|default(100) }};</script>
-    <script>window.VL_LANGUAGES = {{ languages|default({})|json_encode|raw }};</script>
-    <script>window.VL_THEME_COLORS = {{ vl_theme_colors|default([])|json_encode|raw }};</script>
-    <script>
+    <script nonce="{{ csp_nonce }}">window.APP_BASE_PATH = '{{ base_path|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window.VL_CLIENT_SEARCH_FETCH_LIMIT = {{ client_search_fetch_limit|default(100) }};</script>
+    <script nonce="{{ csp_nonce }}">window.VL_LANGUAGES = {{ languages|default({})|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window.VL_THEME_COLORS = {{ vl_theme_colors|default([])|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">
         (function() {
             const theme = document.cookie.match(/vl_admin_theme=([^;]+)/)?.[1] || 'light';
             if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -30,23 +30,23 @@
             if (rail === '0') document.documentElement.classList.add('rail-collapsed');
         })();
     </script>
-    <script>window._VL_COUPONS = {{ _VL_COUPONS|default([])|json_encode|raw }};</script>
-    <script>window._VL_COUPONS_TRUNCATED = {{ _VL_COUPONS_TRUNCATED|default(false)|json_encode|raw }};</script>
-    <script>window._VL_SHOP_ENABLED = '{{ shop_enabled|e('js') }}';</script>
-    <script>window._VL_MEMBERSHIP_ENABLED = '{{ membership_enabled|e('js') }}';</script>
-    <script>window._VL_SUBSCRIPTIONS_ENABLED = '{{ subscriptions_enabled|e('js') }}';</script>
-    <script>window._VL_PAGES_ENABLED = '{{ pages_enabled|e('js') }}';</script>
-    <script>window._VL_BLOG_ENABLED = '{{ blog_enabled|e('js') }}';</script>
-    <script>window._VL_NEWSLETTER_ENABLED = '{{ newsletter_enabled|e('js') }}';</script>
-    <script>window._VL_CAPTCHA = {{ vl_captcha_configured|default({'hcaptcha': false, 'recaptcha': false, 'turnstile': false})|json_encode|raw }};</script>
-    <script>window._VL_FORMS_ENABLED = '{{ form_builder_enabled|e('js') }}';</script>
-    <script>window._VL_MULTI_LANG_ENABLED = '{{ settings.multi_language_content|default("0") }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_COUPONS = {{ _VL_COUPONS|default([])|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window._VL_COUPONS_TRUNCATED = {{ _VL_COUPONS_TRUNCATED|default(false)|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window._VL_SHOP_ENABLED = '{{ shop_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_MEMBERSHIP_ENABLED = '{{ membership_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_SUBSCRIPTIONS_ENABLED = '{{ subscriptions_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_PAGES_ENABLED = '{{ pages_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_BLOG_ENABLED = '{{ blog_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_NEWSLETTER_ENABLED = '{{ newsletter_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_CAPTCHA = {{ vl_captcha_configured|default({'hcaptcha': false, 'recaptcha': false, 'turnstile': false})|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window._VL_FORMS_ENABLED = '{{ form_builder_enabled|e('js') }}';</script>
+    <script nonce="{{ csp_nonce }}">window._VL_MULTI_LANG_ENABLED = '{{ settings.multi_language_content|default("0") }}';</script>
     {% set raw_content_langs = settings.content_languages|default(settings.default_locale|default('en')) %}
     {% set content_langs_list = raw_content_langs is iterable ? raw_content_langs : raw_content_langs|split(',') %}
-    <script>window._VL_CONTENT_LANGUAGES = {{ content_langs_list|filter(Boolean)|json_encode|raw }};</script>
-    <script>window._VL_ACTIVE_CPTS = {{ _VL_ACTIVE_CPTS|default([])|json_encode|raw }};</script>
-    <script>window._VL_MEDIA_EMBEDS = {{ media_embeds|default({})|json_encode|raw }};</script>
-    <script>
+    <script nonce="{{ csp_nonce }}">window._VL_CONTENT_LANGUAGES = {{ content_langs_list|filter(Boolean)|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window._VL_ACTIVE_CPTS = {{ _VL_ACTIVE_CPTS|default([])|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">window._VL_MEDIA_EMBEDS = {{ media_embeds|default({})|json_encode|raw }};</script>
+    <script nonce="{{ csp_nonce }}">
         window.VL_I18N = {
             "Reset Layout": "{{ __('Reset Layout')|e('js') }}",
             "Toggle Panels": "{{ __('Toggle Panels')|e('js') }}",
@@ -645,7 +645,7 @@
         }
         document.addEventListener('DOMContentLoaded', syncLiveSlugLinks);
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     /**
      * Shared show/hide-columns state for admin tables. Spread into any Alpine
      * scope that renders table.columnsToggle(): dataTable does it by default,
@@ -1391,7 +1391,7 @@
     </script>
 
     {# Global featuredImage function (used by posts, products, and custom content type forms) #}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     window.featuredImage = (initialId) => {
         const bp = window.APP_BASE_PATH || '';
         return {
@@ -1579,7 +1579,7 @@
     </script>
 
     {# Shared media browse helpers (used by featuredImage / productGallery / mediaPicker across all admin pages) #}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     window.CLIENT_SEARCH_FETCH_LIMIT = {{ client_search_fetch_limit|default(100) }};
     const _mediaBrowseCache = new Map();
     async function _mediaBrowseFetch(url) {
@@ -1731,15 +1731,15 @@
     }
     </script>
     {% if assets_use_cdn %}
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+    <script nonce="{{ csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script nonce="{{ csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script nonce="{{ csp_nonce }}" defer src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
     {# App logic (rail toggle, panel/nav reorder, editors) has no CDN copy:
        it always comes from the local bundle and uses the CDN globals above. #}
-    <script defer src="{{ asset('assets/build/admin.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/admin.js') }}"></script>
     {% else %}
-    <script defer src="{{ asset('assets/build/admin-vendor.js') }}"></script>
-    <script defer src="{{ asset('assets/build/admin.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/admin-vendor.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/admin.js') }}"></script>
     {% endif %}
 <style>
         [x-cloak] { display: none !important; }
@@ -1788,7 +1788,7 @@
             --vl-table-head-text: {{ vl_theme_colors['--theme-text'].value ?? '#111827' }};
         }
     </style>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     window.VL_COLLAB = {
         enabled: {{ collaboration_enabled|default('0') == '1' ? 'true' : 'false' }},
         url: {{ collaboration_url|default('')|json_encode|raw }},
@@ -1800,27 +1800,27 @@
         }
     };
     </script>
-    <script>window.CURRENCY_SYMBOL = '{{ default_currency_symbol|default(currency_symbol)|raw }}';window.APP_DEBUG = {% if env('APP_DEBUG') or env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};window.VL_VERBOSE = {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};</script>
+    <script nonce="{{ csp_nonce }}">window.CURRENCY_SYMBOL = '{{ default_currency_symbol|default(currency_symbol)|raw }}';window.APP_DEBUG = {% if env('APP_DEBUG') or env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};window.VL_VERBOSE = {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}true{% else %}false{% endif %};</script>
     {% if assets_use_cdn %}
-    <script type="module" src="{{ asset('assets/js/editor.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" type="module" src="{{ asset('assets/js/editor.js') }}"></script>
     {% else %}
-    <script defer src="{{ asset('assets/build/editor.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/build/editor.js') }}"></script>
     {% endif %}
     {# Shared media facade behavior (video/audio tile posters + click-to-load
        player) for the media library, gallery pickers and editor browsers #}
-    <script defer src="{{ asset('assets/js/media-facade.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/js/media-facade.js') }}"></script>
     {# Shared drag-drop upload (transport + drop zone UI) for every media
        picker modal — featured image, gallery, library, download files #}
-    <script defer src="{{ asset('assets/js/media-upload.js') }}"></script>
+    <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/js/media-upload.js') }}"></script>
     {% set _sa = user.hasRole('super_admin') %}
     {% set _can_upload_media = _sa or (user_permissions is defined and 'media.upload' in user_permissions) %}
     {# Upload permission gate for client-side upload surfaces (drag-drop in
        media pickers). The server enforces the same permission on
        /admin/media/upload-json* — this only keeps the UI honest. #}
-    <script>window.VL_CAN_UPLOAD_MEDIA = {{ _can_upload_media ? 'true' : 'false' }};</script>
-    {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}<script>console.debug('editor.js: cache disabled (dev mode)');</script>{% endif %}
+    <script nonce="{{ csp_nonce }}">window.VL_CAN_UPLOAD_MEDIA = {{ _can_upload_media ? 'true' : 'false' }};</script>
+    {% if env('APP_DEBUG') and env('APP_ENV') == 'dev' %}<script nonce="{{ csp_nonce }}">console.debug('editor.js: cache disabled (dev mode)');</script>{% endif %}
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script>
+    <script nonce="{{ csp_nonce }}">
     // Dirty-state guard: warns before navigation with unsaved changes and
     // toggles all [data-dirty-badge] / [data-clean-badge] indicators on the page.
     // Defined in <head> so page-level scripts (content block) can call it immediately.
@@ -2213,7 +2213,7 @@
     </div>
 
     {% block scripts %}{% endblock %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     function tagInput(config) {
         var allTags = Array.isArray(config && config.allTags) ? config.allTags : [];
         var initial = String((config && config.initial) || '');
@@ -2284,7 +2284,7 @@
         };
     }
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     document.addEventListener('keydown', function(e) {
         var modifier = e.ctrlKey || e.metaKey;
         if (!modifier) return;
@@ -2307,7 +2307,7 @@
         }
     });
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function () {
         var path = window.location.pathname.replace(/\/$/, '') || '/';
         var searchParams = new URLSearchParams(window.location.search);
@@ -2379,7 +2379,7 @@
         }
     })();
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         var title = document.getElementById('title');
         var slug  = document.getElementById('slug');
@@ -2406,7 +2406,7 @@
         });
     });
     </script>
-    <script>
+    <script nonce="{{ csp_nonce }}">
         // ── CSRF-aware fetch helper ──────────────────────────────────────
         function vlPost(url, data) {
             const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';

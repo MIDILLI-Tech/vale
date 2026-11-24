@@ -1,4 +1,4 @@
-<script>
+<script nonce="{{ csp_nonce }}">
 window.VL_COUNTRY_CODES = {{ country_codes|default([])|json_encode|raw }};
 window.VL_COUNTRY_TAX_RATES_DATA = {
     initial: {{ countryTaxRates|map(r => ({country_code: r.countryCode, regime: r.regime, rate: r.rate, zero_reason: r.zeroReason, fallback: r.isFallback, _id: r.id}))|default([])|json_encode|raw }},
@@ -1143,7 +1143,7 @@ window.siteLogoPicker = (initialUrl) => {
 };
 </script>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('alpine:init', () => {
     Alpine.store('vlFeatures', {
         blog: {{ settings.blog_enabled|default('1') == '1' ? 'true' : 'false' }},

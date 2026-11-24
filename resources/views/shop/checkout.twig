@@ -623,7 +623,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
  function checkoutForm(activeGateway, subtotal, shipping, taxRate, taxRegime, taxMixed, hasPhysicalItems, shippingCountriesJson, shippingEnabled) {
     return {
         submitting: false,

@@ -472,7 +472,7 @@
         color: #e5e7eb !important;
     }
 </style>
-<script>
+<script nonce="{{ csp_nonce }}">
 function manualOrder() {
     return {
         rows: [],
@@ -641,5 +641,5 @@ function manualOrder() {
     };
 }
 </script>
-<script>vlDirtyGuard({ clicks: true });</script>
+<script nonce="{{ csp_nonce }}">vlDirtyGuard({ clicks: true });</script>
 {% endblock %}

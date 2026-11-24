@@ -2,7 +2,7 @@
     {# ── Advertisement: Sidebar ── #}
     {% if advertisement_enabled == '1' and advertisement_placement == 'sidebar' and advertisement_code %}
     <div class="vl-ad-sidebar rounded-lg border bg-white p-5 flex justify-center">
-        {{ advertisement_code|raw }}
+        {{ advertisement_code|csp_nonce|raw }}
     </div>
     {% endif %}
 

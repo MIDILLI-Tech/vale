@@ -109,7 +109,7 @@
                                 </div>
                             </div>
                         </div>
-                        <script>
+                        <script nonce="{{ csp_nonce }}">
                         function stSetAbility(a){document.getElementById('st_abilities').value=a;}
                         function stAppendAbility(a){var f=document.getElementById('st_abilities'),v=f.value.trim();if(v===''||v==='*'){f.value=a;}else if(!v.split(',').map(s=>s.trim()).includes(a)){f.value=v+','+a;}}
                         </script>

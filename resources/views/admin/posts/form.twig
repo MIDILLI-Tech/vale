@@ -493,7 +493,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const copyBtn = document.getElementById('copy-original-btn');
 
@@ -775,5 +775,5 @@ document.addEventListener('alpine:init', function() {
     });
 });
 </script>
-<script>vlDirtyGuard();</script>
+<script nonce="{{ csp_nonce }}">vlDirtyGuard();</script>
 {% endblock %}

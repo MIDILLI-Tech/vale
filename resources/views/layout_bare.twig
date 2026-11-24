@@ -13,7 +13,7 @@
     {% endif %}
 
     {% if settings.custom_header_scripts %}
-    {{ settings.custom_header_scripts|raw }}
+    {{ settings.custom_header_scripts|csp_nonce|raw }}
     {% endif %}
 </head>
 <body>
@@ -21,7 +21,7 @@
     {% block scripts %}{% endblock %}
 
     {% if settings.custom_footer_scripts %}
-    {{ settings.custom_footer_scripts|raw }}
+    {{ settings.custom_footer_scripts|csp_nonce|raw }}
     {% endif %}
 </body>
 </html>

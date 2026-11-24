@@ -602,7 +602,7 @@
         {label: __('Disable'), action: 'disable', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
     ],
 } %}
-<script>
+<script nonce="{{ csp_nonce }}">
     window.vlPluginBulkEnable = function (event, slugs) {
         if (!Array.isArray(slugs) || slugs.length === 0) return;
         event.preventDefault();

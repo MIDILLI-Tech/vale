@@ -204,6 +204,7 @@ use ValeApp\Infrastructure\Persistence\DbalTagRepository;
 use ValeApp\Infrastructure\Persistence\DbalUserRepository;
 use ValeApp\Infrastructure\Persistence\DbalWebhookRepository;
 use ValeApp\Infrastructure\Pwa\PwaIconGenerator;
+use ValeApp\Infrastructure\Security\CspNonce;
 use ValeApp\Infrastructure\Security\CsrfManager;
 use ValeApp\Infrastructure\Security\Encrypter;
 use ValeApp\Infrastructure\Security\IpAnonymizer;
@@ -358,6 +359,9 @@ return [
         );
     }),
 
+    // ── CSP nonce (per request) ─────────────────────────────────────
+    CspNonce::class => factory(static fn ($c): CspNonce => new CspNonce()),
+
     // ── Rate Limiting ────────────────────────────────────────────────
     RateLimiter::class => factory(function ($c) {
         $cfg = $c->get('config.auth');
@@ -504,6 +508,9 @@ return [
 
         $settings = $c->get(DbalSettingsRepository::class);
         $env      = $twig->getEnvironment();
+        // Placeholder, not the nonce itself: the page cache stores rendered HTML
+        // and the security-headers middleware swaps this for every request.
+        $env->addGlobal('csp_nonce', CspNonce::PLACEHOLDER);
         $env->addGlobal('_vl_coupons', json_encode($allCoupons));
         $env->addGlobal('site_name', $settings->get('site_name', $cfg['name']));
         $env->addGlobal('site_tagline', $settings->get('site_tagline', ''));
@@ -937,6 +944,21 @@ return [
         // Usage: {{ post.body|read_time }}
         $readingTimeService = $c->get(ReadingTimeService::class);
         $env->addFilter(new TwigFilter('read_time', [$readingTimeService, 'calculate']));
+
+        // Operator-authored HTML (Settings → Advanced scripts, advertisement
+        // code) is exempt from nonce template rendering; inject the placeholder
+        // so its <script> tags survive the policy.
+        $env->addFilter(new TwigFilter('csp_nonce', static function (?string $html): string {
+            if ($html === null || $html === '') {
+                return '';
+            }
+
+            return preg_replace(
+                '/<script(?=[\s>])(?![^>]*\bnonce=)/i',
+                '<script nonce="' . CspNonce::PLACEHOLDER . '"',
+                $html,
+            ) ?? $html;
+        }));
 
         // compact_count filter: human-friendly view counters.
         // Usage: {{ post.viewCount|compact_count }}

@@ -4,7 +4,7 @@
 {% block meta_description %}{{ __('Complete your payment securely.') }}{% endblock %}
 
 {% block head %}
-<script src="{{ media_embeds.stripe_js.script_url }}"></script>
+<script nonce="{{ csp_nonce }}" src="{{ media_embeds.stripe_js.script_url }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -25,7 +25,7 @@
     <a href="{{ url('checkout.cancel') }}" class="mt-3 block text-center text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">{{ __('Cancel and go back') }}</a>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const stripe = Stripe({{ stripe_key|json_encode|raw }});
 const clientSecret = {{ client_secret|json_encode|raw }};
 

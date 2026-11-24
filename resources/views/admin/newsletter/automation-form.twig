@@ -545,7 +545,7 @@
 {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function automationForm(initialSteps) {
     // Normalise: convert delay_minutes (from DB) → delay + delay_unit
     function normalise(raw) {

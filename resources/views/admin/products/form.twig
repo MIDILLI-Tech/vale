@@ -1588,7 +1588,7 @@
     </div>
 </form>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const copyBtn = document.getElementById('copy-prod-original-btn');
 
@@ -2648,5 +2648,5 @@ function vatCountryOverrides() {
     };
 }
 </script>
-<script>vlDirtyGuard({ clicks: true });</script>
+<script nonce="{{ csp_nonce }}">vlDirtyGuard({ clicks: true });</script>
 {% endblock %}

@@ -439,7 +439,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function productGallery(slides) {
     return {
         slides: slides || [],
@@ -467,7 +467,7 @@ function productGallery(slides) {
 </script>
 
 {% if variations|default([])|length > 0 %}
-<script>
+<script nonce="{{ csp_nonce }}">
 function productVariations() {
     const variations = {{ variations|json_encode|raw }};
     // Collect all unique attribute names across all variations

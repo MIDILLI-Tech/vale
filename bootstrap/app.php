@@ -51,6 +51,7 @@ use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\User\Entity\User;
 use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
+use ValeApp\Infrastructure\Security\CspNonce;
 
 // ── Global helpers (env(), base_path(), site_url(), etc.) ─────────────
 require_once dirname(__DIR__) . '/app/helpers.php';
@@ -181,11 +182,6 @@ $container->set(App::class, $app);
 // 4) Middleware (LIFO — last added runs first) -----------------------------
 $isDebug = env('APP_DEBUG', false);
 $isDev   = env('APP_ENV', 'production') === 'dev';
-
-// Security headers (X-Frame-Options, X-Content-Type-Options, etc.) — runs on every response
-$app->add(new SecurityHeadersMiddleware(
-    $container->get(\ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface::class)
-));
 
 // Base path fixer — prefixes /admin redirects with APP_BASE_PATH (outermost — runs last on response)
 $app->add(new BasePathMiddleware());
@@ -378,6 +374,14 @@ if (!$showDetail) {
 // sees final responses including 404/500 errors and redirects so 3xx-5xx
 // statuses land in analytics. Excluded prefixes still prevent self-tracking.
 $app->add($container->get(PageviewMiddleware::class));
+
+// Security headers — truly outermost, so cached pages, maintenance screens and
+// error responses all carry the policy, and the per-request CSP nonce is
+// substituted into HTML rendered with the template placeholder.
+$app->add(new SecurityHeadersMiddleware(
+    $container->get(\ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface::class),
+    $container->get(CspNonce::class),
+));
 
 // ── Event listeners ────────────────────────────────────────────────────────
 // Outbound webhooks + page-cache invalidation. Extracted so the CLI

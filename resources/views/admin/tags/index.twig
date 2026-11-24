@@ -4,7 +4,7 @@
 {% block title %}{{ __('Tags') }}{% endblock %}
 
 {% block content %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copy-tag-original-btn');
     copyBtn?.addEventListener('click', async function() {

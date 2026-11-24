@@ -17,7 +17,7 @@
 {% block title %}{{ __('Product Categories') }}{% endblock %}
 
 {% block content %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copy-prod-cat-original-btn');
     copyBtn?.addEventListener('click', async function() {

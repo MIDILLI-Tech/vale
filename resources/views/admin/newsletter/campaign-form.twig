@@ -358,7 +358,7 @@
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Category</label>
                                     <div class="relative" data-multi data-name="recurring_category_ids" data-array="1" data-mode="fetch" data-fetch="/admin/categories/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringCategoryIds|default('') }}">
-                                        <script type="application/json" data-labelmap>[{% for c in allCategories|default([]) %}{"value":{{ c.id }},"label":{{ c.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                                        <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for c in allCategories|default([]) %}{"value":{{ c.id }},"label":{{ c.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                                         <input data-search type="text" placeholder="Search categories..." {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                                         <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
@@ -371,7 +371,7 @@
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tag</label>
                                     <div class="relative" data-multi data-name="recurring_tag_ids" data-array="1" data-mode="fetch" data-fetch="/admin/tags/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringTagIds|default('') }}">
-                                        <script type="application/json" data-labelmap>[{% for t in allContentTags|default([]) %}{"value":{{ t.id }},"label":{{ t.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
+                                        <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for t in allContentTags|default([]) %}{"value":{{ t.id }},"label":{{ t.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                                         <input data-search type="text" placeholder="Search tags..." {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                                         <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
@@ -382,7 +382,7 @@
                                     <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Selected groups are combined with AND — a post must match at least one item from every group you choose.</p>
                                 </div>
 
-                                <script>
+                                <script nonce="{{ csp_nonce }}">
                                 (function(){
                                     'use strict';
                                     function _t(x){ return (typeof tjs==='function') ? tjs(x) : x; }
@@ -560,6 +560,6 @@
 </form>
 {% endif %}
 {% if not readonly %}
-<script>vlDirtyGuard();</script>
+<script nonce="{{ csp_nonce }}">vlDirtyGuard();</script>
 {% endif %}
 {% endblock %}

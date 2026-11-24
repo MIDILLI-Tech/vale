@@ -113,8 +113,8 @@
             </div>
         {% elseif type == 'hcaptcha' and site_key %}
             <div class="h-captcha max-w-full" data-sitekey="{{ site_key }}" data-callback="{{ widgetId }}_callback"></div>
-            <script src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
-            <script>
+            <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.hcaptcha.script_url }}" async defer></script>
+            <script nonce="{{ csp_nonce }}">
                 window['{{ widgetId }}_callback'] = function(token) {
                     const el = document.getElementById('{{ widgetId }}');
                     if (el && el.__x) el.__x.$data.verify(token);
@@ -130,8 +130,8 @@
             </button>
         {% elseif type == 'turnstile' and site_key %}
             <div class="cf-turnstile max-w-full" data-sitekey="{{ site_key }}" data-callback="{{ widgetId }}_callback" data-theme="auto" data-size="flexible"></div>
-            <script src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
-            <script>
+            <script nonce="{{ csp_nonce }}" src="{{ captcha_urls.turnstile.script_url }}" async defer></script>
+            <script nonce="{{ csp_nonce }}">
                 window['{{ widgetId }}_callback'] = function(token) {
                     const el = document.getElementById('{{ widgetId }}');
                     if (el && el.__x) el.__x.$data.verify(token);

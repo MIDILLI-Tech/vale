@@ -23,7 +23,7 @@
         <div class="mb-10">
             {% if comment_system == 'disqus' %}
                 <div id="disqus_thread"></div>
-                <script>
+                <script nonce="{{ csp_nonce }}">
                     var disqus_config = function () {
                         this.page.url = '{{ current_url }}';
                         this.page.identifier = 'post_{{ entity_id }}';
@@ -36,7 +36,7 @@
                     })();
                 </script>
             {% elseif comment_system == 'giscus' %}
-                <script src="https://giscus.app/client.js"
+                <script nonce="{{ csp_nonce }}" src="https://giscus.app/client.js"
                         data-repo="{{ giscus_repo }}"
                         data-repo-id="{{ giscus_repo_id }}"
                         data-category="{{ giscus_category }}"
@@ -58,7 +58,7 @@
                 {% if fb_sdk_template %}
                     {% set fb_sdk_url = fb_sdk_template|replace({'{locale}': fb_locale, '{app_id}': facebook_app_id}) %}
                     <div id="fb-root"></div>
-                    <script async defer crossorigin="anonymous" src="{{ fb_sdk_url }}"></script>
+                    <script nonce="{{ csp_nonce }}" async defer crossorigin="anonymous" src="{{ fb_sdk_url }}"></script>
                     <div class="fb-comments" data-href="{{ current_url }}" data-width="100%" data-numposts="5"></div>
                 {% endif %}
             {% endif %}
@@ -245,7 +245,7 @@
     {% endif %}
 
     {% if comment_page_map is defined or all_comment_ids is defined %}
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function() {
         const hash = window.location.hash;
         if (!hash || !hash.startsWith('#comment-')) return;

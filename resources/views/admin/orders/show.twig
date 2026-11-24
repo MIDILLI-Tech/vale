@@ -612,7 +612,7 @@
             </form>
         </div>
 
-        <script>
+        <script nonce="{{ csp_nonce }}">
         function trackingPreview(carriers) {
             return {
                 carriers: carriers,
@@ -908,7 +908,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 vlDirtyGuard();
 </script>
 {% endblock %}

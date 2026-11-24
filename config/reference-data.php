@@ -386,22 +386,30 @@ return [
             'frame_src'  => 'https://www.google.com',
             'verify_url' => 'https://www.google.com/recaptcha/api/siteverify',
             'script_url' => 'https://www.google.com/recaptcha/api.js',
+            // Hosts reCAPTCHA loads its own bundle from after api.js runs.
+            'script_src' => 'https://www.google.com https://www.gstatic.com',
         ],
         'hcaptcha' => [
             'signup_url' => 'https://dashboard.hcaptcha.com/sites/new',
             'frame_src'  => 'https://newassets.hcaptcha.com',
             'verify_url' => 'https://api.hcaptcha.com/siteverify',
             'script_url' => 'https://js.hcaptcha.com/1/api.js',
+            'script_src' => 'https://js.hcaptcha.com https://newassets.hcaptcha.com',
         ],
         'turnstile' => [
             'signup_url' => 'https://www.cloudflare.com/products/turnstile/',
             'frame_src'  => 'https://challenges.cloudflare.com',
             'verify_url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
             'script_url' => 'https://challenges.cloudflare.com/turnstile/v0/api.js',
+            'script_src' => 'https://challenges.cloudflare.com',
         ],
     ],
     'payment_api' => [
-        'stripe'      => ['api_base' => 'https://api.stripe.com'],
+        'stripe'      => [
+            'api_base'   => 'https://api.stripe.com',
+            // Stripe.js is loaded from this host and bootstraps Elements from it.
+            'script_src' => 'https://js.stripe.com',
+        ],
         'paypal'      => [
             'api_base_sandbox' => 'https://api-m.sandbox.paypal.com',
             'api_base_live'    => 'https://api-m.paypal.com',
