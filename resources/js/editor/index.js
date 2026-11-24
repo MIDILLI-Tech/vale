@@ -104,7 +104,7 @@ import { createSlashMenuPlugin } from './slash-menu.js';
 import { createShortcodePasteHandler } from './shortcode-paste.js';
 import { insertTable } from './table-controls.js';
 import { buildToolbar } from './toolbar.js';
-import { initWordCounter, toggleFullscreen } from './ui/editor-chrome.js';
+import { initWordCounter, restoreFullscreen, toggleFullscreen } from './ui/editor-chrome.js';
 import { duplicateSelectedBlock } from './ui/duplicate.js';
 import { openFormPicker } from './ui/form-picker.js';
 import { openLinkButtonGroupSettings, activeButtonIndex } from './settings/link-button-group-settings.js';
@@ -563,6 +563,10 @@ function vlMountEditor(textarea) {
     // Word & character counter
     initWordCounter(editor, wrapper);
     initCollaborationPresence(collab, wrapper, editorEl, editor);
+
+    // Fullscreen is remembered, so a save reload does not drop the user back
+    // into the narrow layout.
+    restoreFullscreen(wrapper);
     initCollaborationSnapshotPrompt(editor, collab, wrapper);
 
     // Crash-safe local drafts: keep a copy in localStorage and offer to
