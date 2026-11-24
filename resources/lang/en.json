@@ -46,6 +46,7 @@
     ":count form(s) are not displayed because their captcha provider is not configured: :forms.": ":count form(s) are not displayed because their captcha provider is not configured: :forms.",
     ":count form(s) updated.": ":count form(s) updated.",
     ":count images selected": ":count images selected",
+    ":count items": ":count items",
     ":count more file(s) failed.": ":count more file(s) failed.",
     ":count pages total": ":count pages total",
     ":count pending": ":count pending",

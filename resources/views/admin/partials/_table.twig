@@ -151,9 +151,9 @@
     {% set opts = per_page_options|default([10, 20, 50, 100]) %}
     <div class="mt-4 flex items-center justify-between" x-show="serverSide || allRows.length > 0" x-cloak>
         <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-500 dark:text-gray-400" x-text="visibleCount + ' total'"></span>
+            <span class="text-sm text-gray-500 dark:text-gray-400" x-text="tjs(':count items', {':count': visibleCount})"></span>
             <span class="text-gray-300">|</span>
-            <label class="text-sm text-gray-500 dark:text-gray-400">Show</label>
+            <label class="text-sm text-gray-500 dark:text-gray-400">{{ __('Show') }}</label>
             <select x-model.number="perPage" @change="page = 1; apply()"
                     class="min-w-20 rounded-sm border-gray-300 dark:border-gray-700 text-sm py-1 px-2 dark:bg-gray-800 dark:text-gray-200">
                 {% for opt in opts %}
@@ -162,7 +162,7 @@
             </select>
         </div>
         <div class="flex items-center gap-1" x-show="totalPages > 1">
-            <span class="text-sm text-gray-500 dark:text-gray-400 mr-2" x-text="'Page ' + page + '/' + totalPages"></span>
+            <span class="text-sm text-gray-500 dark:text-gray-400 mr-2" x-text="tjs('Page :current of :total', {':current': page, ':total': totalPages})"></span>
             <button @click="setPage(page - 1)" :disabled="page <= 1"
                     class="rounded-sm border px-2.5 py-1 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800/50 disabled:opacity-30">&laquo;</button>
             <template x-for="(p, idx) in pageList" :key="idx">
