@@ -138,7 +138,7 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-center">
                     {% set sc = {published: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', archived: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400', expired: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'} %}
-                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[p.status]|default('bg-gray-100') }}">{{ p.status|capitalize }}</span>
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[p.status]|default('bg-gray-100') }}">{{ __(p.status)|capitalize }}</span>
                     {% if p.status in ['draft', 'unlisted'] and p.publishedAt and p.publishedAt|date('Y-m-d H:i:s') > "now"|date('Y-m-d H:i:s') %}
                     <span class="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">({{ __('scheduled')|capitalize }})</span>
                     {% endif %}
