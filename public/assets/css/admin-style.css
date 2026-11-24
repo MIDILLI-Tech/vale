@@ -846,8 +846,8 @@ input[type="radio"] {
   accent-color: var(--vl-text-main);
   border: 1px solid var(--vl-input-border);
   border-radius: 4px;
-  width: 1rem;
-  height: 1rem;
+  width: var(--vl-check-size, 1rem);
+  height: var(--vl-check-size, 1rem);
   cursor: pointer;
 }
 /* Labels wrapping a checkbox/radio are fully clickable — match the input cursor */
@@ -1581,4 +1581,86 @@ html.rail-collapsed.has-edit-rail [data-panel-container="right"] {
    the left headings sitting visibly lower. Pull only the top edge up slightly. */
 [data-panel-container="left"] > [data-panel-id].p-6 {
   padding-top: 1rem;
+}
+
+/* ── Admin density (Settings → General → Site) ─────────────────────────
+   Tailwind v4 derives every spacing utility from --spacing and every text
+   utility from --text-*, so re-pointing those tokens on <html> tightens the
+   whole panel without touching a template. Only these two classes exist; the
+   default (normal) leaves every token untouched. */
+html.vl-density-compact {
+  --spacing: 0.21rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.0625rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.1875rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.1875rem;
+  --text-xl--line-height: 1.6875rem;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 1.8125rem;
+
+  /* Form controls carry fixed sizes in this file (and utility classes in the
+     templates), so the token swap above never reaches them on its own. */
+  --vl-control-font: 0.8125rem;
+  --vl-control-height: 1.875rem;
+  --vl-check-size: 0.875rem;
+}
+
+html.vl-density-minimal {
+  --spacing: 0.175rem;
+  --text-xs: 0.6875rem;
+  --text-xs--line-height: 0.9375rem;
+  --text-sm: 0.75rem;
+  --text-sm--line-height: 1.0625rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.375rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.5625rem;
+  --text-2xl: 1.25rem;
+  --text-2xl--line-height: 1.625rem;
+
+  --vl-control-font: 0.75rem;
+  --vl-control-height: 1.75rem;
+  --vl-check-size: 0.8125rem;
+}
+
+/* Single-line inputs get an explicit height (they stay tall through their own
+   fixed px/rem sizes or py-* utilities, which are layered and lose to these
+   unlayered rules); with no vertical padding the browser centres the text.
+   Selects keep their natural height: a forced height leaves the option text
+   sitting above the centre line, so they are sized by symmetric padding
+   around the smaller font instead. */
+html.vl-density-compact :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"])),
+html.vl-density-minimal :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"])) {
+  font-size: var(--vl-control-font);
+  height: var(--vl-control-height);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+html.vl-density-compact select,
+html.vl-density-minimal select {
+  font-size: var(--vl-control-font);
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  line-height: normal;
+}
+
+html.vl-density-compact textarea,
+html.vl-density-minimal textarea {
+  font-size: var(--vl-control-font);
+}
+
+html.vl-density-compact input[type="checkbox"],
+html.vl-density-compact input[type="radio"],
+html.vl-density-minimal input[type="checkbox"],
+html.vl-density-minimal input[type="radio"] {
+  width: var(--vl-check-size);
+  height: var(--vl-check-size);
 }

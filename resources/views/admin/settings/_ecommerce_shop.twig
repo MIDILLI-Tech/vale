@@ -214,7 +214,7 @@
                     <input type="hidden" :name="'ctr_fallback[' + idx + ']'" :value="row.fallback ? '1' : ''">
 
                     <select :name="'ctr_regime[' + idx + ']'" x-model="row.regime"
-                            class="w-36 rounded-lg border-gray-300 dark:border-gray-700 text-sm"
+                            class="w-auto rounded-lg border-gray-300 dark:border-gray-700 text-sm"
                             @change="onRegimeChange(row)">
                         <option value="use_global" :disabled="!row.fallback">{{ __('Use Global') }}</option>
                         <option value="normal_vat">{{ __('Normal VAT') }}</option>

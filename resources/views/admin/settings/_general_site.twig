@@ -196,6 +196,21 @@
             </div>
         </div>
 
+        <hr class="border-gray-200">
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Admin Appearance') }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div {{ vl.attrs('general', __('Admin Density'), 'admin_ui_density', 'site', __('Admin Appearance'), 'compact density spacing font size smaller admin panel') }}>
+                <label for="admin_ui_density" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Admin Density') }}</label>
+                {% set _density = settings.admin_ui_density|default('normal') %}
+                <select id="admin_ui_density" name="admin_ui_density" class="mt-1 w-auto rounded-lg border-gray-300 dark:border-gray-700">
+                    <option value="normal" {{ _density == 'normal' ? 'selected' }}>{{ __('Normal') }}</option>
+                    <option value="compact" {{ _density == 'compact' ? 'selected' }}>{{ __('Compact') }}</option>
+                    <option value="minimal" {{ _density == 'minimal' ? 'selected' }}>{{ __('Minimal') }}</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Scales spacing and text across the whole admin panel.') }}</p>
+            </div>
+        </div>
+
         <hr class="border-gray-200" x-show="$store.vlFeatures.pwa" x-cloak>
 
         <div x-show="$store.vlFeatures.pwa" x-cloak

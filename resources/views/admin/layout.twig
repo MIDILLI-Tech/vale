@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ current_locale() ?? 'en' }}"{% if panel_rail|default(false) %} class="has-edit-rail"{% endif %}>
+{% set _density = settings.admin_ui_density|default('normal') %}
+{% set _html_classes = [] %}
+{% if panel_rail|default(false) %}{% set _html_classes = _html_classes|merge(['has-edit-rail']) %}{% endif %}
+{% if _density in ['compact', 'minimal'] %}{% set _html_classes = _html_classes|merge(['vl-density-' ~ _density]) %}{% endif %}
+<html lang="{{ current_locale() ?? 'en' }}"{% if _html_classes %} class="{{ _html_classes|join(' ') }}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
