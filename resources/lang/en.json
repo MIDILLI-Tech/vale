@@ -9,6 +9,7 @@
     "%d migration(s) applied.": "%d migration(s) applied.",
     "%d min read": "%d min read",
     "%d online": "%d online",
+    "%d tabs": "%d tabs",
     "%s SSO is not yet configured. An administrator must set the OAuth client credentials.": "%s SSO is not yet configured. An administrator must set the OAuth client credentials.",
     "(DRY RUN - no changes saved)": "(DRY RUN - no changes saved)",
     "(customised)": "(customised)",

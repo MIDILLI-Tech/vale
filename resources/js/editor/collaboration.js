@@ -69,10 +69,19 @@ function initials(name) {
 }
 
 /**
+ * Stable presence identity: the account id when the awareness state carries
+ * one, the display name otherwise (older clients, or a config without a user).
+ */
+function presenceIdentity(user) {
+  const id = Number(user?.id) || 0;
+  return id > 0 ? `id:${id}` : `name:${String(user?.name || '').toLowerCase()}`;
+}
+
+/**
  * @param {string} initialHtml Saved HTML the room is seeded from. It also
  *   fingerprints the local offline snapshot, so a record saved elsewhere in
  *   the meantime invalidates that snapshot instead of merging a stale copy.
- * @returns {{document: Y.Doc, provider: HocuspocusProvider, user: {name: string, color: string}, name: string}|null}
+ * @returns {{document: Y.Doc, provider: HocuspocusProvider, user: {id: number, name: string, color: string}, name: string}|null}
  */
 export function createCollaborationSession(initialHtml = '') {
   const config = window.VL_COLLAB;
@@ -98,7 +107,10 @@ export function createCollaborationSession(initialHtml = '') {
     document,
     provider,
     name,
-    user: { name: userName, color: userColor(userName) },
+    // CollaborationCaret publishes this object verbatim as the awareness user,
+    // so the id is what lets several tabs of one account share a single
+    // presence entry.
+    user: { id: Number(config.user?.id) || 0, name: userName, color: userColor(userName) },
   };
 }
 
@@ -310,8 +322,9 @@ function scrollToPos(editor, pos, behavior) {
 }
 
 /**
- * Renders "N online" plus one colored initial per connected editor directly
- * above the editing canvas, fed by the Yjs awareness state.
+ * Renders "N online" plus one colored initial per person directly above the
+ * editing canvas, fed by the Yjs awareness state. Several tabs of the same
+ * account share one entry instead of counting as separate editors.
  *
  * Clicking another editor's chip jumps to their caret once; clicking the same
  * chip again starts following it (the viewport tracks their cursor) and a
@@ -328,30 +341,50 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   bar.setAttribute('role', 'status');
   bar.setAttribute('aria-live', 'polite');
 
-  // Click state per editor: null = idle, id = jumped once, and the same id in
-  // followingClientId = follow mode. Stopping follow resets both, so the next
-  // click always starts with a fresh jump.
-  let jumpedClientId = null;
-  let followingClientId = null;
+  // Click state per person: null = idle, key = jumped once, and the same key
+  // in followingUserId = follow mode. Stopping follow resets both, so the next
+  // click always starts with a fresh jump. Keys rather than client ids keep the
+  // state alive when the followed person switches between their tabs.
+  let jumpedUserId = null;
+  let followingUserId = null;
   let followFrame = null;
   let connectionState = 'connecting';
+  let peopleByKey = new Map();
 
-  const titleFor = (clientId, user) => {
-    if (clientId === awareness.clientID) return user.name;
-    if (followingClientId === clientId) {
-      return translate('Following :name — click to stop', { ':name': user.name });
+  const isSelfPerson = (person) => person.clientIds.includes(awareness.clientID);
+
+  // The connection a jump/follow targets: ours for our own entry, otherwise a
+  // tab that currently reports a caret, so following keeps working when the
+  // other tab is in the background.
+  const primaryClientId = (person) => {
+    if (isSelfPerson(person)) return awareness.clientID;
+    return person.clientIds.find((clientId) => awareness.getStates().get(clientId)?.cursor)
+      ?? person.clientIds[0];
+  };
+
+  const titleFor = (person) => {
+    let title;
+    if (isSelfPerson(person)) {
+      title = person.user.name;
+    } else if (followingUserId === person.key) {
+      title = translate('Following :name — click to stop', { ':name': person.user.name });
+    } else if (jumpedUserId === person.key) {
+      title = translate('Click again to follow :name', { ':name': person.user.name });
+    } else {
+      title = translate('Click to jump to :name', { ':name': person.user.name });
     }
-    if (jumpedClientId === clientId) {
-      return translate('Click again to follow :name', { ':name': user.name });
-    }
-    return translate('Click to jump to :name', { ':name': user.name });
+    return person.tabs > 1
+      ? `${title} · ${translate('%d tabs', { '%d': person.tabs })}`
+      : title;
   };
 
   const follow = () => {
-    if (followingClientId === null || followFrame !== null) return;
+    if (followingUserId === null || followFrame !== null) return;
     followFrame = requestAnimationFrame(() => {
       followFrame = null;
-      const state = awareness.getStates().get(followingClientId);
+      const person = peopleByKey.get(followingUserId);
+      if (!person) return;
+      const state = awareness.getStates().get(primaryClientId(person));
       const pos = remoteCursorPos(editor, state);
       if (pos !== null) scrollToPos(editor, pos, 'auto');
     });
@@ -360,22 +393,39 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   const isOnline = () => connectionState === 'connected' && session.provider.synced;
 
   const render = () => {
-    const users = [];
+    // One entry per account, not per connection: a second tab of the same
+    // person must not add a second chip or inflate the online count.
+    const people = new Map();
     awareness.getStates().forEach((state, clientId) => {
-      if (state?.user?.name) users.push({ clientId, user: state.user });
+      if (!state?.user?.name) return;
+      const key = presenceIdentity(state.user);
+      const person = people.get(key) ?? { key, user: state.user, clientIds: [], tabs: 0 };
+      person.clientIds.push(clientId);
+      person.tabs += 1;
+      people.set(key, person);
+    });
+    peopleByKey = people;
+
+    // Our own chip first, then alphabetical, so caret changes never reshuffle
+    // the strip.
+    const ordered = [...people.values()].sort((a, b) => {
+      const selfA = isSelfPerson(a);
+      const selfB = isSelfPerson(b);
+      if (selfA !== selfB) return selfA ? -1 : 1;
+      return a.user.name.localeCompare(b.user.name);
     });
 
     const online = isOnline();
     if (!online) {
-      followingClientId = null;
-      jumpedClientId = null;
+      followingUserId = null;
+      jumpedUserId = null;
     }
 
-    if (followingClientId !== null && !users.some((entry) => entry.clientId === followingClientId)) {
-      followingClientId = null;
+    if (followingUserId !== null && !people.has(followingUserId)) {
+      followingUserId = null;
     }
-    if (jumpedClientId !== null && !users.some((entry) => entry.clientId === jumpedClientId)) {
-      jumpedClientId = null;
+    if (jumpedUserId !== null && !people.has(jumpedUserId)) {
+      jumpedUserId = null;
     }
 
     bar.textContent = '';
@@ -396,46 +446,46 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
       return;
     }
 
-    if (users.length === 0) return;
+    if (ordered.length === 0) return;
 
     const count = document.createElement('span');
     count.className = 'vl-collab-presence-count';
-    count.textContent = translate('%d online', { '%d': users.length });
+    count.textContent = translate('%d online', { '%d': ordered.length });
     bar.appendChild(count);
 
-    users.forEach(({ clientId, user }) => {
-      const isSelf = clientId === awareness.clientID;
+    ordered.forEach((person) => {
+      const isSelf = isSelfPerson(person);
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'vl-collab-presence-user'
         + (isSelf ? ' is-self' : '')
-        + (followingClientId === clientId ? ' is-following' : '')
-        + (followingClientId !== clientId && jumpedClientId === clientId ? ' is-jumped' : '');
-      chip.textContent = initials(user.name);
-      chip.style.setProperty('--vl-collab-user-color', user.color || '#2563eb');
-      chip.title = titleFor(clientId, user);
+        + (followingUserId === person.key ? ' is-following' : '')
+        + (followingUserId !== person.key && jumpedUserId === person.key ? ' is-jumped' : '');
+      chip.textContent = initials(person.user.name);
+      chip.style.setProperty('--vl-collab-user-color', person.user.color || '#2563eb');
+      chip.title = titleFor(person);
       chip.setAttribute('aria-label', chip.title);
 
       if (!isSelf) {
         chip.addEventListener('click', () => {
-          // Following this editor: stop and return to idle so the next click
+          // Following this person: stop and return to idle so the next click
           // is a plain jump again.
-          if (followingClientId === clientId) {
-            followingClientId = null;
-            jumpedClientId = null;
+          if (followingUserId === person.key) {
+            followingUserId = null;
+            jumpedUserId = null;
             render();
             return;
           }
 
-          const pos = remoteCursorPos(editor, awareness.getStates().get(clientId));
+          const pos = remoteCursorPos(editor, awareness.getStates().get(primaryClientId(person)));
           if (pos !== null) scrollToPos(editor, pos, 'smooth');
 
           // First click jumps, a second click on the same chip follows.
-          if (jumpedClientId === clientId) {
-            followingClientId = clientId;
+          if (jumpedUserId === person.key) {
+            followingUserId = person.key;
           } else {
-            followingClientId = null;
-            jumpedClientId = clientId;
+            followingUserId = null;
+            jumpedUserId = person.key;
           }
           render();
         });
