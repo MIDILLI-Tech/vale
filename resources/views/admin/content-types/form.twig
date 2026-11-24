@@ -104,11 +104,11 @@
                     {% else %}
                     <input type="text" name="route_prefix" x-model="urlPath"
                             {% if is_edit and type and type.slug == 'post' %}
-                            placeholder="Default: /blog"
+                            placeholder="{{ __('Default: /blog') }}"
                             {% elseif is_edit and type and type.slug == 'page' %}
-                            placeholder="Default: /"
+                            placeholder="{{ __('Default: /') }}"
                             {% else %}
-                            placeholder="Optional, e.g. /d"
+                            placeholder="{{ __('Optional, e.g. /d') }}"
                             {% endif %}
                             value="{{ type.routePrefix|default('') }}"
                             class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
