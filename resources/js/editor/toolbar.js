@@ -204,7 +204,7 @@ function buildToolbar(editor, wrapper) {
     },
     { label: '🔗', title: tjs('Insert Link (Ctrl+K)'), action: () => openLinkDialog(editor),                      active: () => editor.isActive('link') },
     null,
-    { label: 'Tbl', title: tjs('Insert Table (Ctrl+Alt+T)'), action: () => insertTable(editor), active: () => editor.isActive('table') },
+    { label: tjs('Table'), title: tjs('Insert Table (Ctrl+Alt+T)'), action: () => insertTable(editor), active: () => editor.isActive('table') },
     { label: '⏎',  title: tjs('Hard Break (Shift+Enter)'),    action: () => { if (execOnMediaText('insertLineBreak')) return; editor.chain().setHardBreak().run(); },        active: () => false },
     { label: '—',  title: tjs('Divider (Ctrl+Alt+D)'),       action: () => { if (execOnMediaText('insertHorizontalRule')) return; editor.chain().setHorizontalRule().run(); },   active: () => false },
     { label: '{}', title: tjs('Code Block (Ctrl+Alt+C)'), action: () => editor.chain().focus().toggleCodeBlock().run(), active: () => editor.isActive('codeBlock') },

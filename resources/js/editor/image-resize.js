@@ -351,17 +351,17 @@ function showImageSizeDialog(editor, imgEl) {
     { value: 'full', label: tjs('Original') },
   ];
   if (thumbnails && typeof thumbnails === 'object') {
-    if (thumbnails.large)   THUMB_OPTIONS.push({ value: 'large',   label: 'Large (1024×1024)' });
-    if (thumbnails.medium)  THUMB_OPTIONS.push({ value: 'medium',  label: 'Medium (300×300)' });
-    if (thumbnails.small)   THUMB_OPTIONS.push({ value: 'small',   label: 'Small (150×150)' });
+    if (thumbnails.large)   THUMB_OPTIONS.push({ value: 'large',   label: tjs('Large (1024×1024)') });
+    if (thumbnails.medium)  THUMB_OPTIONS.push({ value: 'medium',  label: tjs('Medium (300×300)') });
+    if (thumbnails.small)   THUMB_OPTIONS.push({ value: 'small',   label: tjs('Small (150×150)') });
   }
 
   // Fallback: no usable thumbnails object — offer all sizes.
   if (THUMB_OPTIONS.length === 1) {
     THUMB_OPTIONS.push(
-      { value: 'large',  label: 'Large (1024×1024)' },
-      { value: 'medium', label: 'Medium (300×300)' },
-      { value: 'small',  label: 'Small (150×150)' },
+      { value: 'large',  label: tjs('Large (1024×1024)') },
+      { value: 'medium', label: tjs('Medium (300×300)') },
+      { value: 'small',  label: tjs('Small (150×150)') },
     );
   }
 
@@ -396,17 +396,17 @@ function showImageSizeDialog(editor, imgEl) {
       </div>
       <div class="flex gap-3 mb-3">
         <div class="flex-1">
-          <label class="vl-label">Width</label>
-          <input type="number" id="is-width" value="${parseFloat(curW) || ''}" min="1" class="vl-input" placeholder="Auto">
+          <label class="vl-label">${tjs('Width')}</label>
+          <input type="number" id="is-width" value="${parseFloat(curW) || ''}" min="1" class="vl-input" placeholder="${tjs('Auto')}">
         </div>
         <div class="flex-1">
-          <label class="vl-label">Height</label>
-          <input type="number" id="is-height" value="${parseFloat(curH) || ''}" min="1" class="vl-input" placeholder="Auto">
+          <label class="vl-label">${tjs('Height')}</label>
+          <input type="number" id="is-height" value="${parseFloat(curH) || ''}" min="1" class="vl-input" placeholder="${tjs('Auto')}">
         </div>
       </div>
       <div class="flex items-center gap-2 mb-4">
         <label class="vl-modal-label-check">
-          <input type="checkbox" id="is-lock" ${curLock ? 'checked' : ''}> 🔒 Maintain aspect ratio
+          <input type="checkbox" id="is-lock" ${curLock ? 'checked' : ''}> 🔒 ${tjs('Maintain aspect ratio')}
         </label>
         <div class="ml-auto flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
           <span>Unit:</span>

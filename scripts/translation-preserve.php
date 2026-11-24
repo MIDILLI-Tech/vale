@@ -202,4 +202,8 @@ return [
     'Subscribed',
     'Stock',
     'Search roles…',
+
+    // ── Editor block settings labels resolved through tjs() helpers ──
+    'Category (optional)',
+    'Tags (optional)',
 ];
