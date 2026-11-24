@@ -34,9 +34,11 @@ final class AdminMiddleware implements MiddlewareInterface
         if (in_array($role, self::BLOCKED_ROLES, true)) {
             $response = new Response(403);
             $response->getBody()->write('Access denied.');
-            return $response;
+            return $response->withHeader('Cache-Control', 'no-store');
         }
 
-        return $handler->handle($request);
+        // Panel HTML is per-user and changes with every deploy; a cached copy
+        // shows stale labels and permissions after an update.
+        return $handler->handle($request)->withHeader('Cache-Control', 'no-store, must-revalidate');
     }
 }
