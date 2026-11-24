@@ -9,6 +9,10 @@ namespace ValeApp\Infrastructure\Security;
  *
  * Tracks request counts per (key + IP) in flat files.
  * No Redis required. Suitable for shared hosting.
+ *
+ * Each key+IP owns one counter file. Every read-modify-write runs under an
+ * exclusive flock() on that file, so concurrent requests serialise and share
+ * one counter instead of each reading the same stale value and all passing.
  */
 final class RateLimiter
 {
@@ -27,23 +31,27 @@ final class RateLimiter
      * @param string $ip        Client IP address
      * @param int    $maxAttempts Max allowed attempts per window
      * @param int    $windowSeconds Time window in seconds (default: 60)
-     * @return bool True if attempt is ALLOWED, false if rate-limited
+     * @return bool True if attempt is ALLOWED, false if rate-limited.
+     *              Also false when the counter file cannot be locked — the
+     *              limit must never fail open.
      */
     public function attempt(string $key, string $ip, int $maxAttempts, int $windowSeconds = 60): bool
     {
-        $file = $this->filePath($key, $ip);
-        $now  = time();
+        $allowed = $this->withLockedAttempts(
+            $this->filePath($key, $ip),
+            $windowSeconds,
+            static function (array $attempts) use ($maxAttempts): array {
+                if (count($attempts) >= $maxAttempts) {
+                    return [$attempts, false];
+                }
 
-        $attempts = $this->loadAttempts($file, $now, $windowSeconds);
+                $attempts[] = time();
 
-        if (count($attempts) >= $maxAttempts) {
-            return false;
-        }
+                return [$attempts, true];
+            },
+        );
 
-        $attempts[] = $now;
-        $this->saveAttempts($file, $attempts);
-
-        return true;
+        return $allowed ?? false;
     }
 
     /**
@@ -53,7 +61,7 @@ final class RateLimiter
      */
     public function blocked(string $key, string $ip, int $maxAttempts, int $windowSeconds = 60): bool
     {
-        return count($this->loadAttempts($this->filePath($key, $ip), time(), $windowSeconds)) >= $maxAttempts;
+        return count($this->readAttempts($this->filePath($key, $ip), $windowSeconds)) >= $maxAttempts;
     }
 
     /**
@@ -61,11 +69,15 @@ final class RateLimiter
      */
     public function record(string $key, string $ip, int $windowSeconds = 60): void
     {
-        $file       = $this->filePath($key, $ip);
-        $now        = time();
-        $attempts   = $this->loadAttempts($file, $now, $windowSeconds);
-        $attempts[] = $now;
-        $this->saveAttempts($file, $attempts);
+        $this->withLockedAttempts(
+            $this->filePath($key, $ip),
+            $windowSeconds,
+            static function (array $attempts): array {
+                $attempts[] = time();
+
+                return [$attempts, null];
+            },
+        );
     }
 
     /**
@@ -73,10 +85,7 @@ final class RateLimiter
      */
     public function remaining(string $key, string $ip, int $maxAttempts, int $windowSeconds = 60): int
     {
-        $file     = $this->filePath($key, $ip);
-        $attempts = $this->loadAttempts($file, time(), $windowSeconds);
-
-        return max(0, $maxAttempts - count($attempts));
+        return max(0, $maxAttempts - count($this->readAttempts($this->filePath($key, $ip), $windowSeconds)));
     }
 
     /**
@@ -99,33 +108,88 @@ final class RateLimiter
     }
 
     /**
-     * Load valid (non-expired) attempts from file.
+     * Reads the attempt list, hands it to $mutator and persists the list the
+     * mutator returns — all while holding an exclusive lock, so the decision
+     * the mutator makes is based on the same state it writes back.
      *
-     * @return int[] Timestamps of valid attempts
+     * @param callable(int[]): array{0: int[], 1: mixed} $mutator
+     * @return mixed The mutator's second return value, or null when the lock
+     *               could not be acquired.
      */
-    private function loadAttempts(string $file, int $now, int $windowSeconds): array
+    private function withLockedAttempts(string $file, int $windowSeconds, callable $mutator): mixed
     {
-        if (!is_file($file)) {
+        $handle = @fopen($file, 'c+');
+        if ($handle === false) {
+            return null;
+        }
+
+        try {
+            if (!flock($handle, LOCK_EX)) {
+                return null;
+            }
+
+            $attempts            = $this->parseAttempts((string) stream_get_contents($handle), $windowSeconds);
+            [$attempts, $result] = $mutator($attempts);
+            $this->writeAttempts($handle, $attempts);
+
+            return $result;
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    /**
+     * @return int[]
+     */
+    private function readAttempts(string $file, int $windowSeconds): array
+    {
+        $handle = @fopen($file, 'r');
+        if ($handle === false) {
             return [];
         }
 
-        $content = @file_get_contents($file);
-        if ($content === false) {
-            return [];
-        }
+        try {
+            if (!flock($handle, LOCK_SH)) {
+                return [];
+            }
 
+            return $this->parseAttempts((string) stream_get_contents($handle), $windowSeconds);
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    /**
+     * @return int[] Attempt timestamps still inside the window
+     */
+    private function parseAttempts(string $content, int $windowSeconds): array
+    {
         $timestamps = json_decode($content, true);
         if (!is_array($timestamps)) {
             return [];
         }
 
-        // Keep only attempts within the window
-        $cutoff = $now - $windowSeconds;
-        return array_values(array_filter($timestamps, fn (int $ts) => $ts > $cutoff));
+        $cutoff = time() - $windowSeconds;
+
+        return array_values(array_filter(
+            $timestamps,
+            static fn ($ts) => is_int($ts) && $ts > $cutoff,
+        ));
     }
 
-    private function saveAttempts(string $file, array $attempts): void
+    /**
+     * @param resource $handle
+     * @param int[]    $attempts
+     */
+    private function writeAttempts($handle, array $attempts): void
     {
-        file_put_contents($file, json_encode($attempts), LOCK_EX);
+        $payload = json_encode(array_values($attempts));
+
+        ftruncate($handle, 0);
+        rewind($handle);
+        fwrite($handle, $payload === false ? '[]' : $payload);
+        fflush($handle);
     }
 }
