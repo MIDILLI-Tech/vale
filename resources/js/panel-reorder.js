@@ -197,6 +197,22 @@ class PanelReorderInstance {
 
         panel.appendChild(arrowEl);
 
+        // The arrows sit on the heading's vertical centre, like the drag handle.
+        // A fixed `top-3` left them a few pixels higher in the p-4 rail cards.
+        const alignArrows = () => {
+            if (heading && heading.offsetHeight > 0 && arrowEl.offsetHeight > 0) {
+                const top = heading.offsetTop + ((heading.offsetHeight - arrowEl.offsetHeight) / 2);
+                arrowEl.style.top = Math.max(0, top) + 'px';
+            } else if (heading && heading.offsetTop > 0) {
+                arrowEl.style.top = heading.offsetTop + 'px';
+            }
+        };
+        alignArrows();
+        requestAnimationFrame(alignArrows);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(alignArrows).catch(() => {});
+        }
+
         // Attach action handlers
         arrowEl.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-panel-action]');
