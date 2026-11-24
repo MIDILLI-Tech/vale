@@ -52,7 +52,7 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th_checkbox(allIds) }}
+                {{ table.th_checkbox(allIds, total|default(allIds|length)) }}
                 {{ table.th('Product', 'name') }}
                 {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
                 {{ table.th('SKU', 'sku') }}
@@ -184,7 +184,7 @@
 {% for key in ['status', 'language', 'category_id', 'search', 'search_body', 'on_sale'] %}
     {% if filters[key] is defined and filters[key] is not empty %}{% set exportQuery = exportQuery|merge({(key): filters[key]}) %}{% endif %}
 {% endfor %}
-{% include 'admin/partials/_bulk_bar.twig' with {action: 'products', extraActions: [
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'products', extraFields: exportQuery|merge({bulk_scope: 'listing'}), extraActions: [
     {label: __('Publish Now'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
     {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
     {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},

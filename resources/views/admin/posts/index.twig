@@ -84,7 +84,7 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th_checkbox(allIds) }}
+                {{ table.th_checkbox(allIds, total|default(allIds|length)) }}
                 {{ table.th(__('Title'), 'title') }}
                 {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
                 {{ table.th(__('Status'), 'status', 'center') }}
@@ -211,7 +211,16 @@
 </div>
 
 {{ table.pagination() }}
-{% include 'admin/partials/_bulk_bar.twig' with {action: 'posts', extraActions: [
+{% include 'admin/partials/_bulk_bar.twig' with {action: 'posts', extraFields: {
+    bulk_scope: 'listing',
+    content_type: filters.content_type|default('post'),
+    status: filters.status|default(''),
+    language: filters.language|default(''),
+    tag_id: filters.tag_id|default(''),
+    category_id: filters.category_id|default(''),
+    search: filters.search|default(''),
+    search_body: filters.search_body|default(false) ? '1' : '',
+}, extraActions: [
     {label: __('Publish Now'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
     {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
     {label: __('Unlisted'), action: 'unlisted', class: 'bg-purple-600/10 text-purple-700 dark:text-purple-400 hover:bg-purple-600/20'},

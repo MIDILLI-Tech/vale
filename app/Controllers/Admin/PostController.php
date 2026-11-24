@@ -660,14 +660,20 @@ final class PostController
     /** POST /admin/bulk/posts */
     public function bulkAction(Request $request, Response $response): Response
     {
-        $body   = (array) $request->getParsedBody();
-        $rawIds = $body['ids'] ?? '[]';
-        if (is_string($rawIds) && str_contains($rawIds, ',')) {
-            $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+        $body        = (array) $request->getParsedBody();
+        $action      = $body['action'] ?? '';
+        $isSelectAll = ($body['select_all'] ?? '0') === '1' && ($body['bulk_scope'] ?? '') === 'listing';
+
+        if ($isSelectAll) {
+            $ids = $this->idsForListingSelection($body);
         } else {
-            $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            $rawIds = $body['ids'] ?? '[]';
+            if (is_string($rawIds) && str_contains($rawIds, ',')) {
+                $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+            } else {
+                $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            }
         }
-        $action = $body['action'] ?? '';
 
         if ($ids === []) {
             $this->session->set('flash_error', $this->translator->get('No items selected.'));
@@ -738,6 +744,55 @@ final class PostController
         }
 
         return $response->withHeader('Location', admin_url('/posts'))->withStatus(302);
+    }
+
+    /**
+     * Resolve every id matching the listing filters when "select all" was
+     * escalated past the rendered page. Mirrors the filters used by index().
+     *
+     * @param array<string, mixed> $body
+     * @return int[]
+     */
+    private function idsForListingSelection(array $body): array
+    {
+        $contentType = trim((string) ($body['content_type'] ?? 'post'));
+        if ($contentType === '' || $contentType === 'all') {
+            $contentType = 'post';
+        }
+
+        $filters = ['content_type' => $contentType];
+
+        $status = trim((string) ($body['status'] ?? ''));
+        if ($status !== '') {
+            $filters['status'] = $status;
+        }
+
+        $language = trim((string) ($body['language'] ?? ''));
+        if ($language !== '') {
+            $filters['language'] = $language;
+        }
+
+        foreach (['tag_id', 'category_id'] as $key) {
+            $value = (int) ($body[$key] ?? 0);
+            if ($value > 0) {
+                $filters[$key] = $value;
+            }
+        }
+
+        $search = trim((string) ($body['search'] ?? ''));
+        if ($search !== '') {
+            $filters['search'] = $search;
+            if (($body['search_body'] ?? '') === '1') {
+                $filters['search_body'] = true;
+            }
+        }
+
+        $posts = $this->posts->findAll(new Pagination(1, 100000), $filters);
+
+        return array_values(array_map(
+            static fn (Post $post): int => (int) $post->getId(),
+            $posts
+        ));
     }
 
     public function destroy(Request $request, Response $response, array $args): Response

@@ -804,14 +804,20 @@ final class ProductController
     /** POST /admin/bulk/products */
     public function bulkAction(Request $request, Response $response): Response
     {
-        $body   = (array) $request->getParsedBody();
-        $rawIds = $body['ids'] ?? '[]';
-        if (is_string($rawIds) && str_contains($rawIds, ',')) {
-            $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+        $body        = (array) $request->getParsedBody();
+        $action      = $body['action'] ?? '';
+        $isSelectAll = ($body['select_all'] ?? '0') === '1' && ($body['bulk_scope'] ?? '') === 'listing';
+
+        if ($isSelectAll) {
+            $ids = $this->idsForListingSelection($body);
         } else {
-            $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            $rawIds = $body['ids'] ?? '[]';
+            if (is_string($rawIds) && str_contains($rawIds, ',')) {
+                $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+            } else {
+                $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            }
         }
-        $action = $body['action'] ?? '';
 
         if ($ids === []) {
             $this->session->set('flash_error', $this->translator->get('No items selected.'));
@@ -850,6 +856,50 @@ final class ProductController
             $this->searchCache->bump(self::PRODUCT_SEARCH_NAMESPACE);
         }
         return $response->withHeader('Location', admin_url('/products'))->withStatus(302);
+    }
+
+    /**
+     * Resolve every id matching the listing filters when "select all" was
+     * escalated past the rendered page. Mirrors the filters used by index().
+     *
+     * @param array<string, mixed> $body
+     * @return int[]
+     */
+    private function idsForListingSelection(array $body): array
+    {
+        $filters = [];
+
+        $status = trim((string) ($body['status'] ?? ''));
+        if ($status === 'on_sale' || ($body['on_sale'] ?? '') === '1') {
+            $filters['on_sale'] = true;
+        } elseif ($status !== '') {
+            $filters['status'] = $status;
+        }
+
+        $language = trim((string) ($body['language'] ?? ''));
+        if ($language !== '') {
+            $filters['language'] = $language;
+        }
+
+        $categoryId = (int) ($body['category_id'] ?? 0);
+        if ($categoryId > 0) {
+            $filters['category_id'] = $categoryId;
+        }
+
+        $search = trim((string) ($body['search'] ?? ''));
+        if ($search !== '') {
+            $filters['search'] = $search;
+            if (($body['search_body'] ?? '') === '1') {
+                $filters['search_body'] = true;
+            }
+        }
+
+        $products = $this->products->findAll(new Pagination(1, 100000), $filters);
+
+        return array_values(array_map(
+            static fn (Product $product): int => (int) $product->getId(),
+            $products
+        ));
     }
 
     /**
