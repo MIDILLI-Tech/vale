@@ -522,6 +522,10 @@ return [
         $env->addGlobal('site_tagline', $settings->get('site_tagline', ''));
         $env->addGlobal('font_family', $settings->get('font_family', 'inter'));
         $env->addGlobal('site_logo', $settings->get('site_logo', ''));
+        // Admin density must be a global: screens that pass their own `settings`
+        // array (e.g. content types) would otherwise shadow it and render at
+        // the default density while the rest of the panel is compact/minimal.
+        $env->addGlobal('admin_ui_density', $settings->get('admin_ui_density', 'normal'));
 
         // Progressive Web App (Settings -> General -> Features). Resolve the
         // icon/color globals only while the feature is on; the head partial

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-{% set _density = settings.admin_ui_density|default('normal') %}
+{% set _density = admin_ui_density|default('normal') %}
 {% set _html_classes = [] %}
 {% if panel_rail|default(false) %}{% set _html_classes = _html_classes|merge(['has-edit-rail']) %}{% endif %}
 {% if _density in ['compact', 'minimal'] %}{% set _html_classes = _html_classes|merge(['vl-density-' ~ _density]) %}{% endif %}
