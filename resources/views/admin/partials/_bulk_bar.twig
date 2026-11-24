@@ -71,6 +71,11 @@ class="fixed z-40 pointer-events-none flex items-center justify-center max-w-[ca
                 {{ csrf_field() }}
                 <input type="hidden" name="ids" :value="$store.bulk.selected.join(',')">
                 <input type="hidden" name="select_all" :value="$store.bulk.selectAll ? '1' : '0'">
+                {# Listing filters, so a server-side "select all" covers the same
+                   record set the operator is looking at. #}
+                {% for fieldName, fieldValue in extraFields|default({}) %}
+                <input type="hidden" name="{{ fieldName }}" value="{{ fieldValue }}">
+                {% endfor %}
 
                 {% for extra in extraActions|default([]) %}
                 <button type="submit"

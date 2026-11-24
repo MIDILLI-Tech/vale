@@ -26,11 +26,12 @@
  #}
 
 {# ── Checkbox column header (select all) ───────────────────── #}
-{% macro th_checkbox(allIds) %}
+{% macro th_checkbox(allIds, totalItems = 0) %}
     {% set ids = allIds|default([])|json_encode|raw %}
     <th class="w-10 px-4 py-3 text-left">
         <input type="checkbox" data-bulk-select-all @click="$store.bulk.selectVisible()"
                :checked="$store.bulk.selectAll || $store.bulk.selectAllVisible"
+               data-bulk-total="{{ totalItems }}"
                class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
     </th>
 {% endmacro %}

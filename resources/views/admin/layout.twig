@@ -1384,6 +1384,14 @@
                 return this.selected.includes(String(id));
             },
             get count() {
+                if (this.selectAll) {
+                    // Server-paginated lists only render one page of checkboxes;
+                    // the listing total is the number of records the bulk form
+                    // will actually act on.
+                    const selectAllCb = this.getVisibleSelectAllCheckbox();
+                    const total = selectAllCb ? parseInt(selectAllCb.dataset.bulkTotal || '0', 10) : 0;
+                    if (total > this.selected.length) return total;
+                }
                 return this.selected.length;
             }
         });

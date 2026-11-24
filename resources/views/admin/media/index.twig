@@ -87,6 +87,7 @@
             <input type="checkbox" data-bulk-select-all
                    @click="$store.bulk.selectVisible()"
                    :checked="$store.bulk.selectAll || $store.bulk.selectAllVisible"
+                   data-bulk-total="{{ total|default(0) }}"
                    class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
             <span>{{ __('Select All') }}</span>
             <span class="text-xs" x-text="'(' + visibleCount + ' files)'"></span>
@@ -175,7 +176,7 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th_checkbox(allIds) }}
+                {{ table.th_checkbox(allIds, total|default(0)) }}
                 {{ table.th(__('File'), 'original_name') }}
                 {{ table.th(__('Type'), 'mime_type') }}
                 {{ table.th(__('Size'), 'size') }}
@@ -232,6 +233,12 @@
     deleteMsg: is_unused_filter|default(false)
         ? __('Are you sure you want to delete the selected unused files?')
         : __('These files may be used in your content. Deleting them may cause content not to display properly.') ~ ' ' ~ __('Continue deleting?'),
+    extraFields: {
+        bulk_scope: 'listing',
+        type: filters.type|default(''),
+        search: filters.search|default(''),
+        unused: is_unused_filter|default(false) ? '1' : '',
+    },
 } %}
 </div>
 

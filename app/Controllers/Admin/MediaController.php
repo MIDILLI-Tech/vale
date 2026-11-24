@@ -241,14 +241,21 @@ final class MediaController
     /** POST /admin/bulk/media */
     public function bulkAction(Request $request, Response $response): Response
     {
-        $body   = (array) $request->getParsedBody();
-        $rawIds = $body['ids'] ?? '[]';
-        if (is_string($rawIds) && str_contains($rawIds, ',')) {
-            $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+        $body      = (array) $request->getParsedBody();
+        $action    = $body['action'] ?? '';
+        $selectAll = ($body['select_all'] ?? '0') === '1'
+            && ($body['bulk_scope'] ?? '')        === 'listing';
+
+        if ($selectAll) {
+            $ids = $this->idsForListingSelection($body);
         } else {
-            $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            $rawIds = $body['ids'] ?? '[]';
+            if (is_string($rawIds) && str_contains($rawIds, ',')) {
+                $ids = array_filter(array_map('intval', explode(',', $rawIds)));
+            } else {
+                $ids = array_filter(array_map('intval', is_array($rawIds) ? $rawIds : (array) json_decode((string) $rawIds, true)));
+            }
         }
-        $action = $body['action'] ?? '';
 
         if ($ids === []) {
             $this->session->set('flash_error', $this->translator->get('No items selected.'));
@@ -278,6 +285,45 @@ final class MediaController
             $redirect = admin_url('/media');
         }
         return $response->withHeader('Location', $redirect)->withStatus(302);
+    }
+
+    /**
+     * Resolve every id matching the listing filters when "select all" was
+     * escalated past the rendered page. The bulk form only carries the
+     * checkboxes that exist in the DOM, so a server-paginated library would
+     * otherwise stop at the current page.
+     *
+     * @param array<string, mixed> $body
+     * @return int[]
+     */
+    private function idsForListingSelection(array $body): array
+    {
+        $filters = [];
+
+        $type = trim((string) ($body['type'] ?? ''));
+        if ($type !== '') {
+            $filters['mime_type'] = $type;
+        }
+
+        $search = trim((string) ($body['search'] ?? ''));
+        if ($search !== '') {
+            $filters['search'] = $search;
+        }
+
+        if (($body['unused'] ?? '') === '1') {
+            $unusedIds = array_keys($this->media->findUnused());
+            if ($unusedIds === []) {
+                return [];
+            }
+            $filters['ids'] = $unusedIds;
+        }
+
+        $rows = $this->media->findAll(new Pagination(1, 100000), $filters);
+
+        return array_values(array_map(
+            static fn (Media $media): int => (int) $media->getId(),
+            $rows
+        ));
     }
 
     public function edit(Request $request, Response $response, array $args): Response
