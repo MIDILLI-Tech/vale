@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No categories yet.') }}</td>
+                <td colspan="{{ multi_language_content ? 5 : 4 }}" class="px-6 py-8 text-center text-sm text-gray-400">{{ __('No categories yet.') }}</td>
             </tr>
             {% endfor %}
         </tbody>
