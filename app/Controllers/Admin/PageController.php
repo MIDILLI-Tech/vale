@@ -328,6 +328,7 @@ final class PageController
             'original_id'            => $translationOf ?: $post->getId(),
             'membership_tags'        => $this->getMembershipTagNames(),
             'page_aliases'           => $this->pageAliasLeafs($this->pageCanonicalPath($post)),
+            ...$this->lastSavedContext($post),
         ]);
     }
 

@@ -574,6 +574,7 @@ final class PostController
             'translations'           => $translations,
             'original_id'            => $originalId,
             'post_aliases'           => $this->contentAliasLeafs($post),
+            ...$this->lastSavedContext($post),
         ]);
     }
 

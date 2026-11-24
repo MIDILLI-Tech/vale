@@ -1547,6 +1547,8 @@
     "Last Delivery": "Last Delivery",
     "Last Name": "Last Name",
     "Last Occurred": "Last Occurred",
+    "Last saved by :name · :time": "Last saved by :name · :time",
+    "Last saved · :time": "Last saved · :time",
     "Last Update": "Last Update",
     "Last Used": "Last Used",
     "Last check failed on :date: :reason": "Last check failed on :date: :reason",

@@ -13,6 +13,9 @@ interface RevisionRepositoryInterface
     /** @return Revision[] */
     public function findByPostId(int $postId): array;
 
+    /** Newest revision only — avoids loading the rest of the history. */
+    public function findLatestByPostId(int $postId): ?Revision;
+
     public function findById(int $id): ?Revision;
 
     public function countByPostId(int $postId): int;

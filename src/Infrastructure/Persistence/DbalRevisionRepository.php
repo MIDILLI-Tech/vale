@@ -49,6 +49,17 @@ final class DbalRevisionRepository implements RevisionRepositoryInterface
         return array_map(fn (array $row) => Revision::fromRow($row), $rows);
     }
 
+    public function findLatestByPostId(int $postId): ?Revision
+    {
+        $row = $this->db->fetchAssociative(
+            'SELECT * FROM ' . VL_DB_PREFIX . 'revisions' . ' WHERE post_id = ? ORDER BY revision_number DESC LIMIT 1',
+            [$postId],
+            [ParameterType::INTEGER],
+        );
+
+        return $row !== false ? Revision::fromRow($row) : null;
+    }
+
     public function findById(int $id): ?Revision
     {
         $row = $this->db->fetchAssociative(

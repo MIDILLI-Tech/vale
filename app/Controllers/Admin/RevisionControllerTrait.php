@@ -7,12 +7,32 @@ namespace ValeApp\App\Controllers\Admin;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use ValeApp\Domain\Content\DiffHelper;
+use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Content\Entity\Revision;
 use ValeApp\Infrastructure\Translation\Translator;
 
 trait RevisionControllerTrait
 {
     abstract protected function revisionUrlPrefix(): string;
+
+    /**
+     * The newest revision is written just before each save, so its author is
+     * the last editor; records without revisions fall back to the timestamp.
+     *
+     * @return array{last_saved_by: ?string, last_saved_at: ?\DateTimeImmutable}
+     */
+    private function lastSavedContext(Post $post): array
+    {
+        $latest = $post->getId() !== null
+            ? $this->revisions->findLatestByPostId((int) $post->getId())
+            : null;
+        $author = $latest !== null ? $this->users->findById($latest->getAuthorId()) : null;
+
+        return [
+            'last_saved_by' => $author?->getName(),
+            'last_saved_at' => $post->getUpdatedAt() ?? $latest?->getCreatedAt(),
+        ];
+    }
 
     public function revisionsJson(Request $request, Response $response, array $args): Response
     {

@@ -21,6 +21,15 @@
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit') ~ ' ' ~ (type.name|default(__('Post'))) : __('Create') ~ ' ' ~ (type.name|default(__('Post'))) }}</h1>
     {% if is_edit %}<span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
     <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% if is_edit and last_saved_at %}
+    <span class="text-xs text-gray-400 dark:text-gray-500" data-last-saved>
+        {% if last_saved_by %}
+            {{ __('Last saved by :name · :time', {':name': last_saved_by, ':time': last_saved_at|date('M j, Y H:i')}) }}
+        {% else %}
+            {{ __('Last saved · :time', {':time': last_saved_at|date('M j, Y H:i')}) }}
+        {% endif %}
+    </span>
+    {% endif %}
     {% include 'admin/components/rail-toggle.twig' %}
 </div>
 
