@@ -56,7 +56,7 @@ final class IdealoFeedService
         }
         $header[] = 'imageUrls';
         $header[] = 'download';
-        fputcsv($output, $header, ',', '"', '\\');
+        fputcsv($output, array_map(vl_csv_escape(...), $header), ',', '"', '\\');
 
         $page    = 1;
         $perPage = 200;
@@ -120,7 +120,7 @@ final class IdealoFeedService
         $cells[] = $this->productImageUrl($product);
         $cells[] = $product->isDigital() ? 'true' : '';
 
-        fputcsv($output, $cells, ',', '"', '\\');
+        fputcsv($output, array_map(vl_csv_escape(...), $cells), ',', '"', '\\');
     }
 
     private function writeVariant($output, Product $product, array $variant): void
@@ -181,7 +181,7 @@ final class IdealoFeedService
         $cells[] = $varImageUrl ?: $this->productImageUrl($product);
         $cells[] = $product->isDigital() ? 'true' : '';
 
-        fputcsv($output, $cells, ',', '"', '\\');
+        fputcsv($output, array_map(vl_csv_escape(...), $cells), ',', '"', '\\');
     }
 
     /**

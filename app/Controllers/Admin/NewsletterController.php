@@ -475,13 +475,7 @@ final class NewsletterController
                 $sStats['opens_count'],
                 $sStats['clicks_count'],
             ];
-            $line = array_map(static function ($val): string {
-                $str = (string) $val;
-                if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
-                    return "'" . $str;
-                }
-                return $str;
-            }, $row);
+            $line = array_map(vl_csv_escape(...), $row);
             fputcsv($stream, $line, ',', '"', '\\');
         }
 

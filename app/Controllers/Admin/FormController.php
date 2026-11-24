@@ -734,11 +734,7 @@ final class FormController
 
     private function escapeCsvValue(string $value): string
     {
-        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
-            return "'" . $value;
-        }
-
-        return $value;
+        return vl_csv_escape($value);
     }
 
     private function submissionExportFilename(Form $form, string $extension): string

@@ -181,17 +181,9 @@ final class ExportProductsCommand extends Command
                 if ($value === null || $value === '') {
                     $line[] = '';
                 } elseif (is_array($value) || is_object($value)) {
-                    $str = json_encode($value, JSON_UNESCAPED_UNICODE);
-                    if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
-                        $str = "'" . $str;
-                    }
-                    $line[] = $str;
+                    $line[] = vl_csv_escape((string) json_encode($value, JSON_UNESCAPED_UNICODE));
                 } else {
-                    $str = (string) $value;
-                    if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
-                        $str = "'" . $str;
-                    }
-                    $line[] = $str;
+                    $line[] = vl_csv_escape((string) $value);
                 }
             }
             fputcsv($stream, $line, ',', '"', '\\');

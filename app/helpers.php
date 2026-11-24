@@ -531,3 +531,29 @@ if (!function_exists('absolute_url')) {
         return $scheme . '://' . $host . $port . $site;
     }
 }
+
+if (!function_exists('vl_csv_escape')) {
+    /**
+     * Neutralises spreadsheet formula injection in a CSV cell.
+     *
+     * Excel and LibreOffice execute a cell whose first character is =, +, -,
+     * @, tab or CR as a formula, so every exported value that came from a user
+     * (product names, order fields, form answers) must be prefixed. Plain
+     * numbers keep their sign — only a "-" that is not a number is escaped —
+     * so prices and totals are not mangled.
+     */
+    function vl_csv_escape(mixed $value): string
+    {
+        $text = (string) $value;
+        if ($text === '') {
+            return '';
+        }
+
+        $first = ltrim($text, " \t\r\n")[0] ?? '';
+
+        $risky = in_array($first, ['=', '+', '@', "\t", "\r", "\n"], true)
+            || ($first === '-' && !is_numeric($text));
+
+        return $risky ? "'" . $text : $text;
+    }
+}
