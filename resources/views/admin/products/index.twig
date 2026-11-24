@@ -12,13 +12,13 @@
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> products</p>
     </div>
     <a href="{{ url('/admin/products/create') }}"
-       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ Add Product</a>
+       class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ {{ __('Add Product') }}</a>
 </div>
 
 <div class="mb-4 flex flex-wrap items-center gap-3">
     <form method="get" action="{{ url('/admin/products') }}" class="flex flex-wrap items-center gap-2">
         <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-200">
-            <option value="">All Statuses</option>
+            <option value="">{{ __('All Statuses') }}</option>
             {% for s in ['draft', 'published', 'scheduled', 'archived', 'expired'] %}
             <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
             {% endfor %}

@@ -36,13 +36,13 @@
             {{ __('Export PDF') }}
         </a>
         <div class="flex gap-1 w-full mt-2" @click.prevent.stop>
-            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
-            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
+            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('7d') }}</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('30d') }}</button>
             <button type="button" @click="setPreset('thisMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This month') }}</button>
             <button type="button" @click="setPreset('lastMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last month') }}</button>
             <button type="button" @click="setPreset('thisYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This year') }}</button>
             <button type="button" @click="setPreset('lastYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last year') }}</button>
-            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">180d</button>
+            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('180d') }}</button>
         </div>
     </form>
 </div>

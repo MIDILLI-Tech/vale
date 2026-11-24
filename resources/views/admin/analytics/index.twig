@@ -150,10 +150,10 @@
             </label>
         </div>
         <div class="flex flex-wrap items-center gap-1 w-full sm:w-auto mt-1 sm:mt-0" @click.prevent.stop>
-            <span class="text-xs text-gray-500 dark:text-gray-400">Presets:</span>
-            <button type="button" @click="setPreset('7d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
-            <button type="button" @click="setPreset('30d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
-            <button type="button" @click="setPreset('90d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">90d</button>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{{ __('Presets') }}:</span>
+            <button type="button" @click="setPreset('7d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('7d') }}</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('30d') }}</button>
+            <button type="button" @click="setPreset('90d')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('90d') }}</button>
             <button type="button" @click="setPreset('thisMonth')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This month') }}</button>
             <button type="button" @click="setPreset('lastMonth')" class="rounded-md px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last month') }}</button>
         </div>

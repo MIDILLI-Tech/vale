@@ -1,28 +1,28 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_table.twig" as table %}
 
-{% block title %}Orders{% endblock %}
+{% block title %}{{ __('Orders') }}{% endblock %}
 
 {% block content %}
 <div x-data="dataTable({perPage: {{ per_page|default(20) }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Orders</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> order(s)</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Orders') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('order(s)') }}</p>
     </div>
     <a href="{{ url('/admin/orders/create') }}"
        class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        New Order
+        {{ __('New Order') }}
     </a>
 </div>
 
 <div class="mb-4 flex items-center gap-3 flex-wrap" x-data="datePresets()">
     <form method="get" action="{{ url('/admin/orders') }}" class="flex items-center gap-2 flex-wrap">
         <select name="status" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-            <option value="">All Statuses</option>
+            <option value="">{{ __('All Statuses') }}</option>
             {% for s in ['pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded'] %}
             <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
             {% endfor %}
@@ -45,15 +45,15 @@
                 <input type="hidden" name="coupon_code" value="{{ filters.coupon_code }}">
             </div>
         {% endif %}
-        <p class="text-sm text-gray-700 dark:text-gray-300">Presets:</p>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ __('Presets') }}:</p>
         <div class="flex flex-wrap gap-1" @click.prevent.stop>
-            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">7d</button>
-            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">30d</button>
-            <button type="button" @click="setPreset('thisMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">This month</button>
-            <button type="button" @click="setPreset('lastMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Last month</button>
-            <button type="button" @click="setPreset('thisYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">This year</button>
-            <button type="button" @click="setPreset('lastYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Last year</button>
-            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">180d</button>
+            <button type="button" @click="setPreset('7d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('7d') }}</button>
+            <button type="button" @click="setPreset('30d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('30d') }}</button>
+            <button type="button" @click="setPreset('thisMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This month') }}</button>
+            <button type="button" @click="setPreset('lastMonth')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last month') }}</button>
+            <button type="button" @click="setPreset('thisYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('This year') }}</button>
+            <button type="button" @click="setPreset('lastYear')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('Last year') }}</button>
+            <button type="button" @click="setPreset('180d')" class="rounded-sm px-2 py-1 text-xs font-medium border border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">{{ __('180d') }}</button>
         </div>
         <button type="submit" class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
     </form>
