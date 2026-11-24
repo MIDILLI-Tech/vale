@@ -30,7 +30,7 @@
 {% set opens_pct = campaign.opensCount > 0 and total > 0 ? min(((campaign.opensCount / total) * 100)|round(1), 100) : 0 %}
 {% set clicks_pct = campaign.clicksCount > 0 and total > 0 ? min(((campaign.clicksCount / total) * 100)|round(1), 100) : 0 %}
 <div class="mb-4 flex flex-wrap items-center gap-3">
-    {{ table.search('Search by email or name…') }}
+    {{ table.search(__('Search by email or name…')) }}
     {{ table.columnsToggle() }}
     {% if filter %}
     <div class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
@@ -73,12 +73,12 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th('Email', 'email') }}
-                {{ table.th('Name', 'name') }}
-                {{ table.th_static('Status', 'left') }}
-                {{ table.th('Sent', 'sent_at') }}
-                {{ table.th('Opened', 'opened_at') }}
-                {{ table.th('Clicks', 'clicks_count') }}
+                {{ table.th(__('Email'), 'email') }}
+                {{ table.th(__('Name'), 'name') }}
+                {{ table.th_static(__('Status'), 'left') }}
+                {{ table.th(__('Sent'), 'sent_at') }}
+                {{ table.th(__('Opened'), 'opened_at') }}
+                {{ table.th(__('Clicks'), 'clicks_count') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">

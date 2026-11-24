@@ -222,7 +222,7 @@
 </div>
 
 <div class="mb-4 flex flex-wrap items-center gap-3">
-    {{ table.search('Search…') }}
+    {{ table.search(__('Search…')) }}
     {% if filters.search is defined and filters.search %}
     <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
         <span>Filtered: {{ filters.search }}</span>
@@ -237,12 +237,12 @@
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
                 {{ table.th_checkbox(allIds) }}
-                {{ table.th('Email', 'email') }}
-                {{ table.th('Status', 'status') }}
-                {{ table.th('Tags', 'tags') }}
-                {% if subscriptions_enabled %}{{ table.th_static('Membership Status', 'left') }}{% endif %}
-                {{ table.th('Subscribed', 'created_at') }}
-                {{ table.th_static('Actions', 'right') }}
+                {{ table.th(__('Email'), 'email') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Tags'), 'tags') }}
+                {% if subscriptions_enabled %}{{ table.th_static(__('Membership Status'), 'left') }}{% endif %}
+                {{ table.th(__('Subscribed'), 'created_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">

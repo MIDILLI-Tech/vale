@@ -15,18 +15,18 @@
 
 <div x-data="dataTable({perPage: 20, serverSide: false, sortBy: '', sortDir: 'desc', search: '', perPage: 20})">
     <div class="mb-4 flex items-center gap-3">
-        {{ table.search('Search roles…') }}
+        {{ table.search(__('Search roles…')) }}
         {{ table.columnsToggle() }}
     </div>
     <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
-                    {{ table.th('Name', 'name') }}
-                    {{ table.th('Slug', 'slug') }}
-                    {{ table.th('Description', 'description') }}
-                    {{ table.th('Permissions', 'permissions') }}
-                    {{ table.th('Type', 'type') }}
+                    {{ table.th(__('Name'), 'name') }}
+                    {{ table.th(__('Slug'), 'slug') }}
+                    {{ table.th(__('Description'), 'description') }}
+                    {{ table.th(__('Permissions'), 'permissions') }}
+                    {{ table.th(__('Type'), 'type') }}
                     <th class="px-6 py-3"></th>
                 </tr>
             </thead>

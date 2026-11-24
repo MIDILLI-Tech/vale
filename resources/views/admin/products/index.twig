@@ -34,7 +34,7 @@
         {% endif %}
         <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
     </form>
-    {{ table.search('Search…') }}
+    {{ table.search(__('Search…')) }}
     {{ table.contentSearch() }}
     {{ table.columnsToggle() }}
 </div>
@@ -53,17 +53,17 @@
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
                 {{ table.th_checkbox(allIds, total|default(allIds|length)) }}
-                {{ table.th('Product', 'name') }}
+                {{ table.th(__('Product'), 'name') }}
                 {% if multi_language_content %}{{ table.th(__('Lang'), 'language', 'center') }}{% endif %}
-                {{ table.th('SKU', 'sku') }}
-                {{ table.th('Price', 'price') }}
-                {{ table.th('Categories', 'categories') }}
-                {{ table.th('Stock', 'stock_quantity', 'center', {cellClass: 'px-2'}) }}
-                {{ table.th('Sold', 'total_sold', 'center', {cellClass: 'px-2'}) }}
-                {{ table.th('Status', 'status', 'center') }}
+                {{ table.th(__('SKU'), 'sku') }}
+                {{ table.th(__('Price'), 'price') }}
+                {{ table.th(__('Categories'), 'categories') }}
+                {{ table.th(__('Stock'), 'stock_quantity', 'center', {cellClass: 'px-2'}) }}
+                {{ table.th(__('Sold'), 'total_sold', 'center', {cellClass: 'px-2'}) }}
+                {{ table.th(__('Status'), 'status', 'center') }}
                 {{ table.th(__('Created'), 'created_at', 'left', {defaultHidden: true}) }}
                 {{ table.th(__('Updated'), 'updated_at', 'left', {defaultHidden: true}) }}
-                {{ table.th_static('Actions', 'right') }}
+                {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">

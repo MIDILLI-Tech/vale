@@ -57,7 +57,7 @@
         </div>
         <button type="submit" class="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600">Filter</button>
     </form>
-    {{ table.search('Search…') }}
+    {{ table.search(__('Search…')) }}
     {{ table.columnsToggle() }}
 </div>
 
@@ -65,13 +65,13 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th('Order', 'order_number') }}
-                {{ table.th_static('Customer', 'left') }}
-                {{ table.th('Total', 'total') }}
-                {{ table.th('Coupon', 'coupon_code') }}
-                {{ table.th('Status', 'status') }}
-                {{ table.th('Date', 'created_at') }}
-                {{ table.th_static('Actions', 'right') }}
+                {{ table.th(__('Order'), 'order_number') }}
+                {{ table.th_static(__('Customer'), 'left') }}
+                {{ table.th(__('Total'), 'total') }}
+                {{ table.th(__('Coupon'), 'coupon_code') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Date'), 'created_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">

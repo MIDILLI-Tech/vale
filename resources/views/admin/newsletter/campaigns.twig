@@ -23,7 +23,7 @@
 </div>
 
 <div class="mb-4 flex flex-wrap items-center gap-3">
-    {{ table.search('Search…') }}
+    {{ table.search(__('Search…')) }}
     {{ table.contentSearch() }}
     {{ table.columnsToggle() }}
     {% if filterSubscriber %}
@@ -44,14 +44,14 @@
     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
-                {{ table.th('Subject', 'subject') }}
-                {{ table.th('Status', 'status') }}
-                {{ table.th('Recipients', 'recipients_count') }}
-                {{ table.th('Opens', 'opens_count') }}
-                {{ table.th('Clicks', 'clicks_count') }}
-                {{ table.th_static('Tracking', 'center') }}
-                {{ table.th('Sent', 'sent_at') }}
-                {{ table.th_static('Actions', 'right') }}
+                {{ table.th(__('Subject'), 'subject') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Recipients'), 'recipients_count') }}
+                {{ table.th(__('Opens'), 'opens_count') }}
+                {{ table.th(__('Clicks'), 'clicks_count') }}
+                {{ table.th_static(__('Tracking'), 'center') }}
+                {{ table.th(__('Sent'), 'sent_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">

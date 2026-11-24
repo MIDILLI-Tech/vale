@@ -57,11 +57,11 @@
         <thead class="bg-gray-50 dark:bg-gray-800/50">
             <tr>
                 {{ table.th_checkbox(allIds) }}
-                {{ table.th('Author', 'author_name') }}
-                {{ table.th('On', 'entity_title') }}
-                {{ table.th('Status', 'status') }}
-                {{ table.th('Date', 'created_at') }}
-                {{ table.th_static('Actions', 'right') }}
+                {{ table.th(__('Author'), 'author_name') }}
+                {{ table.th(__('Content'), 'entity_title') }}
+                {{ table.th(__('Status'), 'status') }}
+                {{ table.th(__('Date'), 'created_at') }}
+                {{ table.th_static(__('Actions'), 'right') }}
             </tr>
         </thead>
         <tbody x-ref="items" class="divide-y divide-gray-200 dark:divide-gray-700">
