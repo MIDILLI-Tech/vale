@@ -23,8 +23,10 @@
 {% endfor %}
 
 <section class="rounded-xl border border-gray-200 bg-white shadow-xs dark:border-gray-700 dark:bg-gray-800 overflow-hidden"
-         x-data="{ collapsed: localStorage.getItem('vl_dash_needs_attention_collapsed') === '1' }">
-    <header class="px-5 py-4 flex items-center justify-between gap-3">
+         x-data="{ collapsed: localStorage.getItem('vl_dash_needs_attention_collapsed') === '1', toggle() { this.collapsed = !this.collapsed; localStorage.setItem('vl_dash_needs_attention_collapsed', this.collapsed ? '1' : '0'); } }">
+    <header class="px-5 py-4 flex cursor-pointer select-none items-center justify-between gap-3"
+            role="button" tabindex="0" :aria-expanded="(!collapsed).toString()"
+            @click="toggle()" @keydown.enter.prevent="toggle()" @keydown.space.prevent="toggle()">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Needs Attention') }}</h2>
             {% if _rows|length > 0 %}
@@ -33,7 +35,7 @@
             </span>
             {% endif %}
         </div>
-        <button type="button" @click="collapsed = !collapsed; localStorage.setItem('vl_dash_needs_attention_collapsed', collapsed ? '1' : '0')"
+        <button type="button" @click.stop="toggle()"
                 class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                 :title="collapsed ? '{{ __('Expand')|e('html_attr') }}' : '{{ __('Collapse')|e('html_attr') }}'">
             <svg x-show="!collapsed" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

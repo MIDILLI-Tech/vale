@@ -165,8 +165,10 @@
         {% set news_off = dashboard_news_disabled is defined and dashboard_news_disabled %}
         {% if not news_off %}
         <section class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs overflow-hidden"
-                 x-data="{ collapsed: localStorage.getItem('vl_dash_vale_news_collapsed') === '1' }">
-            <header class="px-5 py-4 flex items-center justify-between gap-3" id="vl-news-card"
+                 x-data="{ collapsed: localStorage.getItem('vl_dash_vale_news_collapsed') === '1', toggle() { this.collapsed = !this.collapsed; localStorage.setItem('vl_dash_vale_news_collapsed', this.collapsed ? '1' : '0'); } }">
+            <header class="px-5 py-4 flex cursor-pointer select-none items-center justify-between gap-3" id="vl-news-card"
+                    role="button" tabindex="0" :aria-expanded="(!collapsed).toString()"
+                    @click="toggle()" @keydown.enter.prevent="toggle()" @keydown.space.prevent="toggle()"
                     data-news-url="{{ url('/admin/dashboard/news') }}"
                     data-empty-text="{{ __('No news available right now.')|e('html_attr') }}"
                     data-disabled-text="{{ __('Vale News refresh is disabled. Enable it in General › Communications settings.')|e('html_attr') }}"
@@ -178,7 +180,7 @@
                     <span id="vl-news-new" class="hidden items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300"></span>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
-                    <button type="button" x-show="!collapsed"
+                    <button type="button" x-show="!collapsed" @click.stop
                             title="{{ __('Refresh')|e('html_attr') }}" onclick="vlRefreshNews(this)"
                             class="inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -188,7 +190,7 @@
                             <path d="M8 16H3v5"/>
                         </svg>
                     </button>
-                    <button type="button" @click="collapsed = !collapsed; localStorage.setItem('vl_dash_vale_news_collapsed', collapsed ? '1' : '0')"
+                    <button type="button" @click.stop="toggle()"
                             class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                             :title="collapsed ? '{{ __('Expand')|e('html_attr') }}' : '{{ __('Collapse')|e('html_attr') }}'">
                         <svg x-show="!collapsed" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,15 +224,17 @@
 
         {# ── System card ── #}
         <section class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs overflow-hidden"
-                 x-data="{ collapsed: localStorage.getItem('vl_dash_system_collapsed') === '1' }">
-            <header class="px-5 py-4 flex items-center justify-between gap-3">
+                 x-data="{ collapsed: localStorage.getItem('vl_dash_system_collapsed') === '1', toggle() { this.collapsed = !this.collapsed; localStorage.setItem('vl_dash_system_collapsed', this.collapsed ? '1' : '0'); } }">
+            <header class="px-5 py-4 flex cursor-pointer select-none items-center justify-between gap-3"
+                    role="button" tabindex="0" :aria-expanded="(!collapsed).toString()"
+                    @click="toggle()" @keydown.enter.prevent="toggle()" @keydown.space.prevent="toggle()">
                 <div class="flex min-w-0 flex-wrap items-center gap-2">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('System') }}</h2>
                     {% if status|default([])|length > 0 %}
                     <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">{{ status|length }} {{ status|length == 1 ? __('notice') : __('notices') }}</span>
                     {% endif %}
                 </div>
-                <button type="button" @click="collapsed = !collapsed; localStorage.setItem('vl_dash_system_collapsed', collapsed ? '1' : '0')"
+                <button type="button" @click.stop="toggle()"
                         class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                         :title="collapsed ? '{{ __('Expand')|e('html_attr') }}' : '{{ __('Collapse')|e('html_attr') }}'">
                     <svg x-show="!collapsed" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
