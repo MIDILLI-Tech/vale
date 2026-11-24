@@ -167,7 +167,11 @@
                 <label class="block text-sm font-medium text-gray-700">{{ __('Default Site and Admin Language') }}</label>
                 <select name="locale" class="mt-1 w-auto rounded-lg border-gray-300 dark:border-gray-700">
                     {% set adminLocale = settings.locale ?? settings.default_locale ?? 'en' %}
-                    {% for code, name in supported_locales %}
+                    {# Discovered from resources/lang/*.json — never a hardcoded list.
+                       Deliberately all_locales, not supported_locales: the admin
+                       interface language is independent of the content languages
+                       (LocaleMiddleware::resolveAdminLocale uses the same set). #}
+                    {% for code, name in all_locales %}
                     <option value="{{ code }}" {{ adminLocale == code ? 'selected' }}>{{ locale_name(code) }}</option>
                     {% endfor %}
                 </select>
