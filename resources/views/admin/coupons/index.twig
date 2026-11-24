@@ -356,7 +356,7 @@
 <div class="mb-6 flex items-center justify-between">
     <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ __('Coupons') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400"><span x-text="visibleCount"></span> coupon(s)</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('coupon(s)') }}</p>
     </div>
     <button type="button" @click="openAdd()" class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -396,7 +396,7 @@
             <tr class="hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors" data-row-id="{{ c.id }}" data-sort="{{ {code: c.code, type: c.type, amount: c.amount, min_order: c.min_order ?? 0, uses_count: c.usesCount, expires_at: c.expires_at ? c.expires_at.format('Y-m-d') : '', status: status, allowed: c.allowedProductIds|length + c.allowedVariationIds|length + c.allowedCategoryIds|length, blocked: c.blockedProductIds|length + c.blockedVariationIds|length + c.blockedCategoryIds|length}|json_encode|e('html_attr') }}">
                 {{ table.td_checkbox(c.id) }}
                 <td class="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100 dark:text-gray-100"><div class="flex items-center gap-1.5"><button type="button" @click="openEdit({{ c.id }})" class="text-gray-900 dark:text-gray-100 dark:text-gray-100 hover:underline text-left font-medium">{{ c.code }}</button>{% include 'admin/components/_copy_button.twig' with { text: c.code, title: __('Click to copy') } %}</div></td>
-                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ c.type == 'percent' ? 'Percent (%)' : 'Fixed' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{{ c.type == 'percent' ? __('Percent (%)') : __('Fixed') }}</td>
                 <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-gray-100">
                     {% if c.type == 'percent' %}{{ c.amount }}%{% else %}{{ c.amount|price(current_currency) }}{% endif %}
                 </td>
