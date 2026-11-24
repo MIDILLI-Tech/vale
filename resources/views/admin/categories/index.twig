@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
      @keydown.escape.window="addOpen = false">
     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Create') }} {{ __('Category') }}</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Create :type', {':type': __('Category')}) }}</h3>
             <button type="button" @click="addOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
         </div>
         <form method="post" action="{{ url('/admin/categories') }}" class="flex min-h-0 flex-1 flex-col">
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
      @keydown.escape.window="editOpen = false">
     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" @click.stop>
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit') }} {{ __('Category') }}</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit :type', {':type': __('Category')}) }}</h3>
             <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
         </div>
         <form method="post" :action="'{{ url('/admin/categories')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col" id="editCategoryForm">

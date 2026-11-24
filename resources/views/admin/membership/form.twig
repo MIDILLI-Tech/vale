@@ -1,6 +1,6 @@
 {% extends "admin/layout.twig" %}
 
-{% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ __('Plan') : __('Create') ~ ' ' ~ __('Plan') }}{% endblock %}
+{% block title %}{{ is_edit ? __('Edit :type', {':type': __('Plan')}) : __('Create :type', {':type': __('Plan')}) }}{% endblock %}
 
 {% block content %}
 <div class="mb-6 flex items-center gap-3">

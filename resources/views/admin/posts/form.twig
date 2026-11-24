@@ -4,7 +4,7 @@
 {# The collapsed-rail action bar carries the save state next to its status select (layout.twig). #}
 {% set rail_saved_indicator = true %}
 
-{% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ (type.name|default(__('Post'))) : __('Create') ~ ' ' ~ (type.name|default(__('Post'))) }}{% endblock %}
+{% block title %}{{ is_edit ? __('Edit :type', {':type': type.name|default(__('Post'))}) : __('Create :type', {':type': type.name|default(__('Post'))}) }}{% endblock %}
 
 {% block content %}
 {% set listUrl = (type and type.slug.value != 'post') ? url('/admin/posts?content_type=' ~ type.slug.value) : url('/admin/posts') %}
@@ -20,7 +20,7 @@
 {% set listLabel = (type and type.slug.value != 'post') ? type.name : __('Posts') %}
 <div class="mb-6 flex items-center gap-3 flex-wrap">
     <a href="{{ listUrl }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ listLabel }}</a>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit') ~ ' ' ~ (type.name|default(__('Post'))) : __('Create') ~ ' ' ~ (type.name|default(__('Post'))) }}</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit :type', {':type': type.name|default(__('Post'))}) : __('Create :type', {':type': type.name|default(__('Post'))}) }}</h1>
     {# Beside the status select of the collapsed-rail action bar; this title-row
        copy only appears while that bar is hidden. #}
     <span data-saved-indicator>{% include 'admin/components/saved-indicator.twig' %}</span>

@@ -2,7 +2,7 @@
 
 {% set panel_rail = true %}
 
-{% block title %}{{ is_edit ? __('Edit') : __('New') }} {{ __('Content Type') }}{% endblock %}
+{% block title %}{{ is_edit ? __('Edit :type', {':type': __('Content Type')}) : __('New :type', {':type': __('Content Type')}) }}{% endblock %}
 
 {% block head %}
 <style>
