@@ -99,7 +99,7 @@ Three touch points:
 
 ### 1. Register the event: `src/Application/Webhook/OutboundWebhookService.php`
 
-Append to `AVAILABLE_EVENTS` (this const feeds the admin subscription UI):
+Append to `AVAILABLE_EVENTS` (this const feeds the admin subscription UI). Labels stay plain English in the const — `SettingsController` maps them through `__()` when rendering — so write a full user-facing sentence and add its translation like any other UI string:
 
 ```php
 public const AVAILABLE_EVENTS = [

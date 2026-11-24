@@ -122,4 +122,17 @@ return [
     'This coupon cannot be used with one or more products in your cart.',
     'This coupon is not valid for the product categories in your cart.',
     'This coupon cannot be used with one or more product categories in your cart.',
+
+    // ── Webhook event labels (OutboundWebhookService::AVAILABLE_EVENTS, translated in SettingsController) ──
+    'Order paid / payment confirmed',
+    'Order status changed (any transition)',
+    'Post created (any status)',
+    'Post published (first time going live)',
+    'Post updated (existing post saved)',
+    'Product created',
+    'Product updated',
+    'Product deleted',
+    'New user registered / created',
+    'Form submitted',
+    'New newsletter subscriber added',
 ];

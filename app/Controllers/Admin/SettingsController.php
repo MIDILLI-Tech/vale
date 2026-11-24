@@ -314,7 +314,10 @@ final class SettingsController
             'webhookFormErrors'            => $webhookFormErrors,
             'webhookFormOld'               => $webhookFormOld,
             'routingPrefixErrors'          => $routingPrefixErrors,            'webhookEdit'                  => $webhookEdit,
-            'available_events'             => OutboundWebhookService::AVAILABLE_EVENTS,
+            'available_events'             => array_map(
+                static fn (string $label): string => __($label),
+                OutboundWebhookService::AVAILABLE_EVENTS,
+            ),
             'cronConfig'                   => $cronConfig,
             'currency_catalog'             => $currencyCatalog,
             'country_codes'                => $countryCodes,
