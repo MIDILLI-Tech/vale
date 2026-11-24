@@ -91,25 +91,25 @@
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
                                         <select x-model="field.type" @change="field.type === 'email' ? (field.name = 'email') : autoName(field); pruneConditions()" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-                                            <option value="text">Text</option>
+                                            <option value="text">{{ __('Text') }}</option>
                                             <option value="email">{{ __('Email') }}</option>
-                                            <option value="textarea">Textarea</option>
-                                            <option value="select">Select</option>
-                                            <option value="checkbox">Checkbox</option>
-                                            <option value="radio">Radio</option>
-                                            <option value="tel">Phone</option>
-                                            <option value="date">Date</option>
-                                            <option value="static_text">Static Text</option>
-                                            {% if newsletter_enabled %}<option value="newsletter_subscribe">Newsletter Subscribe</option>{% endif %}
+                                            <option value="textarea">{{ __('Textarea') }}</option>
+                                            <option value="select">{{ __('Select') }}</option>
+                                            <option value="checkbox">{{ __('Checkbox') }}</option>
+                                            <option value="radio">{{ __('Radio') }}</option>
+                                            <option value="tel">{{ __('Phone') }}</option>
+                                            <option value="date">{{ __('Date') }}</option>
+                                            <option value="static_text">{{ __('Static Text') }}</option>
+                                            {% if newsletter_enabled %}<option value="newsletter_subscribe">{{ __('Newsletter Subscribe') }}</option>{% endif %}
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Width') }}</label>
                                         <select x-model="field.width" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-                                            <option value="100">100% (Full Width)</option>
-                                            <option value="50">50% (2 per row)</option>
-                                            <option value="33">33% (3 per row)</option>
-                                            <option value="25">25% (4 per row)</option>
+                                            <option value="100">100% ({{ __('Full Width') }})</option>
+                                            <option value="50">50% ({{ __('2 per row') }})</option>
+                                            <option value="33">33% ({{ __('3 per row') }})</option>
+                                            <option value="25">25% ({{ __('4 per row') }})</option>
                                         </select>
                                     </div>
                                 </div>
@@ -330,7 +330,7 @@
                             </div>
                         </div>
                     </template>
-                    <p x-show="fields.length === 0" class="w-full text-sm text-gray-400 text-center py-4">No fields yet. Click "+ Add Field" to start.</p>
+                    <p x-show="fields.length === 0" class="w-full text-sm text-gray-400 text-center py-4">{{ __('No fields yet. Click "+ Add Field" to start.') }}</p>
                 </div>
 
                 <div class="mt-6 flex justify-end">
