@@ -2662,7 +2662,7 @@
     "Send To Customer": "An Kunden senden",
     "Send confirmation email": "Bestätigungs-E-Mail senden",
     "Send reminder emails to logged-in users who left items in their cart.": "Erinnerungs-E-Mails an angemeldete Benutzer senden, die Artikel im Warenkorb gelassen haben.",
-    "Send signed HTTP POST notifications when orders are placed or status changes.": "Signierte HTTP-POST-Benachrichtigungen senden, wenn Bestellungen aufgegeben werden oder sich der Status ändert.",
+    "Send signed HTTP hooks when content, orders, users or forms change.": "Signierte HTTP-Hooks senden, wenn sich Inhalte, Bestellungen, Benutzer oder Formulare ändern.",
     "Send the next batch of this campaign now? The rest will continue automatically by cron.": "Die nächste Charge dieser Kampagne jetzt senden? Der Rest wird automatisch per Cron fortgesetzt.",
     "Send this campaign now to all matching subscribers?": "Diese Kampagne jetzt an alle passenden Abonnenten senden?",
     "Send tracking notification to the customer?": "Tracking-Benachrichtigung an den Kunden senden?",

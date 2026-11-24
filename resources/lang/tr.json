@@ -2698,7 +2698,7 @@
     "Send To Customer": "Müşteriye Gönder",
     "Send confirmation email": "Onay e-postası gönder",
     "Send reminder emails to logged-in users who left items in their cart.": "Sepetinde ürün bırakan giriş yapmış kullanıcılara hatırlatma e-postaları gönder.",
-    "Send signed HTTP POST notifications when orders are placed or status changes.": "Sipariş verildiğinde veya durum değiştiğinde imzalı HTTP POST bildirimleri gönder.",
+    "Send signed HTTP hooks when content, orders, users or forms change.": "İçerik, sipariş, kullanıcı veya form değiştiğinde imzalı HTTP kancaları gönder.",
     "Send the next batch of this campaign now? The rest will continue automatically by cron.": "Bu kampanyanın sonraki partisi şimdi gönderilsin mi? Kalanı cron tarafından otomatik sürdürülecek.",
     "Send this campaign now to all matching subscribers?": "Bu kampanya şimdi eşleşen tüm abonelere gönderilsin mi?",
     "Send tracking notification to the customer?": "Müşteriye kargo bildirimi gönderilsin mi?",

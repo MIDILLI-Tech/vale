@@ -2662,7 +2662,7 @@
     "Send To Customer": "",
     "Send confirmation email": "",
     "Send reminder emails to logged-in users who left items in their cart.": "",
-    "Send signed HTTP POST notifications when orders are placed or status changes.": "",
+    "Send signed HTTP hooks when content, orders, users or forms change.": "",
     "Send the next batch of this campaign now? The rest will continue automatically by cron.": "",
     "Send this campaign now to all matching subscribers?": "",
     "Send tracking notification to the customer?": "",
