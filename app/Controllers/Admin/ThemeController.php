@@ -18,6 +18,7 @@ use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Theme\ColorValueValidator;
 use ValeApp\Infrastructure\Theme\ThemeManager;
+use ValeApp\Infrastructure\Theme\ThemePreview;
 use ValeApp\Infrastructure\Translation\Translator;
 use ZipArchive;
 
@@ -26,6 +27,7 @@ final class ThemeController
     public function __construct(
         private readonly Twig $twig,
         private readonly ThemeManager $themeManager,
+        private readonly ThemePreview $themePreview,
         private readonly DbalSettingsRepository $settings,
         private readonly SessionManager $session,
         private readonly Translator $translator,
@@ -55,7 +57,7 @@ final class ThemeController
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
-        $this->session->set('preview_theme', $slug);
+        $this->themePreview->start($slug);
 
         $this->session->set('flash_success', $this->translator->get('Theme ":name" is now in preview mode.', [':name' => $slug]));
         return $response->withHeader('Location', site_url('/'))->withStatus(302);
@@ -66,7 +68,7 @@ final class ThemeController
      */
     public function stopPreview(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $this->session->remove('preview_theme');
+        $this->themePreview->stop();
         return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
     }
 
@@ -75,12 +77,14 @@ final class ThemeController
      */
     public function index(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $themes      = $this->themeManager->discoverThemes();
-        $activeTheme = $this->themeManager->getActiveTheme();
+        $themes       = $this->themeManager->discoverThemes();
+        $activeTheme  = (string) ($this->settings->get('active_theme') ?? 'default');
+        $previewTheme = $this->themePreview->get();
 
         return $this->twig->render($response, 'admin/themes/index.twig', [
-            'themes'       => $themes,
-            'active_theme' => $activeTheme,
+            'themes'        => $themes,
+            'active_theme'  => $activeTheme,
+            'preview_theme' => $previewTheme,
         ]);
     }
 
@@ -566,7 +570,7 @@ final class ThemeController
         $this->pageCache?->flush();
 
         // Clear any preview session so the activated theme takes effect
-        $this->session->remove('preview_theme');
+        $this->themePreview->stop();
 
         $this->session->set('flash_success', $this->translator->get('Theme ":name" activated.', [':name' => htmlspecialchars($slug, ENT_QUOTES)]));
         return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
@@ -717,7 +721,8 @@ final class ThemeController
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
-        if ($slug === $this->themeManager->getActiveTheme()) {
+        $activeTheme = (string) ($this->settings->get('active_theme') ?? 'default');
+        if ($slug === $activeTheme) {
             $this->session->set('flash_error', 'Cannot delete the active theme.');
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }

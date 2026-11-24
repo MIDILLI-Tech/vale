@@ -211,6 +211,7 @@ use ValeApp\Infrastructure\Security\IpAnonymizer;
 use ValeApp\Infrastructure\Security\RateLimiter;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Theme\ThemeManager;
+use ValeApp\Infrastructure\Theme\ThemePreview;
 use ValeApp\Infrastructure\Translation\Translator;
 
 use function DI\autowire;
@@ -458,14 +459,19 @@ return [
         return new CsrfManager($session, $cfg['csrf']);
     }),
 
+    // ── Theme Preview (session + sliding expiry) ──────────────────────
+    ThemePreview::class => factory(function ($c) {
+        return new ThemePreview($c->get(SessionManager::class));
+    }),
+
     // ── Theme Manager ─────────────────────────────────────────────────
     ThemeManager::class => factory(function ($c) {
         $cfg      = $c->get('config.app');
         $settings = $c->get(DbalSettingsRepository::class);
-        $session  = $c->get(SessionManager::class);
 
         try {
-            $activeTheme = $session->get('preview_theme') ?? $settings->get('active_theme') ?? 'default';
+            $preview     = $c->get(ThemePreview::class)->get();
+            $activeTheme = $preview !== '' ? $preview : ($settings->get('active_theme') ?? 'default');
         } catch (\Throwable) {
             $activeTheme = 'default';
         }
@@ -1306,6 +1312,7 @@ return [
             $c->get(UpdateService::class),
             $c->get(ContentTypeRepositoryInterface::class),
             $c->get(ThemeManager::class),
+            $c->get(ThemePreview::class),
             $c->get(SeoState::class),
             $c->get(MediaRepositoryInterface::class),
             $c->get(ProductVoteRepositoryInterface::class),

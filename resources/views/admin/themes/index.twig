@@ -14,13 +14,31 @@
     </a>
 </div>
 
+{% if preview_theme %}
+<div class="mb-6 flex flex-col items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20 sm:flex-row sm:items-center">
+    <p class="text-sm text-amber-900 dark:text-amber-200">
+        {{ __('Previewing theme:') }} <strong>{{ preview_theme }}</strong>
+    </p>
+    <a href="{{ url('/themes/stop-preview') }}"
+       class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
+        {{ __('Stop Preview') }}
+    </a>
+</div>
+{% endif %}
+
 <div class="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 {% for slug, theme in themes %}
-    <div class="relative flex flex-col rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-hidden {{ slug == active_theme ? 'ring-2 ring-gray-500' : '' }}">
-        {# Active badge #}
-        {% if slug == active_theme %}
+    {% set isActive = slug == active_theme %}
+    {% set isPreview = slug == preview_theme and not isActive %}
+    <div class="relative flex flex-col rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs overflow-hidden {{ isActive ? 'ring-2 ring-gray-500' : (isPreview ? 'ring-2 ring-amber-500' : '') }}">
+        {# Active / preview badge #}
+        {% if isActive %}
         <div class="absolute top-3 right-3 rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
             {{ __('Active') }}
+        </div>
+        {% elseif isPreview %}
+        <div class="absolute top-3 right-3 rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-medium text-white">
+            {{ __('Preview') }}
         </div>
         {% endif %}
 
@@ -113,9 +131,15 @@
                     </a>
                 </div>
 
-            {% if slug != active_theme %}
+            {% if not isActive %}
             <div class="flex gap-2">
-                <form method="post" action="{{ url('/admin/themes/preview') }}" class="flex-1">
+                {% if isPreview %}
+                <a href="{{ url('/themes/stop-preview') }}"
+                   class="flex flex-1 items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-center text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
+                    {{ __('Stop Preview') }}
+                </a>
+                {% else %}
+                <form method="post" action="{{ url('/admin/themes/preview') }}" class="flex-1" target="_blank">
                     {{ csrf_field() }}
                     <input type="hidden" name="theme" value="{{ slug }}">
                     <button type="submit"
@@ -123,6 +147,7 @@
                         {{ __('Preview') }}
                     </button>
                 </form>
+                {% endif %}
                 <form method="post" action="{{ url('/admin/themes/activate') }}" class="flex-1">
                     {{ csrf_field() }}
                     <input type="hidden" name="theme" value="{{ slug }}">

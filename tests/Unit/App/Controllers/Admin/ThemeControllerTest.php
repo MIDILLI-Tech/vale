@@ -14,6 +14,7 @@ use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Theme\ThemeManager;
+use ValeApp\Infrastructure\Theme\ThemePreview;
 use ValeApp\Infrastructure\Translation\Translator;
 
 final class ThemeControllerTest extends TestCase
@@ -35,6 +36,7 @@ final class ThemeControllerTest extends TestCase
         return new ThemeController(
             $this->createStub(Twig::class),
             $this->createStub(ThemeManager::class),
+            new ThemePreview($this->createStub(SessionManager::class)),
             $this->createStub(DbalSettingsRepository::class),
             $this->createStub(SessionManager::class),
             $this->createStub(Translator::class),
@@ -120,6 +122,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $themeManager,
+            new ThemePreview($this->createStub(SessionManager::class)),
             $this->createStub(DbalSettingsRepository::class),
             $this->createStub(SessionManager::class),
             $this->createStub(Translator::class),
@@ -175,6 +178,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $themeManager,
+            new ThemePreview($this->createStub(SessionManager::class)),
             $settings,
             $this->createStub(SessionManager::class),
             $this->createStub(Translator::class),
@@ -204,6 +208,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $this->createStub(ThemeManager::class),
+            new ThemePreview($this->createStub(SessionManager::class)),
             $settings,
             $this->createStub(SessionManager::class),
             $this->createStub(Translator::class),
@@ -242,6 +247,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $this->createStub(ThemeManager::class),
+            new ThemePreview($this->createStub(SessionManager::class)),
             $this->createStub(DbalSettingsRepository::class),
             $session,
             $translator,
@@ -300,6 +306,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $this->createStub(ThemeManager::class),
+            new ThemePreview($this->createStub(SessionManager::class)),
             $this->createStub(DbalSettingsRepository::class),
             $session,
             $translator,
@@ -357,6 +364,7 @@ final class ThemeControllerTest extends TestCase
         $controller = new ThemeController(
             $this->createStub(Twig::class),
             $this->createStub(ThemeManager::class),
+            new ThemePreview($this->createStub(SessionManager::class)),
             $this->createStub(DbalSettingsRepository::class),
             $session,
             $translator,
@@ -423,6 +431,7 @@ final class ThemeControllerTest extends TestCase
             $controller = new ThemeController(
                 $twig,
                 $this->createStub(ThemeManager::class),
+                new ThemePreview($this->createStub(SessionManager::class)),
                 $this->createStub(DbalSettingsRepository::class),
                 $this->createStub(SessionManager::class),
                 $this->createStub(Translator::class),
@@ -489,6 +498,7 @@ final class ThemeControllerTest extends TestCase
             $controller = new ThemeController(
                 $twig,
                 $this->createStub(ThemeManager::class),
+                new ThemePreview($this->createStub(SessionManager::class)),
                 $this->createStub(DbalSettingsRepository::class),
                 $this->createStub(SessionManager::class),
                 $this->createStub(Translator::class),

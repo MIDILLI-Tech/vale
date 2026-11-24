@@ -35,6 +35,7 @@ use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Session\SessionManager;
 use ValeApp\Infrastructure\Theme\ColorValueValidator;
 use ValeApp\Infrastructure\Theme\ThemeManager;
+use ValeApp\Infrastructure\Theme\ThemePreview;
 
 /**
  * Reads flash messages from session and injects them into Twig globals.
@@ -57,6 +58,7 @@ final class FlashMiddleware implements MiddlewareInterface
         private readonly UpdateService $updater,
         private readonly ContentTypeRepositoryInterface $contentTypes,
         private readonly ThemeManager $themes,
+        private readonly ThemePreview $themePreview,
         private readonly SeoState $seoState,
         private readonly MediaRepositoryInterface $media,
         private readonly ProductVoteRepositoryInterface $productVotes,
@@ -840,7 +842,8 @@ final class FlashMiddleware implements MiddlewareInterface
         $this->setGlobal('current_path', $currentPath);
 
         // ── Register Theme Colors Hook ───────────────────────────────
-        $previewTheme     = $this->session->get('preview_theme', '');
+        $previewTheme     = $this->themePreview->get();
+        $this->setGlobal('preview_theme', $previewTheme);
         $colorsThemeSlug  = $previewTheme !== '' ? $previewTheme : $this->themes->getActiveTheme();
         $hasCustomColors  = false;
         $savedColorsRaw   = $this->settings->get('theme_' . $colorsThemeSlug . '_colors', '');
@@ -871,7 +874,7 @@ final class FlashMiddleware implements MiddlewareInterface
         $this->setGlobal('vl_table_palette', $this->themes->getTablePalette($colorsThemeSlug));
 
         $this->themes->addHook('head', function (): string {
-            $activeTheme = $this->session->get('preview_theme', $this->themes->getActiveTheme());
+            $activeTheme = $this->themePreview->get() ?: $this->themes->getActiveTheme();
             $colorsRaw   = $this->settings->get('theme_' . $activeTheme . '_colors', '');
             if (!$colorsRaw) {
                 return '';
