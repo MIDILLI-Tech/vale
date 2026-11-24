@@ -61,10 +61,10 @@
                     </div>
 
                     <select name="per_page" aria-label="{{ __('Products per page') }}" x-show="total > 12" x-cloak x-model.number="perPage" @change="changePerPage()" class="rounded-lg border-gray-300 text-sm pl-3 pr-8 py-2 bg-white w-auto focus:border-gray-900 focus:ring-gray-900">
-                        <option value="12">12 {{ __('per page') }}</option>
-                        <option value="24" x-show="total > 12">24 {{ __('per page') }}</option>
-                        <option value="50" x-show="total > 24">50 {{ __('per page') }}</option>
-                        <option value="100" x-show="total > 50">100 {{ __('per page') }}</option>
+                        <option value="12">{{ __(':count per page', {':count': 12}) }}</option>
+                        <option value="24" x-show="total > 12">{{ __(':count per page', {':count': 24}) }}</option>
+                        <option value="50" x-show="total > 24">{{ __(':count per page', {':count': 50}) }}</option>
+                        <option value="100" x-show="total > 50">{{ __(':count per page', {':count': 100}) }}</option>
                     </select>
 
                     <select name="sort" aria-label="{{ __('Sort products by') }}" x-model="filters.sort" @change="fetchNewBatch(1)" class="rounded-lg border-gray-300 text-sm pl-3 pr-10 py-2 bg-white w-auto max-w-full focus:border-gray-900 focus:ring-gray-900">
@@ -75,10 +75,10 @@
                         <option value="newest">{{ __('Newest') }}</option>
                     </select>
 
-                    <div class="flex flex-1 lg:flex-none gap-2">
+                    <div class="flex w-full min-w-0 flex-1 gap-2 sm:w-auto lg:max-w-xs">
                         <input type="text" name="search" aria-label="{{ __('Search products') }}" x-model="filters.search" @keydown.enter="fetchNewBatch(1)" placeholder="{{ __('Search products…') }}"
-                               class="flex-1 lg:w-48 rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-gray-900 focus:ring-gray-900">
-                        <button type="button" @click="fetchNewBatch(1)" class="rounded-lg btn-primary px-4 py-2 text-sm">{{ __('Search') }}</button>
+                               class="w-full min-w-0 flex-1 rounded-lg border-gray-300 text-sm px-3 py-2 focus:border-gray-900 focus:ring-gray-900">
+                        <button type="button" @click="fetchNewBatch(1)" class="shrink-0 whitespace-nowrap rounded-lg btn-primary px-4 py-2 text-sm">{{ __('Search') }}</button>
                     </div>
                 </div>
             </div>
