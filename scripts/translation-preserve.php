@@ -24,6 +24,7 @@ return [
     'cancelled',
     'completed',
     'draft',
+    'expired',
     'failed',
     'on-hold',
     'pending',

@@ -122,7 +122,7 @@
                         {% elseif p.status == 'archived' %}bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400
                         {% elseif p.status == 'trash' %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300
                         {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
-                        {{ p.status|capitalize }}
+                        {{ __(p.status)|capitalize }}
                     </span>
                     {% if p.status in ['draft', 'unlisted'] and p.publishedAt and p.publishedAt|date('Y-m-d H:i:s') > "now"|date('Y-m-d H:i:s') %}
                     <span class="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">({{ __('scheduled')|capitalize }})</span>
