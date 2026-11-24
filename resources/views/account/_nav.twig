@@ -31,10 +31,12 @@
         <a href="{{ url(routing_account_prefix ~ '/subscription') }}" class="account-tab{{ active_tab == 'subscription' ? ' account-tab-active' }}">{{ __('Subscription') }}</a>
         {% endif %}
     {% endif %}
-    {% set showDeleteTab = settings.gdpr_download_enabled|default('0') == '1' or settings.gdpr_account_deletion_enabled|default('1') == '1' %}
+    {% set gdprDownloadEnabled = settings.gdpr_download_enabled|default('0') == '1' %}
+    {% set canDeleteOwnAccount = user_role is not defined or user_role is empty or user_role == 'subscriber' %}
+    {% set showDeleteTab = gdprDownloadEnabled or (canDeleteOwnAccount and settings.gdpr_account_deletion_enabled|default('1') == '1') %}
     {% if showDeleteTab %}
     <a href="{{ url(routing_account_prefix ~ '/delete') }}" class="account-tab account-tab-danger{{ active_tab == 'delete' ? ' account-tab-active' }}">
-        {{ settings.gdpr_download_enabled|default('0') == '1' or settings.gdpr_account_deletion_enabled|default('1') == '1' ? __('Manage Account') : __('Delete Account') }}
+        {{ gdprDownloadEnabled ? __('Manage Account') : __('Delete Account') }}
     </a>
     {% endif %}
 </div>

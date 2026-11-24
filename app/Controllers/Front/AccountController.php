@@ -711,7 +711,21 @@ final class AccountController
             return $this->deleteAccount($request, $response, $userId);
         }
 
-        return $this->twig->render($response, 'account/delete.twig');
+        $user = $this->users->findById($userId);
+        if ($user === null) {
+            $this->session->flash('error', 'User not found.');
+            return $response->withHeader('Location', site_url('/login'))->withStatus(302);
+        }
+
+        $canDelete = $this->canDeleteOwnAccount($user);
+        if (!$canDelete && $this->settings->get('gdpr_download_enabled', '0') !== '1') {
+            $this->session->flash('error', 'You cannot delete your own account.');
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
+        return $this->twig->render($response, 'account/delete.twig', [
+            'can_delete_account' => $canDelete,
+        ]);
     }
 
     public function downloadData(Request $request, Response $response): Response
@@ -848,6 +862,11 @@ final class AccountController
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
 
+        if (!$this->canDeleteOwnAccount($user)) {
+            $this->session->flash('error', 'You cannot delete your own account.');
+            return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
+        }
+
         $this->avatars->delete($user->getAvatar());
         $this->pageCache->flush();
 
@@ -915,6 +934,21 @@ final class AccountController
 
         $this->session->flash('info', 'Your account has been deleted. Your order history has been preserved.');
         return $response->withHeader('Location', '/')->withStatus(302);
+    }
+
+    /**
+     * Staff accounts are managed from the admin panel: deleting one here would
+     * bypass the self-deletion guard on /admin/users and can lock the site out.
+     */
+    private function canDeleteOwnAccount(User $user): bool
+    {
+        foreach ($user->getRoles() as $role) {
+            if ($role !== 'subscriber') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function fetchUser(int $userId): ?array
