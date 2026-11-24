@@ -1,14 +1,14 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_table.twig" as table %}
 
-{% block title %}Products{% endblock %}
+{% block title %}{{ __('Products') }}{% endblock %}
 
 {% block content %}
 {% set allIds = products|map(p => p.id) %}
 <div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Products') }}</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> products</p>
     </div>
     <a href="{{ url('/admin/products/create') }}"
