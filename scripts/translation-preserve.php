@@ -206,4 +206,8 @@ return [
     'Category (optional)',
     'Tags (optional)',
     'Search roles by name…',
+
+    // ── Dashboard quick action labels (FlashMiddleware, rendered via __(action.label)) ──
+    'New User',
+    'New Subscriber',
 ];

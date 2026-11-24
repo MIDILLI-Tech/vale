@@ -699,7 +699,7 @@ final class FlashMiddleware implements MiddlewareInterface
                 foreach ($this->contentTypes->findActiveCustom() as $ct) {
                     $slug                       = (string) $ct->getSlug();
                     $qaDefs['new_cpt_' . $slug] = [
-                        'label'   => 'New ' . (string) $ct->getName(),
+                        'label'   => __('New :type', [':type' => (string) $ct->getName()]),
                         'path'    => '/admin/posts/create?content_type=' . $slug,
                         'icon'    => IconHelper::resolveIcon($ct->getIcon()),
                         'perm'    => 'cpt.' . $slug . '.list',
