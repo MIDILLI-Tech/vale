@@ -90,7 +90,7 @@
                    data-bulk-total="{{ total|default(0) }}"
                    class="rounded-sm border-gray-300 dark:border-gray-600 text-gray-900 focus:ring-gray-500">
             <span>{{ __('Select All') }}</span>
-            <span class="text-xs" x-text="'(' + visibleCount + ' files)'"></span>
+            <span class="text-xs" x-text="'(' + visibleCount + ' {{ __('files')|e('js') }})'"></span>
         </div>
     </div>
 <div x-show="viewMode === 'grid'" x-ref="items" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">

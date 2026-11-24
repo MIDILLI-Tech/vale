@@ -3667,7 +3667,7 @@
     "exceeds the server batch limit": "sunucu toplu gönderim sınırını aşıyor",
     "failed": "Başarısız",
     "files": "dosya",
-    "files total": "toplam dosya",
+    "files total": "dosya",
     "from your .env file now!": "hemen .env dosyanızdan!",
     "hCaptcha": "hCaptcha",
     "hCaptcha Dashboard": "hCaptcha Paneli",
