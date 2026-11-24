@@ -186,4 +186,8 @@ return [
     // ── Nav entries renamed by FlashMiddleware (rendered via __(item.label) in the sidebar) ──
     'Comments & Reviews',
     'Orders & Membership',
+
+    // ── CPT-driven labels (built in PHP, rendered via __() in the sidebar / permission groups) ──
+    ':cpt Comments',
+    'CPT: :name',
 ];

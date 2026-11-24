@@ -176,7 +176,7 @@ final class RoleController
             'system'     => __('System'),
         ];
         foreach ($this->contentTypes->findAll() as $ct) {
-            $map["cpt_{$ct->getSlug()}"] = 'CPT: ' . $ct->getName();
+            $map["cpt_{$ct->getSlug()}"] = __('CPT: :name', [':name' => $ct->getName()]);
         }
         return $map;
     }
