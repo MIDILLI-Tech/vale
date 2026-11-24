@@ -200,7 +200,7 @@
                     <template x-if="!row.fallback">
                         <select x-model="row.country_code"
                                 x-init="$nextTick(() => { if (row.country_code) $el.value = row.country_code; })"
-                                class="w-40 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                class="w-auto rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                             <option value="">{{ __('Select country') }}</option>
                             <template x-for="code in unusedCodes(idx)" :key="code">
                                 <option :value="code" x-text="labelFor(code)"></option>
