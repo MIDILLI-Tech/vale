@@ -8,11 +8,15 @@
  * create screens stay single-user.
  *
  * The HTML textarea remains the persistence format: the editor keeps writing
- * `editor.getHTML()` into it, so the normal form save is unchanged.
+ * `editor.getHTML()` into it, so the normal form save is unchanged. Unsaved
+ * edits survive an offline reload through a local Yjs snapshot
+ * (`collab-snapshot.js`), applied directly when the server is unreachable and
+ * offered for restore after a normal sync (closed tab, deliberate reopen).
  */
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from '@tiptap/y-tiptap';
+import { attachCollabSnapshot } from './collab-snapshot.js';
 
 const EDIT_PATH = /\/\d+\/edit$/;
 
@@ -65,9 +69,12 @@ function initials(name) {
 }
 
 /**
+ * @param {string} initialHtml Saved HTML the room is seeded from. It also
+ *   fingerprints the local offline snapshot, so a record saved elsewhere in
+ *   the meantime invalidates that snapshot instead of merging a stale copy.
  * @returns {{document: Y.Doc, provider: HocuspocusProvider, user: {name: string, color: string}, name: string}|null}
  */
-export function createCollaborationSession() {
+export function createCollaborationSession(initialHtml = '') {
   const config = window.VL_COLLAB;
   if (!config || !config.enabled || !config.url) return null;
 
@@ -101,11 +108,22 @@ export function createCollaborationSession() {
  * not both write the initial content.
  */
 export function seedCollaborationContent(editor, session, initialHtml) {
-  if (!session || !initialHtml) return;
+  if (!session) return;
+
+  // Attached here because the snapshot stores the editor HTML next to the Yjs
+  // update; the session itself is created before the editor exists.
+  if (!session.snapshot) {
+    session.snapshot = attachCollabSnapshot(
+      session.document,
+      session.name,
+      initialHtml,
+      () => editor.getHTML(),
+    );
+  }
 
   let seeded = false;
   const seed = () => {
-    if (seeded) return;
+    if (seeded || !initialHtml) return;
     if (session.document.getXmlFragment('default').length > 0) return;
     seeded = true;
     editor.commands.setContent(initialHtml, { emitUpdate: false });
@@ -122,9 +140,144 @@ export function seedCollaborationContent(editor, session, initialHtml) {
   // canvas stays blank and saving would wipe the record, so seed the saved
   // content locally after a short grace period. Anything typed offline merges
   // into the room once the connection returns.
-  setTimeout(() => {
-    if (!session.provider.synced) seed();
+  setTimeout(async () => {
+    if (session.provider.synced || seeded) return;
+
+    // A reload that happens while the server is still unreachable would
+    // otherwise lose the edits that only lived in the room. The snapshot is
+    // tied to the saved HTML it was taken from, so newer database content
+    // wins over a stale local copy.
+    const stored = await session.snapshot?.read?.();
+    if (session.provider.synced || seeded) return;
+
+    if (stored) {
+      try {
+        Y.applyUpdate(session.document, stored.update, 'offline-snapshot');
+      } catch (_) {
+        /* unreadable snapshot — fall back to the saved content */
+      }
+      if (session.document.getXmlFragment('default').length > 0) {
+        seeded = true;
+        return;
+      }
+    }
+
+    seed();
   }, 3000);
+}
+
+function normalizeHtml(html) {
+  return String(html || '').replace(/\r\n/g, '\n').trim();
+}
+
+function formatSavedAt(timestamp) {
+  try {
+    return new Date(timestamp).toLocaleString(document.documentElement.lang || undefined);
+  } catch (_) {
+    return new Date(timestamp).toLocaleString();
+  }
+}
+
+/**
+ * Offers a locally stored snapshot for restore once the room is synced.
+ *
+ * The snapshot survives the sync (that is what makes unsaved work survive a
+ * closed tab), but merging it automatically could re-add content someone
+ * deleted on the server. The prompt is skipped when the room already contains
+ * every operation in the snapshot, and "Discard changes" deletes the record.
+ */
+export function initCollaborationSnapshotPrompt(editor, session, wrapper) {
+  if (!session?.snapshot || !wrapper) return;
+
+  let banner = null;
+  let asked = false;
+
+  const hide = () => {
+    if (banner?.parentNode) banner.parentNode.removeChild(banner);
+    banner = null;
+  };
+
+  const show = (stored) => {
+    banner = document.createElement('div');
+    banner.className = 'vl-draft-banner';
+    banner.setAttribute('role', 'status');
+
+    const icon = document.createElement('span');
+    icon.className = 'vl-draft-banner-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠';
+
+    const text = document.createElement('span');
+    text.className = 'vl-draft-banner-text';
+
+    const title = document.createElement('span');
+    title.className = 'vl-draft-banner-title';
+    title.textContent = translate('Unsaved changes found');
+
+    const detail = document.createElement('span');
+    detail.textContent = translate(
+      'Changes saved in this browser at :time can be restored into the shared document.',
+      { ':time': formatSavedAt(stored.savedAt) },
+    );
+
+    text.append(title, detail);
+
+    const actions = document.createElement('span');
+    actions.className = 'vl-draft-banner-actions';
+
+    const restore = document.createElement('button');
+    restore.type = 'button';
+    restore.className = 'vl-draft-btn vl-draft-btn--primary';
+    restore.textContent = translate('Restore changes');
+    restore.addEventListener('click', () => {
+      try {
+        Y.applyUpdate(session.document, stored.update, 'restored-snapshot');
+      } catch (_) {
+        /* unreadable snapshot — leave the room untouched */
+      }
+      hide();
+    });
+
+    const discard = document.createElement('button');
+    discard.type = 'button';
+    discard.className = 'vl-draft-btn vl-draft-btn--danger';
+    discard.textContent = translate('Discard changes');
+    discard.addEventListener('click', () => {
+      session.snapshot.clear();
+      hide();
+    });
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'vl-draft-banner-close';
+    dismiss.setAttribute('aria-label', translate('Dismiss'));
+    dismiss.title = translate('Dismiss');
+    dismiss.textContent = '×';
+    dismiss.addEventListener('click', hide);
+
+    actions.append(restore, discard, dismiss);
+    banner.append(icon, text, actions);
+
+    const container = document.querySelector('main') || wrapper.parentNode || document.body;
+    container.insertBefore(banner, container.firstChild);
+  };
+
+  const ask = async () => {
+    if (asked || !document.contains(editor.view.dom)) return;
+    asked = true;
+
+    const stored = await session.snapshot.read();
+    if (!stored?.update) return;
+
+    // Nothing to offer when the room already shows the stored content: the
+    // snapshot was written from the seeded document and nobody edited it.
+    if (stored.html && normalizeHtml(stored.html) === normalizeHtml(editor.getHTML())) return;
+
+    show(stored);
+  };
+
+  if (session.provider.synced) ask();
+  else session.provider.on('synced', ask);
 }
 
 /** Maps a remote awareness cursor onto the local ProseMirror document. */

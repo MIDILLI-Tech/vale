@@ -68,6 +68,7 @@ import { CollaborationCaret } from '@tiptap/extension-collaboration-caret';
 import {
   createCollaborationSession,
   initCollaborationPresence,
+  initCollaborationSnapshotPrompt,
   seedCollaborationContent,
 } from './collaboration.js';
 import { initEditorDraftRecovery } from './draft.js';
@@ -161,7 +162,7 @@ function vlMountEditor(textarea) {
     const textMenu = buildTextBubbleMenu(wrapper);
 
     if (window.VL_VERBOSE) console.log('[Vale] Initializing Vale editor.');
-    const collab = createCollaborationSession();
+    const collab = createCollaborationSession(initialContent);
     let editorReady = false;
     const editor = new Editor({
       element: editorEl,
@@ -545,6 +546,7 @@ function vlMountEditor(textarea) {
     // Word & character counter
     initWordCounter(editor, wrapper);
     initCollaborationPresence(collab, wrapper, editorEl, editor);
+    initCollaborationSnapshotPrompt(editor, collab, wrapper);
 
     // Crash-safe local drafts: keep a copy in localStorage and offer to
     // recover it when the page is reloaded with different saved content.
