@@ -76,7 +76,7 @@
                                     <button type="button" @click="moveFieldBottom(idx)" title="{{ __('Move to bottom (resets to 100% width)') }}" class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-0.5 leading-none">⇊</button>
                                     <span class="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></span>
                                     <label x-show="field.type !== 'static_text' && field.type !== 'newsletter_subscribe'" class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer mr-0.5" title="{{ __('Required') }}">
-                                        <input type="checkbox" x-model="field.required" class="rounded-sm border-gray-300 dark:border-gray-700"> Req.
+                                        <input type="checkbox" x-model="field.required" class="rounded-sm border-gray-300 dark:border-gray-700"> {{ __('Req.') }}
                                     </label>
                                     <button type="button" @click="removeField(idx)" class="text-red-400 hover:text-red-600 text-lg leading-none p-1" title="{{ __('Remove') }}">&times;</button>
                                 </div>
