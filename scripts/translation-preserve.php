@@ -190,4 +190,16 @@ return [
     // ── CPT-driven labels (built in PHP, rendered via __() in the sidebar / permission groups) ──
     ':cpt Comments',
     'CPT: :name',
+
+    // ── Admin table headers and search placeholders (macro args resolved at runtime) ──
+    'Search by email or name…',
+    'Sent',
+    'Opened',
+    'Clicks',
+    'Recipients',
+    'Opens',
+    'Membership Status',
+    'Subscribed',
+    'Stock',
+    'Search roles…',
 ];
