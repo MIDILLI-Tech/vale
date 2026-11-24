@@ -348,7 +348,7 @@ function showImageSizeDialog(editor, imgEl) {
   // Only show a size option if that thumbnail file actually exists
   // (the backend skips sizes larger than the source image).
   const THUMB_OPTIONS = [
-    { value: 'full', label: 'Original' },
+    { value: 'full', label: tjs('Original') },
   ];
   if (thumbnails && typeof thumbnails === 'object') {
     if (thumbnails.large)   THUMB_OPTIONS.push({ value: 'large',   label: 'Large (1024×1024)' });

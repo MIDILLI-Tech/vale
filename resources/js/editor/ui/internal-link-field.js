@@ -134,13 +134,13 @@ function internalLinkField({ label = tjs('Link'), value = '', onChange = null } 
     const btnWrap = document.createElement('div');
     btnWrap.style.cssText = 'display:flex;gap:4px';
     const prev = document.createElement('button');
-    prev.type = 'button'; prev.textContent = '←'; prev.title = 'Previous page';
+    prev.type = 'button'; prev.textContent = '←'; prev.title = tjs('Previous page');
     prev.className = 'vl-btn vl-btn-xs vl-btn-secondary';
     prev.style.padding = '2px 8px'; prev.style.fontSize = '12px';
     prev.disabled = internalPage <= 1;
     prev.addEventListener('click', () => { if (internalPage > 1) { internalPage--; applyPagination(); } });
     const next = document.createElement('button');
-    next.type = 'button'; next.textContent = '→'; next.title = 'Next page';
+    next.type = 'button'; next.textContent = '→'; next.title = tjs('Next page');
     next.className = 'vl-btn vl-btn-xs vl-btn-secondary';
     next.style.padding = '2px 8px'; next.style.fontSize = '12px';
     next.disabled = internalPage >= totalPages;

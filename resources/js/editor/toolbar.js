@@ -100,7 +100,7 @@ function buildToolbar(editor, wrapper) {
     { label: 'U',  title: tjs('Underline (Ctrl+U)'),     action: fmtAction('underline', 'underline'),  active: fmtActive('underline') },
     null,
     {
-      label: 'Fmt',
+      label: tjs('Fmt'),
       title: tjs('Formatting Options'),
       dropdown: true,
       dropdownName: 'format',
@@ -151,7 +151,7 @@ function buildToolbar(editor, wrapper) {
     },
     null,
     {
-      label: '<span class="text-xs leading-none">Align</span>',
+      label: '<span class="text-xs leading-none">' + tjs('Align') + '</span>',
       title: tjs('Text Alignment'),
       dropdown: true,
       dropdownName: 'align',
@@ -164,7 +164,7 @@ function buildToolbar(editor, wrapper) {
     },
     null,
     {
-      label: 'Element',
+      label: tjs('Element'),
       title: tjs('Insert Element'),
       dropdown: true,
       dropdownName: 'element',

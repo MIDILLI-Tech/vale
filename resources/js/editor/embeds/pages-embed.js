@@ -103,7 +103,7 @@ const PagesEmbed = Node.create({
       const parentBtn = document.createElement('button');
       parentBtn.type = 'button';
       parentBtn.className = 'vl-pages-parent-btn';
-      parentBtn.title = 'Select parent page';
+      parentBtn.title = tjs('Select parent page');
 
       function updateParentDisplay(slug) {
         slug = slug || node.attrs.pageParent;
