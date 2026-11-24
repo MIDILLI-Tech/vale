@@ -495,30 +495,30 @@
                                    placeholder="ABC" maxlength="20">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Code') }} <span class="text-red-500">*</span></label>
                             <div class="flex gap-2">
                                 <input type="text" x-ref="addCodeInput" x-model="addCode" name="code" required
                                        style="text-transform:uppercase"
                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
                                        placeholder="SUMMER20">
                                 <button type="button" @click="generateCode('addCode')"
-                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ Generate</button>
+                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ {{ __('Generate') }}</button>
                             </div>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).') }}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Discount Type') }}</label>
                         <select x-model="addType" name="type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                            <option value="percent">Percent (%)</option>
+                            <option value="percent">{{ __('Percent (%)') }}</option>
                             <option value="fixed_cart">{{ __('Fixed amount') }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Value <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Discount Value') }} <span class="text-red-500">*</span></label>
                         <input type="number" x-model="addAmount" name="amount" required min="0" step="0.01"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10">
                     </div>
@@ -531,7 +531,7 @@
                         <option value="cheapest">{{ __('Cheapest eligible product only (1 unit)') }}</option>
                         <option value="most_expensive">{{ __('Most expensive eligible product only (1 unit)') }}</option>
                     </select>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">When products or categories are restricted above, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit's price.</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('When products or categories are restricted above, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit\'s price.') }}</p>
                 </div>
 
                 <div class="grid grid-cols-3 gap-4">
@@ -548,7 +548,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Max Uses Per Person') }}</label>
                         <input type="number" x-model="addMaxUsesPerEmail" name="max_uses_per_email" min="0" step="1"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="0 = unlimited">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('0 = unlimited') }}">
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Guests are matched by the billing email they enter at checkout.') }}</p>
                     </div>
                 </div>
@@ -573,9 +573,7 @@
                                class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enabled') }}</span>
                     </label>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        If a start date is set, coupon will be enabled automatically from that date.
-                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('If a start date is set, coupon will be enabled automatically from that date.') }}</p>
                 </div>
 
                 <div>
@@ -593,7 +591,7 @@
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Restrictions') }}</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Allowed Categories <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Allowed Categories') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = all') }})</span></label>
                                 <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
                                     {% for cat in categories %}
                                     <label class="flex items-center gap-2 text-sm dark:text-gray-100">
@@ -640,7 +638,7 @@
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Membership Restrictions') }}</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Allowed Plans') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = all') }})</span></label>
                             <input type="text" x-model="allowedPlanSearch"
                                    placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
@@ -652,7 +650,7 @@
                                                @change="togglePlan('allowed', p.id)"
                                                class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                                         <span x-text="p.name"></span>
-                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '({{ __('free')|e('js') }})'"></span>
                                     </label>
                                 </template>
                                 <p x-show="!allPlansLoading && allPlans.length === 0 && !allowedPlanSearch"
@@ -661,7 +659,7 @@
                                    class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No plans found') }}</p>
                             </div>
                             <input type="hidden" name="allowed_membership_ids" :value="addAllowedMembershipIds.join(',')">
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addAllowedMembershipIds.length + ' plan(s) selected'"></p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addAllowedMembershipIds.length + ' {{ __('plan(s) selected')|e('js') }}'"></p>
                             <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedAllowedPlans.length > 0">
                                 <template x-for="p in selectedAllowedPlans" :key="p.id">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -684,7 +682,7 @@
                                                @change="togglePlan('blocked', p.id)"
                                                class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
                                         <span x-text="p.name"></span>
-                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '({{ __('free')|e('js') }})'"></span>
                                     </label>
                                 </template>
                                 <p x-show="!allPlansLoading && allPlans.length === 0 && !blockedPlanSearch"
@@ -693,7 +691,7 @@
                                    class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No plans found') }}</p>
                             </div>
                             <input type="hidden" name="blocked_membership_ids" :value="addBlockedMembershipIds.join(',')">
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addBlockedMembershipIds.length + ' plan(s) selected'"></p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="addBlockedMembershipIds.length + ' {{ __('plan(s) selected')|e('js') }}'"></p>
                             <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedBlockedPlans.length > 0">
                                 <template x-for="p in selectedBlockedPlans" :key="p.id">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
@@ -711,9 +709,7 @@
                             <option value="once">{{ __('Once (First cycle only)') }}</option>
                             <option value="forever">{{ __('Forever (Recurring discount)') }}</option>
                         </select>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.
-                        </p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.') }}</p>
                     </div>
                 </div>
                 {% endif %}
@@ -731,7 +727,7 @@
                 </div>
 
                 <div class="border-t pt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Emails <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = anyone)</span></label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Allowed Emails') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = anyone') }})</span></label>
                     <textarea x-model="addAllowedEmails" name="allowed_emails" rows="3"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
                               placeholder="alice@example.com, bob@example.com"></textarea>
@@ -739,7 +735,7 @@
                 </div>
                 <div class="vl-modal-actions">
                     <button type="button" @click="addOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Cancel') }}</button>
-                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">Create Coupon</button>
+                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">{{ __('Create Coupon') }}</button>
                 </div>
             </form>
         </div>
@@ -752,7 +748,7 @@
          @keydown.escape.window="editOpen = false">
         <div class="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl" @click.stop>
             <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Coupon</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Edit Coupon') }}</h3>
                 <button type="button" @click="editOpen = false" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
             </div>
             <form method="POST" :action="'{{ url('/admin/coupons')|e('js') }}/' + editId" class="flex min-h-0 flex-1 flex-col">
@@ -761,15 +757,15 @@
                 <input type="hidden" name="_METHOD" value="PUT">
                 {% if shop_enabled == '1' and membership_enabled %}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Coupon Target</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Coupon Target') }}</label>
                     <div class="flex gap-6 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
                         <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
                             <input type="radio" name="target_type" value="product" x-model="editTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
-                            <span>Products (Shop)</span>
+                            <span>{{ __('Products (Shop)') }}</span>
                         </label>
                         <label class="inline-flex items-center cursor-pointer text-sm dark:text-gray-300 font-medium">
                             <input type="radio" name="target_type" value="membership" x-model="editTargetType" class="rounded-full border-gray-300 dark:border-gray-700 text-gray-900 focus:ring-gray-500 mr-2">
-                            <span>Membership Plans (Subscriptions)</span>
+                            <span>{{ __('Membership Plans (Subscriptions)') }}</span>
                         </label>
                     </div>
                 </div>
@@ -779,79 +775,79 @@
                 <div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prefix</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Prefix') }}</label>
                             <input type="text" x-model="editPrefix" name="prefix"
                                    style="text-transform:uppercase"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
                                    placeholder="ABC" maxlength="20">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Code') }} <span class="text-red-500">*</span></label>
                             <div class="flex gap-2">
                                 <input type="text" x-ref="editCodeInput" x-model="editCode" name="code" required
                                        style="text-transform:uppercase"
                                        class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs font-mono focus:border-gray-600 focus:ring-gray-500 text-sm"
                                        placeholder="SUMMER20">
                                 <button type="button" @click="generateCode('editCode')"
-                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ Generate</button>
+                                        class="rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 whitespace-nowrap">↻ {{ __('Generate') }}</button>
                             </div>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('Prefix is added in front of the code when saved (e.g. ABC + X7K2PQ9M).') }}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Type</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Discount Type') }}</label>
                         <select x-model="editType" name="type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                            <option value="percent">Percent (%)</option>
-                            <option value="fixed_cart">Fixed amount</option>
+                            <option value="percent">{{ __('Percent (%)') }}</option>
+                            <option value="fixed_cart">{{ __('Fixed amount') }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Value <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Discount Value') }} <span class="text-red-500">*</span></label>
                         <input type="number" x-model="editAmount" name="amount" required min="0" step="0.01"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="10">
                     </div>
                 </div>
 
                 <div x-show="editTargetType === 'product'">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Applies To</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Applies To') }}</label>
                     <select x-model="editApplyScope" name="apply_scope" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                        <option value="all_eligible">All eligible products</option>
-                        <option value="cheapest">Cheapest eligible product only (1 unit)</option>
-                        <option value="most_expensive">Most expensive eligible product only (1 unit)</option>
+                        <option value="all_eligible">{{ __('All eligible products') }}</option>
+                        <option value="cheapest">{{ __('Cheapest eligible product only (1 unit)') }}</option>
+                        <option value="most_expensive">{{ __('Most expensive eligible product only (1 unit)') }}</option>
                     </select>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">When products or categories are restricted below, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit's price.</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('When products or categories are restricted below, "eligible" means the items matching those restrictions. Single-product options discount one unit only; a fixed amount is capped at that unit\'s price.') }}</p>
                 </div>
 
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Order</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Minimum Order') }}</label>
                         <input type="number" x-model="editMinOrder" name="min_order" min="0" step="0.01"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = no minimum') }}">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Total Uses</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Max Total Uses') }}</label>
                         <input type="number" x-model="editMaxUses" name="max_uses" min="1" step="1"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = unlimited') }}">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Uses Per Email</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Max Uses Per Email') }}</label>
                         <input type="number" x-model="editMaxUsesPerEmail" name="max_uses_per_email" min="0" step="1"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="0 = unlimited">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('0 = unlimited') }}">
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Guests are matched by the billing email they enter at checkout.') }}</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Start Date') }}</label>
                         <input type="datetime-local" x-model="editStartsAt" name="starts_at"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expiry Date</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Expiry Date') }}</label>
                         <input type="datetime-local" x-model="editExpiresAt" name="expires_at"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                     </div>
@@ -862,11 +858,9 @@
                         <input type="hidden" name="enabled" value="">
                         <input type="checkbox" x-model="editEnabled" name="enabled" value="1"
                                class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Enabled</span>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enabled') }}</span>
                     </label>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        If a start date is set, coupon will be enabled automatically from that date.
-                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('If a start date is set, coupon will be enabled automatically from that date.') }}</p>
                 </div>
 
                 <div>
@@ -874,17 +868,17 @@
                         <input type="hidden" name="free_shipping" value="">
                         <input type="checkbox" x-model="editFreeShipping" name="free_shipping" value="1"
                                class="rounded-sm border-gray-300 dark:border-gray-700 text-green-600">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Free Shipping</span>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Free Shipping') }}</span>
                     </label>
                 </div>
 
                 <div x-show="editTargetType === 'product'">
                     {% if categories is not empty %}
                     <div class="border-t pt-4 space-y-4">
-                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Restrictions</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Restrictions') }}</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Allowed Categories <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Allowed Categories') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = all') }})</span></label>
                                 <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
                                     {% for cat in categories %}
                                     <label class="flex items-center gap-2 text-sm dark:text-gray-100">
@@ -896,7 +890,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Blocked Categories</label>
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Blocked Categories') }}</label>
                                 <div class="space-y-1 max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
                                     {% for cat in categories %}
                                     <label class="flex items-center gap-2 text-sm dark:text-gray-100">
@@ -928,10 +922,10 @@
                 {% if membership_enabled %}
                 <div x-show="editTargetType === 'membership'" class="border-t pt-4 space-y-4" x-cloak
                      x-effect="if (editTargetType === 'membership') loadAllPlans()">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Membership Restrictions</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Membership Restrictions') }}</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Allowed Plans') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = all') }})</span></label>
                             <input type="text" x-model="allowedPlanSearch"
                                    placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
@@ -943,16 +937,16 @@
                                                @change="togglePlanEdit('allowed', p.id)"
                                                class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                                         <span x-text="p.name"></span>
-                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '({{ __('free')|e('js') }})'"></span>
                                     </label>
                                 </template>
                                 <p x-show="!allPlansLoading && allPlans.length === 0 && !allowedPlanSearch"
                                    class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
                                 <p x-show="!allPlansLoading && allPlans.length > 0 && filteredAllowedPlansEdit.length === 0"
-                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No plans found') }}</p>
                             </div>
                             <input type="hidden" name="allowed_membership_ids" :value="editAllowedMembershipIds.join(',')">
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editAllowedMembershipIds.length + ' plan(s) selected'"></p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editAllowedMembershipIds.length + ' {{ __('plan(s) selected')|e('js') }}'"></p>
                             <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedAllowedPlansEdit.length > 0">
                                 <template x-for="p in selectedAllowedPlansEdit" :key="p.id">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -963,7 +957,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Blocked Plans</label>
+                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Blocked Plans') }}</label>
                             <input type="text" x-model="blockedPlanSearch"
                                    placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
@@ -975,16 +969,16 @@
                                                @change="togglePlanEdit('blocked', p.id)"
                                                class="rounded-sm border-gray-300 dark:border-gray-700 text-red-500">
                                         <span x-text="p.name"></span>
-                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '(free)'"></span>
+                                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="p.price > 0 ? '(' + p.price + '/' + p.interval + ')' : '({{ __('free')|e('js') }})'"></span>
                                     </label>
                                 </template>
                                 <p x-show="!allPlansLoading && allPlans.length === 0 && !blockedPlanSearch"
                                    class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No membership plans yet.') }}</p>
                                 <p x-show="!allPlansLoading && allPlans.length > 0 && filteredBlockedPlansEdit.length === 0"
-                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No plans found</p>
+                                   class="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{{ __('No plans found') }}</p>
                             </div>
                             <input type="hidden" name="blocked_membership_ids" :value="editBlockedMembershipIds.join(',')">
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editBlockedMembershipIds.length + ' plan(s) selected'"></p>
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="editBlockedMembershipIds.length + ' {{ __('plan(s) selected')|e('js') }}'"></p>
                             <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="selectedBlockedPlansEdit.length > 0">
                                 <template x-for="p in selectedBlockedPlansEdit" :key="p.id">
                                     <span class="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">
@@ -997,14 +991,12 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Membership Discount Duration</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Membership Discount Duration') }}</label>
                         <select name="membership_duration" x-model="editMembershipDuration" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
-                            <option value="once">Once (First cycle only)</option>
-                            <option value="forever">Forever (Recurring discount)</option>
+                            <option value="once">{{ __('Once (First cycle only)') }}</option>
+                            <option value="forever">{{ __('Forever (Recurring discount)') }}</option>
                         </select>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.
-                        </p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('Choose whether this discount applies only to the first cycle or recursively to all subscription cycles.') }}</p>
                     </div>
                 </div>
                 {% endif %}
@@ -1014,15 +1006,13 @@
                         <input type="hidden" name="only_users" value="0">
                         <input type="checkbox" x-model="editOnlyUsers" name="only_users" value="1"
                                class="rounded-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Only Registered Users</span>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Only Registered Users') }}</span>
                     </label>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        When enabled, only logged-in users can use this coupon.
-                    </p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ __('When enabled, only logged-in users can use this coupon.') }}</p>
                 </div>
 
                 <div class="border-t pt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Emails <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = anyone)</span></label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Allowed Emails') }} <span class="text-gray-400 dark:text-gray-500 font-normal">({{ __('empty = anyone') }})</span></label>
                     <textarea x-model="editAllowedEmails" name="allowed_emails" rows="3"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
                               placeholder="alice@example.com, bob@example.com"></textarea>
@@ -1030,7 +1020,7 @@
                 </div>
                 <div class="vl-modal-actions">
                     <button type="button" @click="editOpen = false" class="rounded-lg border border-gray-300 dark:border-gray-700 px-5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Cancel') }}</button>
-                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">Update Coupon</button>
+                    <button type="submit" class="rounded-lg bg-gray-900 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-gray-800">{{ __('Update Coupon') }}</button>
                 </div>
             </form>
         </div>
