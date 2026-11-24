@@ -1437,7 +1437,9 @@
 .vl-collab-presence-count { font-weight: 600; color: #374151; }
 .vl-collab-presence-user { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 9999px; background: var(--vl-collab-user-color, #2563eb); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .02em; box-shadow: 0 0 0 2px #fff; cursor: pointer; transition: transform .12s ease, outline-color .12s ease; }
 .vl-collab-presence-user.is-self { cursor: default; }
-.vl-collab-presence-user:not(.is-self):hover { transform: scale(1.08); }
+.vl-collab-presence-user.is-self.has-other-tab { cursor: pointer; }
+.vl-collab-presence-user:not(.is-self):hover,
+.vl-collab-presence-user.is-self.has-other-tab:hover { transform: scale(1.08); }
 .vl-collab-presence-user.is-following { outline: 2px solid var(--vl-collab-user-color, #2563eb); outline-offset: 2px; }
 .vl-collab-presence-user.is-jumped { outline: 2px dashed var(--vl-collab-user-color, #2563eb); outline-offset: 2px; }
 .vl-collab-presence-alert { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 9999px; background: #fef3c7; border: 1px solid #fde68a; color: #92400e; font-size: 12px; font-weight: 700; line-height: 1; cursor: help; }

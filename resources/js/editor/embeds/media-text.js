@@ -7,6 +7,7 @@ import { toEmbedUrl } from '../utils.js';
 import { openLinkDialog } from '../ui/link-dialog.js';
 import { openMediaTextSettings } from '../settings/media-text-settings.js';
 import { makeDuplicateButton } from '../ui/duplicate.js';
+import { setEditingBlock } from '../collaboration.js';
 
 const MediaText = Node.create({
   name: 'mediaText',
@@ -396,15 +397,30 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
         clearOuterNodeSelection();
         isEditing = true;
         textCol.classList.remove('vl-mt-empty');
+        // This column is not ProseMirror content, so collaboration needs the
+        // block position to let others jump/follow here.
+        setEditingBlock(editor, getPos());
       });
+      textCol.addEventListener('focusin', () => setEditingBlock(editor, getPos()));
       textCol.addEventListener('input', () => {
         node.attrs.content = textCol.innerHTML;
         syncPlaceholder();
         syncContentToNode();
+        // Refresh the block hint: it is skipped when unchanged, so this only
+        // republishes after a remote insert shifted the block index.
+        setEditingBlock(editor, getPos());
       });
       textCol.addEventListener('blur', () => {
         isEditing = false;
         syncContentToNode();
+        // Clearing the outer node selection makes ProseMirror touch the DOM
+        // selection, which can blur the column for a moment while the caret
+        // stays here. Clear the hint only when focus really moved elsewhere.
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (active === textCol || textCol.contains(active)) return;
+          setEditingBlock(editor, null);
+        }, 0);
       });
 
       // Floating selection bubble menu for Media+Text
@@ -638,6 +654,7 @@ lightbox: img ? img.getAttribute('data-lightbox') === 'true' : false,
         },
         destroy() {
           document.removeEventListener('selectionchange', onSelectionChange);
+          setEditingBlock(editor, null);
           if (bubbleTippy) {
             bubbleTippy.destroy();
             bubbleTippy = null;
