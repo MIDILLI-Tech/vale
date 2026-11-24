@@ -209,4 +209,5 @@ return [
     // ── Dashboard quick action labels (FlashMiddleware, rendered via __(action.label)) ──
     'New User',
     'New Subscriber',
+    'Thumbnail',
 ];

@@ -175,29 +175,29 @@
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Type') }}</label>
                                         <select x-model="field.type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-                                            <option value="text">Text</option>
-                                            <option value="number">Number</option>
-                                            <option value="textarea">Textarea</option>
-                                            <option value="select">Select</option>
-                                            <option value="checkbox">Checkbox</option>
-                                            <option value="date">Date</option>
-                                            <option value="phone">Phone</option>
-                                            <option value="image">Image</option>
+                                            <option value="text">{{ __('Text') }}</option>
+                                            <option value="number">{{ __('Number') }}</option>
+                                            <option value="textarea">{{ __('Textarea') }}</option>
+                                            <option value="select">{{ __('Select') }}</option>
+                                            <option value="checkbox">{{ __('Checkbox') }}</option>
+                                            <option value="date">{{ __('Date') }}</option>
+                                            <option value="phone">{{ __('Phone') }}</option>
+                                            <option value="image">{{ __('Image') }}</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Width') }}</label>
                                         <select x-model="field.width" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-                                            <option value="100">100% (Full Width)</option>
-                                            <option value="50">50% (2 per row)</option>
-                                            <option value="33">33% (3 per row)</option>
-                                            <option value="25">25% (4 per row)</option>
+                                            <option value="100">100% ({{ __('Full Width') }})</option>
+                                            <option value="50">50% ({{ __('2 per row') }})</option>
+                                            <option value="33">33% ({{ __('3 per row') }})</option>
+                                            <option value="25">25% ({{ __('4 per row') }})</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="min-w-0">
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Label') }}</label>
-                                    <input type="text" x-model="field.label" @input="autoName(field)" placeholder="e.g. Price" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                    <input type="text" x-model="field.label" @input="autoName(field)" placeholder="{{ __('e.g. Price') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                 </div>
                                 <div class="min-w-0">
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Name (key)') }} <span class="text-red-500">*</span></label>
@@ -280,7 +280,7 @@
                                    {% if feature == 'rss' %}x-model="rssEnabled"{% endif %}
                                    {% if feature != 'rss' %}{% if is_edit %}{% if feature in (type.supports|default([])) %}checked{% endif %}{% elseif feature in default_supports %}checked{% endif %}{% endif %}
                                    class="rounded-sm border-gray-300 dark:border-gray-700">
-                            {{ feature == 'rss' ? __('RSS Feed') : (feature == 'read_count' ? __('Read Count') : (feature == 'scheduled_swap' ? __('Scheduled replacement') : feature|capitalize)) }}
+                            {{ feature == 'rss' ? __('RSS Feed') : (feature == 'read_count' ? __('Read Count') : (feature == 'scheduled_swap' ? __('Scheduled replacement') : __(feature|capitalize))) }}
                         </label>
                         {% endfor %}
                         {% if settings.multi_language_content|default(false) %}
