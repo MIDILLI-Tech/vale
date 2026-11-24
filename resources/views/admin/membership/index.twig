@@ -96,7 +96,7 @@
                         </div>
                         <div class="relative">
                             <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
-                                   placeholder="Type tag name..."
+                                   placeholder="{{ __('Type tag name...') }}"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                             <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
                                  class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
@@ -152,7 +152,7 @@
                         </div>
                         <div class="relative">
                             <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
-                                   placeholder="Type tag name..."
+                                   placeholder="{{ __('Type tag name...') }}"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                             <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
                                  class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">

@@ -180,7 +180,7 @@
                             <div x-show="showPages" {{ vl.attrs('seo', __('Page URL Prefix'), 'routing_page_prefix', 'redirects', __('URL Prefixes'), 'page slug prefix url') }}>
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Page URL Prefix') }}</label>
                                 <input type="text" name="routing_page_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].page"
-                                       placeholder="Default: /"
+                                       placeholder="{{ __('Default: /') }}"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
                                 {% if routingPrefixErrors['routing_page_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_page_prefix' ~ suffix] }}</p>
@@ -197,7 +197,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Blog URL Prefix') }}</label>
                                 <input type="text" name="routing_blog_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].blog"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                       placeholder="Default: /blog">
+                                       placeholder="{{ __('Default: /blog') }}">
                                 {% if routingPrefixErrors['routing_blog_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_blog_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -213,7 +213,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Category URL Prefix') }}</label>
                                 <input type="text" name="routing_category_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].category"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                       placeholder="Default: /category">
+                                       placeholder="{{ __('Default: /category') }}">
                                 {% if routingPrefixErrors['routing_category_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_category_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -229,7 +229,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Tag URL Prefix') }}</label>
                                 <input type="text" name="routing_tag_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].tag"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /tag">
+                                                                               placeholder="{{ __('Default: /tag') }}">
                                 {% if routingPrefixErrors['routing_tag_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_tag_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -250,7 +250,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Shop URL Prefix') }}</label>
                                 <input type="text" name="routing_shop_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].shop"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /shop">
+                                                                               placeholder="{{ __('Default: /shop') }}">
                                 {% if routingPrefixErrors['routing_shop_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_shop_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -265,7 +265,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Cart URL Prefix') }}</label>
                                 <input type="text" name="routing_cart_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].cart"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /cart">
+                                                                               placeholder="{{ __('Default: /cart') }}">
                                 {% if routingPrefixErrors['routing_cart_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_cart_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -280,7 +280,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Checkout URL Prefix') }}</label>
                                 <input type="text" name="routing_checkout_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].checkout"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /checkout">
+                                                                               placeholder="{{ __('Default: /checkout') }}">
                                 {% if routingPrefixErrors['routing_checkout_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_checkout_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -301,7 +301,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Membership URL Prefix') }}</label>
                                 <input type="text" name="routing_membership_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].membership"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /membership">
+                                                                               placeholder="{{ __('Default: /membership') }}">
                                 {% if routingPrefixErrors['routing_membership_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_membership_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -322,7 +322,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Account URL Prefix') }}</label>
                                 <input type="text" name="routing_account_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].account"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /account">
+                                                                               placeholder="{{ __('Default: /account') }}">
                                 {% if routingPrefixErrors['routing_account_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_account_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -337,7 +337,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Login URL Prefix') }}</label>
                                 <input type="text" name="routing_login_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].login"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /login">
+                                                                               placeholder="{{ __('Default: /login') }}">
                                 {% if routingPrefixErrors['routing_login_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_login_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -352,7 +352,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Register URL Prefix') }}</label>
                                 <input type="text" name="routing_register_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].register"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /register">
+                                                                               placeholder="{{ __('Default: /register') }}">
                                 {% if routingPrefixErrors['routing_register_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_register_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -367,7 +367,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Forgot Password URL Prefix') }}</label>
                                 <input type="text" name="routing_forgot_password_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].forgot_password"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /forgot-password">
+                                                                               placeholder="{{ __('Default: /forgot-password') }}">
                                 {% if routingPrefixErrors['routing_forgot_password_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_forgot_password_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -382,7 +382,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Reset Password URL Prefix') }}</label>
                                 <input type="text" name="routing_reset_password_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].reset_password"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /reset-password">
+                                                                               placeholder="{{ __('Default: /reset-password') }}">
                                 {% if routingPrefixErrors['routing_reset_password_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_reset_password_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -397,7 +397,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Verify Email URL Prefix') }}</label>
                                 <input type="text" name="routing_verify_email_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].verify_email"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /verify-email">
+                                                                               placeholder="{{ __('Default: /verify-email') }}">
                                 {% if routingPrefixErrors['routing_verify_email_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_verify_email_prefix' ~ suffix] }}</p>
                                 {% endif %}
@@ -412,7 +412,7 @@
                                 <label class="block text-sm font-medium text-gray-700">{{ __('Logout URL Prefix') }}</label>
                                 <input type="text" name="routing_logout_prefix{{ suffix }}" x-model="prefixes['{{ code }}'].logout"
                                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700"
-                                                                               placeholder="Default: /logout">
+                                                                               placeholder="{{ __('Default: /logout') }}">
                                 {% if routingPrefixErrors['routing_logout_prefix' ~ suffix]|default(null) %}
                                 <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ routingPrefixErrors['routing_logout_prefix' ~ suffix] }}</p>
                                 {% endif %}

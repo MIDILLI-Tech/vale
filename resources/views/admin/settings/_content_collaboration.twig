@@ -70,7 +70,7 @@
         <div {{ vl.attrs('content', __('Room prefix'), 'collaboration_room_prefix', 'collaboration', __('Collaboration'), 'namespace room document prefix') }}>
             <label class="text-sm text-gray-700 dark:text-gray-300">{{ __('Room prefix') }}</label>
             <input type="text" name="collaboration_room_prefix" value="{{ settings.collaboration_room_prefix|default('') }}"
-                   placeholder="site-a" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
+                   placeholder="{{ __('site-a') }}" class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700">
             <p class="mt-1 text-xs text-gray-400">{{ __('Optional. Prepends a namespace to every room name (site-a/admin/pages/5/edit). On a shared server it must match the tenant the shared secret is bound to.') }}</p>
         </div>
         <div {{ vl.attrs('content', __('Shared secret'), 'collaboration_secret', 'collaboration', __('Collaboration'), 'token secret password authentication') }}>

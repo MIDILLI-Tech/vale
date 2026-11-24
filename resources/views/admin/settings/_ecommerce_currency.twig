@@ -210,7 +210,7 @@
                     <input type="text" name="fx_api_key"
                            value="{{ settings.fx_api_key|default('') }}"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm font-mono"
-                           placeholder="your-api-key-here">
+                           placeholder="{{ __('your-api-key-here') }}">
                     <p class="mt-1 text-xs text-gray-400">{{ __('Required for OpenExchangeRates and ExchangeRate-API.') }}</p>
                     </div>
                 </div>

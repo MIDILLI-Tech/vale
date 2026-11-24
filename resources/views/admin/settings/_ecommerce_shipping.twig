@@ -200,10 +200,10 @@
                                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm pl-7">
                                 </div>
                                 <div class="flex items-center gap-1 shrink-0">
-                                    <input type="number" min="1" max="365" x-model="row.shipping_time_min" placeholder="Min"
+                                    <input type="number" min="1" max="365" x-model="row.shipping_time_min" placeholder="{{ __('Min') }}"
                                            class="w-14 sm:w-16 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                     <span class="text-xs text-gray-400">-</span>
-                                    <input type="number" min="1" max="365" x-model="row.shipping_time_max" placeholder="Max"
+                                    <input type="number" min="1" max="365" x-model="row.shipping_time_max" placeholder="{{ __('Max') }}"
                                            class="w-14 sm:w-16 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                 </div>
                                 <button type="button" @click="rates.splice(idx,1)" class="text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm p-1 ml-auto sm:ml-0" title="{{ __('Remove') }}">✕</button>

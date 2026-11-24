@@ -173,7 +173,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div {{ vl.attrs('discussion', 'GitHub Repository', 'giscus_repo', '', __('Comment System'), 'giscus github repository') }}>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('GitHub Repository') }}</label>
-                        <input type="text" name="giscus_repo" value="{{ settings.giscus_repo|default('') }}" placeholder="owner/repo"
+                        <input type="text" name="giscus_repo" value="{{ settings.giscus_repo|default('') }}" placeholder="{{ __('owner/repo') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
                     </div>
                     <div {{ vl.attrs('discussion', 'Repository ID', 'giscus_repo_id', '', __('Comment System'), 'giscus repo id') }}>

@@ -34,7 +34,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Sequence Name') }} <span class="text-red-500">*</span></label>
                     <input type="text" name="name" required value="{{ sequence.name|default('') }}"
-                           placeholder="e.g. Welcome Series"
+                           placeholder="{{ __('e.g. Welcome Series') }}"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500">
                 </div>
             </div>
@@ -196,12 +196,12 @@
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
-                                                    <input type="number" min="0" x-model.number="step.min_orders_filter" placeholder="any"
+                                                    <input type="number" min="0" x-model.number="step.min_orders_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
-                                                    <input type="number" min="0" x-model.number="step.max_orders_filter" placeholder="any"
+                                                    <input type="number" min="0" x-model.number="step.max_orders_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                             </div>
@@ -211,12 +211,12 @@
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
-                                                    <input type="number" min="0" step="0.01" x-model.number="step.min_total_spend_filter" placeholder="any"
+                                                    <input type="number" min="0" step="0.01" x-model.number="step.min_total_spend_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
-                                                    <input type="number" min="0" step="0.01" x-model.number="step.max_total_spend_filter" placeholder="any"
+                                                    <input type="number" min="0" step="0.01" x-model.number="step.max_total_spend_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                             </div>
@@ -226,12 +226,12 @@
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Min:') }}</span>
-                                                    <input type="number" min="0" x-model.number="step.min_days_since_last_purchase_filter" placeholder="any"
+                                                    <input type="number" min="0" x-model.number="step.min_days_since_last_purchase_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-xs text-gray-500">{{ __('Max:') }}</span>
-                                                    <input type="number" min="0" x-model.number="step.max_days_since_last_purchase_filter" placeholder="any"
+                                                    <input type="number" min="0" x-model.number="step.max_days_since_last_purchase_filter" placeholder="{{ __('any') }}"
                                                            class="w-full rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                                 </div>
                                             </div>
@@ -242,22 +242,22 @@
                                         <div class="grid grid-cols-2 gap-4">
                                             <div class="flex items-center gap-2">
                                                 <span class="text-[10px] text-gray-500 uppercase">Min Open %:</span>
-                                                <input type="number" min="0" max="100" x-model.number="step.min_open_rate_filter" placeholder="any"
+                                                <input type="number" min="0" max="100" x-model.number="step.min_open_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-[10px] text-gray-500 uppercase">Max Open %:</span>
-                                                <input type="number" min="0" max="100" x-model.number="step.max_open_rate_filter" placeholder="any"
+                                                <input type="number" min="0" max="100" x-model.number="step.max_open_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-[10px] text-gray-500 uppercase">Min Click %:</span>
-                                                <input type="number" min="0" max="100" x-model.number="step.min_click_rate_filter" placeholder="any"
+                                                <input type="number" min="0" max="100" x-model.number="step.min_click_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-[10px] text-gray-500 uppercase">Max Click %:</span>
-                                                <input type="number" min="0" max="100" x-model.number="step.max_click_rate_filter" placeholder="any"
+                                                <input type="number" min="0" max="100" x-model.number="step.max_click_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                         </div>
@@ -293,7 +293,7 @@
                                     <div class="mb-4">
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
                                         <input type="text" x-model="step.subject"
-                                               placeholder="Email subject line"
+                                               placeholder="{{ __('Email subject line') }}"
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                                     </div>
 
@@ -323,7 +323,7 @@
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
                                         <input type="text" x-model="step.subject_b"
-                                               placeholder="Email subject line"
+                                               placeholder="{{ __('Email subject line') }}"
                                                class="w-full rounded-lg border-indigo-200 dark:border-indigo-800 shadow-xs text-sm focus:border-indigo-600 focus:ring-indigo-500">
                                     </div>
                                     <div>
@@ -414,7 +414,7 @@
                             </div>
                             <div class="relative">
                                 <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
-                                       placeholder="e.g. premium, vip, beta"
+                                       placeholder="{{ __('e.g. premium, vip, beta') }}"
                                        class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                                 <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
                                      class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
@@ -472,7 +472,7 @@
                         </div>
                         <div class="relative">
                             <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
-                                   placeholder="e.g. customer"
+                                   placeholder="{{ __('e.g. customer') }}"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                             <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
                                  class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">

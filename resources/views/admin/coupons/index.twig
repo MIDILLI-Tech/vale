@@ -538,12 +538,12 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Minimum Order') }}</label>
                         <input type="number" x-model="addMinOrder" name="min_order" min="0" step="0.01"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = no minimum">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = no minimum') }}">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Max Total Uses') }}</label>
                         <input type="number" x-model="addMaxUses" name="max_uses" min="1" step="1"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = unlimited">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = unlimited') }}">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Max Uses Per Person') }}</label>
@@ -642,7 +642,7 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
                             <input type="text" x-model="allowedPlanSearch"
-                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                                   placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
                                 <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
                                 <template x-for="p in filteredAllowedPlans" :key="p.id">
@@ -674,7 +674,7 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Blocked Plans') }}</label>
                             <input type="text" x-model="blockedPlanSearch"
-                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                                   placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
                                 <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
                                 <template x-for="p in filteredBlockedPlans" :key="p.id">
@@ -829,12 +829,12 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Order</label>
                         <input type="number" x-model="editMinOrder" name="min_order" min="0" step="0.01"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = no minimum">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = no minimum') }}">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Total Uses</label>
                         <input type="number" x-model="editMaxUses" name="max_uses" min="1" step="1"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="Empty = unlimited">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm" placeholder="{{ __('Empty = unlimited') }}">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Uses Per Email</label>
@@ -933,7 +933,7 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Plans <span class="text-gray-400 dark:text-gray-500 font-normal">(empty = all)</span></label>
                             <input type="text" x-model="allowedPlanSearch"
-                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                                   placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
                                 <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
                                 <template x-for="p in filteredAllowedPlansEdit" :key="p.id">
@@ -965,7 +965,7 @@
                         <div>
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Blocked Plans</label>
                             <input type="text" x-model="blockedPlanSearch"
-                                   placeholder="Search plans…" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
+                                   placeholder="{{ __('Search plans…') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm mb-2">
                             <div class="max-h-60 overflow-y-auto border dark:border-gray-700 rounded-lg p-2 space-y-1 bg-white dark:bg-gray-800">
                                 <p x-show="allPlansLoading" class="text-xs text-gray-400 dark:text-gray-500 text-center py-2"><span class="vl-icon-refresh vl-icon-spin mr-1"></span>{{ __('Loading…') }}</p>
                                 <template x-for="p in filteredBlockedPlansEdit" :key="p.id">

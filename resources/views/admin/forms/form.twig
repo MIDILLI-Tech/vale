@@ -116,10 +116,10 @@
                                 <div :class="field.type === 'static_text' ? 'sm:col-span-2' : ''" class="min-w-0">
                                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Label</label>
                                     <template x-if="field.type !== 'static_text'">
-                                        <input type="text" x-model="field.label" @input="field.type !== 'email' && autoName(field)" placeholder="Label" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                                        <input type="text" x-model="field.label" @input="field.type !== 'email' && autoName(field)" placeholder="{{ __('Label') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                     </template>
                                     <template x-if="field.type === 'static_text'">
-                                        <textarea x-model="field.label" rows="3" placeholder="Static information text"
+                                        <textarea x-model="field.label" rows="3" placeholder="{{ __('Static information text') }}"
                                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm leading-5"
                                                   style="white-space: pre-wrap;"></textarea>
                                     </template>

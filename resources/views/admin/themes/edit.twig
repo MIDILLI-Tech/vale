@@ -101,7 +101,7 @@
                             {{ csrf_field() }}
                             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('New Page Template') }}</label>
                             <div class="flex gap-2">
-                                <input type="text" name="name" placeholder="e.g. full-width" required
+                                <input type="text" name="name" placeholder="{{ __('e.g. full-width') }}" required
                                        class="block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-xs">
                                 <button type="submit" class="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600">
                                     {{ __('Add') }}

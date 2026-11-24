@@ -34,7 +34,7 @@
                @input="onInput($event)"
                @keydown.escape.prevent="closeDropdown()"
                @keydown.arrow-down.prevent="open = true; openDropdown()"
-               :placeholder="placeholder"
+               :placeholder="{{ __('placeholder') }}"
                autocomplete="off"
                role="combobox"
                :aria-expanded="open"

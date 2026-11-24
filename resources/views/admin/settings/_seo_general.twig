@@ -67,7 +67,7 @@
                     </a>
                 </label>
                 <input type="text" name="meta_google_verification" value="{{ settings.meta_google_verification|default('') }}"
-                       placeholder="google-site-verification content"
+                       placeholder="{{ __('google-site-verification content') }}"
                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
             </div>
             <div {{ vl.attrs('seo', __('Yandex Webmaster'), 'meta_yandex_verification', 'general', __('Search Engine Verification'), 'yandex webmaster verification') }}>
@@ -79,7 +79,7 @@
                     </a>
                 </label>
                 <input type="text" name="meta_yandex_verification" value="{{ settings.meta_yandex_verification|default('') }}"
-                       placeholder="yandex-verification content"
+                       placeholder="{{ __('yandex-verification content') }}"
                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
             </div>
             <div {{ vl.attrs('seo', __('Bing Webmaster Tools'), 'meta_bing_verification', 'general', __('Search Engine Verification'), 'bing microsoft webmaster') }}>
@@ -91,7 +91,7 @@
                     </a>
                 </label>
                 <input type="text" name="meta_bing_verification" value="{{ settings.meta_bing_verification|default('') }}"
-                       placeholder="msvalidate.01 content"
+                       placeholder="{{ __('msvalidate.01 content') }}"
                        class="mt-1 w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm font-mono">
             </div>
             </div>

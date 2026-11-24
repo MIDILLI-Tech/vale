@@ -166,7 +166,7 @@
                         </div>
                         <div class="relative">
                             <input type="text" x-model="input" @input="onInput" @keydown="onKeydown" @blur="onBlur" @focus="onInput"
-                                   placeholder="Type tag name..."
+                                   placeholder="{{ __('Type tag name...') }}"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                             <div x-show="showSuggestions && filteredSuggestions.length > 0" x-cloak
                                  class="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-lg max-h-48 overflow-y-auto">
@@ -346,7 +346,7 @@
                                 <div>
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Post Types</label>
                                     <div class="relative" data-multi data-name="recurring_post_types" data-array="0" data-mode="client" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringPostTypes|default('') }}">
-                                        <input data-search type="text" placeholder="Search post types..." {{ readonly ? 'disabled' : '' }}
+                                        <input data-search type="text" placeholder="{{ __('Search post types...') }}" {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                                         <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
@@ -359,7 +359,7 @@
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Category</label>
                                     <div class="relative" data-multi data-name="recurring_category_ids" data-array="1" data-mode="fetch" data-fetch="/admin/categories/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringCategoryIds|default('') }}">
                                         <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for c in allCategories|default([]) %}{"value":{{ c.id }},"label":{{ c.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
-                                        <input data-search type="text" placeholder="Search categories..." {{ readonly ? 'disabled' : '' }}
+                                        <input data-search type="text" placeholder="{{ __('Search categories...') }}" {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                                         <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
@@ -372,7 +372,7 @@
                                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tag</label>
                                     <div class="relative" data-multi data-name="recurring_tag_ids" data-array="1" data-mode="fetch" data-fetch="/admin/tags/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringTagIds|default('') }}">
                                         <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for t in allContentTags|default([]) %}{"value":{{ t.id }},"label":{{ t.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
-                                        <input data-search type="text" placeholder="Search tags..." {{ readonly ? 'disabled' : '' }}
+                                        <input data-search type="text" placeholder="{{ __('Search tags...') }}" {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
                                         <div data-chips class="flex flex-wrap gap-1.5 mt-1 hidden"></div>
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>

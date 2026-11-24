@@ -131,7 +131,7 @@
                                 <label class="block text-xs font-medium text-gray-600 mb-1">{{ __('Steam Web API Key') }}</label>
                                 <input type="text" name="steam_api_key"
                                        value="{{ settings.steam_api_key|default('') }}"
-                                       placeholder="Get key at https://steamcommunity.com/dev"
+                                       placeholder="{{ __('Get key at https://steamcommunity.com/dev') }}"
                                        class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                                 <p class="mt-1 text-xs text-gray-400">{{ __('Optional — used to fetch player name and avatar. Without it, users will see "Steam User".') }}</p>
                             </div>

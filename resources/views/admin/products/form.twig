@@ -217,7 +217,7 @@
                 <div x-show="dlSource === 'external'" class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Download URL') }}</label>
                     <input type="text" name="download_url" x-model="dlUrl" :disabled="dlSource !== 'external'"
-                           placeholder="https://example.com/file.zip"
+                           placeholder="{{ __('https://example.com/file.zip') }}"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm dark:bg-gray-800 dark:text-gray-200">
                     <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Must start with https:// or http://') }}</p>
                     <div class="mt-2">
@@ -445,22 +445,22 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Color') }}</label>
                         <input type="text" name="color" value="{{ product.color|default('') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="e.g. Red">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="{{ __('e.g. Red') }}">
                     </div>
                     <div data-gmc-field="apparel">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Size') }}</label>
                         <input type="text" name="size" value="{{ product.size|default('') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="e.g. M, 42, XL">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="{{ __('e.g. M, 42, XL') }}">
                     </div>
                     <div data-gmc-field="apparel">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Material') }}</label>
                         <input type="text" name="material" value="{{ product.material|default('') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="e.g. Cotton">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="{{ __('e.g. Cotton') }}">
                     </div>
                     <div data-gmc-field="apparel">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Pattern') }}</label>
                         <input type="text" name="pattern" value="{{ product.pattern|default('') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="e.g. Striped">
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs dark:bg-gray-800 dark:text-gray-200" placeholder="{{ __('e.g. Striped') }}">
                     </div>
                 </div>
                 <div class="border-t pt-4">
@@ -593,9 +593,9 @@
                             <template x-for="(attr, ai) in item.attrs" :key="ai">
                                 <div class="flex items-center gap-2 mb-1">
                                     <input type="text" :name="'variations[' + idx + '][attr_name][]'" x-model="attr.name"
-                                           placeholder="e.g. Color" class="w-1/3 rounded-sm border-gray-300 dark:border-gray-700 text-sm px-2 py-1">
+                                           placeholder="{{ __('e.g. Color') }}" class="w-1/3 rounded-sm border-gray-300 dark:border-gray-700 text-sm px-2 py-1">
                                     <input type="text" :name="'variations[' + idx + '][attr_value][]'" x-model="attr.value"
-                                           placeholder="e.g. Red" class="w-1/3 rounded-sm border-gray-300 dark:border-gray-700 text-sm px-2 py-1">
+                                           placeholder="{{ __('e.g. Red') }}" class="w-1/3 rounded-sm border-gray-300 dark:border-gray-700 text-sm px-2 py-1">
                                     <button type="button" @click="item.attrs.splice(ai, 1)" class="text-gray-400 hover:text-red-500 text-xs">✕</button>
                                 </div>
                             </template>
@@ -693,7 +693,7 @@
 
                             <div x-show="item.download_mode === 'external'" class="mb-2">
                                 <input type="text" :name="'variations[' + idx + '][download_url]'" x-model="item.download_url" :disabled="item.download_mode !== 'external'"
-                                       placeholder="https://..." class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                       placeholder="{{ __('https://...') }}" class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
                                 <div class="mt-1">
                                     <label class="flex items-center gap-2 text-[11px] text-gray-600 dark:text-gray-400 cursor-pointer">
                                         <input type="checkbox" :name="'variations[' + idx + '][download_url_proxy]'" x-model="item.download_url_proxy" :disabled="item.download_mode !== 'external'"
@@ -768,11 +768,11 @@
                                         <div class="flex items-center gap-1">
                                             <input type="number" min="1" max="365"
                                                    :name="'variations[' + idx + '][shipping_time_min]'" x-model="item.shipping_time_min"
-                                                   placeholder="Min" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                                   placeholder="{{ __('Min') }}" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
                                             <span class="text-xs text-gray-400">-</span>
                                             <input type="number" min="1" max="365"
                                                    :name="'variations[' + idx + '][shipping_time_max]'" x-model="item.shipping_time_max"
-                                                   placeholder="Max" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                                   placeholder="{{ __('Max') }}" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
                                         </div>
                                     </template>
                                     <template x-if="item.time_mode !== 'custom'">
@@ -814,11 +814,11 @@
                                                 <div class="flex items-center gap-1">
                                                     <input type="number" min="1" max="365" :value="rule.shipping_time_min || ''"
                                                            @input="updateVarOverrideTime(item, ccode, 'shipping_time_min', $event.target.value)" @change="updateVarOverrideTime(item, ccode, 'shipping_time_min', $event.target.value)"
-                                                           placeholder="Min" class="w-14 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                                           placeholder="{{ __('Min') }}" class="w-14 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
                                                     <span class="text-xs text-gray-400">-</span>
                                                     <input type="number" min="1" max="365" :value="rule.shipping_time_max || ''"
                                                            @input="updateVarOverrideTime(item, ccode, 'shipping_time_max', $event.target.value)" @change="updateVarOverrideTime(item, ccode, 'shipping_time_max', $event.target.value)"
-                                                           placeholder="Max" class="w-14 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                                           placeholder="{{ __('Max') }}" class="w-14 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
                                                 </div>
                                             </template>
                                             <button type="button" @click="removeVarOverride(item, ccode)" class="text-red-500 hover:text-red-700 text-xs shrink-0">✕</button>
@@ -976,7 +976,7 @@
                                    x-model="varMediaQuery"
                                    @input="onVarSearchInput()"
                                    @keydown.enter.prevent="loadVarMediaPage(1)"
-                                   placeholder="Search images..."
+                                   placeholder="{{ __('Search images...') }}"
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                         </div>
                         <div class="flex-1 min-h-0 overflow-y-auto p-6">
@@ -1137,11 +1137,11 @@
                                 <div class="flex items-center gap-1">
                                     <input type="number" min="1" max="365" name="shipping_time_min"
                                            value="{{ product.shippingTimeMin|default('') }}"
-                                           placeholder="Min" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           placeholder="{{ __('Min') }}" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                     <span class="text-xs text-gray-400">-</span>
                                     <input type="number" min="1" max="365" name="shipping_time_max"
                                            value="{{ product.shippingTimeMax|default('') }}"
-                                           placeholder="Max" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           placeholder="{{ __('Max') }}" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                 </div>
                             </template>
                             <template x-if="timeMode !== 'custom'">
@@ -1216,11 +1216,11 @@
                                     <div class="flex items-center gap-1">
                                         <input type="number" min="1" max="365"
                                                :value="rules[ccode].shipping_time_min || ''" @input="rules[ccode].shipping_time_min = $event.target.value; updateJson()" @change="updateJson"
-                                               placeholder="Min" class="w-12 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                               placeholder="{{ __('Min') }}" class="w-12 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
                                         <span class="text-xs text-gray-400">-</span>
                                         <input type="number" min="1" max="365"
                                                :value="rules[ccode].shipping_time_max || ''" @input="rules[ccode].shipping_time_max = $event.target.value; updateJson()" @change="updateJson"
-                                               placeholder="Max" class="w-12 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                               placeholder="{{ __('Max') }}" class="w-12 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-1.5 py-1 dark:bg-gray-800 dark:text-gray-200">
                                     </div>
                                 </template>
                                 <template x-if="rule.class !== 'custom'">
