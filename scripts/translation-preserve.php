@@ -205,7 +205,7 @@ return [
     // ── Editor block settings labels resolved through tjs() helpers ──
     'Category (optional)',
     'Tags (optional)',
-    'Search roles by name…',
+    'Search roles…',
 
     // ── Dashboard quick action labels (FlashMiddleware, rendered via __(action.label)) ──
     'New User',
