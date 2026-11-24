@@ -192,7 +192,6 @@ return [
     'CPT: :name',
 
     // ── Admin table headers and search placeholders (macro args resolved at runtime) ──
-    'Search by email or name…',
     'Sent',
     'Opened',
     'Clicks',

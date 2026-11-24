@@ -30,7 +30,7 @@
 {% set opens_pct = campaign.opensCount > 0 and total > 0 ? min(((campaign.opensCount / total) * 100)|round(1), 100) : 0 %}
 {% set clicks_pct = campaign.clicksCount > 0 and total > 0 ? min(((campaign.clicksCount / total) * 100)|round(1), 100) : 0 %}
 <div class="mb-4 flex flex-wrap items-center gap-3">
-    {{ table.search(__('Search by email or name…')) }}
+    {{ table.search(__('Search email, name or tag…')) }}
     {{ table.columnsToggle() }}
     {% if filter %}
     <div class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">

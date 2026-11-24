@@ -25,7 +25,7 @@
 </div>
 
 <div class="mb-4">
-    <input type="text" x-model="search" placeholder="Search name, trigger or status…"
+    <input type="text" x-model="search" placeholder="{{ __('Search name, trigger or status…') }}"
            class="w-full max-w-sm rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
 </div>
 
@@ -101,15 +101,15 @@
                 {% set duration = total_min ~ ' min' %}
             {% endif %}
             {% if seq.triggerType == 'subscribe' %}
-                {% set trigger_label = 'Subscribe' %}
+                {% set trigger_label = __('Subscribe') %}
             {% elseif seq.triggerType == 'manual' %}
-                {% set trigger_label = 'Manual' %}
+                {% set trigger_label = __('Manual') %}
             {% elseif seq.triggerType == 'tag_assigned' %}
-                {% set trigger_label = 'Tag' %}
+                {% set trigger_label = __('Tag') %}
             {% else %}
                 {% set trigger_label = seq.triggerType %}
             {% endif %}
-            {% set search_text = (seq.name ~ ' ' ~ trigger_label ~ ' ' ~ (seq.isActive() ? 'active' : 'paused'))|lower|e('js') %}
+            {% set search_text = (seq.name ~ ' ' ~ trigger_label ~ ' ' ~ (seq.isActive() ? __('Active') ~ ' active' : __('Paused') ~ ' paused'))|lower|e('js') %}
             <tr data-row
                 data-sort-Name="{{ seq.name|lower|e('html_attr') }}"
                 data-sort-Trigger="{{ trigger_label|lower|e('html_attr') }}"

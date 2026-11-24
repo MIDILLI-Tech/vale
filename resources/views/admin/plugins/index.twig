@@ -102,7 +102,7 @@
 {% else %}
 <div x-data="dataTable({perPage: {{ per_page|default(20) }}, search: '{{ (filters.search|default(''))|e('js') }}'{% if not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}'{% endif %}})">
 <div class="mb-4 flex flex-wrap items-center gap-3">
-    {{ table.search(__('Search plugin name, slug or description…')) }}
+    {{ table.search(__('Search plugins…')) }}
     <form method="get" action="{{ url('/admin/plugins') }}" class="flex flex-wrap items-center gap-2">
         <input type="hidden" name="search" :value="search">
         <select name="status" aria-label="{{ __('Status') }}"
