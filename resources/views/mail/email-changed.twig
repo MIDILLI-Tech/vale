@@ -1,0 +1,10 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Your email address was changed') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Hello, :name', {':name': name}) }}</h2>
+<p>{{ __('The email address on your account was just changed from :previous to :new.', {':previous': previous_email, ':new': new_email}) }}</p>
+<p>{{ __('The new address has to be verified before it can be used to sign in.') }}</p>
+<p style="color:{{ email_text_muted }}; font-size:13px;">{{ __('If you did not make this change, contact the site administrator immediately — your account may have been accessed by someone else.') }}</p>
+{% endblock %}

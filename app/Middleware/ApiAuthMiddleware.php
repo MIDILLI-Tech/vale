@@ -41,9 +41,12 @@ final class ApiAuthMiddleware implements MiddlewareInterface
 
         $hashed = hash('sha256', $plainToken);
 
+        // Join the owner so a deactivated account loses API access immediately
+        // instead of keeping a working token until it is deleted by hand.
         $row = $this->db->fetchAssociative(
-            'SELECT id, user_id, abilities FROM ' . self::TABLE
-            . ' WHERE token = ? AND (expires_at IS NULL OR expires_at > ?)',
+            'SELECT t.id, t.user_id, t.abilities FROM ' . self::TABLE . ' t'
+            . ' INNER JOIN ' . VL_DB_PREFIX . 'users u ON u.id = t.user_id AND u.is_active = 1'
+            . ' WHERE t.token = ? AND (t.expires_at IS NULL OR t.expires_at > ?)',
             [$hashed, date('Y-m-d H:i:s')],
         );
 

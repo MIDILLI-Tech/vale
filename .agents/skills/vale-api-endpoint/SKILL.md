@@ -12,6 +12,8 @@ metadata:
 
 All API routes live under `/api/v1` in `routes/api.php`, protected per-route by **Bearer token auth** (`ApiAuthMiddleware`) plus an **ability check** (`ApiAbilityMiddleware`, e.g. `coupons:read`). Tokens are managed in Admin → Settings → Advanced → API Tokens; each token carries comma-separated abilities or `*`. The whole group is wrapped by the `rate_limit.api` middleware — do not remove it.
 
+`ApiAuthMiddleware` resolves the token with an `INNER JOIN vl_users u ON u.id = api_tokens.user_id AND u.is_active = 1`, so a token is only valid while its owner's account is active. Deactivating a user revokes every token they own on the next request, and the answer is the same `401 Invalid or expired token.` as an unknown token (no account-state disclosure). Role changes and password resets do **not** revoke tokens — the abilities stored on the token, not the user's RBAC permissions, authorize each call.
+
 ## Phase 1 — Ask (required before writing any code)
 
 1. Resource name (singular + plural)? → drives route path, controller name, ability prefix (e.g. coupons → `read|write|delete:coupons`. Caution: follow verb:resource)
@@ -150,6 +152,8 @@ Place under the matching suite — existing API controller tests live in `tests/
 
 New abilities (`coupons:*`) work automatically — tokens stored as comma-separated strings; `*` grants everything. Mention to the user that they must create/update a token with the new abilities in Admin → Settings → Advanced → API Tokens before testing.
 
+Do not add a route-level role or permission check: API authorization is ability-based, and `ApiAuthMiddleware` already rejects tokens whose owner is inactive. A subscriber with a `*` token can write — abilities live on the token and are independent of the owner's RBAC permissions.
+
 ## Phase 3 — Verify
 
 - `php -l` on touched PHP files
@@ -161,7 +165,7 @@ New abilities (`coupons:*`) work automatically — tokens stored as comma-separa
 curl -H "Authorization: Bearer TOKEN" http://localhost/api/v1/coupons?page=1
 ```
 
-Expect `{data: [...], meta: {...}}`; without token expect 401; wrong ability expect 403.
+Expect `{data: [...], meta: {...}}`; without token expect 401; wrong ability expect 403. A token whose owner was deactivated also returns 401 (`Invalid or expired token.`) even though the token row still exists.
 
 ## Checklist
 

@@ -452,11 +452,43 @@ final class AccountController
                 return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
             }
 
+            // Moving the account address is a credential-level action: a borrowed
+            // session must not be able to point it at an attacker inbox silently.
+            if ($currentPassword === '' || !$this->hasher->verify($currentPassword, $user->getPassword())) {
+                return $this->twig->render($response->withStatus(422), 'account/profile.twig', [
+                    'user'   => $user,
+                    'errors' => [$currentPassword === ''
+                        ? 'Current password is required to change your email address.'
+                        : 'Current password is incorrect.'],
+                ]);
+            }
+
+            $previousEmail = (string) $user->getEmail();
             $user->setEmail($emailVo);
             $user->setEmailVerifiedAt(null);
             $user->setVerificationToken(bin2hex(random_bytes(32)));
             $user->setVerificationTokenExpiresAt(new \DateTimeImmutable('+24 hours'));
             $emailChanged = true;
+
+            // Tell the previous address, so a silent takeover is visible to its owner.
+            if ($this->mailer !== null) {
+                try {
+                    $this->mailer->sendTemplate(
+                        $previousEmail,
+                        __('Your email address was changed'),
+                        'mail/email-changed',
+                        [
+                            'name'           => $user->getName(),
+                            'previous_email' => $previousEmail,
+                            'new_email'      => (string) $user->getEmail(),
+                        ],
+                        locale: $user->getLocale(),
+                        recipientType: 'customer',
+                    );
+                } catch (\Throwable) {
+                    // silent
+                }
+            }
 
             if ($this->settings->get('registration_verify_email', '1') === '1' && $this->mailer !== null) {
                 try {

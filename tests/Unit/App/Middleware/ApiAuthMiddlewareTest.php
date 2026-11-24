@@ -121,6 +121,50 @@ final class ApiAuthMiddlewareTest extends TestCase
         self::assertSame(401, $response->getStatusCode());
     }
 
+    /**
+     * A deactivated owner must not keep API access. The lookup joins users on
+     * is_active = 1, so the row disappears and the caller receives the same 401
+     * as an unknown token — the account state is never disclosed.
+     */
+    public function testDeactivatedOwnerIsRejectedWith401(): void
+    {
+        $capturedSql    = '';
+        $capturedParams = [];
+
+        $db = $this->createStub(Connection::class);
+        $db->method('fetchAssociative')->willReturnCallback(
+            static function (string $sql, array $params = []) use (&$capturedSql, &$capturedParams) {
+                $capturedSql    = $sql;
+                $capturedParams = $params;
+
+                // The users JOIN filtered the row out: the token's owner is inactive.
+                return false;
+            }
+        );
+
+        $request = (new RequestFactory())->createRequest('GET', '/api/v1/posts')
+            ->withHeader('Authorization', 'Bearer token-of-deactivated-user');
+
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willReturn($this->createStub(ResponseInterface::class));
+
+        $response = $this->makeMiddleware($db)->process($request, $handler);
+
+        self::assertSame(401, $response->getStatusCode());
+
+        // The query itself must exclude owners whose account is switched off.
+        self::assertStringContainsString('INNER JOIN ' . VL_DB_PREFIX . 'users', $capturedSql);
+        self::assertStringContainsString('u.id = t.user_id', $capturedSql);
+        self::assertStringContainsString('u.is_active = 1', $capturedSql);
+
+        // Still looked up by hash, never by the plaintext token.
+        self::assertSame(hash('sha256', 'token-of-deactivated-user'), $capturedParams[0] ?? null);
+
+        // The response must not reveal that the account was deactivated.
+        $response->getBody()->rewind();
+        self::assertStringContainsString('Invalid or expired token', (string) $response->getBody());
+    }
+
     public function testMissingBearerReturns401(): void
     {
         $db = $this->createStub(Connection::class);

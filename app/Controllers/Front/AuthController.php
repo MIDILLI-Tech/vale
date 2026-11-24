@@ -318,6 +318,21 @@ class AuthController
             $ip     = vl_client_ip($request);
             $result = $this->loginUseCase->execute($email, $password, $remember, $ip);
 
+            // An unverified address must never complete a login — including the
+            // 2FA challenge branch below, which returns before this point would
+            // otherwise be reached.
+            $emailVo = new Email($email);
+            $user    = $this->users->findByEmail($emailVo);
+
+            if ($user !== null && $user->getEmailVerifiedAt() === null) {
+                $this->session->destroy();
+                return $this->twig->render($response->withStatus(403), 'auth/login.twig', [
+                    'error'     => 'Please verify your email address before logging in. Check your inbox for the verification link.',
+                    'old_email' => $email,
+                    'redirect'  => $redirect,
+                ]);
+            }
+
             if (!empty($result['two_factor_required'])) {
                 $this->session->set('two_factor_user_id', $result['id']);
                 $this->session->set('two_factor_remember', $remember);
@@ -330,18 +345,6 @@ class AuthController
                 $accountPrefix = $this->settings->get('routing_account_prefix', '/account') ?: '/account';
 
                 return $response->withHeader('Location', $accountPrefix . '/two-factor/forced-setup')->withStatus(302);
-            }
-
-            $emailVo = new Email($email);
-            $user    = $this->users->findByEmail($emailVo);
-
-            if ($user !== null && $user->getEmailVerifiedAt() === null) {
-                $this->session->destroy();
-                return $this->twig->render($response->withStatus(403), 'auth/login.twig', [
-                    'error'     => 'Please verify your email address before logging in. Check your inbox for the verification link.',
-                    'old_email' => $email,
-                    'redirect'  => $redirect,
-                ]);
             }
 
             if ($redirect === '' && $this->session->has('redirect_after_login')) {
@@ -388,9 +391,10 @@ class AuthController
         }
 
         $user = $this->users->findById((int) $userId);
-        if ($user === null || !$user->isTwoFactorEnabled() || !$user->isActive()) {
-            // Re-check activation: the account may have been deactivated
-            // between the password step and this challenge.
+        if ($user === null || !$user->isTwoFactorEnabled() || !$user->isActive() || $user->getEmailVerifiedAt() === null) {
+            // Re-check activation and verification: the account may have been
+            // deactivated or had its address changed between the password step
+            // and this challenge.
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
 
