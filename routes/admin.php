@@ -149,7 +149,7 @@ return function (App $app): void {
 
             $g->get('/posts/{id}/revisions/json', [PostController::class, 'revisionsJson']);
             $g->get('/posts/{id}/revisions/{revId}', [PostController::class, 'revisionDetail']);
-            $g->get('/posts/{id}/revisions/{revId}/diff/{type:current|previous}', [
+            $g->get('/posts/{id}/revisions/{revId}/diff/{type:current|previous|revision}', [
                 PostController::class, 'revisionDiff',
             ]);
             $g->post('/posts/{id}/revisions/{revId}/restore', [PostController::class, 'restoreRevision']);
@@ -268,7 +268,7 @@ return function (App $app): void {
             $g->put('/pages/{id}', [PageController::class, 'update']);
             $g->get('/pages/{id}/revisions/json', [PageController::class, 'revisionsJson']);
             $g->get('/pages/{id}/revisions/{revId}', [PageController::class, 'revisionDetail']);
-            $g->get('/pages/{id}/revisions/{revId}/diff/{type:current|previous}', [
+            $g->get('/pages/{id}/revisions/{revId}/diff/{type:current|previous|revision}', [
                 PageController::class, 'revisionDiff',
             ]);
             $g->post('/pages/{id}/revisions/{revId}/restore', [PageController::class, 'restoreRevision']);

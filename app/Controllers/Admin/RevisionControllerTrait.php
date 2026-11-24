@@ -96,7 +96,7 @@ trait RevisionControllerTrait
         $postId = (int) $args['id'];
         $type   = $args['type'] ?? '';
 
-        if (!in_array($type, ['current', 'previous'], true)) {
+        if (!in_array($type, ['current', 'previous', 'revision'], true)) {
             return $response->withStatus(400);
         }
 
@@ -113,6 +113,22 @@ trait RevisionControllerTrait
         if ($type === 'current') {
             $oldBody = $post->getBody();
             $newBody = $rev->getBody();
+        } elseif ($type === 'revision') {
+            $againstId = (int) ($request->getQueryParams()['against'] ?? 0);
+            $against   = $againstId > 0 ? $this->revisions->findById($againstId) : null;
+            if (
+                $against === null
+                || $against->getPostId() !== $postId
+                || $against->getId() === $rev->getId()
+            ) {
+                return $response->withStatus(404);
+            }
+
+            // Older revision on the left, newer on the right, whichever way
+            // the two were picked.
+            $againstIsOlder = $against->getRevisionNumber() < $rev->getRevisionNumber();
+            $oldBody        = $againstIsOlder ? $against->getBody() : $rev->getBody();
+            $newBody        = $againstIsOlder ? $rev->getBody() : $against->getBody();
         } else {
             $prevRev = $this->revisions->findPreviousByPostId($postId, $rev->getRevisionNumber());
             if ($prevRev === null) {

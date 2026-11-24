@@ -7,13 +7,17 @@
     restoreUrl: '{{ url(rp ~ post.id ~ '/revisions/__REV_ID__/restore') }}',
     deleteUrl: '{{ url(rp ~ post.id ~ '/revisions/__REV_ID__/delete') }}',
     csrfToken: '{{ csrf_token() }}',
+    labels: {
+        latest: '{{ __('Latest version')|e('js') }}',
+        revision: '{{ __('Revision')|e('js') }}',
+    },
 })">
     <button type="button" @click="open()"
             class="mt-3 flex items-center justify-center gap-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:bg-gray-800/50">
         &#128214; {{ __('Revision History') }} <span x-text="count ? '(' + count + ')' : ''"></span>
     </button>
 
-    <div x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    <div x-show="show" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
          @keydown.escape.window="close()">
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col mx-4">
 
@@ -81,7 +85,7 @@
                     {{ __('Failed to load revision content.') }}
                 </div>
 
-                <div class="flex gap-2 mt-4">
+                <div class="flex flex-wrap items-center gap-2 mt-4">
                     <button type="button" @click="showDiff('current')"
                             :class="activeDiff === 'current' ? 'bg-gray-900 dark:bg-gray-700 text-white' : 'border border-gray-300 dark:border-gray-700 text-gray-600 hover:bg-gray-50 dark:bg-gray-800/50'"
                             class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
@@ -92,6 +96,14 @@
                             class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
                             x-text="selected ? '{{ __('Compare changes with Revision') }} #' + selected.prev_revision_number : ''">
                     </button>
+                    <label for="vl-revision-compare" class="ml-1 text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Compare with') }}</label>
+                    <select id="vl-revision-compare" x-model="compareId" @change="compareWith($event.target.value)"
+                            class="shrink-0 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-1.5 pl-2.5 pr-8 text-xs text-gray-700 dark:text-gray-200 focus:border-gray-400 focus:outline-none">
+                        <option value="">{{ __('Select a revision') }}</option>
+                        <template x-for="rev in revisions.filter(r => !selected || r.id !== selected.id)" :key="'compare-' + rev.id">
+                            <option :value="String(rev.id)" x-text="'#' + rev.revision_number + ' \u2014 ' + rev.created_at"></option>
+                        </template>
+                    </select>
                 </div>
 
                 <div x-show="diffLoading" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 py-4">
@@ -102,10 +114,10 @@
                 </div>
                 <div x-show="!diffLoading && !diffError && activeDiff" class="mt-2">
                     <div class="flex gap-4 mb-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm vl-diff-swatch-del"></span> <span x-text="activeDiff === 'current' ? '{{ __('Latest version') }}' : (selected ? '{{ __('Revision') }} #' + selected.prev_revision_number : '')"></span></span>
-                        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm vl-diff-swatch-add"></span> <span x-text="selected ? '{{ __('Revision') }} #' + selected.revision_number : ''"></span></span>
+                        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm vl-diff-swatch-del"></span> <span x-text="activeDiff && diffCache[activeDiff] ? diffCache[activeDiff].from : ''"></span></span>
+                        <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded-sm vl-diff-swatch-add"></span> <span x-text="activeDiff && diffCache[activeDiff] ? diffCache[activeDiff].to : ''"></span></span>
                     </div>
-                    <div class="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/60 rounded-lg p-3 text-sm max-h-96 overflow-y-auto" x-html="diffCache[activeDiff]"></div>
+                    <div class="bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/60 rounded-lg p-3 text-sm max-h-96 overflow-y-auto" x-html="activeDiff && diffCache[activeDiff] ? diffCache[activeDiff].html : ''"></div>
                 </div>
                 <div x-show="!diffLoading && !diffError && !activeDiff" class="text-gray-400 dark:text-gray-500 text-sm py-4">
                     {{ __('Click a button above to see the changes.') }}
@@ -123,7 +135,7 @@
                 </div>
             </div>
 
-            <div x-show="restoreConfirm" x-cloak class="fixed inset-0 z-60 flex items-center justify-center bg-black/40"
+            <div x-show="restoreConfirm" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40"
                  @keydown.escape.window="restoreConfirm = null">
                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-md mx-4">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ __('Restore Revision?') }}</h3>
@@ -135,7 +147,7 @@
                 </div>
             </div>
 
-            <div x-show="deleteConfirm" x-cloak class="fixed inset-0 z-60 flex items-center justify-center bg-black/40"
+            <div x-show="deleteConfirm" x-cloak class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40"
                  @keydown.escape.window="deleteConfirm = null">
                 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 max-w-md mx-4">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{{ __('Delete Revision?') }}</h3>

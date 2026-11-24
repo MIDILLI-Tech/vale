@@ -641,6 +641,7 @@ document.addEventListener('alpine:init', function() {
             diffError: false,
             diffCache: {},
             activeDiff: null,
+            compareId: null,
 
             open: function () {
                 this.show = true;
@@ -649,6 +650,7 @@ document.addEventListener('alpine:init', function() {
                 this.deleteConfirm = null;
                 this.diffCache = {};
                 this.activeDiff = null;
+                this.compareId = null;
 
                 if (this.loaded) return;
 
@@ -674,6 +676,7 @@ document.addEventListener('alpine:init', function() {
                 this.deleteConfirm = null;
                 this.diffCache = {};
                 this.activeDiff = null;
+                this.compareId = null;
                 this.detailLoading = false;
                 this.detailError = false;
                 this.diffLoading = false;
@@ -686,6 +689,7 @@ document.addEventListener('alpine:init', function() {
                 this.detailError = false;
                 this.diffCache = {};
                 this.activeDiff = null;
+                this.compareId = null;
 
                 var self = this;
                 fetch(config.detailUrl.replace('__REV_ID__', rev.id))
@@ -701,11 +705,14 @@ document.addEventListener('alpine:init', function() {
                     });
             },
 
-            showDiff: function (type) {
+            showDiff: function (type, againstId) {
                 if (!this.selected) return;
 
-                if (this.diffCache[type]) {
-                    this.activeDiff = type;
+                if (type !== 'revision') this.compareId = null;
+
+                var key = type === 'revision' ? 'revision:' + Number(againstId) : type;
+                if (this.diffCache[key]) {
+                    this.activeDiff = key;
                     return;
                 }
 
@@ -715,17 +722,59 @@ document.addEventListener('alpine:init', function() {
 
                 var self = this;
                 var url = config.diffUrl.replace('__REV_ID__', self.selected.id).replace('__TYPE__', type);
+                if (type === 'revision') {
+                    url += '?against=' + encodeURIComponent(againstId);
+                }
+                var labels = self.diffLabels(type, againstId);
+
                 fetch(url)
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
-                        self.diffCache[type] = data.diff;
-                        self.activeDiff = type;
+                        self.diffCache[key] = { html: data.diff, from: labels.from, to: labels.to };
+                        self.activeDiff = key;
                         self.diffLoading = false;
                     })
                     .catch(function () {
                         self.diffError = true;
                         self.diffLoading = false;
                     });
+            },
+
+            compareWith: function (value) {
+                var id = Number(value);
+                if (!this.selected || !id) return;
+                this.showDiff('revision', id);
+            },
+
+            versionLabel: function (rev) {
+                return rev ? config.labels.revision + ' #' + rev.revision_number : config.labels.revision;
+            },
+
+            diffLabels: function (type, againstId) {
+                var selectedLabel = this.versionLabel(this.selected);
+                if (type === 'current') {
+                    return { from: config.labels.latest, to: selectedLabel };
+                }
+                if (type === 'previous') {
+                    return {
+                        from: config.labels.revision + ' #' + this.selected.prev_revision_number,
+                        to: selectedLabel,
+                    };
+                }
+
+                var wanted = Number(againstId);
+                var other = null;
+                for (var i = 0; i < this.revisions.length; i++) {
+                    if (this.revisions[i].id === wanted) {
+                        other = this.revisions[i];
+                        break;
+                    }
+                }
+                var otherLabel = this.versionLabel(other);
+                var otherIsOlder = other && other.revision_number < this.selected.revision_number;
+                return otherIsOlder
+                    ? { from: otherLabel, to: selectedLabel }
+                    : { from: selectedLabel, to: otherLabel };
             },
 
             confirmRestore: function (rev) {
