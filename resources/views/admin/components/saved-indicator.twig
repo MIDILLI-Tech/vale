@@ -1,0 +1,19 @@
+{# Save state: clean/dirty badge plus the "last saved" line.
+   Rendered beside the status select of the collapsed-rail action bar, and kept
+   in the title row while that bar is hidden ([data-saved-indicator],
+   admin-style.css), so the state never leaves the screen. #}
+<span class="flex flex-wrap items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+    {% if is_edit %}
+    <span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>
+    {% endif %}
+    <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
+    {% if is_edit and last_saved_at %}
+    <span data-last-saved>
+        {% if last_saved_by %}
+            {{ __('Last saved by :name · :time', {':name': last_saved_by, ':time': last_saved_at|date('M j, Y H:i')}) }}
+        {% else %}
+            {{ __('Last saved · :time', {':time': last_saved_at|date('M j, Y H:i')}) }}
+        {% endif %}
+    </span>
+    {% endif %}
+</span>

@@ -1554,6 +1554,17 @@ html.rail-collapsed.has-edit-rail [data-rail-bar] {
   display: block;
 }
 
+/* Save state (badges + "last saved" line): the collapsed-rail action bar shows
+   it beside its status select, so the title-row copy only appears while that
+   bar is hidden (rail open). */
+[data-saved-indicator] {
+  display: none;
+}
+
+html:not(.rail-collapsed) [data-saved-indicator] {
+  display: flex;
+}
+
 /* Bulk-collapse every right-hand panel column and give the main column
    the full grid width (outranks Tailwind's lg:col-span-2 on the left). */
 html.rail-collapsed.has-edit-rail [data-panel-container="right"] {

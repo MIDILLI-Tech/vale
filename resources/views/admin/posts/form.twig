@@ -1,6 +1,8 @@
 {% extends "admin/layout.twig" %}
 
 {% set panel_rail = true %}
+{# The collapsed-rail action bar carries the save state next to its status select (layout.twig). #}
+{% set rail_saved_indicator = true %}
 
 {% block title %}{{ is_edit ? __('Edit') ~ ' ' ~ (type.name|default(__('Post'))) : __('Create') ~ ' ' ~ (type.name|default(__('Post'))) }}{% endblock %}
 
@@ -19,17 +21,9 @@
 <div class="mb-6 flex items-center gap-3 flex-wrap">
     <a href="{{ listUrl }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ listLabel }}</a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit') ~ ' ' ~ (type.name|default(__('Post'))) : __('Create') ~ ' ' ~ (type.name|default(__('Post'))) }}</h1>
-    {% if is_edit %}<span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
-    <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
-    {% if is_edit and last_saved_at %}
-    <span class="text-xs text-gray-400 dark:text-gray-500" data-last-saved>
-        {% if last_saved_by %}
-            {{ __('Last saved by :name · :time', {':name': last_saved_by, ':time': last_saved_at|date('M j, Y H:i')}) }}
-        {% else %}
-            {{ __('Last saved · :time', {':time': last_saved_at|date('M j, Y H:i')}) }}
-        {% endif %}
-    </span>
-    {% endif %}
+    {# Beside the status select of the collapsed-rail action bar; this title-row
+       copy only appears while that bar is hidden. #}
+    <span data-saved-indicator>{% include 'admin/components/saved-indicator.twig' %}</span>
     {% include 'admin/components/rail-toggle.twig' %}
 </div>
 

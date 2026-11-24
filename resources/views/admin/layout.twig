@@ -2176,7 +2176,12 @@
                     <div class="flex items-center gap-2 sm:gap-3">
                         <span data-rail-status-wrap class="flex min-w-0 items-center gap-2">
                             <span class="hidden shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400 sm:inline">{{ __('Status') }}</span>
-                            <select data-rail-status class="w-24 min-w-0 rounded-lg border-gray-300 dark:border-gray-700 text-sm shadow-xs focus:border-gray-600 focus:ring-gray-500 sm:w-32"></select>
+                            {# Content width: the mirror copies the real status select's options, so
+                               the native select sizes itself to them (arrow included). #}
+                            <select data-rail-status class="min-w-0 w-auto rounded-lg border-gray-300 dark:border-gray-700 text-sm shadow-xs focus:border-gray-600 focus:ring-gray-500"></select>
+                            {% if rail_saved_indicator|default(false) %}
+                            {% include 'admin/components/saved-indicator.twig' %}
+                            {% endif %}
                         </span>
                         <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                             <button type="button" data-rail-publish data-no-dirty
