@@ -3,17 +3,38 @@
  *
  * Phase 1 mechanical split from resources/js/editor.js (behavior-preserving).
  */
+/** Escape listeners, one per wrapper, so repeated toggles cannot stack them. */
+const escHandlers = new WeakMap();
+
+/**
+ * Fullscreen fixes the wrapper to the viewport, which changes what "the top of
+ * the screen" means for the pinned toolbar and the presence strip. Both listen
+ * for this event instead of waiting for the next scroll or editor click.
+ */
+function setFullscreen(wrapper, on) {
+  wrapper.classList.toggle('is-fullscreen', on);
+  document.body.style.overflow = on ? 'hidden' : '';
+  wrapper.dispatchEvent(new CustomEvent('vl:fullscreen', { bubbles: true, detail: { fullscreen: on } }));
+}
+
 function toggleFullscreen(wrapper) {
-  const isFs = wrapper.classList.toggle('is-fullscreen');
-  document.body.style.overflow = isFs ? 'hidden' : '';
-  if (!isFs) return;
+  const on = !wrapper.classList.contains('is-fullscreen');
+  setFullscreen(wrapper, on);
+
+  const previous = escHandlers.get(wrapper);
+  if (previous) {
+    document.removeEventListener('keydown', previous);
+    escHandlers.delete(wrapper);
+  }
+  if (!on) return;
+
   const escHandler = (e) => {
-    if (e.key === 'Escape') {
-      wrapper.classList.remove('is-fullscreen');
-      document.body.style.overflow = '';
-      document.removeEventListener('keydown', escHandler);
-    }
+    if (e.key !== 'Escape') return;
+    escHandlers.delete(wrapper);
+    document.removeEventListener('keydown', escHandler);
+    setFullscreen(wrapper, false);
   };
+  escHandlers.set(wrapper, escHandler);
   document.addEventListener('keydown', escHandler);
 }
 

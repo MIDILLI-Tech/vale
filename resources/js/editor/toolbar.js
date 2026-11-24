@@ -216,6 +216,14 @@ function buildToolbar(editor, wrapper) {
   ];
 
   function render() {
+    // The collaboration presence strip rides inside the toolbar row on wide
+    // screens (collaboration.js moves it in). Redrawing the buttons must not
+    // drop it — selectionUpdate fires on the first focus in the editor, so
+    // clearing the children used to wipe the strip the moment it appeared.
+    const presence = Array.from(toolbar.children).filter(
+      (el) => el.classList.contains('vl-collab-presence'),
+    );
+
     toolbar.innerHTML = '';
     buttons.forEach(btn => {
       if (btn === null) {
@@ -305,6 +313,8 @@ function buildToolbar(editor, wrapper) {
       }
       toolbar.appendChild(b);
     });
+
+    presence.forEach((el) => toolbar.appendChild(el));
   }
 
   editor.on('selectionUpdate', render);

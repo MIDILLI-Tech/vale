@@ -389,8 +389,24 @@ function vlMountEditor(textarea) {
       return Math.round(bar.getBoundingClientRect().height);
     }
 
+    function unpinToolbar() {
+      if (!pinnedToolbar) return;
+      pinnedToolbar.classList.remove('is-pinned');
+      pinnedToolbar.style.width = '';
+      pinnedToolbar.style.top = '';
+    }
+
     function onScrollPin() {
       if (!pinnedToolbar || !pinnedWrapper) return;
+
+      // In fullscreen the wrapper covers the viewport and the admin rail is
+      // behind it, so a toolbar pinned below that rail left a gap exactly the
+      // height of the (now invisible) rail above it.
+      if (pinnedWrapper.classList.contains('is-fullscreen')) {
+        unpinToolbar();
+        return;
+      }
+
       const offset = pinnedToolbarOffset();
       const wrapRect = pinnedWrapper.getBoundingClientRect();
       const toolbarH = pinnedToolbar.offsetHeight;
@@ -409,6 +425,11 @@ function vlMountEditor(textarea) {
       }
     }
 
+    // Entering fullscreen has to drop the pin at once and leaving it has to
+    // re-park the toolbar under the rail without waiting for a scroll event or
+    // a click back into the editor.
+    wrapper.addEventListener('vl:fullscreen', onScrollPin);
+
     editor.on('focus', () => {
       window._lpLastEditor = editor;
       const toolbar = wrapper.querySelector('.vl-editor-toolbar');
@@ -421,11 +442,7 @@ function vlMountEditor(textarea) {
       }
     });
     editor.on('blur-sm', () => {
-      if (pinnedToolbar) {
-        pinnedToolbar.classList.remove('is-pinned');
-        pinnedToolbar.style.width = '';
-        pinnedToolbar.style.top = '';
-      }
+      unpinToolbar();
       pinnedToolbar = null;
       pinnedWrapper = null;
       window.removeEventListener('scroll', onScrollPin, { capture: true });

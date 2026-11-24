@@ -1434,6 +1434,9 @@
 /* Collaboration presence (Yjs awareness): "N online" + one colored initial per editor */
 .vl-collab-presence { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; padding: 6px 8px; margin-bottom: 8px; font-size: 12px; color: #6b7280; position: sticky; top: var(--vl-collab-top, 0px); z-index: 90; background: var(--vl-editor-bg); }
 .vl-collab-presence:empty { display: none; }
+/* Wide toolbar: the strip rides at the right end of the toolbar row instead of
+   claiming a row of its own (collaboration.js moves it in and out). */
+.vl-editor-toolbar > .vl-collab-presence.is-inline { flex: 0 0 auto; flex-wrap: nowrap; margin: 0 0 0 auto; padding: 0 2px 0 10px; position: static; top: auto; z-index: auto; background: transparent; }
 .vl-collab-presence-count { font-weight: 600; color: #374151; }
 .vl-collab-presence-user { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 9999px; background: var(--vl-collab-user-color, #2563eb); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .02em; box-shadow: 0 0 0 2px #fff; cursor: pointer; transition: transform .12s ease, outline-color .12s ease; }
 .vl-collab-presence-user.is-self { cursor: default; }

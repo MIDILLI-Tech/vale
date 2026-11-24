@@ -414,6 +414,16 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   // awareness is not trustworthy until `synced`, so the strip must wait for it.
   let synced = Boolean(session.provider.synced);
   let peopleByKey = new Map();
+  let lastPresenceSignature = '';
+  // Assigned once the toolbar is known; render() calls it only when the strip's
+  // contents change, so caret moves never re-measure the toolbar.
+  let place = null;
+
+  const commit = (signature) => {
+    if (signature === lastPresenceSignature) return;
+    lastPresenceSignature = signature;
+    if (place) place();
+  };
 
   const isSelfPerson = (person) => person.clientIds.includes(awareness.clientID);
 
@@ -525,6 +535,7 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
       alert.setAttribute('role', 'status');
       alert.setAttribute('aria-label', alert.title);
       bar.appendChild(alert);
+      commit(`offline|${connectionState}|${synced ? 1 : 0}`);
       return;
     }
 
@@ -552,6 +563,8 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
 
       bar.appendChild(chip);
     });
+
+    commit(`online|${ordered.map((person) => person.key).join(',')}`);
   };
 
   // Runs on the press rather than on the click: every remote caret move
@@ -624,21 +637,89 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   });
   render();
 
-  // The strip sticks under the toolbar. When the toolbar itself is sticky or
-  // pinned it covers the top of the wrapper, so the strip offsets by its
-  // measured height instead of overlapping it.
+  // On a wide toolbar the strip shares the toolbar row, at its right end. When
+  // it does not fit there it keeps a row of its own above the canvas, right
+  // aligned.
   const toolbarEl = wrapper.querySelector('.vl-editor-toolbar');
+  let inline = false;
+  let placing = false;
+  let lastWrapperWidth = wrapper.clientWidth;
+
   const syncStickyOffset = () => {
+    if (inline) {
+      bar.style.setProperty('--vl-collab-top', '0px');
+      return;
+    }
+
+    // The collapsed-rail action bar owns the top edge and the pinned toolbar
+    // already parks underneath it, so the strip has to clear both; offsetting by
+    // the toolbar height alone landed it on the toolbar's first row. In
+    // fullscreen that rail is covered by the fixed wrapper, so reserving its
+    // height would only push the strip down.
+    const railBar = wrapper.classList.contains('is-fullscreen')
+      ? null
+      : document.querySelector('[data-rail-bar]');
+    const railOffset = railBar && railBar.offsetParent !== null
+      ? Math.round(railBar.getBoundingClientRect().height)
+      : 0;
     const pinned = Boolean(toolbarEl) && (
       wrapper.classList.contains('is-sticky') || toolbarEl.classList.contains('is-pinned')
     );
-    bar.style.setProperty('--vl-collab-top', pinned ? `${toolbarEl.offsetHeight}px` : '0px');
+    const top = railOffset + (pinned && toolbarEl ? toolbarEl.offsetHeight : 0);
+
+    bar.style.setProperty('--vl-collab-top', `${top}px`);
   };
-  if (toolbarEl && typeof ResizeObserver === 'function') {
-    new ResizeObserver(syncStickyOffset).observe(toolbarEl);
-  }
+
+  // The toolbar wraps instead of overflowing, so the only reliable test is to
+  // move the strip in and see whether the row grew.
+  place = () => {
+    if (!toolbarEl || placing) return;
+    placing = true;
+
+    try {
+      if (bar.parentElement === toolbarEl) {
+        bar.classList.remove('is-inline');
+        wrapper.insertBefore(bar, editorEl);
+      }
+
+      const singleRowHeight = toolbarEl.offsetHeight;
+      bar.classList.add('is-inline');
+      toolbarEl.appendChild(bar);
+
+      inline = toolbarEl.offsetHeight <= singleRowHeight + 1
+        && toolbarEl.scrollWidth <= toolbarEl.clientWidth + 1;
+
+      if (!inline) {
+        bar.classList.remove('is-inline');
+        wrapper.insertBefore(bar, editorEl);
+      }
+    } finally {
+      placing = false;
+    }
+
+    syncStickyOffset();
+  };
+
   new MutationObserver(syncStickyOffset).observe(wrapper, { attributes: true, attributeFilter: ['class'] });
-  syncStickyOffset();
+  new MutationObserver(syncStickyOffset)
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+  // Re-measure when the wrapper actually changes width (rail collapse, window
+  // resize). Height is ignored: place() moves the strip between rows itself and
+  // would otherwise observe its own layout and loop.
+  if (typeof ResizeObserver === 'function') {
+    let frame = null;
+    new ResizeObserver(() => {
+      if (wrapper.clientWidth === lastWrapperWidth) return;
+      lastWrapperWidth = wrapper.clientWidth;
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        place();
+      });
+    }).observe(wrapper);
+  }
 
   wrapper.insertBefore(bar, editorEl);
+  place();
 }
