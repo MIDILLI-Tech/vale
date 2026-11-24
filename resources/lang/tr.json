@@ -1616,7 +1616,7 @@
     "Legal pages not configured: :pages.": "Yasal sayfalar yapılandırılmamış: :pages.",
     "Length": "Uzunluk",
     "Less than a minute read": "Bir dakikadan az okuma",
-    "Let external applications read and write Vale content, products, orders, media and subscribers over the REST API.": "Harici uygulamalarin Vale icerik, urun, siparis, medya ve abone verilerine REST API uzerinden okuma ve yazma erisimi vermesine izin verin.",
+    "Let external applications read and write Vale content, products, orders, media and subscribers over the REST API.": "Harici uygulamaların Vale içeriğine, ürünlerine, siparişlerine, medyasına ve abone verilerine REST API üzerinden okuma ve yazma erişimine izin verin.",
     "Let search engines follow links on this page": "Arama motorlarının bu sayfadaki bağlantıları takip etmesine izin ver",
     "License": "Lisans",
     "Light gray": "Açık gri",
