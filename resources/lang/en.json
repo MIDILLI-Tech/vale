@@ -70,6 +70,7 @@
     ":sent email(s) dispatched in this batch. The rest will be sent automatically by cron.": ":sent email(s) dispatched in this batch. The rest will be sent automatically by cron.",
     ":sent email(s) resent in this batch. The rest will be sent automatically by cron.": ":sent email(s) resent in this batch. The rest will be sent automatically by cron.",
     ":title took over the URL.": ":title took over the URL.",
+    ":type Title": ":type Title",
     "A backup is in progress. Closing the page may interrupt it.": "A backup is in progress. Closing the page may interrupt it.",
     "A blazing-fast, lightweight CMS.": "A blazing-fast, lightweight CMS.",
     "A carrier with this name already exists.": "A carrier with this name already exists.",

@@ -17,7 +17,7 @@
 {% else %}
     {% set _prefix = '' %}
 {% endif %}
-{% set listLabel = (type and type.slug.value != 'post') ? type.name : __('Posts') %}
+{% set listLabel = (type and type.slug.value != 'post') ? __(type.name) : __('Posts') %}
 <div class="mb-6 flex items-center gap-3 flex-wrap">
     <a href="{{ listUrl }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ listLabel }}</a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit :type', {':type': type.name|default(__('Post'))}) : __('Create :type', {':type': type.name|default(__('Post'))}) }}</h1>
@@ -42,7 +42,7 @@
         <div class="lg:col-span-2 space-y-6" data-panel-container="left">
             {# Title #}
             <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="title_card">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ (type.name|default(__('Post'))) ~ ' ' ~ __('Title') }}</h3>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __(':type Title', {':type': type.name|default(__('Post'))}) }}</h3>
                 <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Title') }} <span class="text-red-500">*</span></label>
                 <input type="text" id="title" name="title"
                        value="{{ old.title|default(post ? post.title : '') }}"

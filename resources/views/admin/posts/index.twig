@@ -1,7 +1,7 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_table.twig" as table %}
 
-{% block title %}{{ type ? type.name : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}{% endblock %}
+{% block title %}{{ type ? __(type.name) : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}{% endblock %}
 
 {% set contentTypes = contentTypes|default([]) %}
 {% set contentType = filters.content_type|default('post') %}
@@ -12,7 +12,7 @@
 <div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ type ? type.name : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ type ? __(type.name) : (contentType == 'all' ? __('All Content Types') : __('Posts')) }}</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> {{ __('items total') }}</p>
     </div>
     <a href="{{ url('/admin/posts/create?content_type=' ~ (type.slug.value|default('post'))) }}"
@@ -31,7 +31,7 @@
         {% endif %}
         {% for ct in contentTypes %}
             {% if not ct.isSystem %}
-            <option value="{{ url('/admin/posts?content_type=' ~ ct.slug.value) }}" {{ contentType == ct.slug.value ? 'selected' }}>{{ ct.name }}</option>
+            <option value="{{ url('/admin/posts?content_type=' ~ ct.slug.value) }}" {{ contentType == ct.slug.value ? 'selected' }}>{{ __(ct.name) }}</option>
             {% endif %}
         {% endfor %}
         <option value="{{ url('/admin/posts?content_type=all') }}" {{ contentType == 'all' ? 'selected' }}>{{ __('All') }}</option>

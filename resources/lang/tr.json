@@ -70,6 +70,7 @@
     ":sent email(s) dispatched in this batch. The rest will be sent automatically by cron.": "Bu partide :sent e-posta gönderildi. Kalanlar cron tarafından otomatik gönderilecek.",
     ":sent email(s) resent in this batch. The rest will be sent automatically by cron.": "Bu partide :sent e-posta yeniden gönderildi. Kalanlar cron tarafından otomatik gönderilecek.",
     ":title took over the URL.": ":title bu URL'yi devraldı.",
+    ":type Title": ":type Başlığı",
     "A backup is in progress. Closing the page may interrupt it.": "Yedekleme sürüyor. Sayfayı kapatmak işlemi kesintiye uğratabilir.",
     "A blazing-fast, lightweight CMS.": "Işık hızında, hafif bir CMS.",
     "A carrier with this name already exists.": "Bu isimde bir kargo firması zaten mevcut.",

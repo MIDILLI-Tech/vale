@@ -500,7 +500,7 @@
     <div data-card-id="top-cpt-{{ ct.type.slug }}" class="rounded-xl border bg-white dark:bg-gray-900 p-3 shadow-xs relative group">
         <div class="drag-handle absolute left-1.5 sm:left-2 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-move text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 select-none text-base font-bold leading-none z-10" title="{{ __('Drag to reorder') }}">⠿</div>
         <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top') }} {{ ct.type.name }}</h3>
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ __('Top') }} {{ __(ct.type.name) }}</h3>
         </div>
         <div class="px-1 pb-1 text-xs font-medium text-gray-400">{{ sort.th('top-cpt-' ~ ct.type.slug, 'views', __('Views'), 'desc', true) }}</div>
         <div class="space-y-1.5 max-h-48 overflow-y-auto pr-2" data-vl-list-body="top-cpt" data-vl-sort-card="{{ 'top-cpt-' ~ ct.type.slug }}" data-vl-list-type="{{ ct.type.slug }}">
