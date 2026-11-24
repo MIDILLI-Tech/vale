@@ -75,8 +75,8 @@
         <option value="created_at">{{ __('Date') }}</option>
     </select>
     <select x-model="sortDir" @change="page = 1; apply()" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
-        <option value="desc">↓ Desc</option>
-        <option value="asc">↑ Asc</option>
+        <option value="desc">↓ {{ __('Descending') }}</option>
+        <option value="asc">↑ {{ __('Ascending') }}</option>
     </select>
     <template x-if="viewMode === 'list'">{{ table.columnsToggle() }}</template>
 </div>
