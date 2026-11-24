@@ -334,7 +334,7 @@
 
                 <button type="submit"
                         class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-                        title="Shortcut: Ctrl/Cmd+S">
+                        title="{{ __('Shortcut: :keys', {':keys': 'Ctrl/Cmd+S'}) }}">
                     {{ is_edit ? __('Update') : __('Create') }}
                 </button>
                 {% if _can_publish is defined and _can_publish and _st != 'published' %}
@@ -345,14 +345,14 @@
                 </button>
                 {% endif %}
                 <button type="button" id="vl-preview-btn" data-preview-action
-                   title="Shortcut: Ctrl/Cmd+Shift+P"
+                   title="{{ __('Shortcut: :keys', {':keys': 'Ctrl/Cmd+Shift+P'}) }}"
                    class="mt-2 flex items-center justify-center gap-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
                     &#128065; {{ __('Preview') }}
                 </button>
                 {% if is_edit and post and post.status in ['published', 'unlisted'] %}
                 {% set active_url = absolute_url(type.slug == 'page' ? url(routing_page_prefix ~ '/' ~ post.slug) : (type.slug == 'post' ? url(routing_blog_prefix ~ '/' ~ post.slug) : url('cpt.show.' ~ type.slug, {slug: post.slug}))) %}
                 <a href="{{ active_url }}" target="_blank" data-show-active-version
-                   title="Shortcut: Ctrl/Cmd+Shift+S"
+                   title="{{ __('Shortcut: :keys', {':keys': 'Ctrl/Cmd+Shift+S'}) }}"
                    class="mt-2 flex items-center justify-center gap-1 w-full rounded-lg border border-green-400 dark:border-green-600 px-4 py-2 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30">
                     &#127760; {{ __('Show Active Version') }}
                 </a>
