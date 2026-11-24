@@ -165,7 +165,16 @@ final class RoleController
     /** @return array<string, string> slug => label */
     private function groupLabels(): array
     {
-        $map = [];
+        $map = [
+            'users'      => __('Users'),
+            'content'    => __('Content'),
+            'media'      => __('Media'),
+            'shop'       => __('E-commerce'),
+            'settings'   => __('Settings'),
+            'forms'      => __('Forms'),
+            'newsletter' => __('Newsletter'),
+            'system'     => __('System'),
+        ];
         foreach ($this->contentTypes->findAll() as $ct) {
             $map["cpt_{$ct->getSlug()}"] = 'CPT: ' . $ct->getName();
         }

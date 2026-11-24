@@ -34,7 +34,7 @@
             <select name="registration_default_role" class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                 {% for role in roles %}
                     <option value="{{ role.slug }}" {{ (settings.registration_default_role|default('subscriber')) == role.slug ? 'selected' }}>
-                        {{ role.name }}
+                        {{ __(role.name) }}
                     </option>
                 {% endfor %}
             </select>

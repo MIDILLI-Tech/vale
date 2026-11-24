@@ -193,7 +193,7 @@
                     <input type="hidden" name="role" :value="selectedRole">
                     <div class="flex flex-wrap gap-2">
                         <template x-for="roleMeta in [
-                            {% for role in roles %}{'slug': '{{ role.slug|e('js') }}', 'name': '{{ role.name|e('js') }}'}{{ not loop.last ? ',' : '' }}
+                            {% for role in roles %}{'slug': '{{ role.slug|e('js') }}', 'name': '{{ __(role.name)|e('js') }}'}{{ not loop.last ? ',' : '' }}
                             {% endfor %}
                         ]" :key="roleMeta.slug">
                             <button type="button" @click="pick(roleMeta.slug)"
@@ -292,7 +292,7 @@
                     <input type="hidden" name="role" :value="selectedRole">
                     <div class="flex flex-wrap gap-2">
                         <template x-for="roleMeta in [
-                            {% for role in roles %}{'slug': '{{ role.slug|e('js') }}', 'name': '{{ role.name|e('js') }}'}{{ not loop.last ? ',' : '' }}
+                            {% for role in roles %}{'slug': '{{ role.slug|e('js') }}', 'name': '{{ __(role.name)|e('js') }}'}{{ not loop.last ? ',' : '' }}
                             {% endfor %}
                         ]" :key="roleMeta.slug">
                             <button type="button" @click="pick(roleMeta.slug)"
