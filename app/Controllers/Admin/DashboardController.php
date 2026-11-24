@@ -157,16 +157,16 @@ final class DashboardController
         if ($cronMode === 'none') {
             $status[] = [
                 'type'     => 'warning',
-                'message'  => 'Cron is disabled. Scheduled tasks (automations, updates) will not run automatically.',
+                'message'  => __('Cron is disabled. Scheduled tasks (automations, updates) will not run automatically.'),
                 'link'     => '/admin/settings#tab-maintenance',
-                'linkText' => 'Maintenance → Scheduled Tasks',
+                'linkText' => __('Maintenance → Scheduled Tasks'),
             ];
         }
 
         if ($appDebug) {
             $status[] = [
                 'type'    => 'warning',
-                'message' => 'Debug mode is enabled. Cache is disabled and performance may be reduced while debugging is active.',
+                'message' => __('Debug mode is enabled. Cache is disabled and performance may be reduced while debugging is active.'),
             ];
         }
 
@@ -190,9 +190,9 @@ final class DashboardController
             if (!$anyEnabled) {
                 $status[] = [
                     'type'     => 'warning',
-                    'message'  => 'Shop is enabled but no payment gateway is configured. Customers cannot complete purchases.',
+                    'message'  => __('Shop is enabled but no payment gateway is configured. Customers cannot complete purchases.'),
                     'link'     => '/admin/settings#tab-payments',
-                    'linkText' => 'Payment Settings',
+                    'linkText' => __('Payment Settings'),
                 ];
             }
         }
@@ -215,9 +215,9 @@ final class DashboardController
         if (!empty($sandboxGateways)) {
             $status[] = [
                 'type'     => 'warning',
-                'message'  => 'Sandbox mode is active for: ' . implode(', ', $sandboxGateways) . '. Test transactions will not be processed as real payments.',
+                'message'  => __('Sandbox mode is active for: :gateways. Test transactions will not be processed as real payments.', [':gateways' => implode(', ', $sandboxGateways)]),
                 'link'     => '/admin/settings?tab=ecommerce&subtab=payment',
-                'linkText' => 'E-Commerce → Payment',
+                'linkText' => __('E-Commerce → Payment'),
             ];
         }
 
@@ -227,9 +227,9 @@ final class DashboardController
             || ($this->settings->get('membership_enabled', '1') ?? '1')                     === '1';
         if ($shopEnabled || $subscriptionsEnabled) {
             $policyKeys = [
-                'policy_page_returns'  => 'Returns / Cancellation Policy',
-                'policy_page_privacy'  => 'Privacy Policy',
-                'policy_page_terms'    => 'Terms & Conditions',
+                'policy_page_returns'  => __('Returns / Cancellation Policy'),
+                'policy_page_privacy'  => __('Privacy Policy'),
+                'policy_page_terms'    => __('Terms & Conditions'),
             ];
             $missingPolicies = [];
             foreach ($policyKeys as $key => $label) {
@@ -241,9 +241,9 @@ final class DashboardController
             if (!empty($missingPolicies)) {
                 $status[] = [
                     'type'     => 'info',
-                    'message'  => 'Legal pages not configured: ' . implode(', ', $missingPolicies) . '.',
+                    'message'  => __('Legal pages not configured: :pages.', [':pages' => implode(', ', $missingPolicies)]),
                     'link'     => '/admin/settings?tab=ecommerce&subtab=legal',
-                    'linkText' => 'E-Commerce → Legal',
+                    'linkText' => __('E-Commerce → Legal'),
                 ];
             }
         }
@@ -254,9 +254,9 @@ final class DashboardController
         if ($allowedCurrencies !== '' && $fxProvider === 'none') {
             $status[] = [
                 'type'     => 'warning',
-                'message'  => 'Additional currencies are enabled but the exchange rate provider is not set. Currency conversion will not work.',
+                'message'  => __('Additional currencies are enabled but the exchange rate provider is not set. Currency conversion will not work.'),
                 'link'     => '/admin/settings?tab=ecommerce&subtab=currency',
-                'linkText' => 'Currency Settings',
+                'linkText' => __('Currency Settings'),
             ];
         }
 
@@ -265,9 +265,9 @@ final class DashboardController
         if ($mailDriver === 'log') {
             $status[] = [
                 'type'     => 'warning',
-                'message'  => 'Mail driver is set to "Log" mode. Emails are written to the log file but not actually sent to recipients.',
+                'message'  => __('Mail driver is set to "Log" mode. Emails are written to the log file but not actually sent to recipients.'),
                 'link'     => '/admin/settings#tab-mail',
-                'linkText' => 'Mail Settings',
+                'linkText' => __('Mail Settings'),
             ];
         }
 
