@@ -481,10 +481,13 @@
                     </div>
                     <div x-show="showEmbed" x-cloak>
                         <div class="mb-2 text-right">
-                            <button type="button" onclick="var t=document.createElement('textarea');t.style.position='fixed';t.style.opacity='0';t.value=document.querySelector('[x-data] pre').textContent;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);this.textContent='{{ __('Copied!')|e('js') }}';var s=this;setTimeout(function(){s.textContent='{{ __('Copy Code')|e('js') }}'},2000)"
-                                    class="rounded-sm bg-gray-800 px-2 py-1 text-xs text-white hover:bg-gray-700">
-                                {{ __('Copy Code') }}
-                            </button>
+                            {% include 'admin/components/_copy_button.twig' with {
+                                expr: "document.querySelector('[x-data] pre').textContent",
+                                label: __('Copy Code'),
+                                title: __('Copy Code'),
+                                size: 'h-3.5 w-3.5',
+                                class: 'inline-flex items-center rounded-sm bg-gray-800 px-2 py-1 text-xs text-white hover:bg-gray-700'
+                            } %}
                         </div>
                         <pre class="block bg-white dark:bg-gray-900 border rounded-sm px-3 py-2 text-[10px] font-mono text-gray-800 overflow-x-auto whitespace-pre-wrap" x-text="embedCode"></pre>
                         <p class="mt-2 text-xs text-gray-400">{{ __('Copy this to your other website. It submits via AJAX without page reload.') }}</p>
@@ -609,22 +612,26 @@
             <div class="rounded-xl border bg-gray-50 dark:bg-gray-800/50 p-4 text-sm text-gray-500 dark:text-gray-400" data-panel-id="standalone_url_card">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{{ __('Standalone URL:') }}</h3>
                 <div class="flex items-center gap-2">
-                    <a :href="standaloneUrl" target="_blank" class="min-w-0 flex-1 break-all text-gray-900 dark:text-gray-100 hover:underline" x-text="standaloneUrl"></a>
-                    <button type="button"
-                            @click="navigator.clipboard.writeText(standaloneUrl); $el.textContent = '✓'; setTimeout(() => $el.textContent = '📋', 1500)"
-                            class="shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            title="{{ __('Copy URL') }}">📋</button>
+                    <a id="standalone-url-text" :href="standaloneUrl" target="_blank" class="min-w-0 flex-1 break-all text-gray-900 dark:text-gray-100 hover:underline" x-text="standaloneUrl"></a>
+                    {% include 'admin/components/_copy_button.twig' with {
+                        expr: "document.getElementById('standalone-url-text').textContent.trim()",
+                        title: __('Copy URL'),
+                        size: 'h-3.5 w-3.5',
+                        class: 'shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } %}
                 </div>
                 <p class="mt-2 text-xs text-gray-400">{{ __('Use this URL to test or accept submissions directly from the public.') }}</p>
             </div>
             <div class="rounded-xl border bg-gray-50 dark:bg-gray-800/50 p-4 text-sm text-gray-500 dark:text-gray-400" data-panel-id="embed_code_card">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{{ __('Embed in Page / Post:') }}</h3>
                 <div class="flex items-center gap-2">
-                    <code class="min-w-0 flex-1 block bg-white dark:bg-gray-900 border rounded-sm px-3 py-2 text-xs font-mono text-gray-800 dark:text-gray-200 select-all" x-text="shortcodeText"></code>
-                    <button type="button"
-                            @click="navigator.clipboard.writeText(shortcodeText); $el.textContent = '✓'; setTimeout(() => $el.textContent = '📋', 1500)"
-                            class="shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            title="{{ __('Copy shortcode') }}">📋</button>
+                    <code id="shortcode-text" class="min-w-0 flex-1 block bg-white dark:bg-gray-900 border rounded-sm px-3 py-2 text-xs font-mono text-gray-800 dark:text-gray-200 select-all" x-text="shortcodeText"></code>
+                    {% include 'admin/components/_copy_button.twig' with {
+                        expr: "document.getElementById('shortcode-text').textContent.trim()",
+                        title: __('Copy shortcode'),
+                        size: 'h-3.5 w-3.5',
+                        class: 'shrink-0 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } %}
                 </div>
                 <p class="mt-2 text-xs text-gray-400">{{ __('Paste this shortcode into the HTML editor of any page or post.') }}</p>
             </div>
