@@ -637,75 +637,40 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
   });
   render();
 
-  // On a wide toolbar the strip shares the toolbar row, at its right end. When
-  // it does not fit there it keeps a row of its own above the canvas, right
-  // aligned.
+  // The strip is a row of the toolbar: it shares the toolbar's last row when it
+  // fits there and claims a full row of its own when it does not. Staying inside
+  // the toolbar is what keeps it on screen — as a sibling of a pinned (fixed)
+  // toolbar it scrolled away behind it and vanished.
   const toolbarEl = wrapper.querySelector('.vl-editor-toolbar');
-  let inline = false;
   let placing = false;
   let lastWrapperWidth = wrapper.clientWidth;
 
-  const syncStickyOffset = () => {
-    if (inline) {
-      bar.style.setProperty('--vl-collab-top', '0px');
-      return;
-    }
-
-    // The collapsed-rail action bar owns the top edge and the pinned toolbar
-    // already parks underneath it, so the strip has to clear both; offsetting by
-    // the toolbar height alone landed it on the toolbar's first row. In
-    // fullscreen that rail is covered by the fixed wrapper, so reserving its
-    // height would only push the strip down.
-    const railBar = wrapper.classList.contains('is-fullscreen')
-      ? null
-      : document.querySelector('[data-rail-bar]');
-    const railOffset = railBar && railBar.offsetParent !== null
-      ? Math.round(railBar.getBoundingClientRect().height)
-      : 0;
-    const pinned = Boolean(toolbarEl) && (
-      wrapper.classList.contains('is-sticky') || toolbarEl.classList.contains('is-pinned')
-    );
-    const top = railOffset + (pinned && toolbarEl ? toolbarEl.offsetHeight : 0);
-
-    bar.style.setProperty('--vl-collab-top', `${top}px`);
-  };
-
-  // The toolbar wraps instead of overflowing, so the only reliable test is to
-  // move the strip in and see whether the row grew.
   place = () => {
     if (!toolbarEl || placing) return;
     placing = true;
 
     try {
-      if (bar.parentElement === toolbarEl) {
-        bar.classList.remove('is-inline');
-        wrapper.insertBefore(bar, editorEl);
-      }
+      if (bar.parentElement !== toolbarEl) toolbarEl.appendChild(bar);
 
-      const singleRowHeight = toolbarEl.offsetHeight;
+      // Height without the strip is the reference: with it the last row either
+      // still fits (same height) or wraps into one more row.
+      bar.style.display = 'none';
+      const baseHeight = toolbarEl.offsetHeight;
+      bar.style.display = '';
+
       bar.classList.add('is-inline');
+      const fits = toolbarEl.offsetHeight <= baseHeight + 1;
+      bar.classList.toggle('is-inline', fits);
+
+      // Last child, so a wrapped row becomes the toolbar's final row.
       toolbarEl.appendChild(bar);
-
-      inline = toolbarEl.offsetHeight <= singleRowHeight + 1
-        && toolbarEl.scrollWidth <= toolbarEl.clientWidth + 1;
-
-      if (!inline) {
-        bar.classList.remove('is-inline');
-        wrapper.insertBefore(bar, editorEl);
-      }
     } finally {
       placing = false;
     }
-
-    syncStickyOffset();
   };
 
-  new MutationObserver(syncStickyOffset).observe(wrapper, { attributes: true, attributeFilter: ['class'] });
-  new MutationObserver(syncStickyOffset)
-    .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
   // Re-measure when the wrapper actually changes width (rail collapse, window
-  // resize). Height is ignored: place() moves the strip between rows itself and
+  // resize, fullscreen). Height is ignored: place() reflows the strip itself and
   // would otherwise observe its own layout and loop.
   if (typeof ResizeObserver === 'function') {
     let frame = null;
@@ -720,6 +685,7 @@ export function initCollaborationPresence(session, wrapper, editorEl, editor) {
     }).observe(wrapper);
   }
 
-  wrapper.insertBefore(bar, editorEl);
+  if (toolbarEl) toolbarEl.appendChild(bar);
+  else wrapper.insertBefore(bar, editorEl);
   place();
 }
