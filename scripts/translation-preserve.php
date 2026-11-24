@@ -182,4 +182,8 @@ return [
     'Manage Cache',
     'Manage Plugins',
     'Manage Themes',
+
+    // ── Nav entries renamed by FlashMiddleware (rendered via __(item.label) in the sidebar) ──
+    'Comments & Reviews',
+    'Orders & Membership',
 ];
