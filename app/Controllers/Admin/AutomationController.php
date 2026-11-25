@@ -108,7 +108,7 @@ final class AutomationController
     {
         $sequence = $this->automations->findSequenceById((int) $args['id']);
         if ($sequence === null) {
-            $this->session->flash('error', 'Sequence not found.');
+            $this->session->flash('error', $this->translator->get('Sequence not found.'));
             return $response->withHeader('Location', '/admin/newsletter/automations')->withStatus(302);
         }
 
@@ -128,7 +128,7 @@ final class AutomationController
     {
         $sequence = $this->automations->findSequenceById((int) $args['id']);
         if ($sequence === null) {
-            $this->session->flash('error', 'Sequence not found.');
+            $this->session->flash('error', $this->translator->get('Sequence not found.'));
             return $response->withHeader('Location', '/admin/newsletter/automations')->withStatus(302);
         }
 
@@ -166,7 +166,7 @@ final class AutomationController
     {
         $original = $this->automations->findSequenceById((int) $args['id']);
         if ($original === null) {
-            $this->session->flash('error', 'Sequence not found.');
+            $this->session->flash('error', $this->translator->get('Sequence not found.'));
             return $response->withHeader('Location', '/admin/newsletter/automations')->withStatus(302);
         }
 
@@ -193,7 +193,7 @@ final class AutomationController
             $this->automations->saveStep($newStep);
         }
 
-        $this->session->flash('success', 'Automation sequence cloned.');
+        $this->session->flash('success', $this->translator->get('Automation sequence cloned.'));
         return $response->withHeader('Location', '/admin/newsletter/automations')->withStatus(302);
     }
 
@@ -214,7 +214,7 @@ final class AutomationController
     {
         $sequence = $this->automations->findSequenceById((int) $args['id']);
         if ($sequence === null) {
-            $this->session->flash('error', 'Sequence not found.');
+            $this->session->flash('error', $this->translator->get('Sequence not found.'));
             return $response->withHeader('Location', '/admin/newsletter/automations')->withStatus(302);
         }
 

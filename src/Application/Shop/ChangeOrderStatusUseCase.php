@@ -68,7 +68,10 @@ final class ChangeOrderStatusUseCase
         $this->orderLogs->add(
             $order->getId(),
             'status_changed',
-            'Status changed from "' . OrderStatus::label($oldStatus) . '" to "' . OrderStatus::label($newStatus) . '".'
+            __('Status changed from ":from" to ":to".', [
+                ':from' => __(OrderStatus::label($oldStatus)),
+                ':to'   => __(OrderStatus::label($newStatus)),
+            ])
         );
 
         $wasPaid = OrderStatus::isPaid($oldStatus);

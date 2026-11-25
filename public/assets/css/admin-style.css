@@ -786,6 +786,28 @@ audio.vl-media-facade-player {
   border-color: var(--vl-input-focus-border);
   box-shadow: inset 0 0 0 1px var(--vl-input-focus-ring);
 }
+/* ── Native selects ─────────────────────────────────────────
+   Tailwind's compiled build (@tailwindcss/forms) draws the chevron as a
+   background image and reserves 2.5rem of right padding for it — but the
+   CDN build has no forms plugin and utility classes such as `px-2` reset
+   that padding, which hides the arrow under the selected label. Draw one
+   chevron here so every single-line select keeps a visible arrow in both
+   builds. `.vl-select` styles its own arrow and is left alone. */
+select:not([multiple]):not(.vl-select) {
+  appearance: none;
+  -webkit-appearance: none;
+  border-width: 1px;
+  min-height: 1.75rem;
+  background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%236b7280%22 d=%22M6 8L1 3h10z%22/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+  padding-right: 26px;
+}
+.dark select:not([multiple]):not(.vl-select) {
+  background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%239ca3af%22 d=%22M6 8L1 3h10z%22/></svg>');
+}
+
 .vl-select {
   padding: 5px 10px;
   padding-right: 28px;

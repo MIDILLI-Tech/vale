@@ -48,7 +48,7 @@ final class ExchangeRateController
                 return $response->withHeader('Content-Type', 'application/json');
             }
 
-            $this->session->set('flash_success', 'Exchange rates refreshed successfully.');
+            $this->session->set('flash_success', __('Exchange rates refreshed successfully.'));
         } catch (\Throwable $e) {
             if ($isAjax) {
                 $response->getBody()->write((string) json_encode([
@@ -57,7 +57,7 @@ final class ExchangeRateController
                 ]));
                 return $response->withHeader('Content-Type', 'application/json')->withStatus(422);
             }
-            $this->session->set('flash_error', 'Failed to refresh rates: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->set('flash_error', __('Failed to refresh rates: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response

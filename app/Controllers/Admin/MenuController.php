@@ -191,7 +191,7 @@ final class MenuController
         }
 
         $this->flushPageCache();
-        $this->session->set('flash_success', 'Menu cloned successfully.');
+        $this->session->set('flash_success', $this->translator->get('Menu cloned successfully.'));
         return $response->withHeader('Location', admin_url('/menus'))->withStatus(302);
     }
 

@@ -72,7 +72,7 @@ final class AccountController
         $user   = $this->users->findById($userId);
 
         if ($user === null) {
-            $this->session->flash('error', 'User not found.');
+            $this->session->flash('error', __('User not found.'));
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
 
@@ -282,13 +282,13 @@ final class AccountController
                 $this->session->remove('two_factor_pending');
             }
 
-            $this->session->flash('success', 'Two-factor authentication has been enabled.');
+            $this->session->flash('success', __('Two-factor authentication has been enabled.'));
             return $this->twig->render($response, 'account/two-factor-confirmed.twig', [
                 'user'                 => $user,
                 'two_factor_new_codes' => $codes,
             ]);
         } else {
-            $this->session->flash('error', 'Invalid authentication code. Please try again.');
+            $this->session->flash('error', __('Invalid authentication code. Please try again.'));
             return $response->withHeader('Location', site_url($this->accountPrefix() . '/two-factor/setup'))->withStatus(302);
         }
     }
@@ -303,7 +303,7 @@ final class AccountController
         }
 
         if ($this->settings->get('two_factor_forced_global', '0') === '1') {
-            $this->session->flash('error', 'Two-factor authentication cannot be disabled because it is required by the administrator.');
+            $this->session->flash('error', __('Two-factor authentication cannot be disabled because it is required by the administrator.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -329,7 +329,7 @@ final class AccountController
         }
 
         if (!$verified) {
-            $this->session->flash('error', 'Invalid code. 2FA could not be disabled.');
+            $this->session->flash('error', __('Invalid code. 2FA could not be disabled.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -340,7 +340,7 @@ final class AccountController
         $this->users->save($user);
 
         $this->session->set('session_version', $user->getSessionVersion());
-        $this->session->flash('success', 'Two-factor authentication has been disabled.');
+        $this->session->flash('success', __('Two-factor authentication has been disabled.'));
 
         return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
     }
@@ -419,7 +419,7 @@ final class AccountController
         $this->users->save($user);
 
         $this->session->set('two_factor_new_codes', $codes);
-        $this->session->flash('success', 'Recovery codes have been regenerated.');
+        $this->session->flash('success', __('Recovery codes have been regenerated.'));
 
         return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
     }
@@ -632,7 +632,7 @@ final class AccountController
             'updated_at'       => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
         ], ['id' => $userId]);
 
-        $this->session->flash('success', 'Addresses updated successfully.');
+        $this->session->flash('success', __('Addresses updated successfully.'));
         return $response->withHeader('Location', $this->accountPrefix() . '/addresses')->withStatus(302);
     }
 
@@ -692,7 +692,7 @@ final class AccountController
         $userId = (int) $this->session->get('user_id');
 
         if ($request->getMethod() !== 'POST') {
-            $this->session->flash('info', 'Subscription checkout cancelled.');
+            $this->session->flash('info', __('Subscription checkout cancelled.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         }
 
@@ -702,7 +702,7 @@ final class AccountController
 
         $sub = $this->subscriptionService->findActiveByUserId($userId);
         if ($sub === null) {
-            $this->session->flash('error', 'No active subscription found.');
+            $this->session->flash('error', __('No active subscription found.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         }
 
@@ -732,7 +732,7 @@ final class AccountController
                 $this->orderLogs->add(
                     (int) $orderRow['id'],
                     'subscription_cancelled',
-                    'Cancelled by user.',
+                    __('Cancelled by user.'),
                     'user',
                     $userId,
                     $user['username'] ?? '',
@@ -745,12 +745,12 @@ final class AccountController
             // PayPal agreements and lifetime purchases terminate immediately;
             // Stripe cancellations take effect at the end of the period.
             if ($gateway === 'paypal' || $isLifetime) {
-                $this->session->flash('success', 'Your subscription has been cancelled.');
+                $this->session->flash('success', __('Your subscription has been cancelled.'));
             } else {
-                $this->session->flash('success', 'Subscription will be cancelled at the end of the billing period.');
+                $this->session->flash('success', __('Subscription will be cancelled at the end of the billing period.'));
             }
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Failed to cancel subscription: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('Failed to cancel subscription: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
@@ -761,7 +761,7 @@ final class AccountController
         $userId = (int) $this->session->get('user_id');
 
         if ($this->settings->get('gdpr_account_deletion_enabled', '1') !== '1') {
-            $this->session->flash('error', 'Account deletion is not enabled.');
+            $this->session->flash('error', __('Account deletion is not enabled.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -771,13 +771,13 @@ final class AccountController
 
         $user = $this->users->findById($userId);
         if ($user === null) {
-            $this->session->flash('error', 'User not found.');
+            $this->session->flash('error', __('User not found.'));
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
 
         $canDelete = $this->canDeleteOwnAccount($user);
         if (!$canDelete && $this->settings->get('gdpr_download_enabled', '0') !== '1') {
-            $this->session->flash('error', 'You cannot delete your own account.');
+            $this->session->flash('error', __('You cannot delete your own account.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -789,7 +789,7 @@ final class AccountController
     public function downloadData(Request $request, Response $response): Response
     {
         if ($this->settings->get('gdpr_download_enabled', '0') !== '1') {
-            $this->session->flash('error', 'Data download is not enabled.');
+            $this->session->flash('error', __('Data download is not enabled.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/delete')->withStatus(302);
         }
 
@@ -902,7 +902,7 @@ final class AccountController
     private function deleteAccount(Request $request, Response $response, int $userId): Response
     {
         if ($this->settings->get('gdpr_account_deletion_enabled', '1') !== '1') {
-            $this->session->flash('error', 'Account deletion is not enabled.');
+            $this->session->flash('error', __('Account deletion is not enabled.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -910,18 +910,18 @@ final class AccountController
         $confirm = trim($body['confirm'] ?? '');
 
         if ($confirm !== 'DELETE') {
-            $this->session->flash('error', 'Please type DELETE to confirm account deletion.');
+            $this->session->flash('error', __('Please type DELETE to confirm account deletion.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/delete')->withStatus(302);
         }
 
         $user = $this->users->findById($userId);
         if ($user === null) {
-            $this->session->flash('error', 'User not found.');
+            $this->session->flash('error', __('User not found.'));
             return $response->withHeader('Location', site_url('/login'))->withStatus(302);
         }
 
         if (!$this->canDeleteOwnAccount($user)) {
-            $this->session->flash('error', 'You cannot delete your own account.');
+            $this->session->flash('error', __('You cannot delete your own account.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/profile')->withStatus(302);
         }
 
@@ -990,7 +990,7 @@ final class AccountController
         // Clear session
         $this->session->destroy();
 
-        $this->session->flash('info', 'Your account has been deleted. Your order history has been preserved.');
+        $this->session->flash('info', __('Your account has been deleted. Your order history has been preserved.'));
         return $response->withHeader('Location', '/')->withStatus(302);
     }
 

@@ -33,7 +33,7 @@ final class OrderTrackingNotifier
             $this->orderLogs->add(
                 $order->getId(),
                 'mail_not_configured',
-                'Tracking notification could not be sent because MailService is not configured.',
+                __('Tracking notification could not be sent because MailService is not configured.'),
                 'system',
                 $actorId,
                 $actorName,
@@ -48,7 +48,7 @@ final class OrderTrackingNotifier
             $this->orderLogs->add(
                 $order->getId(),
                 'tracking_email_skipped',
-                'Tracking notification email skipped — no customer email on file for order #' . $order->getOrderNumber(),
+                __('Tracking notification email skipped — no customer email on file for order #:number', [':number' => $order->getOrderNumber()]),
                 'system',
                 $actorId,
                 $actorName,
@@ -84,9 +84,11 @@ final class OrderTrackingNotifier
             $this->orderLogs->add(
                 $order->getId(),
                 'tracking_email_sent',
-                'Tracking notification email sent to ' . $email
-                    . ' — Carrier: ' . ($carrier ?: 'none')
-                    . ', Tracking #: ' . $trackNum,
+                __('Tracking notification email sent to :email — Carrier: :carrier, Tracking #:tracking', [
+                    ':email'    => $email,
+                    ':carrier'  => $carrier !== '' ? $carrier : __('none'),
+                    ':tracking' => $trackNum,
+                ]),
                 'system',
                 $actorId,
                 $actorName,
@@ -97,7 +99,7 @@ final class OrderTrackingNotifier
             $this->orderLogs->add(
                 $order->getId(),
                 'tracking_email_failed',
-                'Failed to send tracking notification email: ' . $e->getMessage(),
+                __('Failed to send tracking notification email: :message', [':message' => $e->getMessage()]),
                 'system',
                 $actorId,
                 $actorName,

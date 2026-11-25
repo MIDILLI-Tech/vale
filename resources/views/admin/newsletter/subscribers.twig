@@ -1,7 +1,7 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_table.twig" as table %}
 
-{% block title %}Newsletter Subscribers{% endblock %}
+{% block title %}{{ __('Newsletter Subscribers') }}{% endblock %}
 
 {% set allIds = subscribers|map(s => s.id) %}
 
@@ -11,7 +11,7 @@
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Newsletter Subscribers') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ counts.active }} active · {{ counts.pending }} pending · {{ counts.unsubscribed }} unsubscribed</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __(':count active', {':count': counts.active}) }} · {{ __(':count pending', {':count': counts.pending}) }} · {{ __(':count unsubscribed', {':count': counts.unsubscribed}) }}</p>
     </div>
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <button type="button" @click="importOpen = true"
@@ -25,8 +25,8 @@
             {{ __('Export CSV') }}
         </button>
         <button type="button" @click="addOpen = true"
-                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ Add Subscriber</button>
-        <a href="{{ url('/admin/newsletter/campaigns') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-800/50">Campaigns →</a>
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ {{ __('Add Subscriber') }}</button>
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Campaigns') }} →</a>
     </div>
 </div>
 
@@ -44,11 +44,12 @@
             {{ csrf_field() }}
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CSV File <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('CSV File') }} <span class="text-red-500">*</span></label>
                     <input type="file" name="csv_file" accept=".csv,text/csv" required
                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-gray-600 focus:ring-gray-500">
+                    {% set _csv_columns %}<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">email</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">name</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">tags</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">status</code>{% endset %}
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                        Supports <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">email</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">name</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">tags</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">status</code> columns or a plain list of emails. Existing emails will be skipped.
+                        {{ __('Supports :columns columns or a plain list of emails. Existing emails will be skipped.', {':columns': _csv_columns})|raw }}
                     </p>
                 </div>
                 <div>
@@ -95,9 +96,8 @@
                 <div class="flex items-center gap-3" x-show="$store.bulk.count > 0">
                     <input type="radio" id="scope_selected" name="export_scope" value="selected" x-model="exportScope"
                            class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
-                    <label for="scope_selected" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
-                        Selected subscribers (<span x-text="$store.bulk.count" class="font-semibold"></span>)
-                    </label>
+                    <label for="scope_selected" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer"
+                           x-text="tjs('Selected subscribers (:count)', {':count': $store.bulk.count})"></label>
                 </div>
                 {% if filters.search|default('') or filters.status|default('') %}
                 <div class="flex items-center gap-3">
@@ -112,7 +112,7 @@
                     <input type="radio" id="scope_all" name="export_scope" value="all" x-model="exportScope"
                            class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
                     <label for="scope_all" class="text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
-                        All subscribers ({{ counts.all }})
+                        {{ __('All subscribers (:count)', {':count': counts.all}) }}
                     </label>
                 </div>
             </div>
@@ -140,7 +140,7 @@
             {{ csrf_field() }}
             <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Email') }} <span class="text-red-500">*</span></label>
                     <input type="email" name="email" required placeholder="subscriber@example.com"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                 </div>
@@ -159,7 +159,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Source Form') }}</label>
                     <select name="source_form_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
-                        <option value="">— None —</option>
+                        <option value="">{{ __('— None —') }}</option>
                         {% for f in forms|default([]) %}
                         <option value="{{ f.id }}">{{ f.name }}</option>
                         {% endfor %}
@@ -212,7 +212,7 @@
 
 {# Status tabs #}
 <div class="mb-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-    {% set tabs = [['', 'All', counts.all], ['active', 'Active', counts.active], ['pending', 'Pending', counts.pending], ['unsubscribed', 'Unsubscribed', counts.unsubscribed]] %}
+    {% set tabs = [['', __('All'), counts.all], ['active', __('Active'), counts.active], ['pending', __('Pending'), counts.pending], ['unsubscribed', __('Unsubscribed'), counts.unsubscribed]] %}
     {% for tab in tabs %}
     <a href="{{ url('/admin/newsletter/subscribers') }}{{ tab[0] ? '?status=' ~ tab[0] : '' }}"
        class="text-sm font-medium pb-2 -mb-2 border-b-2 {{ filters.status|default('') == tab[0] ? 'border-gray-900 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' }}">
@@ -225,7 +225,7 @@
     {{ table.search(__('Search…')) }}
     {% if filters.search is defined and filters.search %}
     <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-        <span>Filtered: {{ filters.search }}</span>
+        <span>{{ __('Filtered') }}: {{ filters.search }}</span>
         <a href="{{ url('/admin/newsletter/subscribers') }}{{ filters.status is defined and filters.status ? '?status=' ~ filters.status : '' }}" class="text-blue-500 hover:text-blue-700">&times;</a>
     </div>
     {% endif %}
@@ -257,7 +257,8 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4">
                     {% set sc = {active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', unsubscribed: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'} %}
-                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[s.status]|default('bg-gray-100') }}">{{ s.status|capitalize }}</span>
+                    {% set status_labels = {active: __('Active'), pending: __('Pending'), unsubscribed: __('Unsubscribed')} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[s.status]|default('bg-gray-100') }}">{{ status_labels[s.status]|default(s.status|capitalize) }}</span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {% for tag in s.tags %}
@@ -315,7 +316,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="7" class="px-6 py-12 text-center text-gray-400">{{ __('No subscribers yet.') }}</td></tr>
+            <tr><td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">{{ __('No subscribers yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -362,7 +363,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Source Form') }}</label>
                     <select name="source_form_id" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
-                        <option value="">— None —</option>
+                        <option value="">{{ __('— None —') }}</option>
                         {% for f in forms|default([]) %}
                         <option value="{{ f.id }}" :selected="String(editSub.source_form_id) === '{{ f.id }}'">{{ f.name }}</option>
                         {% endfor %}

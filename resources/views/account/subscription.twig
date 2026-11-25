@@ -21,7 +21,7 @@
         <div class="mb-4">
             <h2 class="text-xl font-semibold {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">{{ sub.plan.name }}</h2>
             <p class="mt-1 text-sm {{ is_cancelling ? 'account-card-warning-text' : 'account-card-muted-text' }}">
-                {{ sub.plan.price|price(current_currency) }} / {{ sub.plan.intervalLabel }}
+                {{ sub.plan.price|price(current_currency) }} / {{ __(sub.plan.intervalLabel) }}
             </p>
         </div>
         {% endif %}

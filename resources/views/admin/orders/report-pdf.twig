@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Order Report {{ from }} to {{ to }}</title>
+    <title>{{ __('Order Report') }} {{ from }} — {{ to }}</title>
     {% if assets_use_cdn %}
     <script nonce="{{ csp_nonce }}" src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     {% else %}
@@ -35,11 +35,24 @@
     </style>
 </head>
 <body>
+    {% set pm_labels = payment_method_labels|default({}) %}
+    {% set status_labels = {
+        'pending':          __('Pending Payment'),
+        'processing':       __('Paid & Processing'),
+        'on-hold':          __('On Hold'),
+        'shipped':          __('Shipped'),
+        'completed':        __('Completed'),
+        'refunded':         __('Refunded'),
+        'refund_requested': __('Refund Requested'),
+        'refund_rejected':  __('Refund Rejected'),
+        'cancelled':        __('Cancelled')
+    } %}
+
     <table style="width:100%;margin-bottom:16px;">
         <tr>
             <td style="vertical-align:top;width:50%;">
-                <h1 class="text-xl font-bold">Order Report</h1>
-                <p class="text-gray" style="margin-top:4px;">Period: <strong>{{ from }}</strong> to <strong>{{ to }}</strong></p>
+                <h1 class="text-xl font-bold">{{ __('Order Report') }}</h1>
+                <p class="text-gray" style="margin-top:4px;">{{ __('Period: :from to :to', {':from': from, ':to': to}) }}</p>
             </td>
             <td style="vertical-align:top;width:50%;text-align:right;font-size:9px;color:#6b7280;">
                 {% if shop.company_name %}<p style="margin:0 0 2px;font-weight:700;color:#1f2937;">{{ shop.company_name }}</p>{% endif %}
@@ -49,7 +62,7 @@
                 {% if shop.state or shop.country %}<p style="margin:0 0 1px;">{{ shop.state }} {{ shop.country }}</p>{% endif %}
                 {% if shop.phone %}<p style="margin:0 0 1px;">{{ shop.phone }}</p>{% endif %}
                 {% if shop.email %}<p style="margin:0 0 1px;">{{ shop.email }}</p>{% endif %}
-                {% if shop.vat_number %}<p style="margin:0 0 1px;">VAT: {{ shop.vat_number }}</p>{% endif %}
+                {% if shop.vat_number %}<p style="margin:0 0 1px;">{{ __('VAT') }}: {{ shop.vat_number }}</p>{% endif %}
             </td>
         </tr>
     </table>
@@ -59,46 +72,46 @@
 
     <div class="summary-grid">
         <div class="summary-card">
-            <p class="label">Orders</p>
+            <p class="label">{{ __('Orders') }}</p>
             <p class="value">{{ totalActive }}</p>
-            <p style="font-size:8px;color:#9ca3af;">cancelled: {{ s.cancelled_count }}, refunded: {{ s.refunded_count }}</p>
+            <p style="font-size:8px;color:#9ca3af;">{{ __('cancelled') }}: {{ s.cancelled_count }}, {{ __('refunded') }}: {{ s.refunded_count }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Revenue</p>
+            <p class="label">{{ __('Revenue') }}</p>
             <p class="value text-green">{{ s.total_revenue|price(current_currency) }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Avg Order</p>
+            <p class="label">{{ __('Avg Order') }}</p>
             <p class="value">{{ s.avg_order_value|price(current_currency) }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Tax</p>
+            <p class="label">{{ __('Tax') }}</p>
             <p class="value">{{ s.total_tax|price(current_currency) }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Shipping</p>
+            <p class="label">{{ __('Shipping') }}</p>
             <p class="value">{{ s.total_shipping|price(current_currency) }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Discount</p>
+            <p class="label">{{ __('Discount') }}</p>
             <p class="value text-amber">{{ s.total_discount|price(current_currency) }}</p>
         </div>
         <div class="summary-card">
-            <p class="label">Refunded</p>
+            <p class="label">{{ __('Refunded') }}</p>
             <p class="value text-red">{{ s.total_refunded|price(current_currency) }}</p>
         </div>
     </div>
 
     {% if data.monthly %}
-    <h2 class="text-lg font-bold border-b">Monthly Breakdown</h2>
+    <h2 class="text-lg font-bold border-b">{{ __('Monthly Breakdown') }}</h2>
     <div style="margin-bottom: 20px;">
         <table>
             <thead>
                 <tr>
-                    <th>Month</th>
-                    <th class="text-right">Orders</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Refunds</th>
+                    <th>{{ __('Month') }}</th>
+                    <th class="text-right">{{ __('Orders') }}</th>
+                    <th class="text-right">{{ __('Revenue') }}</th>
+                    <th class="text-right">{{ __('Refunds') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -116,21 +129,21 @@
     {% endif %}
 
     {% if data.payment_methods %}
-    <h2 class="text-lg font-bold border-b">Payment Methods</h2>
+    <h2 class="text-lg font-bold border-b">{{ __('Payment Methods') }}</h2>
     <div style="margin-bottom: 20px;">
         <table>
             <thead>
                 <tr>
-                    <th>Method</th>
-                    <th class="text-right">Orders</th>
-                    <th class="text-right">Revenue</th>
-                    <th class="text-right">Refunded</th>
+                    <th>{{ __('Method') }}</th>
+                    <th class="text-right">{{ __('Orders') }}</th>
+                    <th class="text-right">{{ __('Revenue') }}</th>
+                    <th class="text-right">{{ __('Refunded') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for pm in data.payment_methods %}
                 <tr>
-                    <td>{{ pm.method|capitalize }}</td>
+                    <td>{{ pm_labels[pm.method]|default(pm.method|replace({'_': ' '})|title) }}</td>
                     <td class="text-right">{{ pm.orders }}</td>
                     <td class="text-right text-green">{{ pm.revenue|price(current_currency) }}</td>
                     <td class="text-right text-red">{{ pm.refunded_orders }}</td>
@@ -142,14 +155,14 @@
     {% endif %}
 
     {% if data.top_products %}
-    <h2 class="text-lg font-bold border-b">Top Selling Products</h2>
+    <h2 class="text-lg font-bold border-b">{{ __('Top Selling Products') }}</h2>
     <div style="margin-bottom: 20px;">
         <table>
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th class="text-right">Sold</th>
-                    <th class="text-right">Revenue</th>
+                    <th>{{ __('Product') }}</th>
+                    <th class="text-right">{{ __('Sold') }}</th>
+                    <th class="text-right">{{ __('Revenue') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -166,31 +179,20 @@
     {% endif %}
 
     {% if data.status_breakdown %}
-    <h2 class="text-lg font-bold border-b">Orders by Status</h2>
+    <h2 class="text-lg font-bold border-b">{{ __('Orders by Status') }}</h2>
     <div>
         <table>
             <thead>
                 <tr>
                     <th>{{ __('Status') }}</th>
-                    <th class="text-right">Orders</th>
+                    <th class="text-right">{{ __('Orders') }}</th>
                     <th class="text-right">{{ __('Total') }}</th>
                 </tr>
             </thead>
             <tbody>
-                {% set statusLabels = {
-                    'pending': 'Pending Payment',
-                    'processing': 'Processing',
-                    'on-hold': 'On Hold',
-                    'shipped': 'Shipped',
-                    'completed': 'Completed',
-                    'refunded': 'Refunded',
-                    'refund_requested': 'Refund Requested',
-                    'refund_rejected': 'Refund Rejected',
-                    'cancelled': 'Cancelled',
-                } %}
                 {% for st in data.status_breakdown %}
                 <tr>
-                    <td>{{ statusLabels[st.status]|default(st.status) }}</td>
+                    <td>{{ status_labels[st.status]|default(st.status) }}</td>
                     <td class="text-right">{{ st.orders }}</td>
                     <td class="text-right">{{ st.total|price(current_currency) }}</td>
                 </tr>
@@ -201,7 +203,7 @@
     {% endif %}
 
     <p class="text-gray" style="margin-top: 32px; font-size: 8px; text-align: center;">
-        Generated on {{ "now"|date('Y-m-d H:i:s') }}
+        {{ __('Generated on :date', {':date': "now"|date('Y-m-d H:i:s')}) }}
     </p>
 </body>
 </html>

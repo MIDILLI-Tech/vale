@@ -24,7 +24,7 @@
             <div {{ vl.attrs('ecommerce', __('Shipping Mode'), 'shipping_mode', 'shipping', __('Shipping'), 'flat rate free weight based') }}>
                 <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Shipping Mode') }}</label>
                 <select name="shipping_mode" class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                    {% for mode in [['flat_rate', 'Flat rate'], ['free', 'Always free'], ['free_above_threshold', 'Free above order threshold'], ['weight_based', 'Weight-based'], ['highest_item_rate', 'Highest item rate']] %}
+                    {% for mode in [['flat_rate', __('Flat rate')], ['free', __('Always free')], ['free_above_threshold', __('Free above order threshold')], ['weight_based', __('Weight-based')], ['highest_item_rate', __('Highest item rate')]] %}
                     <option value="{{ mode[0] }}" {{ settings.shipping_mode|default('flat_rate') == mode[0] ? 'selected' }}>{{ mode[1] }}</option>
                     {% endfor %}
                 </select>
@@ -183,7 +183,7 @@
                 </div>
                 <div class="space-y-3 sm:space-y-2">
                     <template x-for="(row, idx) in rates" :key="idx">
-                        <div class="p-3 sm:p-0 rounded-lg sm:rounded-none bg-gray-50 dark:bg-gray-800/40 sm:bg-transparent dark:sm:bg-transparent border sm:border-0 border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-w-0">
+                        <div class="p-3 sm:p-0 rounded-lg sm:rounded-none max-sm:bg-gray-50 max-sm:dark:bg-gray-800/40 max-sm:border max-sm:border-gray-200 max-sm:dark:border-gray-800 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-w-0">
                             <div class="w-full sm:w-56 shrink-0">
                                 <select x-model="row.code"
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
@@ -201,10 +201,10 @@
                                 </div>
                                 <div class="flex items-center gap-1 shrink-0">
                                     <input type="number" min="1" max="365" x-model="row.shipping_time_min" placeholder="{{ __('Min') }}"
-                                           class="w-14 sm:w-16 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           class="w-20 sm:w-24 px-2 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                     <span class="text-xs text-gray-400">-</span>
                                     <input type="number" min="1" max="365" x-model="row.shipping_time_max" placeholder="{{ __('Max') }}"
-                                           class="w-14 sm:w-16 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           class="w-20 sm:w-24 px-2 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                 </div>
                                 <button type="button" @click="rates.splice(idx,1)" class="text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors text-sm p-1 ml-auto sm:ml-0" title="{{ __('Remove') }}">✕</button>
                             </div>
@@ -228,7 +228,7 @@
 
                 <div class="space-y-3 sm:space-y-2">
                     <template x-for="(row, idx) in rows" :key="row._key">
-                        <div class="p-3 sm:p-0 rounded-lg sm:rounded-none bg-gray-50 dark:bg-gray-800/40 sm:bg-transparent dark:sm:bg-transparent border sm:border-0 border-gray-200 dark:border-gray-800">
+                        <div class="p-3 sm:p-0 rounded-lg sm:rounded-none max-sm:bg-gray-50 max-sm:dark:bg-gray-800/40 max-sm:border max-sm:border-gray-200 max-sm:dark:border-gray-800">
                             <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center min-w-0">
                                 <div class="w-full sm:w-40 shrink-0">
                                     <input type="text" x-model="row.name" placeholder="AcmeCargo"

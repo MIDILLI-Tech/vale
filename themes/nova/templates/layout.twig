@@ -748,6 +748,21 @@
     </div>
 
     {# Fallback language notice — Nova theme closeable popup #}
+    {# Entity-specific sentences: the type name needs its own article/case per language. #}
+    {% set _fallback_also_keys = {
+        'post':    'This post is also available in :language.',
+        'page':    'This page is also available in :language.',
+        'product': 'This product is also available in :language.',
+        'form':    'This form is also available in :language.',
+    } %}
+    {% set _fallback_only_keys = {
+        'post':    'This post is only available in :language.',
+        'page':    'This page is only available in :language.',
+        'product': 'This product is only available in :language.',
+        'form':    'This form is only available in :language.',
+    } %}
+    {% set _fallback_also_key = _fallback_also_keys[entity_label|default('content')]|default('This content is also available in :language.') %}
+    {% set _fallback_only_key = _fallback_only_keys[entity_label|default('content')]|default('This content is only available in :language.') %}
     {% if is_fallback_lang is defined and is_fallback_lang and entity_label is defined %}
     <div x-data="{ closed: false }" x-show="!closed" x-cloak
          class="fixed right-4 z-[70] max-w-sm top-header-offset-24">
@@ -755,12 +770,12 @@
             <div class="flex-1">
                 <p class="text-sm font-medium text-blue-300">
                     {% if has_translation_in_current_locale %}
-                        {{ __('This :label is also available in :language.', {':label': entity_label|default('content'), ':language': locale_name(content_language)}) }}
+                        {{ __(_fallback_also_key, {':language': locale_name(content_language)}) }}
                         <a href="javascript:void(0)" onclick="setLanguage('{{ content_language }}')" class="underline ml-1 hover:text-white">
                             {{ __('View in :language', {':language': locale_name(content_language)}) }}
                         </a>
                     {% else %}
-                        {{ __('This :label is only available in :language.', {':label': entity_label|default('content'), ':language': locale_name(content_language)}) }}
+                        {{ __(_fallback_only_key, {':language': locale_name(content_language)}) }}
                     {% endif %}
                 </p>
             </div>

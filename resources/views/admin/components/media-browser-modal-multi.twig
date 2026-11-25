@@ -58,7 +58,7 @@
         <div class="vl-modal-footer border-t dark:border-gray-700 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2.5">
             <div class="flex items-center gap-2.5">
                 <span class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="selectedCount + ' ' + '{{ __('selected') }}'"></span>
-                <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'{{ __('Page') }} ' + mediaPage + ' / ' + mediaTotalPages"></span>
+                <span class="text-xs text-gray-500 dark:text-gray-400" x-text="tjs('Page :current of :total', {':current': mediaPage, ':total': mediaTotalPages})"></span>
             </div>
             <div class="flex items-center gap-1.5">
                 <button type="button" @click="prevMediaPage()" :disabled="loading || mediaPage <= 1"

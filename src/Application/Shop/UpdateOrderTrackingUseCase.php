@@ -48,8 +48,10 @@ final class UpdateOrderTrackingUseCase
         $this->orderLogs->add(
             $order->getId(),
             'tracking_updated',
-            'Tracking updated — Carrier: ' . ($carrier !== '' ? $carrier : 'none')
-                . ', Tracking #: ' . $trackingNumber,
+            __('Tracking updated — Carrier: :carrier, Tracking #:tracking', [
+                ':carrier'  => $carrier !== '' ? $carrier : __('none'),
+                ':tracking' => $trackingNumber,
+            ]),
             'system',
             $actorId,
             $actorName,

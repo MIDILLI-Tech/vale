@@ -64,7 +64,7 @@
     <input type="hidden" name="{{ list }}_product_ids" :value="{{ _product_ids }}.join(',')">
     <input type="hidden" name="{{ list }}_variation_ids" :value="{{ _variation_ids }}.join(',')">
     <p class="mt-1 text-xs text-gray-400 dark:text-gray-500" x-text="tjs(':count product(s) selected', {':count': {{ _product_ids }}.length})"></p>
-    <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500" x-show="{{ _variation_ids }}.length > 0" x-text="{{ _variation_ids }}.length + ' variation(s) selected'"></p>
+    <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500" x-show="{{ _variation_ids }}.length > 0" x-text="tjs(':count variation(s) selected', {':count': {{ _variation_ids }}.length})"></p>
     <div class="flex flex-wrap gap-1.5 mt-1.5" x-show="{{ _selected_products }}.length > 0">
         <template x-for="p in {{ _selected_products }}" :key="p.id">
             <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium {{ _chip }}">

@@ -41,7 +41,7 @@
             </div>
         </div>
         <div class="border-t dark:border-gray-700 px-6 py-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span x-text="'Page ' + mediaPage + ' / ' + mediaTotalPages"></span>
+            <span x-text="tjs('Page :current of :total', {':current': mediaPage, ':total': mediaTotalPages})"></span>
             <div class="flex items-center gap-2">
                 <button type="button" @click="prevMediaPage()" :disabled="loading || mediaPage <= 1"
                         class="rounded-sm border dark:border-gray-700 px-3 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800/50 disabled:opacity-50 disabled:cursor-not-allowed">{{ __('Previous') }}</button>

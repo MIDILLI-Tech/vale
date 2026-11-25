@@ -46,14 +46,14 @@ final class ThemeController
         $slug = trim((string) ($body['theme'] ?? ''));
 
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'No theme specified.');
+            $this->session->set('flash_error', $this->translator->get('No theme specified.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
         // Validate theme exists
         $themeJson = base_path('themes/' . $slug . '/theme.json');
         if (!file_exists($themeJson)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
@@ -95,13 +95,13 @@ final class ThemeController
     {
         $slug      = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $themePath = base_path('themes/' . $slug);
 
         if (!is_dir($themePath)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
@@ -289,7 +289,7 @@ final class ThemeController
     {
         $slug       = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Invalid theme.');
+            $this->session->set('flash_error', $this->translator->get('Invalid theme.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $body       = (array) $request->getParsedBody();
@@ -302,7 +302,7 @@ final class ThemeController
         }
 
         if (!preg_match('/^[a-z0-9_-]+$/i', $name)) {
-            $this->session->set('flash_error', 'Invalid template name. Use alphanumeric characters, dashes, and underscores.');
+            $this->session->set('flash_error', $this->translator->get('Invalid template name. Use alphanumeric characters, dashes, and underscores.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
@@ -310,14 +310,14 @@ final class ThemeController
         $dirPath  = base_path('themes/' . $slug . '/templates/page-templates');
         if (!is_dir($dirPath)) {
             if (!mkdir($dirPath, 0755, true) && !is_dir($dirPath)) {
-                $this->session->set('flash_error', 'Failed to create page-templates directory.');
+                $this->session->set('flash_error', $this->translator->get('Failed to create page-templates directory.'));
                 return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
             }
         }
 
         $filePath = $dirPath . '/' . $fileName;
         if (file_exists($filePath)) {
-            $this->session->set('flash_error', 'Template already exists.');
+            $this->session->set('flash_error', $this->translator->get('Template already exists.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
@@ -334,7 +334,7 @@ final class ThemeController
     {
         $contentType = $this->contentTypes->findBySlug(new Slug($typeSlug));
         if ($contentType === null || $contentType->isSystem() || !$contentType->isActive()) {
-            $this->session->set('flash_error', 'Invalid content type.');
+            $this->session->set('flash_error', $this->translator->get('Invalid content type.'));
             return $response->withHeader('Location', admin_url("/themes/$themeSlug/edit"))->withStatus(302);
         }
 
@@ -342,14 +342,14 @@ final class ThemeController
         $dirPath  = base_path('themes/' . $themeSlug . '/templates');
         if (!is_dir($dirPath)) {
             if (!mkdir($dirPath, 0755, true) && !is_dir($dirPath)) {
-                $this->session->set('flash_error', 'Failed to create templates directory.');
+                $this->session->set('flash_error', $this->translator->get('Failed to create templates directory.'));
                 return $response->withHeader('Location', admin_url("/themes/$themeSlug/edit"))->withStatus(302);
             }
         }
 
         $filePath = $dirPath . '/' . $fileName;
         if (file_exists($filePath)) {
-            $this->session->set('flash_error', 'Template already exists.');
+            $this->session->set('flash_error', $this->translator->get('Template already exists.'));
             return $response->withHeader('Location', admin_url("/themes/$themeSlug/edit"))->withStatus(302);
         }
 
@@ -366,7 +366,7 @@ final class ThemeController
         file_put_contents($filePath, $content);
         $this->invalidateTemplateCache($fileName, $filePath);
 
-        $this->session->set('flash_success', 'Template "' . $fileName . '" created.');
+        $this->session->set('flash_success', $this->translator->get('Template ":name" created.', [':name' => $fileName]));
         return $response->withHeader('Location', admin_url("/themes/$themeSlug/edit?file=$fileName"))->withStatus(302);
     }
 
@@ -377,19 +377,19 @@ final class ThemeController
     {
         $slug = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Invalid theme.');
+            $this->session->set('flash_error', $this->translator->get('Invalid theme.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $body = (array) $request->getParsedBody();
         $file = trim((string) ($body['file'] ?? ''));
 
         if ($slug === '' || $file === '') {
-            $this->session->set('flash_error', 'Invalid request.');
+            $this->session->set('flash_error', $this->translator->get('Invalid request.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
         if (!preg_match('/^[a-z0-9\/_-]+\.twig$/i', $file)) {
-            $this->session->set('flash_error', 'Invalid file name.');
+            $this->session->set('flash_error', $this->translator->get('Invalid file name.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
@@ -398,12 +398,12 @@ final class ThemeController
         $realBase = realpath($baseDir);
 
         if ($filePath === false || $realBase === false || !$this->isWithinDirectory($filePath, $realBase)) {
-            $this->session->set('flash_error', 'Invalid file path.');
+            $this->session->set('flash_error', $this->translator->get('Invalid file path.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
         if (!file_exists($filePath)) {
-            $this->session->set('flash_error', 'File not found.');
+            $this->session->set('flash_error', $this->translator->get('File not found.'));
             return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
         }
 
@@ -429,7 +429,7 @@ final class ThemeController
             $cptSlugs    = array_map(fn ($t) => (string) $t->getSlug(), $customTypes);
 
             if (!in_array($fileName, $cptSlugs, true)) {
-                $this->session->set('flash_error', 'Only custom content templates can be deleted.');
+                $this->session->set('flash_error', $this->translator->get('Only custom content templates can be deleted.'));
                 return $response->withHeader('Location', admin_url("/themes/$slug/edit"))->withStatus(302);
             }
         }
@@ -554,7 +554,7 @@ final class ThemeController
         $slug = trim((string) ($body['theme'] ?? ''));
 
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'No theme specified.');
+            $this->session->set('flash_error', $this->translator->get('No theme specified.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
@@ -562,7 +562,7 @@ final class ThemeController
         $themeJson = base_path('themes/' . $slug . '/theme.json');
 
         if (!file_exists($themeJson)) {
-            $this->session->set('flash_error', 'Theme not found: ' . htmlspecialchars($slug, ENT_QUOTES));
+            $this->session->set('flash_error', $this->translator->get('Theme not found: :slug', [':slug' => htmlspecialchars($slug, ENT_QUOTES)]));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
@@ -717,20 +717,20 @@ final class ThemeController
         $slug = trim((string) ($body['theme'] ?? ''));
 
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'No theme specified.');
+            $this->session->set('flash_error', $this->translator->get('No theme specified.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
         $activeTheme = (string) ($this->settings->get('active_theme') ?? 'default');
         if ($slug === $activeTheme) {
-            $this->session->set('flash_error', 'Cannot delete the active theme.');
+            $this->session->set('flash_error', $this->translator->get('Cannot delete the active theme.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
         // Security check: only allow deleting from the themes/ directory
         $themePath = base_path('themes/' . $slug);
         if (!is_dir($themePath)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
 
@@ -748,7 +748,7 @@ final class ThemeController
     {
         $slug      = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $themePath = base_path('themes/' . $slug);
@@ -788,7 +788,7 @@ final class ThemeController
     {
         $slug      = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $themePath = base_path('themes/' . $slug);
@@ -825,7 +825,7 @@ final class ThemeController
     {
         $slug      = $args['slug'] ?? '';
         if (!$this->isValidThemeSlug($slug)) {
-            $this->session->set('flash_error', 'Theme not found.');
+            $this->session->set('flash_error', $this->translator->get('Theme not found.'));
             return $response->withHeader('Location', admin_url('/themes'))->withStatus(302);
         }
         $themePath = base_path('themes/' . $slug);

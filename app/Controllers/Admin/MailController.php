@@ -222,18 +222,18 @@ final class MailController
         $name = trim($body['template_name'] ?? '');
 
         if (!preg_match('/^[a-z0-9_-]+$/', $name)) {
-            $this->session->flash('error', 'Invalid template name.');
+            $this->session->flash('error', $this->translator->get('Invalid template name.'));
             return $this->redirectToMail($request, $response);
         }
 
         $content = $body['template_content'] ?? '';
         if ($content === '') {
-            $this->session->flash('error', 'Template content cannot be empty.');
+            $this->session->flash('error', $this->translator->get('Template content cannot be empty.'));
             return $this->redirectToMail($request, $response);
         }
 
         $this->settings->set('mail_template_' . $name, $content, 'mail');
-        $this->session->flash('success', 'Template "' . $this->templateLabel($name) . '" saved.');
+        $this->session->flash('success', $this->translator->get('Template ":name" saved.', [':name' => $this->templateLabel($name)]));
         return $this->redirectToMail($request, $response);
     }
 
@@ -246,12 +246,12 @@ final class MailController
         $name = trim($body['template_name'] ?? '');
 
         if (!preg_match('/^[a-z0-9_-]+$/', $name)) {
-            $this->session->flash('error', 'Invalid template name.');
+            $this->session->flash('error', $this->translator->get('Invalid template name.'));
             return $this->redirectToMail($request, $response);
         }
 
         $this->settings->delete('mail_template_' . $name);
-        $this->session->flash('success', 'Template "' . $this->templateLabel($name) . '" reset to default.');
+        $this->session->flash('success', $this->translator->get('Template ":name" reset to default.', [':name' => $this->templateLabel($name)]));
         return $this->redirectToMail($request, $response);
     }
 
@@ -316,7 +316,7 @@ final class MailController
         if (is_file($logFile)) {
             @unlink($logFile);
         }
-        $this->session->set('flash_success', 'Mail logs cleared.');
+        $this->session->set('flash_success', $this->translator->get('Mail logs cleared.'));
         return $response->withHeader('Location', admin_url('/mail/logs'))->withStatus(302);
     }
 
@@ -333,14 +333,14 @@ final class MailController
         $fileIdx  = $total - $id;
 
         if ($fileIdx < 0 || $fileIdx >= $total) {
-            $this->session->set('flash_error', 'Log entry not found.');
+            $this->session->set('flash_error', $this->translator->get('Log entry not found.'));
             return $response->withHeader('Location', admin_url('/mail/logs'))->withStatus(302);
         }
 
         array_splice($entries, $fileIdx, 1);
         $this->writeLogFile($logFile, $entries);
 
-        $this->session->set('flash_success', 'Log entry deleted.');
+        $this->session->set('flash_success', $this->translator->get('Log entry deleted.'));
         return $response->withHeader('Location', admin_url('/mail/logs'))->withStatus(302);
     }
 

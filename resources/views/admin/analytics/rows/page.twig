@@ -9,7 +9,7 @@
 {% set showDuration = mode == 'duration' or mode == 'session' %}
 {% set durationValue = mode == 'session' ? row.avg_session_duration : row.avg_duration %}
 <a href="{{ site_url }}{{ row.page_url }}" target="_blank"
-   class="grid items-center gap-2 text-sm rounded-sm px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors {{ showDuration ? 'grid-cols-[minmax(0,1fr)_auto_3rem]' : 'grid-cols-[minmax(0,1fr)_3rem]' }}">
+   class="grid items-center gap-2 text-sm rounded-sm px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors {{ showDuration ? 'grid-cols-[minmax(0,1fr)_auto_5.25rem]' : 'grid-cols-[minmax(0,1fr)_5.25rem]' }}">
     <span class="truncate text-gray-700 dark:text-gray-300" title="{{ row.page_title ?: row.page_url }}">{{ row.page_title ?: row.page_url }}</span>
     {% if showDuration %}
     <span class="tabular-nums text-xs text-gray-400 text-right whitespace-nowrap">

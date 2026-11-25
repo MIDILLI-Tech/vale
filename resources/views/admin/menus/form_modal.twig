@@ -884,7 +884,7 @@ function buildPreview() {
     var nodeByIndex = {};
     var roots = [];
     items.forEach(function(row) {
-        var label = row.querySelector('input[name="item_label[]"]').value || 'Untitled';
+        var label = row.querySelector('input[name="item_label[]"]').value || {{ __('Untitled')|json_encode|raw }};
         var node = { label: label, children: [] };
         nodeByIndex[row.dataset.itemIndex] = node;
     });

@@ -1455,9 +1455,9 @@ final class SettingsController
             }
 
             $summary = implode('; ', $results);
-            $this->session->set('flash_success', $this->translator->get('DB Optimize complete: ' . $summary));
+            $this->session->set('flash_success', $this->translator->get('DB Optimize complete: :summary', [':summary' => $summary]));
         } catch (\Throwable $e) {
-            $this->session->set('flash_error', $this->translator->get('DB Optimize error: ' . $e->getMessage()));
+            $this->session->set('flash_error', $this->translator->get('DB Optimize error: :message', [':message' => $e->getMessage()]));
         }
 
         return $response->withHeader('Location', admin_url('/settings?tab=maintenance&subtab=cleanup'))->withStatus(302);
@@ -1555,7 +1555,7 @@ final class SettingsController
             $msg = "Cache cleared ({$cleared} files), {$pruned} revisions pruned, {$spam} spam + {$trash} trash comments deleted, {$orphaned} orphaned meta records cleaned, pageviews purged, {$optimized} optimized.";
             $this->session->set('flash_success', $this->translator->get($msg));
         } catch (\Throwable $e) {
-            $this->session->set('flash_error', $this->translator->get('Optimization error: ' . $e->getMessage()));
+            $this->session->set('flash_error', $this->translator->get('Optimization error: :message', [':message' => $e->getMessage()]));
         }
 
         return $response->withHeader('Location', admin_url('/'))->withStatus(302);
@@ -1997,7 +1997,7 @@ final class SettingsController
         $email = trim($body['email'] ?? '');
 
         if ($email === '') {
-            $this->session->set('flash_error', 'Email is required.');
+            $this->session->set('flash_error', $this->translator->get('Email is required.'));
             return $response->withHeader('Location', admin_url('/settings?tab=privacy&subtab=gdpr'))->withStatus(302);
         }
 

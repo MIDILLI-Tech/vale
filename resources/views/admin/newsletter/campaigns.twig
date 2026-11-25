@@ -1,7 +1,7 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_table.twig" as table %}
 
-{% block title %}Campaigns{% endblock %}
+{% block title %}{{ __('Campaigns') }}{% endblock %}
 
 {% block content %}
 <div x-data="dataTable({perPage: {{ per_page|default(20) }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (filters.search|default(''))|e('js') }}', searchBody: {{ filters.search_body is defined and filters.search_body ? 'true' : 'false' }}{% if client_side is defined and not client_side %}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, sort: '{{ (filters.sort|default(''))|e('js') }}', dir: '{{ (filters.dir|default('desc'))|e('js') }}'{% endif %}})">
@@ -14,11 +14,11 @@
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Email Campaigns') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> campaigns</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-text="tjs(':count campaigns', {':count': visibleCount})"></p>
     </div>
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <a href="{{ url('/admin/newsletter/subscribers') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Subscribers') }}</a>
-        <a href="{{ url('/admin/newsletter/campaigns/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ New Campaign</a>
+        <a href="{{ url('/admin/newsletter/campaigns/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ {{ __('New Campaign') }}</a>
     </div>
 </div>
 
@@ -28,13 +28,13 @@
     {{ table.columnsToggle() }}
     {% if filterSubscriber %}
     <div class="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
-        <span>Filtered: <strong>{{ filterSubscriber.email }}</strong></span>
+        <span>{{ __('Filtered') }}: <strong>{{ filterSubscriber.email }}</strong></span>
         <a href="{{ url('/admin/newsletter/campaigns') }}" class="ml-1 text-blue-500 hover:text-blue-700 font-medium">&times;</a>
     </div>
     {% endif %}
     {% if filters.filter is defined and filters.filter %}
     <div class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-900">
-        <span>{% if filters.filter == 'opened' %}Opened campaigns{% elseif filters.filter == 'clicked' %}Clicked campaigns{% endif %}</span>
+        <span>{% if filters.filter == 'opened' %}{{ __('Opened campaigns') }}{% elseif filters.filter == 'clicked' %}{{ __('Clicked campaigns') }}{% endif %}</span>
         <a href="{{ url('/admin/newsletter/campaigns') }}{{ filterSubscriber ? '?subscriber_id=' ~ filterSubscriber.id : '' }}" class="text-amber-700 hover:text-amber-900">&times;</a>
     </div>
     {% endif %}
@@ -73,7 +73,8 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4">
                     {% set sc = {draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', sent: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', sending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300', queued: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300', processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'} %}
-                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[c.status]|default('bg-gray-100') }}">{{ c.status|capitalize }}</span>
+                    {% set status_labels = {draft: __('Draft'), sent: __('Sent'), sending: __('Sending'), scheduled: __('Scheduled'), queued: __('Queued'), processing: __('Processing')} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[c.status]|default('bg-gray-100') }}">{{ status_labels[c.status]|default(c.status|capitalize) }}</span>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {% if c.recipientsCount %}
@@ -176,7 +177,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="8" class="px-6 py-12 text-center text-gray-400">{{ __('No campaigns yet.') }}</td></tr>
+            <tr><td colspan="8" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">{{ __('No campaigns yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

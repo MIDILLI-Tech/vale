@@ -165,9 +165,10 @@ final class OrderController
         $data = $this->orders->getReportData($from, $to);
 
         return $this->twig->render($response, 'admin/orders/reports.twig', [
-            'from'   => $from,
-            'to'     => $to,
-            'data'   => $data,
+            'from'                  => $from,
+            'to'                    => $to,
+            'data'                  => $data,
+            'payment_method_labels' => $this->availablePaymentMethods(),
         ]);
     }
 
@@ -180,20 +181,21 @@ final class OrderController
         $data = $this->orders->getReportData($from, $to);
 
         $html = $this->twig->fetch('admin/orders/report-pdf.twig', [
-            'from' => $from,
-            'to'   => $to,
-            'data' => $data,
-            'shop' => $this->getShopData(),
+            'from'                  => $from,
+            'to'                    => $to,
+            'data'                  => $data,
+            'shop'                  => $this->getShopData(),
+            'payment_method_labels' => $this->availablePaymentMethods(),
         ]);
 
         if ($this->pdfGenerator === null || !$this->pdfGenerator->isAvailable()) {
-            $this->session->set('flash_error', 'PDF generation is not available.');
+            $this->session->set('flash_error', $this->translator->get('PDF generation is not available.'));
             return $response->withHeader('Location', admin_url('/orders/reports?from=' . $from . '&to=' . $to))->withStatus(302);
         }
 
         $pdf = $this->pdfGenerator->generate($html);
 
-        $this->session->set('flash_success', 'Report exported.');
+        $this->session->set('flash_success', $this->translator->get('Report exported.'));
         $response->getBody()->write($pdf);
         return $response
             ->withHeader('Content-Type', 'application/pdf')
@@ -280,12 +282,12 @@ final class OrderController
         ];
 
         if ($updated['first_name'] === '' || $updated['email'] === '') {
-            $this->session->flash('error', 'Billing first name and email are required.');
+            $this->session->flash('error', $this->translator->get('Billing first name and email are required.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
         if (!filter_var($updated['email'], FILTER_VALIDATE_EMAIL)) {
-            $this->session->flash('error', 'Billing email format is invalid.');
+            $this->session->flash('error', $this->translator->get('Billing email format is invalid.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -302,7 +304,7 @@ final class OrderController
         $this->orderLogs->add(
             $order->getId(),
             'billing_updated',
-            'Billing details updated by admin.',
+            $this->translator->get('Billing details updated by admin.'),
             'system',
             (int) $this->session->get('user_id'),
             (string) ($this->session->get('user_name') ?? 'Admin'),
@@ -346,7 +348,7 @@ final class OrderController
         $this->orderLogs->add(
             $order->getId(),
             'shipping_updated',
-            'Shipping details updated by admin.',
+            $this->translator->get('Shipping details updated by admin.'),
             'system',
             (int) $this->session->get('user_id'),
             (string) ($this->session->get('user_name') ?? 'Admin'),
@@ -402,7 +404,10 @@ final class OrderController
             $this->orderLogs->add(
                 $order->getId(),
                 'payment_method_changed',
-                'Payment method changed from "' . $oldLabel . '" to "' . $newLabel . '".'
+                $this->translator->get(
+                    'Payment method changed from ":from" to ":to".',
+                    [':from' => $oldLabel, ':to' => $newLabel]
+                )
             );
 
             $this->session->flash('success', $this->translator->get('Payment method updated.'));
@@ -420,7 +425,7 @@ final class OrderController
         }
 
         if ($order->getStatus() !== 'refund_requested') {
-            $this->session->flash('error', 'Order has no pending refund request.');
+            $this->session->flash('error', $this->translator->get('Order has no pending refund request.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -430,11 +435,11 @@ final class OrderController
         $refundAmount    = (float) str_replace(',', '.', $refundAmountRaw === '' ? '0' : $refundAmountRaw);
 
         if ($refundAmount <= 0.0) {
-            $this->session->flash('error', 'Please enter a valid refund amount.');
+            $this->session->flash('error', $this->translator->get('Please enter a valid refund amount.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
         if ($refundAmount > (float) $order->getTotal()) {
-            $this->session->flash('error', 'Refund amount cannot exceed order total.');
+            $this->session->flash('error', $this->translator->get('Refund amount cannot exceed order total.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -449,14 +454,22 @@ final class OrderController
                     $this->orderLogs->add(
                         $order->getId(),
                         'payment_refunded',
-                        ucfirst($paymentMethod) . ' refund completed. Amount: ' . number_format($refundAmount, 2, '.', '') . ' ' . $order->getCurrency() . '. Refund ID: ' . $refundId . '.',
+                        $this->translator->get(
+                            ':gateway refund completed. Amount: :amount :currency. Refund ID: :refund_id.',
+                            [
+                                ':gateway'   => ucfirst($paymentMethod),
+                                ':amount'    => number_format($refundAmount, 2, '.', ''),
+                                ':currency'  => $order->getCurrency(),
+                                ':refund_id' => $refundId,
+                            ]
+                        ),
                         'system',
                         (int) $this->session->get('user_id'),
                         (string) ($this->session->get('user_name') ?? 'Admin'),
                     );
                 }
             } catch (\Throwable $e) {
-                $this->session->flash('error', ucfirst($paymentMethod) . ' refund failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+                $this->session->flash('error', $this->translator->get(':gateway refund failed: :message', [':gateway' => ucfirst($paymentMethod), ':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
                 return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
             }
         }
@@ -494,7 +507,7 @@ final class OrderController
             }
         }
 
-        $note = 'Refund request approved by admin.';
+        $note = $this->translator->get('Refund request approved by admin.');
         $note .= ' Amount: ' . number_format($refundAmount, 2, '.', '') . ' ' . $order->getCurrency() . '.';
         if ($adminNote !== '') {
             $note .= ' Note: ' . $adminNote;
@@ -504,9 +517,9 @@ final class OrderController
         $this->events?->doAction('order.status_changed', $order, $newStatus);
         $this->sendRefundReviewEmail($order, true, $adminNote);
         if ($newStatus === 'refunded') {
-            $this->session->flash('success', 'Refund request approved and gateway refund completed.');
+            $this->session->flash('success', $this->translator->get('Refund request approved and gateway refund completed.'));
         } else {
-            $this->session->flash('success', 'Refund request approved and order cancelled.');
+            $this->session->flash('success', $this->translator->get('Refund request approved and order cancelled.'));
         }
 
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
@@ -521,14 +534,14 @@ final class OrderController
         }
 
         if ($order->getStatus() !== 'refund_requested') {
-            $this->session->flash('error', 'Order has no pending refund request.');
+            $this->session->flash('error', $this->translator->get('Order has no pending refund request.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
         $body   = (array) $request->getParsedBody();
         $reason = trim((string) ($body['reject_reason'] ?? ''));
         if ($reason === '') {
-            $this->session->flash('error', 'Please provide a rejection reason.');
+            $this->session->flash('error', $this->translator->get('Please provide a rejection reason.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -539,7 +552,7 @@ final class OrderController
         $this->orderLogs->add(
             $order->getId(),
             'refund_request_rejected',
-            'Reason: ' . $reason,
+            $this->translator->get('Reason: :reason', [':reason' => $reason]),
             'system',
             (int) $this->session->get('user_id'),
             (string) ($this->session->get('user_name') ?? 'Admin'),
@@ -547,7 +560,7 @@ final class OrderController
 
         $this->events?->doAction('order.status_changed', $order, 'refund_rejected');
         $this->sendRefundReviewEmail($order, false, $reason);
-        $this->session->flash('success', 'Refund request rejected and customer notified.');
+        $this->session->flash('success', $this->translator->get('Refund request rejected and customer notified.'));
 
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
@@ -634,7 +647,7 @@ final class OrderController
         ];
 
         if (empty($billing['first_name']) || empty($billing['email'])) {
-            $this->session->flash('error', 'First name and email are required.');
+            $this->session->flash('error', $this->translator->get('First name and email are required.'));
             return $response->withHeader('Location', admin_url('/orders/create'))->withStatus(302);
         }
 
@@ -813,7 +826,7 @@ final class OrderController
         $this->orderLogs->add(
             $order->getId(),
             'order_created',
-            'Manual order created by admin. Initial status: "' . $statusLabel . '".'
+            $this->translator->get('Manual order created by admin. Initial status: ":status".', [':status' => $statusLabel])
         );
         $this->session->flash('success', $this->translator->get('Order #:number created.', [':number' => $order->getOrderNumber()]));
 
@@ -879,7 +892,7 @@ final class OrderController
                 $userId ?: null,
                 $addedBy,
             );
-            $this->session->flash('success', 'Note added.');
+            $this->session->flash('success', $this->translator->get('Note added.'));
         }
 
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
@@ -897,7 +910,7 @@ final class OrderController
         $message = trim($body['message'] ?? '');
 
         if ($subject === '' || $message === '') {
-            $this->session->flash('error', 'Subject and message are required.');
+            $this->session->flash('error', $this->translator->get('Subject and message are required.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -905,7 +918,7 @@ final class OrderController
         $email   = $billing['email'] ?? null;
 
         if (empty($email)) {
-            $this->session->flash('error', 'No customer email address on this order.');
+            $this->session->flash('error', $this->translator->get('No customer email address on this order.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -921,7 +934,7 @@ final class OrderController
                 );
             } catch (\Throwable $e) {
                 error_log('[Order] Failed to send customer email for order #' . $order->getOrderNumber() . ': ' . $e->getMessage());
-                $this->session->flash('error', 'Failed to send email: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+                $this->session->flash('error', $this->translator->get('Failed to send email: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
                 return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
             }
         }
@@ -931,13 +944,13 @@ final class OrderController
         $this->orderLogs->add(
             $order->getId(),
             'email_sent',
-            'Email sent to ' . $email . '. Subject: "' . $subject . '".',
+            $this->translator->get('Email sent to :email. Subject: ":subject".', [':email' => $email, ':subject' => $subject]),
             'email',
             $userId ?: null,
             $addedBy,
         );
 
-        $this->session->flash('success', 'Email sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '.');
+        $this->session->flash('success', $this->translator->get('Email sent to :email.', [':email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8')]));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -954,7 +967,7 @@ final class OrderController
 
         $email = $this->getCustomerEmail($order);
         if ($email === null) {
-            $this->session->flash('error', 'No customer email address on this order.');
+            $this->session->flash('error', $this->translator->get('No customer email address on this order.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1017,12 +1030,12 @@ final class OrderController
                 recipientType: 'customer',
             );
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Failed to send order confirmation: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Failed to send order confirmation: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
-        $this->logEmailSent($order, $email, 'Order confirmation resent to ' . $email . '.');
-        $this->session->flash('success', 'Order confirmation sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '.');
+        $this->logEmailSent($order, $email, $this->translator->get('Order confirmation resent to :email.', [':email' => $email]));
+        $this->session->flash('success', $this->translator->get('Order confirmation sent to :email.', [':email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8')]));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -1047,12 +1060,12 @@ final class OrderController
                 recipientType: 'customer',
             );
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Failed to send payment received email: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Failed to send payment received email: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
-        $this->logEmailSent($order, $email, 'Payment received email resent to ' . $email . '.');
-        $this->session->flash('success', 'Payment received email sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '.');
+        $this->logEmailSent($order, $email, $this->translator->get('Payment received email resent to :email.', [':email' => $email]));
+        $this->session->flash('success', $this->translator->get('Payment received email sent to :email.', [':email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8')]));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -1069,8 +1082,8 @@ final class OrderController
             $order->getId(),
             'payment_link_generated',
             $isBankTransfer
-                ? 'Bank transfer instruction link generated and sent to customer: ' . $link
-                : 'Payment link generated and sent to customer: ' . $link
+                ? $this->translator->get('Bank transfer instruction link generated and sent to customer: :link', [':link' => $link])
+                : $this->translator->get('Payment link generated and sent to customer: :link', [':link' => $link])
         );
 
         $templateData   = [
@@ -1094,19 +1107,19 @@ final class OrderController
                 recipientType: 'customer',
             );
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Failed to send payment link email: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Failed to send payment link email: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
         $logDetail = $isBankTransfer
-            ? 'Bank transfer instructions email sent to ' . $email . '.'
-            : 'Payment link email sent to ' . $email . '.';
+            ? $this->translator->get('Bank transfer instructions email sent to :email.', [':email' => $email])
+            : $this->translator->get('Payment link email sent to :email.', [':email' => $email]);
         $this->logEmailSent($order, $email, $logDetail);
         $this->session->flash(
             'success',
             $isBankTransfer
-                ? 'Bank transfer instructions sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '.'
-                : 'Payment link generated and sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '.'
+                ? $this->translator->get('Bank transfer instructions sent to :email.', [':email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8')])
+                : $this->translator->get('Payment link generated and sent to :email.', [':email' => htmlspecialchars($email, ENT_QUOTES, 'UTF-8')])
         );
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
@@ -1128,7 +1141,7 @@ final class OrderController
         $notify = isset($body['notify']) && (string) $body['notify'] === '1';
 
         if ($trackNum === '') {
-            $this->session->flash('error', 'Tracking number is required.');
+            $this->session->flash('error', $this->translator->get('Tracking number is required.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1141,7 +1154,7 @@ final class OrderController
             (int) $this->session->get('user_id'),
         );
 
-        $this->session->flash('success', $notify ? 'Tracking saved and customer notified.' : 'Tracking saved.');
+        $this->session->flash('success', $notify ? $this->translator->get('Tracking saved and customer notified.') : $this->translator->get('Tracking saved.'));
 
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
@@ -1246,8 +1259,8 @@ final class OrderController
 
         $link      = __require_app_url() . '/pay/' . $token;
         $logDetail = $isBankTransfer
-            ? 'Bank transfer instruction link generated by admin: ' . $link
-            : 'Payment link generated by admin: ' . $link;
+            ? $this->translator->get('Bank transfer instruction link generated by admin: :link', [':link' => $link])
+            : $this->translator->get('Payment link generated by admin: :link', [':link' => $link]);
         $this->orderLogs->add(
             $order->getId(),
             'payment_link_generated',
@@ -1257,8 +1270,8 @@ final class OrderController
         $this->session->flash(
             'success',
             $isBankTransfer
-                ? 'Bank transfer instruction link generated.'
-                : 'Payment link generated.'
+                ? $this->translator->get('Bank transfer instruction link generated.')
+                : $this->translator->get('Payment link generated.')
         );
 
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
@@ -1288,7 +1301,9 @@ final class OrderController
             (string) ($this->session->get('user_name') ?? 'Admin'),
         );
 
-        $this->session->flash('success', ($event === 'invoice_reissued' ? 'Invoice reissued with latest totals: ' : 'Invoice issued: ') . $snapshot['invoice_number']);
+        $this->session->flash('success', $event === 'invoice_reissued'
+            ? $this->translator->get('Invoice reissued with latest totals: :number', [':number' => $snapshot['invoice_number']])
+            : $this->translator->get('Invoice issued: :number', [':number' => $snapshot['invoice_number']]));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -1303,7 +1318,7 @@ final class OrderController
         $logs     = $this->orderLogs->findByOrderId($order->getId());
         $versions = $this->extractAllInvoiceVersions($logs);
         if ($versions === []) {
-            $this->session->flash('error', 'Issue invoice first.');
+            $this->session->flash('error', $this->translator->get('Issue invoice first.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1334,7 +1349,7 @@ final class OrderController
         $logs     = $this->orderLogs->findByOrderId($order->getId());
         $versions = $this->extractAllInvoiceVersions($logs);
         if ($versions === []) {
-            $this->session->flash('error', 'Issue invoice first.');
+            $this->session->flash('error', $this->translator->get('Issue invoice first.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1345,7 +1360,7 @@ final class OrderController
         $isLatest = $resolved['log_id'] === $latest['log_id'];
 
         if ($this->pdfGenerator === null || !$this->pdfGenerator->isAvailable()) {
-            $this->session->flash('error', 'PDF generation is not available — missing PHP extension (dom). Install php-xml package and restart your web server.');
+            $this->session->flash('error', $this->translator->get('PDF generation is not available — missing PHP extension (dom). Install php-xml package and restart your web server.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1376,14 +1391,14 @@ final class OrderController
         }
 
         if ($this->mail === null) {
-            $this->session->flash('error', 'Mail service is not configured.');
+            $this->session->flash('error', $this->translator->get('Mail service is not configured.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
         $logs     = $this->orderLogs->findByOrderId($order->getId());
         $versions = $this->extractAllInvoiceVersions($logs);
         if ($versions === []) {
-            $this->session->flash('error', 'Issue invoice first.');
+            $this->session->flash('error', $this->translator->get('Issue invoice first.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1393,7 +1408,7 @@ final class OrderController
 
         $email = (string) ($snapshot['billing']['email'] ?? '');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->session->flash('error', 'Invoice cannot be sent: customer email is missing/invalid.');
+            $this->session->flash('error', $this->translator->get('Invoice cannot be sent: customer email is missing/invalid.'));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
@@ -1420,7 +1435,7 @@ final class OrderController
             }
 
             if ($mailDriver !== 'log' && !$pdfAvailable) {
-                $this->session->flash('warning', 'PDF attachment could not be generated — missing PHP extension (dom). Email sent without PDF.');
+                $this->session->flash('warning', $this->translator->get('PDF attachment could not be generated — missing PHP extension (dom). Email sent without PDF.'));
             }
 
             $this->mail->sendTemplate(
@@ -1441,20 +1456,20 @@ final class OrderController
                 recipientType: 'customer',
             );
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Invoice email failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Invoice email failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
         $this->orderLogs->add(
             $order->getId(),
             'invoice_sent',
-            'Invoice ' . ($snapshot['invoice_number'] ?? '') . ' sent to ' . $email . '.',
+            $this->translator->get('Invoice :number sent to :email.', [':number' => $snapshot['invoice_number'] ?? '', ':email' => $email]),
             'email',
             (int) $this->session->get('user_id'),
             (string) ($this->session->get('user_name') ?? 'Admin'),
         );
 
-        $this->session->flash('success', 'Invoice ' . ($snapshot['invoice_number'] ?? '') . ' sent to customer.');
+        $this->session->flash('success', $this->translator->get('Invoice :number sent to customer.', [':number' => (string) ($snapshot['invoice_number'] ?? '')]));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -1816,7 +1831,7 @@ final class OrderController
         $action = (string) ($body['action'] ?? 'revoke');
         $this->downloadRepo->setRevoked((int) $args['dlId'], $action !== 'unrevoke');
 
-        $this->session->flash('success', $action === 'unrevoke' ? 'Download link restored.' : 'Download link revoked.');
+        $this->session->flash('success', $action === 'unrevoke' ? $this->translator->get('Download link restored.') : $this->translator->get('Download link revoked.'));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
@@ -1828,7 +1843,7 @@ final class OrderController
         }
         $this->downloadRepo->regenerateToken((int) $args['dlId']);
 
-        $this->session->flash('success', 'Download token regenerated and count reset.');
+        $this->session->flash('success', $this->translator->get('Download token regenerated and count reset.'));
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 

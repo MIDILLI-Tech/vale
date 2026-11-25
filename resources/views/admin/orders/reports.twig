@@ -49,6 +49,7 @@
 
 {% set s = data.summary %}
 {% set totalActive = s.total_orders - s.cancelled_count - s.refunded_count %}
+{% set pm_labels = payment_method_labels|default({}) %}
 
 {# ── Summary Cards ── #}
 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
@@ -147,7 +148,7 @@
                 <tbody>
                     {% for pm in data.payment_methods %}
                     <tr class="border-b last:border-0">
-                        <td class="py-2 pr-4 font-medium text-gray-800 capitalize">{{ pm.method }}</td>
+                        <td class="py-2 pr-4 font-medium text-gray-800">{{ pm_labels[pm.method]|default(pm.method|replace({'_': ' '})|title) }}</td>
                         <td class="py-2 pr-4 text-right text-gray-700">{{ pm.orders }}</td>
                         <td class="py-2 pr-4 text-right text-green-700">{{ pm.revenue|price(current_currency) }}</td>
                         <td class="py-2 text-right text-red-600">{{ pm.refunded_orders }}</td>
@@ -203,15 +204,15 @@
                 </thead>
                 <tbody>
                     {% set statusLabels = {
-                        'pending': 'Pending Payment',
-                        'processing': 'Processing',
-                        'on-hold': 'On Hold',
-                        'shipped': 'Shipped',
-                        'completed': 'Completed',
-                        'refunded': 'Refunded',
-                        'refund_requested': 'Refund Requested',
-                        'refund_rejected': 'Refund Rejected',
-                        'cancelled': 'Cancelled',
+                        'pending': __('Pending Payment'),
+                        'processing': __('Paid & Processing'),
+                        'on-hold': __('On Hold'),
+                        'shipped': __('Shipped'),
+                        'completed': __('Completed'),
+                        'refunded': __('Refunded'),
+                        'refund_requested': __('Refund Requested'),
+                        'refund_rejected': __('Refund Rejected'),
+                        'cancelled': __('Cancelled'),
                     } %}
                     {% for st in data.status_breakdown %}
                     <tr class="border-b last:border-0">
@@ -299,14 +300,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Revenue',
+                        label: {{ __('Revenue')|json_encode|raw }},
                         data: revenue,
                         backgroundColor: 'rgba(34, 197, 94, 0.7)',
                         borderColor: 'rgb(34, 197, 94)',
                         borderWidth: 1,
                     },
                     {
-                        label: 'Refunds',
+                        label: {{ __('Refunds')|json_encode|raw }},
                         data: refunds,
                         backgroundColor: 'rgba(239, 68, 68, 0.7)',
                         borderColor: 'rgb(239, 68, 68)',
@@ -342,17 +343,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Status Doughnut Chart ──
     if (document.getElementById('statusChart')) {
-        var statusLabels = {
-            'pending': 'Pending Payment',
-            'processing': 'Processing',
-            'on-hold': 'On Hold',
-            'shipped': 'Shipped',
-            'completed': 'Completed',
-            'refunded': 'Refunded',
-            'refund_requested': 'Refund Requested',
-            'refund_rejected': 'Refund Rejected',
-            'cancelled': 'Cancelled',
-        };
+        var statusLabels = {{ {
+            'pending': __('Pending Payment'),
+            'processing': __('Paid & Processing'),
+            'on-hold': __('On Hold'),
+            'shipped': __('Shipped'),
+            'completed': __('Completed'),
+            'refunded': __('Refunded'),
+            'refund_requested': __('Refund Requested'),
+            'refund_rejected': __('Refund Rejected'),
+            'cancelled': __('Cancelled'),
+        }|json_encode|raw }};
         var colors = {
             'pending': '#f59e0b',
             'processing': '#3b82f6',

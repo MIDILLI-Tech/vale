@@ -109,7 +109,7 @@
                                 :disabled="loading">
                             <option value="">{{ __('— Choose —') }}</option>
                             {% for tpl in mailTemplates %}
-                            <option value="{{ tpl.name }}">{{ tpl.label }} ({{ tpl.name }}.twig)</option>
+                            <option value="{{ tpl.name }}">{{ __(tpl.label) }} ({{ tpl.name }}.twig)</option>
                             {% endfor %}
                         </select>
                         <div x-show="loading" x-cloak
@@ -154,8 +154,8 @@
                         <div class="flex flex-col gap-2" :class="isFullscreen ? 'fixed inset-0 z-[9999] bg-white dark:bg-gray-900 p-6 flex flex-col gap-3' : 'relative'">
                             <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                                 <span class="font-mono text-xs flex items-center gap-2">
-                                    <span>Twig & HTML Syntax Highlighting</span>
-                                    <span class="text-gray-400 dark:text-gray-500">(Ctrl+S / Cmd+S to save)</span>
+                                    <span>{{ __('Twig & HTML Syntax Highlighting') }}</span>
+                                    <span class="text-gray-400 dark:text-gray-500">{{ __('(Ctrl+S / Cmd+S to save)') }}</span>
                                 </span>
                                 <div class="flex items-center gap-2">
                                     <button type="button" @click="openPreview()"

@@ -158,7 +158,7 @@ final class NewsletterController
     {
         $this->subscribers->delete((int) $args['id']);
         $this->searchCache->bump(self::SUBSCRIBER_SEARCH_NAMESPACE);
-        $this->session->flash('success', 'Subscriber removed.');
+        $this->session->flash('success', $this->translator->get('Subscriber removed.'));
         return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
     }
 
@@ -204,7 +204,7 @@ final class NewsletterController
         $email = strtolower(trim($body['email'] ?? ''));
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->session->flash('error', 'Invalid email address.');
+            $this->session->flash('error', $this->translator->get('Invalid email address.'));
             return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
         }
 
@@ -248,7 +248,7 @@ final class NewsletterController
                     subject: 'Confirm your subscription',
                     htmlBody: "<p>Please confirm your subscription by clicking: <a href=\"{$confirmUrl}\">{$confirmUrl}</a></p>",
                 ));
-                $this->session->flash('success', 'Subscriber added as pending — confirmation email sent.');
+                $this->session->flash('success', $this->translator->get('Subscriber added as pending — confirmation email sent.'));
             } catch (\Throwable $e) {
                 // Subscriber row is already saved — report the provider failure
                 // instead of blowing up into an error page.
@@ -262,7 +262,7 @@ final class NewsletterController
                 );
             }
         } else {
-            $this->session->flash('success', 'Subscriber added as active.');
+            $this->session->flash('success', $this->translator->get('Subscriber added as active.'));
         }
 
         return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
@@ -272,7 +272,7 @@ final class NewsletterController
     {
         $subscriber = $this->subscribers->findById((int) $args['id']);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', $this->translator->get('Subscriber not found.'));
             return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
         }
 
@@ -315,7 +315,7 @@ final class NewsletterController
     {
         $subscriber = $this->subscribers->findById((int) $args['id']);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', $this->translator->get('Subscriber not found.'));
             return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
         }
 
@@ -392,7 +392,7 @@ final class NewsletterController
     {
         $subscriber = $this->subscribers->findById((int) $args['id']);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', $this->translator->get('Subscriber not found.'));
             return $response->withHeader('Location', admin_url('/newsletter/subscribers'))->withStatus(302);
         }
 
@@ -790,7 +790,7 @@ final class NewsletterController
         $this->fillCampaign($campaign, $body);
         $this->campaigns->save($campaign);
 
-        $this->session->flash('success', 'Campaign saved.');
+        $this->session->flash('success', $this->translator->get('Campaign saved.'));
         return $response->withHeader('Location', admin_url('/newsletter/campaigns'))->withStatus(302);
     }
 
@@ -822,7 +822,7 @@ final class NewsletterController
         $this->campaigns->save($clone);
         $this->searchCache->bump('campaign_search');
 
-        $this->session->flash('success', 'Campaign cloned as draft.');
+        $this->session->flash('success', $this->translator->get('Campaign cloned as draft.'));
         return $response->withHeader('Location', admin_url('/newsletter/campaigns/' . $clone->getId() . '/edit'))->withStatus(302);
     }
 
@@ -869,7 +869,7 @@ final class NewsletterController
         }
 
         if (!$campaign->isDraft()) {
-            $this->session->flash('error', 'Only draft campaigns can be edited.');
+            $this->session->flash('error', $this->translator->get('Only draft campaigns can be edited.'));
             return $response->withHeader('Location', admin_url('/newsletter/campaigns'))->withStatus(302);
         }
 
@@ -893,7 +893,7 @@ final class NewsletterController
     {
         $this->campaigns->delete((int) $args['id']);
         $this->searchCache->bump('campaign_search');
-        $this->session->flash('success', 'Campaign deleted.');
+        $this->session->flash('success', $this->translator->get('Campaign deleted.'));
         return $response->withHeader('Location', admin_url('/newsletter/campaigns'))->withStatus(302);
     }
 
@@ -1019,7 +1019,7 @@ final class NewsletterController
         }
 
         if (!$campaign->isSent()) {
-            $this->session->flash('error', 'Only sent campaigns can be resent.');
+            $this->session->flash('error', $this->translator->get('Only sent campaigns can be resent.'));
             return $response->withHeader('Location', admin_url('/newsletter/campaigns'))->withStatus(302);
         }
 

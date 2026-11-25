@@ -248,7 +248,7 @@ final class PaymentController
             $this->settings->set($provider . '_tested_ok', '0', 'payment');
         }
 
-        $this->session->set('flash_success', 'Payment credentials saved.');
+        $this->session->set('flash_success', __('Payment credentials saved.'));
         $this->session->set('payment_open_card', $provider);
         return $response->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=payment'))->withStatus(302);
     }
@@ -403,7 +403,7 @@ final class PaymentController
             // failure as a normal flash result instead.
             error_log('[PaymentTest] ' . $e->getMessage());
             $this->settings->set(($body['provider'] ?? 'stripe') . '_tested_ok', '0', 'payment');
-            $this->session->set('flash_error', 'Connection test failed unexpectedly. Please check your credentials and try again.');
+            $this->session->set('flash_error', __('Connection test failed unexpectedly. Please check your credentials and try again.'));
             return $response->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=payment'))->withStatus(302);
         }
     }
@@ -615,7 +615,7 @@ final class PaymentController
 
         $allowedProviders = ['stripe', 'paypal', 'mollie', 'twocheckout', 'checkoutcom', 'banktransfer'];
         if (!in_array($provider, $allowedProviders, true)) {
-            $this->session->set('flash_error', 'Unknown provider.');
+            $this->session->set('flash_error', __('Unknown provider.'));
             return $response->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=payment'))->withStatus(302);
         }
 
@@ -633,7 +633,7 @@ final class PaymentController
                 $holderName = trim((string) $this->settings->get('banktransfer_holder_name', ''));
                 $iban       = trim((string) $this->settings->get('banktransfer_iban', ''));
                 if ($bankName === '' || $holderName === '' || $iban === '') {
-                    $this->session->set('flash_error', 'Bank Transfer cannot be enabled: Bank Name, Account Holder, and IBAN are required.');
+                    $this->session->set('flash_error', __('Bank Transfer cannot be enabled: Bank Name, Account Holder, and IBAN are required.'));
                     return $response->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=payment'))->withStatus(302);
                 }
             }
@@ -674,7 +674,7 @@ final class PaymentController
         $provider = (string) ($body['provider'] ?? '');
 
         if (!in_array($provider, ['stripe', 'paypal', 'mollie', 'twocheckout', 'checkoutcom', 'banktransfer'], true)) {
-            $this->session->set('flash_error', 'Unknown provider.');
+            $this->session->set('flash_error', __('Unknown provider.'));
             return $response->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=payment'))->withStatus(302);
         }
 

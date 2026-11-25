@@ -71,12 +71,17 @@ final class OrderInvoiceSubjectTest extends TestCase
         $orderLogs = $this->createStub(OrderLogRepositoryInterface::class);
         $orderLogs->method('findByOrderId')->willReturn($logs);
 
-        $translator = $this->createMock(Translator::class);
-        $translator->expects(self::once())->method('get')->with(
-            'Invoice :number',
-            [':number' => 'INV-ORD-2026-1003'],
-            'tr',
-        )->willReturn('Fatura INV-ORD-2026-1003');
+        $translatorCalls = [];
+        $translator      = $this->createMock(Translator::class);
+        $translator->expects(self::exactly(3))->method('get')->willReturnCallback(
+            static function (string $key, array $params = [], ?string $locale = null) use (&$translatorCalls): string {
+                $translatorCalls[] = [$key, $params, $locale];
+
+                return $key === 'Invoice :number'
+                    ? 'Fatura ' . ($params[':number'] ?? '')
+                    : strtr($key, $params);
+            },
+        );
 
         $sent   = [];
         $mailer = $this->createMock(MailInterface::class);
@@ -135,5 +140,11 @@ final class OrderInvoiceSubjectTest extends TestCase
 
         self::assertSame(302, $response->getStatusCode());
         self::assertSame([['m.yilmaz@example.com', 'Fatura INV-ORD-2026-1003']], $sent);
+        self::assertContains(['Invoice :number', [':number' => 'INV-ORD-2026-1003'], 'tr'], $translatorCalls);
+        self::assertContains(['Invoice :number sent to customer.', [':number' => 'INV-ORD-2026-1003'], null], $translatorCalls);
+        self::assertContains(
+            ['Invoice :number sent to :email.', [':number' => 'INV-ORD-2026-1003', ':email' => 'm.yilmaz@example.com'], null],
+            $translatorCalls,
+        );
     }
 }

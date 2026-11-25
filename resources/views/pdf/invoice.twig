@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Invoice {{ invoice.invoice_number|default('') }}</title>
+<title>{{ __('Invoice') }} {{ invoice.invoice_number|default('') }}</title>
 <style>
   @page { margin: 20mm; }
   body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #1f2937; line-height: 1.5; margin: 0; padding: 0; }
@@ -31,34 +31,34 @@
 <body>
 
 <div class="header">
-  <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}Invoice{% endif %}</h1>
-  <p>Invoice #{{ invoice.invoice_number|default('') }}</p>
-  <p>Issued: {{ invoice.issued_at|default('') }}</p>
+  <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}{{ __('Invoice') }}{% endif %}</h1>
+  <p>{{ __('Invoice #:number', {':number': invoice.invoice_number|default('')}) }}</p>
+  <p>{{ __('Issued: :date', {':date': invoice.issued_at|default('')}) }}</p>
 </div>
 
 {% if is_latest is defined and not is_latest and latest_invoice is defined and latest_invoice %}
-<div class="notice">Note: this version was superseded by {{ latest_invoice.invoice_number|default('') }} (issued {{ latest_invoice.issued_at|default('') }}).</div>
+<div class="notice">{{ __('Note: this version was superseded by :number (issued :date).', {':number': latest_invoice.invoice_number|default(''), ':date': latest_invoice.issued_at|default('')}) }}</div>
 {% endif %}
 {% if invoice.revision|default(1) > 1 %}
-<div class="notice">Revision R{{ invoice.revision }} — supersedes {{ prev_number|default('') }}.</div>
+<div class="notice">{{ __('Revision R:rev — supersedes :prev.', {':rev': invoice.revision, ':prev': prev_number|default('')}) }}</div>
 {% endif %}
 
 <div class="addresses">
 <table>
   <tr>
   <td>
-    <h2>From</h2>
+    <h2>{{ __('From') }}</h2>
     <p>{{ invoice.shop.company_name|default('') }}</p>
     <p>{{ invoice.shop.address_1|default('') }}</p>
     {% if invoice.shop.address_2 %}<p>{{ invoice.shop.address_2 }}</p>{% endif %}
     <p>{{ invoice.shop.city|default('') }} {{ invoice.shop.postcode|default('') }}</p>
     <p>{{ invoice.shop.state|default('') }} {{ invoice.shop.country|default('') }}</p>
-    {% if invoice.shop.phone %}<p>Phone: {{ invoice.shop.phone }}</p>{% endif %}
+    {% if invoice.shop.phone %}<p>{{ __('Phone') }}: {{ invoice.shop.phone }}</p>{% endif %}
     {% if invoice.shop.email %}<p>{{ invoice.shop.email }}</p>{% endif %}
-    {% if invoice.shop.vat_number %}<p>VAT: {{ invoice.shop.vat_number }}</p>{% endif %}
+    {% if invoice.shop.vat_number %}<p>{{ __('VAT') }}: {{ invoice.shop.vat_number }}</p>{% endif %}
   </td>
   <td>
-    <h2>Bill To</h2>
+    <h2>{{ __('Bill To') }}</h2>
     <p>{{ invoice.billing.first_name|default('') }} {{ invoice.billing.last_name|default('') }}</p>
     <p>{{ invoice.billing.address_1|default(invoice.billing.address|default('')) }}</p>
     {% if invoice.billing.address_2 %}<p>{{ invoice.billing.address_2 }}</p>{% endif %}
@@ -74,10 +74,10 @@
 <table class="items">
   <thead>
     <tr>
-      <th>Item</th>
-      <th class="text-right">Qty</th>
-      <th class="text-right">Price</th>
-      <th class="text-right">Total</th>
+      <th>{{ __('Item') }}</th>
+      <th class="text-right">{{ __('Qty') }}</th>
+      <th class="text-right">{{ __('Price') }}</th>
+      <th class="text-right">{{ __('Total') }}</th>
     </tr>
   </thead>
   <tbody>
@@ -95,11 +95,11 @@
 </table>
 
 <table class="totals">
-  <tr><td class="label">Subtotal</td><td class="value">{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
-  <tr><td class="label">Shipping</td><td class="value">{{ invoice.shipping|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr><td class="label">{{ __('Subtotal') }}</td><td class="value">{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr><td class="label">{{ __('Shipping') }}</td><td class="value">{{ invoice.shipping|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
   <tr>
     <td class="label">
-      Included VAT
+      {{ __('Included VAT') }}
       {% if invoice.tax_regime|default('normal_vat') == 'normal_vat' %}
       ({{ invoice.tax_rate|default(0)|number_format(2, '.', ',') }}%)
       {% endif %}
@@ -110,22 +110,22 @@
   <tr><td class="label" colspan="2" style="font-size:8pt;color:#6b7280;text-align:right;">{{ invoice.tax_zero_reason }}</td></tr>
   {% endif %}
   {% if invoice.discount|default(0) > 0 %}
-  <tr style="color:#16a34a;"><td class="label">Discount</td><td class="value">-{{ invoice.discount|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr style="color:#16a34a;"><td class="label">{{ __('Discount') }}</td><td class="value">-{{ invoice.discount|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
   {% endif %}
-  <tr class="total"><td class="label">{{ order.status in ['processing','completed','shipped'] ? 'Paid Total' : 'Total' }}</td><td class="value">{{ invoice.total|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
+  <tr class="total"><td class="label">{{ order.status in ['processing','completed','shipped'] ? __('Paid Total') : __('Total') }}</td><td class="value">{{ invoice.total|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>
 </table>
 
 {% if invoice.refunds|default([])|length > 0 %}
 <div class="refunds">
   {% for ref in invoice.refunds %}
-  <div>Refund{% if ref.refund_id %} ({{ ref.refund_id }}){% endif %}: -{{ ref.amount|number_format(2, '.', ',') }} {{ ref.currency }}</div>
+  <div>{{ __('Refund') }}{% if ref.refund_id %} ({{ ref.refund_id }}){% endif %}: -{{ ref.amount|number_format(2, '.', ',') }} {{ ref.currency }}</div>
   {% endfor %}
-  <div style="font-weight:bold;margin-top:4pt;">Net Paid: {{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</div>
+  <div style="font-weight:bold;margin-top:4pt;">{{ __('Net Paid') }}: {{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</div>
 </div>
 {% endif %}
 
 <div class="footer">
-  {{ invoice.shop.company_name|default('') }} &mdash; Thank you for your business.
+  {{ invoice.shop.company_name|default('') }} &mdash; {{ __('Thank you for your business.') }}
 </div>
 
 </body>

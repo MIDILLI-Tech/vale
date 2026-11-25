@@ -12,7 +12,8 @@
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">
             <span class="inline-flex items-center gap-1.5">
                 {% set sc = {draft: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400', sent: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400', sending: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400', scheduled: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400', queued: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400', processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400'} %}
-                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[campaign.status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ campaign.status|capitalize }}</span>
+                {% set status_labels = {draft: __('Draft'), sent: __('Sent'), sending: __('Sending'), scheduled: __('Scheduled'), queued: __('Queued'), processing: __('Processing')} %}
+                <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[campaign.status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ status_labels[campaign.status]|default(campaign.status|capitalize) }}</span>
                 {% set t = campaign.trackingEnabled|default(3) %}
                 {% if t b-and 1 or t b-and 2 %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -90,14 +91,15 @@
                 <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.name|default('—') }}</td>
                 <td class="whitespace-nowrap px-6 py-4">
                     {% set sc = {active: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400', pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400', unsubscribed: 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 dark:text-gray-400'} %}
-                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[r.subscriber_status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ r.subscriber_status|capitalize }}</span>
+                    {% set subscriber_status_labels = {active: __('Active'), pending: __('Pending'), unsubscribed: __('Unsubscribed')} %}
+                    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[r.subscriber_status]|default('bg-gray-100 dark:bg-gray-800') }}">{{ subscriber_status_labels[r.subscriber_status]|default(r.subscriber_status|capitalize) }}</span>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.sent_at ? r.sent_at|date('Y-m-d H:i') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.opened_at ? r.opened_at|date('Y-m-d H:i') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ r.clicks_count ?: '—' }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">{{ __('No recipients recorded yet.') }}</td></tr>
+            <tr><td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">{{ __('No recipients recorded yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

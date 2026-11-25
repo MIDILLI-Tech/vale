@@ -25,7 +25,7 @@
 
 {# Status tabs #}
 <div class="mb-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-    {% set tab_statuses = [['', 'All', counts.all], ['pending', 'Pending', counts.pending], ['approved', 'Approved', counts.approved], ['spam', 'Spam', counts.spam]] %}
+    {% set tab_statuses = [['', __('All'), counts.all], ['pending', __('Pending'), counts.pending], ['approved', __('Approved'), counts.approved], ['spam', __('Spam'), counts.spam]] %}
     {% for tab in tab_statuses %}
     {% set tab_url = url('/admin/comments') ~ (filters.entity_type|default('') ? '?entity_type=' ~ filters.entity_type : '') %}
     {% set tab_url = tab[0] ? tab_url ~ (filters.entity_type|default('') ? '&' : '?') ~ 'status=' ~ tab[0] : tab_url %}
@@ -43,7 +43,7 @@
         <select name="entity_type" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm" onchange="this.form.submit()">
             <option value="">{{ __('All Types') }}</option>
             {% for slug, name in entityTypeOptions %}
-                <option value="{{ slug }}" {{ filters.entity_type|default('') == slug ? 'selected' }}>{{ name }}</option>
+                <option value="{{ slug }}" {{ filters.entity_type|default('') == slug ? 'selected' }}>{{ __(name) }}</option>
             {% endfor %}
         </select>
         <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">{{ __('Filter') }}</button>
@@ -89,8 +89,9 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4">
                     {% set status_colors = {pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', approved: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', spam: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300', trash: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'} %}
+                    {% set status_labels = {pending: __('Pending'), approved: __('Approved'), spam: __('Spam'), trash: __('Trash')} %}
                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ status_colors[c.status]|default('bg-gray-100') }}">
-                        {{ c.status|capitalize }}
+                        {{ status_labels[c.status]|default(c.status|capitalize) }}
                     </span>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-xs text-gray-400">{{ c.createdAt|date('Y-m-d H:i') }}</td>
@@ -121,7 +122,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="6" class="px-6 py-12 text-center text-gray-400">{{ is_reviews ? __('No reviews found.') : __('No comments found.') }}</td></tr>
+            <tr><td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">{{ is_reviews ? __('No reviews found.') : __('No comments found.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

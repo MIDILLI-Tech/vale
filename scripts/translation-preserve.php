@@ -91,6 +91,8 @@ return [
     'Refund Request (Customer)',
     'Refund Request (Admin)',
     'Refund Reviewed',
+    'Refund Auto-Approved',
+    'Scheduled Task Report',
     'Low Stock Warning',
     'Subscription Welcome',
     'Subscription Cancelled',
@@ -109,6 +111,47 @@ return [
     'Dark theme for Vale - demonstrates how to build a child theme.',
     'Premium \'Elegant Tech\' theme for marketing agencies and high-end portfolios. Features glassmorphism, neon accents, and high-impact typography.',
     'Bold magazine-style theme - emerald accents, full-width grid blog, immersive post hero. Drop-in demo of a complete custom theme.',
+
+    // ── Mail subjects built with translator?->get() (not matched by the extractor) ──
+    'Refund Auto-Approved — Order #:number',
+
+    // ── Fallback-language notice sentences (partials/_fallback_notice.twig + nova layout, rendered via __(_fallback_*_key)) ──
+    'This post is also available in :language.',
+    'This post is only available in :language.',
+    'This page is also available in :language.',
+    'This page is only available in :language.',
+    'This product is also available in :language.',
+    'This product is only available in :language.',
+    'This form is also available in :language.',
+    'This form is only available in :language.',
+    'This content is also available in :language.',
+    'This content is only available in :language.',
+
+    // ── Membership interval labels (MembershipPlan::intervalLabel(), rendered via __(plan.intervalLabel)) ──
+    'Per Day',
+    'Per Week',
+    'Per Month',
+    'Per Year',
+
+    // ── Mail template labels (MailController::templateLabel(), rendered via __(tpl.label)) ──
+    'Abandoned cart',
+    'Comment notification admin',
+    'Comment reply',
+    'Email changed',
+    'Email verify',
+    'Layout (Base)',
+    'Order Note (Admin)',
+    'Payment claim admin',
+    'Payment link',
+    'Refund request admin',
+    'Refund request auto approved',
+    'Refund request customer',
+    'Refund request reviewed',
+    'Review notification admin',
+    'Stock warning admin',
+    'Subscription cancelled',
+    'Subscription welcome',
+    'Tracking update',
 
     // ── Coupon error messages (returned from CouponValidator / admin validateAmount,
     //    translated dynamically via translator->get($result['error'])) ──

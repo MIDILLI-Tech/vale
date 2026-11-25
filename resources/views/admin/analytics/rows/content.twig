@@ -6,7 +6,7 @@
 </a>
 {% elseif mode == 'post' %}
 <a href="{{ url('/admin/posts/' ~ row.id ~ '/edit') }}"
-   class="grid grid-cols-[minmax(0,1fr)_5.5rem_3rem] items-center gap-2 text-sm rounded-sm px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+   class="grid grid-cols-[minmax(0,1fr)_5.5rem_5.25rem] items-center gap-2 text-sm rounded-sm px-1 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
     <span class="truncate text-gray-700 dark:text-gray-300" title="{{ row.title }}">{{ row.title }}</span>
     <span class="tabular-nums text-xs text-gray-400 text-right whitespace-nowrap">
         {% set pdur = row.avg_duration|default(0)|round(0) %}

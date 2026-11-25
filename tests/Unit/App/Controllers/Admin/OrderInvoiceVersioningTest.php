@@ -140,7 +140,9 @@ final class OrderInvoiceVersioningTest extends TestCase
         );
 
         $translator = $this->createStub(Translator::class);
-        $translator->method('get')->willReturnCallback(static fn (string $key): string => $key);
+        $translator->method('get')->willReturnCallback(
+            static fn (string $key, array $params = []): string => strtr($key, $params),
+        );
 
         $collaborators = $this->makeOrderCollaborators(
             $orders,

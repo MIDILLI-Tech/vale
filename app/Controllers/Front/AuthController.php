@@ -176,7 +176,7 @@ class AuthController
                 $this->session->remove('redirect_after_login');
             }
 
-            $this->session->flash('success', 'Account created! Welcome aboard.');
+            $this->session->flash('success', __('Account created! Welcome aboard.'));
             $target = $redirect !== '' ? $redirect : ($this->settings->get('routing_account_prefix', '/account') ?: '/account');
             if (!$this->isSafeInternalUrl($target)) {
                 $target = $this->settings->get('routing_account_prefix', '/account') ?: '/account';
@@ -247,9 +247,9 @@ class AuthController
             $redirect = trim($body['redirect'] ?? '');
 
             if ($user->getEmailVerifiedAt() !== null) {
-                $this->session->flash('success', 'Account created! You can now log in.');
+                $this->session->flash('success', __('Account created! You can now log in.'));
             } else {
-                $this->session->flash('success', 'Account created! Please check your email to verify your address before logging in.');
+                $this->session->flash('success', __('Account created! Please check your email to verify your address before logging in.'));
             }
 
             $target = site_url('/login');
@@ -507,7 +507,7 @@ class AuthController
             // silent
         }
 
-        $this->session->flash('success', 'Email verified! You can now log in.');
+        $this->session->flash('success', __('Email verified! You can now log in.'));
         return $response->withHeader('Location', site_url('/login'))->withStatus(302);
     }
 

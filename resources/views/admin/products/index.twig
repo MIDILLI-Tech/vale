@@ -9,7 +9,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Products') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><span x-text="visibleCount"></span> products</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-text="tjs(':count products', {':count': visibleCount})"></p>
     </div>
     <a href="{{ url('/admin/products/create') }}"
        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ {{ __('Add Product') }}</a>
@@ -127,7 +127,7 @@
                 </td>
                 <td class="px-2 py-4 text-center text-sm dark:text-gray-300">
                     {{ p.stockQuantity }}
-                    <span class="block text-xs text-gray-400 dark:text-gray-500">{{ p.stockStatus|replace({'_': ' '})|capitalize }}</span>
+                    <span class="block text-xs text-gray-400 dark:text-gray-500">{{ p.stockStatus == 'out_of_stock' ? __('Out of Stock') : (p.stockStatus in ['on_backorder', 'backorder'] ? __('On Backorder') : __('In Stock')) }}</span>
                 </td>
                 <td class="px-2 py-4 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-400">
                     {% if p.totalSold %}
@@ -173,7 +173,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="{{ multi_language_content ? 12 : 11 }}" class="px-6 py-12 text-center text-gray-400 dark:text-gray-500">{{ __('No products yet.') }}</td></tr>
+            <tr><td colspan="{{ multi_language_content ? 12 : 11 }}" class="px-6 py-12 text-center text-sm text-gray-400 dark:text-gray-500">{{ __('No products yet.') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

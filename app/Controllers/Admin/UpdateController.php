@@ -128,11 +128,11 @@ final class UpdateController
         }
 
         if ($manifest === null) {
-            $this->session->flash('error', 'Could not reach the update server. Check UPDATE_MANIFEST_URL in .env.');
+            $this->session->flash('error', $this->translator->get('Could not reach the update server. Check UPDATE_MANIFEST_URL in .env.'));
         } elseif ($this->updater->isUpdateAvailable()) {
-            $this->session->flash('success', 'Update available: v' . $this->updater->getAvailableVersion());
+            $this->session->flash('success', $this->translator->get('Update available: v:version', [':version' => $this->updater->getAvailableVersion()]));
         } else {
-            $this->session->flash('success', 'You are running the latest version.');
+            $this->session->flash('success', $this->translator->get('You are running the latest version.'));
         }
 
         return $response
@@ -147,7 +147,7 @@ final class UpdateController
         $manifest = $this->updater->getCachedManifest();
 
         if ($manifest === null || !$this->updater->isUpdateAvailable()) {
-            $this->session->flash('error', 'No update is available. Run "Check now" first.');
+            $this->session->flash('error', $this->translator->get('No update is available. Run "Check now" first.'));
             return $response->withHeader('Location', '/admin/update')->withStatus(302);
         }
 
@@ -155,7 +155,7 @@ final class UpdateController
         $expectedSha256 = $manifest['sha256']       ?? '';
 
         if ($downloadUrl === '') {
-            $this->session->flash('error', 'Manifest does not contain a download_url.');
+            $this->session->flash('error', $this->translator->get('Manifest does not contain a download_url.'));
             return $response->withHeader('Location', '/admin/update')->withStatus(302);
         }
 
@@ -165,7 +165,7 @@ final class UpdateController
         }
 
         if (!$this->manifestHasSha256($manifest)) {
-            $this->session->flash('error', 'Update manifest SHA-256 is missing or invalid. Installation is blocked.');
+            $this->session->flash('error', $this->translator->get('Update manifest SHA-256 is missing or invalid. Installation is blocked.'));
             return $response->withHeader('Location', '/admin/update')->withStatus(302);
         }
 
@@ -192,7 +192,7 @@ final class UpdateController
             }
             $this->session->flash('success', $msg);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Update failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Update failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', '/admin/update')->withStatus(302);
@@ -217,7 +217,7 @@ final class UpdateController
             if ($isAjax) {
                 return $this->jsonResponse($response, ['ok' => false, 'error' => 'BackupService is not configured.']);
             }
-            $this->session->flash('error', 'BackupService is not configured.');
+            $this->session->flash('error', $this->translator->get('BackupService is not configured.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
@@ -225,7 +225,7 @@ final class UpdateController
             $body      = (array) ($request->getParsedBody() ?? []);
             $quick     = !empty($body['quick']);
             $backupDir = $this->backupService->createBackup($this->updater->getCurrentVersion(), $quick);
-            $this->session->flash('success', 'Backup created: ' . basename($backupDir));
+            $this->session->flash('success', $this->translator->get('Backup created: :name', [':name' => basename($backupDir)]));
             if ($isAjax) {
                 return $this->jsonResponse($response, ['ok' => true, 'dir' => basename($backupDir), 'quick' => $quick]);
             }
@@ -233,7 +233,7 @@ final class UpdateController
             if ($isAjax) {
                 return $this->jsonResponse($response, ['ok' => false, 'error' => $e->getMessage()]);
             }
-            $this->session->flash('error', 'Backup failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Backup failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
@@ -256,15 +256,15 @@ final class UpdateController
             : 'all';
 
         if ($backupDir !== '' && !$this->isAllowedBackupDir($backupDir)) {
-            $this->session->flash('error', 'Invalid backup directory.');
+            $this->session->flash('error', $this->translator->get('Invalid backup directory.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
         try {
             $this->updater->rollback($backupDir, $restoreType);
-            $this->session->flash('success', 'Rollback completed successfully.');
+            $this->session->flash('success', $this->translator->get('Rollback completed successfully.'));
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Rollback failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Rollback failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
@@ -275,12 +275,12 @@ final class UpdateController
         $backupDir = $request->getQueryParams()['backup_dir'] ?? '';
 
         if ($backupDir === '' || !$this->isAllowedBackupDir($backupDir)) {
-            $this->session->flash('error', 'Invalid backup directory.');
+            $this->session->flash('error', $this->translator->get('Invalid backup directory.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
         if ($this->backupService === null || !is_dir($backupDir)) {
-            $this->session->flash('error', 'Backup not found.');
+            $this->session->flash('error', $this->translator->get('Backup not found.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
@@ -296,7 +296,7 @@ final class UpdateController
                 ->withHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
                 ->withBody($psrStream);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Download failed: ' . $e->getMessage());
+            $this->session->flash('error', $this->translator->get('Download failed: :message', [':message' => $e->getMessage()]));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
     }
@@ -312,12 +312,12 @@ final class UpdateController
             : 'all';
 
         if ($backupDir === '' || !$this->isAllowedBackupDir($backupDir)) {
-            $this->session->flash('error', 'Invalid backup directory.');
+            $this->session->flash('error', $this->translator->get('Invalid backup directory.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
         if ($this->backupService === null || !is_dir($backupDir)) {
-            $this->session->flash('error', 'Backup not found.');
+            $this->session->flash('error', $this->translator->get('Backup not found.'));
             return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);
         }
 
@@ -352,9 +352,9 @@ final class UpdateController
                     file_put_contents($metaFile, json_encode($meta, JSON_PRETTY_PRINT));
                 }
             }
-            $this->session->flash('success', 'Backup deleted: ' . basename($backupDir));
+            $this->session->flash('success', $this->translator->get('Backup deleted: :name', [':name' => basename($backupDir)]));
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Delete failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', $this->translator->get('Delete failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', '/admin/update?tab=backups')->withStatus(302);

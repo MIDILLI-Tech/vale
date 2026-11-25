@@ -47,7 +47,9 @@ final class OrderUpdatePaymentMethodTest extends TestCase
         $twig = $this->createStub(Twig::class);
 
         $translator = $this->createStub(Translator::class);
-        $translator->method('get')->willReturnCallback(static fn (string $key, array $replacements = []) => $key);
+        $translator->method('get')->willReturnCallback(
+            static fn (string $key, array $replacements = []) => strtr($key, $replacements)
+        );
 
         $settings = $this->createStub(DbalSettingsRepository::class);
         $settings->method('get')->willReturnCallback(

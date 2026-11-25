@@ -212,6 +212,24 @@
             ":count file(s) not allowed here.": "{{ __(':count file(s) not allowed here.')|e('js') }}",
             ":count file(s) queued.": "{{ __(':count file(s) queued.')|e('js') }}",
             ":count product(s) selected": "{{ __(':count product(s) selected')|e('js') }}",
+            ":count variation(s) selected": "{{ __(':count variation(s) selected')|e('js') }}",
+            ":count campaigns": "{{ __(':count campaigns')|e('js') }}",
+            ":count products": "{{ __(':count products')|e('js') }}",
+            "Variation #:number": "{{ __('Variation #:number')|e('js') }}",
+            "Selected subscribers (:count)": "{{ __('Selected subscribers (:count)')|e('js') }}",
+            "Pick from library": "{{ __('Pick from library')|e('js') }}",
+            "Select Download Files": "{{ __('Select Download Files')|e('js') }}",
+            "Select Download Files (Variation)": "{{ __('Select Download Files (Variation)')|e('js') }}",
+            "Add / Manage files": "{{ __('Add / Manage files')|e('js') }}",
+            "Pick files": "{{ __('Pick files')|e('js') }}",
+            ":count file(s) selected": "{{ __(':count file(s) selected')|e('js') }}",
+            "At least :count characters": "{{ __('At least :count characters')|e('js') }}",
+            "One uppercase letter": "{{ __('One uppercase letter')|e('js') }}",
+            "One lowercase letter": "{{ __('One lowercase letter')|e('js') }}",
+            "One number": "{{ __('One number')|e('js') }}",
+            "One special character": "{{ __('One special character')|e('js') }}",
+            "Passwords match": "{{ __('Passwords match')|e('js') }}",
+            "Passwords do not match.": "{{ __('Passwords do not match.')|e('js') }}",
             "Show more (:count remaining)": "{{ __('Show more (:count remaining)')|e('js') }}",
             ":count more file(s) failed.": "{{ __(':count more file(s) failed.')|e('js') }}",
             "You don't have permission to upload files.": "{{ __('You don\'t have permission to upload files.')|e('js') }}",
@@ -1678,10 +1696,10 @@
                     || '';
             },
             get previewTitle() {
-                return this.metaTitle || this.liveTitle || 'Untitled';
+                return this.metaTitle || this.liveTitle || {{ __('Untitled')|json_encode|raw }};
             },
             get previewDesc() {
-                return this.metaDesc || this.liveDesc || 'No description set';
+                return this.metaDesc || this.liveDesc || {{ __('No description set')|json_encode|raw }};
             },
             get titleLen() {
                 return String(this.metaTitle || '').length;

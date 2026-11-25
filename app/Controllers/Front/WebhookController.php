@@ -375,7 +375,7 @@ final class WebhookController
             $this->orderLogs?->add(
                 $order->getId(),
                 'payment_received',
-                'Payment confirmed via ' . ucfirst($gatewayName) . '. Transaction: ' . ($event['payment_id'] ?? 'n/a')
+                __('Payment confirmed via :gateway. Transaction: :transaction', [':gateway' => ucfirst($gatewayName), ':transaction' => $event['payment_id'] ?? 'n/a'])
             );
 
             // Fire outbound webhook event
@@ -389,7 +389,7 @@ final class WebhookController
             $this->orderLogs?->add(
                 $order->getId(),
                 'payment_failed',
-                'Payment failed reported by ' . ucfirst($gatewayName) . '.'
+                __('Payment failed reported by :gateway.', [':gateway' => ucfirst($gatewayName)])
             );
 
             // Return the coupon use — nothing was purchased. The atomic

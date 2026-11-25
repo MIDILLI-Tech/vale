@@ -865,7 +865,10 @@ final class CheckoutController
         $this->orderLogs?->add(
             $order->getId(),
             'order_created',
-            'Order placed via checkout. Awaiting payment via ' . $gateway . '.'
+            $this->translator->get(
+                'Order placed via checkout. Awaiting payment via :gateway.',
+                [':gateway' => $this->gatewayLabel($gateway)]
+            )
         );
 
         $this->session->set('pending_order_id', $order->getId());
@@ -919,7 +922,7 @@ final class CheckoutController
                 $order->getOrderNumber(),
                 $e->getMessage()
             ));
-            $this->session->set('flash_error', 'Payment initialization failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->set('flash_error', $this->translator->get('Payment initialization failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
         }
 
@@ -934,7 +937,7 @@ final class CheckoutController
         }
 
         if (empty($paymentData['client_secret'])) {
-            $this->session->set('flash_error', 'Payment initialization failed: no redirect URL and no client secret returned from gateway.');
+            $this->session->set('flash_error', $this->translator->get('Payment initialization failed: no redirect URL and no client secret returned from gateway.'));
             return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
         }
 
@@ -1164,7 +1167,7 @@ final class CheckoutController
                 && $sessionEmail === $orderEmail;
 
             if (!$matchesOwnGuestOrder) {
-                $this->session->flash('error', 'You do not have permission to view this order.');
+                $this->session->flash('error', $this->translator->get('You do not have permission to view this order.'));
                 return $response->withHeader('Location', site_url($shopPrefix))->withStatus(302);
             }
         }
@@ -1237,13 +1240,13 @@ final class CheckoutController
                         $this->orderLogs?->add(
                             $order->getId(),
                             'payment_received',
-                            'Stripe payment confirmed. Transaction: ' . $result['transaction_id']
+                            $this->translator->get('Stripe payment confirmed. Transaction: :transaction', [':transaction' => $result['transaction_id']])
                         );
                         $this->events->doAction('order.paid', $order);
                         $justPaid = true;
                     }
                 } catch (\Throwable $e) {
-                    $this->session->set('flash_error', 'Stripe verification failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+                    $this->session->set('flash_error', $this->translator->get('Stripe verification failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
                 }
             }
         }
@@ -1263,7 +1266,7 @@ final class CheckoutController
                         $this->orderLogs?->add(
                             $order->getId(),
                             'payment_received',
-                            'PayPal payment confirmed. Transaction: ' . $result['transaction_id']
+                            $this->translator->get('PayPal payment confirmed. Transaction: :transaction', [':transaction' => $result['transaction_id']])
                         );
                         $this->events->doAction('order.paid', $order);
                         $justPaid = true;
@@ -1297,7 +1300,7 @@ final class CheckoutController
                         $this->orderLogs?->add(
                             $order->getId(),
                             'payment_received',
-                            'Checkout.com payment confirmed. Transaction: ' . $result['transaction_id']
+                            $this->translator->get('Checkout.com payment confirmed. Transaction: :transaction', [':transaction' => $result['transaction_id']])
                         );
                         $this->events->doAction('order.paid', $order);
                         $justPaid = true;
@@ -1434,6 +1437,30 @@ final class CheckoutController
         }
 
         return '';
+    }
+
+    private function gatewayLabel(string $gateway): string
+    {
+        $defaults = [
+            'stripe'       => 'Credit / Debit Card',
+            'paypal'       => 'PayPal',
+            'mollie'       => 'Credit / Debit Card',
+            'twocheckout'  => 'Credit / Debit Card',
+            'checkoutcom'  => 'Credit / Debit Card',
+            'banktransfer' => 'Bank Transfer / EFT',
+        ];
+
+        if (isset($defaults[$gateway])) {
+            $label = trim((string) ($this->settings->get($gateway . '_label', $defaults[$gateway]) ?? ''));
+            if ($label !== '') {
+                return $label;
+            }
+        }
+
+        $refData = require dirname(__DIR__, 3) . '/config/reference-data.php';
+        $name    = $refData['signup_urls']['payment_gateways'][$gateway]['name'] ?? null;
+
+        return is_string($name) && $name !== '' ? $name : ucfirst($gateway);
     }
 
     /** @return array{regime:string,rate:float,zero_reason:string,display_mode:string} */
@@ -1771,7 +1798,10 @@ final class CheckoutController
             $effects->syncDownloadRevocation($order, 'refunded');
             $effects->syncCouponUsage($order, $oldStatus, 'refunded');
 
-            $note = 'Auto-accepted digital refund request (no files downloaded).' . ($reason !== '' ? ' Customer reason: ' . $reason : '');
+            $note = $this->translator->get('Auto-accepted digital refund request (no files downloaded).');
+            if ($reason !== '') {
+                $note .= ' ' . $this->translator->get('Customer reason: :reason', [':reason' => $reason]);
+            }
             $this->orderLogs?->add($order->getId(), 'refund_request_approved', $note, 'system', null, 'System');
 
             if (in_array($oldStatus, OrderStatus::PAID, true)) {
@@ -1791,9 +1821,11 @@ final class CheckoutController
         $order->setStatus('refund_requested');
         $this->orders->save($order);
 
-        $note = $reason !== '' ? ('Customer reason: ' . $reason) : 'Customer requested cancellation/refund review.';
+        $note = $reason !== ''
+            ? $this->translator->get('Customer reason: :reason', [':reason' => $reason])
+            : $this->translator->get('Customer requested cancellation/refund review.');
         if ($summary['has_non_refundable']) {
-            $note .= ' Note: Order contains non-refundable items: ' . implode('; ', $summary['reasons']);
+            $note .= ' ' . $this->translator->get('Note: Order contains non-refundable items: :items', [':items' => implode('; ', $summary['reasons'])]);
         }
 
         $this->orderLogs?->add($order->getId(), 'refund_requested', $note, 'system', null, 'Customer');
@@ -1940,7 +1972,7 @@ final class CheckoutController
             $this->orderLogs?->add(
                 $order->getId(),
                 'customer_claimed_payment',
-                'Customer marked the bank transfer as sent.',
+                $this->translator->get('Customer marked the bank transfer as sent.'),
                 'customer',
                 null,
                 'Customer'
@@ -1993,7 +2025,7 @@ final class CheckoutController
                 $this->orderLogs?->add(
                     $order->getId(),
                     'status_changed',
-                    'Payment not completed - customer left the payment page.'
+                    $this->translator->get('Payment not completed - customer left the payment page.')
                 );
 
                 // Return the coupon use — nothing was purchased. The atomic

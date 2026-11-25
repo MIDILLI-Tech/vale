@@ -78,7 +78,7 @@ final class MembershipCheckoutController
         $planId = (int) ($args['id'] ?? 0);
         $plan   = $this->plans->findById($planId);
         if ($plan === null || !$plan->isActive()) {
-            $this->session->flash('error', 'Plan not found.');
+            $this->session->flash('error', __('Plan not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -109,14 +109,14 @@ final class MembershipCheckoutController
                     $this->subscribers->save($subscriber);
                 }
             } else {
-                $this->session->flash('error', 'User not found.');
+                $this->session->flash('error', __('User not found.'));
                 return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
             }
         }
 
         $existingSub = $this->subscriptionService->findActiveByUserId((int) $userId);
         if ($existingSub !== null) {
-            $this->session->flash('error', 'You already have an active subscription.');
+            $this->session->flash('error', __('You already have an active subscription.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -144,7 +144,7 @@ final class MembershipCheckoutController
 
         $plan = $this->plans->findById($planId);
         if ($plan === null || !$plan->isActive()) {
-            $this->session->flash('error', 'Plan not found.');
+            $this->session->flash('error', __('Plan not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -155,13 +155,13 @@ final class MembershipCheckoutController
 
         $subscriber = $this->subscribers->findByUserId((int) $userId);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', __('Subscriber not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
         $user = $this->fetchUser((int) $userId);
         if ($user === null) {
-            $this->session->flash('error', 'User not found.');
+            $this->session->flash('error', __('User not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -226,7 +226,7 @@ final class MembershipCheckoutController
         $sessionId = $request->getQueryParams()['session_id'] ?? '';
         error_log('[Membership] Stripe return: session_id=' . $sessionId);
         if ($sessionId === '') {
-            $this->session->flash('error', 'Stripe session ID missing.');
+            $this->session->flash('error', __('Stripe session ID missing.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -237,19 +237,19 @@ final class MembershipCheckoutController
 
         $planId = (int) ($this->session->get('stripe_pending_plan_id', 0));
         if ($planId === 0) {
-            $this->session->flash('error', 'Session expired. Please try again.');
+            $this->session->flash('error', __('Session expired. Please try again.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
         $plan = $this->plans->findById($planId);
         if ($plan === null) {
-            $this->session->flash('error', 'Plan not found.');
+            $this->session->flash('error', __('Plan not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
         $subscriber = $this->subscribers->findByUserId((int) $userId);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', __('Subscriber not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -326,7 +326,7 @@ final class MembershipCheckoutController
             $this->orderLogs?->add(
                 $orderId,
                 'order_created',
-                'Subscription created via Stripe Checkout.',
+                __('Subscription created via Stripe Checkout.'),
                 'system',
                 (int) $userId,
                 $user['username'] ?? '',
@@ -344,10 +344,10 @@ final class MembershipCheckoutController
 
             $this->session->set('stripe_pending_plan_id', null);
             $this->clearMembershipCouponSession($planId);
-            $this->session->flash('success', 'Subscription created successfully!');
+            $this->session->flash('success', __('Subscription created successfully!'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Stripe subscription failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('Stripe subscription failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
     }
@@ -369,13 +369,13 @@ final class MembershipCheckoutController
 
         $planId = (int) ($this->session->get('paypal_pending_plan_id', 0));
         if ($planId === 0) {
-            $this->session->flash('error', 'Session expired. Please try again.');
+            $this->session->flash('error', __('Session expired. Please try again.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
         $plan = $this->plans->findById($planId);
         if ($plan === null) {
-            $this->session->flash('error', 'Plan not found.');
+            $this->session->flash('error', __('Plan not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -383,7 +383,7 @@ final class MembershipCheckoutController
         if ($plan->getInterval() === 'one_time') {
             $paymentId = $params['paymentId'] ?? $token;
             if ($paymentId === '') {
-                $this->session->flash('error', 'PayPal payment ID missing.');
+                $this->session->flash('error', __('PayPal payment ID missing.'));
                 return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
             }
             return $this->paypalOneTimeReturn($request, $response, $paymentId);
@@ -391,13 +391,13 @@ final class MembershipCheckoutController
 
         $agreementToken = $token !== '' ? $token : $baToken;
         if ($agreementToken === '') {
-            $this->session->flash('error', 'PayPal return token missing.');
+            $this->session->flash('error', __('PayPal return token missing.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
         $subscriber = $this->subscribers->findByUserId((int) $userId);
         if ($subscriber === null) {
-            $this->session->flash('error', 'Subscriber not found.');
+            $this->session->flash('error', __('Subscriber not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -467,7 +467,7 @@ final class MembershipCheckoutController
             $this->orderLogs?->add(
                 $orderId,
                 'order_created',
-                'Subscription created via PayPal.',
+                __('Subscription created via PayPal.'),
                 'system',
                 (int) $userId,
                 $user['username'] ?? '',
@@ -485,10 +485,10 @@ final class MembershipCheckoutController
 
             $this->session->set('paypal_pending_plan_id', null);
             $this->clearMembershipCouponSession($planId);
-            $this->session->flash('success', 'PayPal subscription created successfully!');
+            $this->session->flash('success', __('PayPal subscription created successfully!'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'PayPal subscription failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('PayPal subscription failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
     }
@@ -500,7 +500,7 @@ final class MembershipCheckoutController
 
         $plan = $this->plans->findById($planId);
         if ($plan === null) {
-            $this->session->flash('error', 'Plan not found.');
+            $this->session->flash('error', __('Plan not found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -509,7 +509,7 @@ final class MembershipCheckoutController
         if ($this->subscriptionService->findByGatewayId($gatewaySubId) !== null) {
             $this->session->set('paypal_pending_plan_id', null);
             $this->clearMembershipCouponSession($planId);
-            $this->session->flash('info', 'Life-time membership is already active.');
+            $this->session->flash('info', __('Life-time membership is already active.'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         }
 
@@ -573,10 +573,10 @@ final class MembershipCheckoutController
 
             $this->session->set('paypal_pending_plan_id', null);
             $this->clearMembershipCouponSession($planId);
-            $this->session->flash('success', 'Life-time membership active!');
+            $this->session->flash('success', __('Life-time membership active!'));
             return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'PayPal payment failed: ' . $e->getMessage());
+            $this->session->flash('error', __('PayPal payment failed: :message', [':message' => $e->getMessage()]));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
     }
@@ -586,7 +586,7 @@ final class MembershipCheckoutController
         $userId = $this->session->get('user_id');
 
         if ($request->getMethod() === 'GET') {
-            $this->session->flash('info', 'Subscription checkout cancelled.');
+            $this->session->flash('info', __('Subscription checkout cancelled.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -596,7 +596,7 @@ final class MembershipCheckoutController
 
         $sub = $this->subscriptionService->findActiveByUserId((int) $userId);
         if ($sub === null) {
-            $this->session->flash('error', 'No active subscription found.');
+            $this->session->flash('error', __('No active subscription found.'));
             return $response->withHeader('Location', $this->membershipPrefix())->withStatus(302);
         }
 
@@ -623,7 +623,7 @@ final class MembershipCheckoutController
                 $this->orderLogs?->add(
                     (int) $orderRow['id'],
                     'subscription_cancelled',
-                    'Cancelled by user.',
+                    __('Cancelled by user.'),
                     'user',
                     (int) $userId,
                     $user['username'] ?? '',
@@ -633,9 +633,9 @@ final class MembershipCheckoutController
             $expiresAt = !empty($sub['expires_at']) ? (new \DateTimeImmutable($sub['expires_at']))->format('Y-m-d') : null;
             $this->sendSubscriptionMail('cancelled', (int) $userId, $sub['plan_name'] ?? 'Membership', $expiresAt);
 
-            $this->session->flash('success', 'Subscription will be cancelled at the end of the billing period.');
+            $this->session->flash('success', __('Subscription will be cancelled at the end of the billing period.'));
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Failed to cancel subscription: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('Failed to cancel subscription: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
         }
 
         return $response->withHeader('Location', $this->accountPrefix() . '/subscription')->withStatus(302);
@@ -722,7 +722,7 @@ final class MembershipCheckoutController
 
             return $response->withHeader('Location', $session['url'])->withStatus(302);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Stripe checkout failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('Stripe checkout failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', $this->membershipPrefix() . '/checkout/' . $planId)->withStatus(302);
         }
     }
@@ -841,7 +841,7 @@ final class MembershipCheckoutController
 
             return $response->withHeader('Location', $agreement['redirect_url'])->withStatus(302);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'PayPal setup failed: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+            $this->session->flash('error', __('PayPal setup failed: :message', [':message' => htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')]));
             return $response->withHeader('Location', $this->membershipPrefix() . '/checkout/' . $planId)->withStatus(302);
         }
     }

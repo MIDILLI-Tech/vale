@@ -449,7 +449,7 @@ final class OrderApiController
         $this->orderLogs->add(
             $order->getId(),
             'order_created',
-            'Manual order created via REST API. Initial status: "' . OrderStatus::label($status) . '".',
+            __('Manual order created via REST API. Initial status: ":status".', [':status' => __(OrderStatus::label($status))]),
             'system',
             null,
             self::API_ACTOR,
