@@ -1,4 +1,5 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}{{ __('Campaigns') }}{% endblock %}
@@ -138,40 +139,37 @@
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ c.sentAt ? c.sentAt|date('Y-m-d') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <div class="inline-flex items-center justify-end gap-2">
+                    <div class="inline-flex items-center justify-end gap-1.5">
                         {% if c.status == 'draft' or c.status == 'scheduled' %}
-                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/edit') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
-                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
+                        {{ actions.link(url('/admin/newsletter/campaigns/' ~ c.id ~ '/edit'), 'pencil', __('Edit')) }}
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Send this campaign now to all matching subscribers?')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">{{ __('Send Now') }}</button>
+                            {{ actions.submit('send', __('Send Now'), 'success') }}
                         </form>
                         {% elseif c.status == 'sent' %}
-                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">{{ __('Reports') }}</a>
-                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/resend') }}"
+                        {{ actions.link(url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients'), 'chart', __('Reports'), 'info') }}
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/resend') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Resend this campaign to all matching subscribers? Previous tracking data will be reset.')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-700 hover:bg-green-50 dark:hover:bg-green-900/40">{{ __('Resend') }}</button>
+                            {{ actions.submit('send', __('Resend'), 'success') }}
                         </form>
                         {% elseif c.status == 'queued' or c.status == 'processing' %}
-                        <a href="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">{{ __('Reports') }}</a>
-                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}"
+                        {{ actions.link(url('/admin/newsletter/campaigns/' ~ c.id ~ '/recipients'), 'chart', __('Reports'), 'info') }}
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/send') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Send the next batch of this campaign now? The rest will continue automatically by cron.')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 ring-1 ring-amber-300 dark:ring-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20">{{ __('Resume') }}</button>
+                            {{ actions.submit('play', __('Resume'), 'warning') }}
                         </form>
                         {% endif %}
-                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/clone') }}">
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '/clone') }}" class="inline-flex">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">{{ __('Clone') }}</button>
+                            {{ actions.submit('duplicate', __('Clone'), 'info') }}
                         </form>
-                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '') }}"
+                        <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ c.id ~ '') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Delete campaign?')|e('js') }}')">
                             {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                            {{ actions.submit('trash', __('Delete'), 'danger') }}
                         </form>
                     </div>
                 </td>

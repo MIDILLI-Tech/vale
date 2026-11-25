@@ -1,4 +1,6 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
+{% import "admin/partials/_icons.twig" as icons %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}{{ __('Mail Logs') }}{% endblock %}
@@ -83,14 +85,13 @@
                         {% if log.html_body %}
                         <button type="button"
                                 onclick="var d=this.closest('tbody').querySelector('[data-detail-for=&quot;'+this.closest('tr').dataset.rowId+'&quot;]');if(d)d.style.display=d.style.display==='none'?'':'none'"
-                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-300">
-                            {{ __('Preview') }}
-                        </button>
+                                title="{{ __('Preview') }}" aria-label="{{ __('Preview') }}"
+                                class="{{ actions.classes() }}">{{ icons.icon('eye') }}</button>
                         {% endif %}
-                        <form method="POST" action="{{ url('/admin/mail/logs/' ~ log.id ~ '/delete') }}"
+                        <form method="POST" action="{{ url('/admin/mail/logs/' ~ log.id ~ '/delete') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Delete this log entry?')|e('js') }}')">
                             {{ csrf_field() }}
-                            <button type="submit" class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                            {{ actions.submit('trash', __('Delete'), 'danger') }}
                         </form>
                     </div>
                 </td>

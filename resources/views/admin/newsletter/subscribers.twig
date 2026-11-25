@@ -1,4 +1,6 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
+{% import "admin/partials/_icons.twig" as icons %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}{{ __('Newsletter Subscribers') }}{% endblock %}
@@ -289,27 +291,31 @@
                 {% endif %}
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ s.createdAt|date('Y-m-d') }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-right">
-                    <div class="inline-flex items-center justify-end gap-2">
-                        <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800"
-                                @click="editSub = JSON.parse($el.closest('tr').querySelector('[data-sub]').dataset.sub); editOpen = true">{{ __('Edit') }}</button>
+                    <div class="inline-flex items-center justify-end gap-1.5">
+                        <button type="button"
+                                @click="editSub = JSON.parse($el.closest('tr').querySelector('[data-sub]').dataset.sub); editOpen = true"
+                                title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"
+                                class="{{ actions.classes() }}">{{ icons.icon('pencil') }}</button>
                         {% if subscriptions_enabled and s.subscriptionStatus in ['active', 'cancelling'] %}
                         <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '/terminate') }}" id="term-{{ s.id }}">
                             {{ csrf_field() }}
                             <input type="hidden" name="message" id="term-msg-{{ s.id }}" value="">
                         </form>
-                        <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                onclick="if(confirm('{{ __('Terminate subscription for :email? This will IMMEDIATELY cancel the payment agreement.', {':email': s.email})|e('js') }}')){var m=prompt('{{ __('Optional message to send to the subscriber (or leave empty):')|e('js') }}')||'';document.getElementById('term-msg-{{ s.id }}').value=m;document.getElementById('term-{{ s.id }}').submit()}">{{ __('Terminate') }}</button>
-                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '/cancel') }}"
+                        <button type="button"
+                                title="{{ __('Terminate') }}" aria-label="{{ __('Terminate') }}"
+                                class="{{ actions.classes('danger') }}"
+                                onclick="if(confirm('{{ __('Terminate subscription for :email? This will IMMEDIATELY cancel the payment agreement.', {':email': s.email})|e('js') }}')){var m=prompt('{{ __('Optional message to send to the subscriber (or leave empty):')|e('js') }}')||'';document.getElementById('term-msg-{{ s.id }}').value=m;document.getElementById('term-{{ s.id }}').submit()}">{{ icons.icon('no-symbol') }}</button>
+                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '/cancel') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Cancel subscription for :email? The subscription will remain active until the end of the billing period.', {':email': s.email})|e('js') }}')">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 ring-1 ring-orange-300 dark:ring-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20">{{ __('Cancel') }}</button>
+                            {{ actions.submit('x-circle', __('Cancel'), 'warning') }}
                         </form>
                         {% endif %}
                         {% if s.subscriptionStatus is not defined or s.subscriptionStatus not in ['active', 'cancelling'] %}
-                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '') }}"
+                        <form method="POST" action="{{ url('/admin/newsletter/subscribers/' ~ s.id ~ '') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Remove subscriber?')|e('js') }}')">
                             {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Remove') }}</button>
+                            {{ actions.submit('trash', __('Remove'), 'danger') }}
                         </form>
                         {% endif %}
                     </div>

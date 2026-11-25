@@ -1,4 +1,6 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
+{% import "admin/partials/_icons.twig" as icons %}
 
 {% block title %}{{ __('Menus') }}{% endblock %}
 
@@ -155,18 +157,19 @@
                     {% endif %}
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <div class="inline-flex items-center justify-end gap-2">
+                    <div class="inline-flex items-center justify-end gap-1.5">
                         <button type="button" @click="openEdit({{ menu.id }})"
-                                class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</button>
-                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '/clone') }}">
+                                title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"
+                                class="{{ actions.classes() }}">{{ icons.icon('pencil') }}</button>
+                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '/clone') }}" class="inline-flex">
                             {{ csrf_field() }}
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:bg-gray-800/50 dark:text-gray-400">{{ __('Clone') }}</button>
+                            {{ actions.submit('duplicate', __('Clone'), 'info') }}
                         </form>
-                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '') }}"
+                        <form method="post" action="{{ url('/admin/menus/' ~ menu.id ~ '') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Are you sure?')|e('js') }}')">
                             {{ csrf_field() }}
                             <input type="hidden" name="_METHOD" value="DELETE">
-                            <button class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                            {{ actions.submit('trash', __('Delete'), 'danger') }}
                         </form>
                     </div>
                 </td>

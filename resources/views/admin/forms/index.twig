@@ -1,4 +1,5 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}{{ __('Forms') }}{% endblock %}
@@ -69,24 +70,18 @@
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.createdAt ? f.createdAt|local_date('medium') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">{{ f.updatedAt ? f.updatedAt|local_date('medium') : '—' }}</td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <div class="inline-flex items-center justify-end gap-2">
-                        <a href="{{ absolute_url(url('/form/' ~ f.slug)) }}" target="_blank" rel="noopener"
-                           title="{{ __('Open form') }}: /form/{{ f.slug|e }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('View') }}</a>
-                        <a href="{{ url('/admin/forms/' ~ f.id ~ '/submissions') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Submissions') }}</a>
-                        <a href="{{ url('/admin/forms/' ~ f.id ~ '/edit') }}"
-                           class="rounded-sm px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 ring-1 ring-gray-300 dark:ring-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 dark:hover:bg-gray-800">{{ __('Edit') }}</a>
-                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '/clone') }}">
+                    <div class="inline-flex items-center justify-end gap-1.5">
+                        {{ actions.link(absolute_url(url('/form/' ~ f.slug)), 'eye', __('View'), 'neutral', {external: true}) }}
+                        {{ actions.link(url('/admin/forms/' ~ f.id ~ '/submissions'), 'inbox', __('Submissions')) }}
+                        {{ actions.link(url('/admin/forms/' ~ f.id ~ '/edit'), 'pencil', __('Edit')) }}
+                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '/clone') }}" class="inline-flex">
                             {{ csrf_field() }}
-                            <button type="submit"
-                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/40">{{ __('Clone') }}</button>
+                            {{ actions.submit('duplicate', __('Clone'), 'info') }}
                         </form>
-                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '') }}"
+                        <form method="POST" action="{{ url('/admin/forms/' ~ f.id ~ '') }}" class="inline-flex"
                               onsubmit="return confirm('{{ __('Delete this form?')|e('js') }}')">
                             {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
-                            <button type="submit"
-                                    class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                            {{ actions.submit('trash', __('Delete'), 'danger') }}
                         </form>
                     </div>
                 </td>

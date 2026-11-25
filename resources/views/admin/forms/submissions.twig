@@ -1,4 +1,5 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}Submissions{{ seo_title_separator }}{{ form.name }}{% endblock %}
@@ -110,10 +111,10 @@
                     {{ s.ipAddress ?? '—' }}
                 </td>
                 <td class="whitespace-nowrap px-6 py-4 text-right text-sm">
-                    <form method="POST" action="{{ url('/admin/forms/' ~ form.id ~ '/submissions/' ~ s.id) }}"
+                    <form method="POST" action="{{ url('/admin/forms/' ~ form.id ~ '/submissions/' ~ s.id) }}" class="inline-flex"
                           onsubmit="return confirm('{{ __('Delete this submission?')|e('js') }}')">
                         {{ csrf_field() }}<input type="hidden" name="_METHOD" value="DELETE">
-                        <button type="submit" class="rounded-sm px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">{{ __('Delete') }}</button>
+                        {{ actions.submit('trash', __('Delete'), 'danger') }}
                     </form>
                 </td>
             </tr>

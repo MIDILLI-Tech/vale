@@ -1,4 +1,6 @@
 {% extends "admin/layout.twig" %}
+{% import "admin/partials/_row_actions.twig" as actions %}
+{% import "admin/partials/_icons.twig" as icons %}
 {% import "admin/partials/_table.twig" as table %}
 
 {% block title %}{{ __('Media') }}{% endblock %}
@@ -137,21 +139,24 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2 mt-2 pt-2 border-t border-white/20">
+            <div class="flex items-center gap-1.5 mt-2 pt-2 border-t border-white/20">
                 {% if _can_upload %}
                 <a href="{{ url('/admin/media/' ~ item.id ~ '/edit') }}"
-                   class="rounded-sm bg-gray-700 px-2 py-1 text-[11px] hover:bg-gray-900">{{ __('Edit') }}</a>
+                   title="{{ __('Edit') }}" aria-label="{{ __('Edit') }}"
+                   class="inline-flex rounded-sm bg-gray-700 p-1.5 text-white hover:bg-gray-900 dark:bg-gray-600 dark:hover:bg-gray-500">{{ icons.icon('pencil', 'h-3.5 w-3.5') }}</a>
                 {% endif %}
                 {% if _can_delete %}
                 <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}"
-                      onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')" class="inline">
+                      onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')" class="inline-flex">
                     {{ csrf_field() }}
                     <input type="hidden" name="_METHOD" value="DELETE">
-                    <button title="{{ __('Delete') }}" class="rounded-sm bg-red-500 dark:bg-red-700 px-2 py-1 text-[11px] hover:bg-red-600 dark:hover:bg-red-800">{{ __('Delete') }}</button>
+                    <button type="submit" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}"
+                            class="inline-flex rounded-sm bg-red-500 p-1.5 text-white hover:bg-red-600 dark:bg-red-900/70 dark:text-red-200 dark:ring-1 dark:ring-inset dark:ring-red-800/70 dark:hover:bg-red-900/90">{{ icons.icon('trash', 'h-4 w-4') }}</button>
                 </form>
                 {% endif %}
                 <button type="button" @click="showInfo = false"
-                        class="ml-auto rounded-sm bg-white dark:bg-gray-900/20 px-2 py-1 text-[11px] text-gray-900 dark:text-white hover:bg-white dark:bg-gray-900/30" title="{{ __('Cancel') }}">✕</button>
+                        title="{{ __('Cancel') }}" aria-label="{{ __('Cancel') }}"
+                        class="ml-auto inline-flex rounded-sm bg-white p-1.5 text-gray-900 hover:bg-gray-100 dark:bg-gray-900/40 dark:text-white dark:hover:bg-gray-900/60">{{ icons.icon('x-mark', 'h-3.5 w-3.5') }}</button>
             </div>
         </div>
 
@@ -161,7 +166,8 @@
                   onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')">
                 {{ csrf_field() }}
                 <input type="hidden" name="_METHOD" value="DELETE">
-                <button title="{{ __('Delete') }}" class="rounded-sm bg-red-600 dark:bg-red-700 px-2 py-0.5 text-xs text-white hover:bg-red-700 dark:hover:bg-red-800">×</button>
+                <button type="submit" title="{{ __('Delete') }}" aria-label="{{ __('Delete') }}"
+                        class="inline-flex rounded-md bg-red-600 p-1.5 text-white shadow-sm hover:bg-red-700 dark:bg-red-900/70 dark:text-red-200 dark:ring-1 dark:ring-inset dark:ring-red-800/70 dark:hover:bg-red-900/90">{{ icons.icon('trash', 'h-4 w-4') }}</button>
             </form>
         </div>
         {% endif %}
@@ -205,18 +211,18 @@
                 <td class="px-6 py-4 text-sm text-gray-500">{{ (item.size / 1024)|round(1) }} KB</td>
                 <td class="px-6 py-4 text-sm text-gray-500">{{ item.createdAt ? item.createdAt|local_date('medium') : '—' }}</td>
                 <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
+                    <div class="flex items-center justify-end gap-1.5">
                         {% include 'admin/components/_copy_button.twig' with {
                             text: site_url ~ '/uploads/' ~ item.path,
                             title: __('Copy URL'),
-                            size: 'h-3.5 w-3.5',
-                            class: 'shrink-0 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300'
+                            size: 'h-4 w-4',
+                            class: actions.classes()
                         } %}
                         {% if _can_delete %}
-                        <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}" onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')">
+                        <form method="post" action="{{ url('/admin/media/' ~ item.id ~ '') }}" class="inline-flex" onsubmit="return confirm('{{ deleteConfirmMsg|e('js') }}')">
                             {{ csrf_field() }}
                             <input type="hidden" name="_METHOD" value="DELETE">
-                            <button title="{{ __('Delete') }}" class="text-red-500 hover:text-red-700">✕</button>
+                            {{ actions.submit('trash', __('Delete'), 'danger') }}
                         </form>
                         {% endif %}
                     </div>
