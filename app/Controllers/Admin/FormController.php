@@ -76,7 +76,7 @@ final class FormController
     {
         $params   = $request->getQueryParams();
         $lang     = $params['language'] ?? null;
-        if ($lang === '') {
+        if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
 
@@ -94,7 +94,7 @@ final class FormController
 
     public function create(Request $request, Response $response): Response
     {
-        $lang          = $request->getQueryParams()['language']       ?? $this->translator->getLocale();
+        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->forms->findTranslations((int) $translationOf) : [];
 

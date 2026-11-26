@@ -292,7 +292,7 @@ final class ProductController
     public function create(Request $request, Response $response): Response
     {
         $referenceData = require dirname(__DIR__, 3) . '/config/reference-data.php';
-        $lang          = $request->getQueryParams()['language']       ?? $this->translator->getLocale();
+        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->products->findTranslations((int) $translationOf) : [];
 

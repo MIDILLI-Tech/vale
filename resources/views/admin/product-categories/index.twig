@@ -54,9 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <div x-data="{
     addOpen: false, addName: '', addSlug: '', addSlugManually: false, addParentId: '', addDescription: '',
-    addLanguage: '{{ current_locale() }}',
+    addLanguage: '{{ default_category_language|e('js') }}',
     editOpen: false, editId: null, editName: '', editSlug: '', editSlugManually: false, editParentId: '', editDescription: '',
-    editLanguage: '{{ current_locale() }}',
+    editLanguage: '{{ default_category_language|e('js') }}',
     editTranslationOf: '',
     addTranslationOf: '',
     addTranslationOfName: '',
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     openAdd() {
         this.addName = ''; this.addSlug = ''; this.addSlugManually = false; this.addParentId = ''; this.addDescription = '';
-        this.addLanguage = '{{ current_locale() }}';
+        this.addLanguage = '{{ default_category_language|e('js') }}';
         this.addTranslationOf = '';
         this.addTranslationOfName = '';
         this.addOpen = true;
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
         this.editSlugManually = slug !== '';
         this.editParentId = parentId != null ? String(parentId) : '';
         this.editDescription = description || '';
-        this.editLanguage = language || '{{ current_locale() }}';
+        this.editLanguage = language || '{{ default_category_language|e('js') }}';
         this.editTranslationOf = translationOf || '';
 
         const rootId = String(this.editTranslationOf || this.editId);
@@ -183,6 +183,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <div class="mb-6 flex flex-wrap items-center gap-3">
     {{ table.search(__('Search') ~ '…') }}
+    {% if multi_language_content %}
+    <select onchange="var u=new window.URL(window.location.href);u.searchParams.set('language',this.value);window.location.href=u.toString()"
+            class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+        <option value="">{{ __('All Languages') }}</option>
+        {% for code, name in supported_locales %}
+            <option value="{{ code }}" {{ filters.language|default('') == code ? 'selected' }}>{{ locale_name(code) }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
 </div>
 
 <div class="overflow-x-auto rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xs">

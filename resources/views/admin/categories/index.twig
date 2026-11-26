@@ -71,10 +71,10 @@ document.addEventListener('DOMContentLoaded', function() {
     addContentType: '{{ defaultCt }}',
     editOpen: false, editId: null, editName: '', editSlug: '', editDescription: '', editParentId: '', editSortOrder: 0, editSlugManually: false,
     editContentType: 'post',
-    addLanguage: '{{ current_locale() }}',
+    addLanguage: '{{ current_locale|default(default_locale) }}',
     addTranslationOf: '',
     addTranslationOfName: '',
-    editLanguage: '{{ current_locale() }}',
+    editLanguage: '{{ current_locale|default(default_locale) }}',
     editTranslationOf: '',
     allCats: {{ catsJson|e('html_attr') }},
     allOriginals: {{ originalsList|json_encode|e('html_attr') }},
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     openAdd() {
         this.addName = ''; this.addSlug = ''; this.addDescription = ''; this.addParentId = ''; this.addSortOrder = 0; this.addSlugManually = false;
         this.addContentType = '{{ defaultCt }}';
-        this.addLanguage = '{{ current_locale() }}';
+        this.addLanguage = '{{ current_locale|default(default_locale) }}';
         this.addTranslationOf = '';
         this.addTranslationOfName = '';
         this.addOpen = true;

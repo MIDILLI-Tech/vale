@@ -107,6 +107,74 @@ final class ShopControllerTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
     }
 
+    public function testIndexRequestsOriginalsFallbackForCategoryTree(): void
+    {
+        $twigEnv = new Environment(new ArrayLoader(['shop/index.twig' => 'Shop']));
+        $twig    = $this->createStub(Twig::class);
+        $twig->method('getEnvironment')->willReturn($twigEnv);
+
+        $responseFactory = new ResponseFactory();
+        $twig->method('render')->willReturn($responseFactory->createResponse());
+
+        $products        = $this->createStub(ProductRepositoryInterface::class);
+        $categories      = $this->createMock(ProductCategoryRepositoryInterface::class);
+        $votes           = $this->createStub(ProductVoteRepositoryInterface::class);
+        $comments        = $this->createStub(CommentRepositoryInterface::class);
+        $session         = $this->createStub(SessionManager::class);
+        $media           = $this->createStub(MediaRepositoryInterface::class);
+        $settings        = $this->createStub(DbalSettingsRepository::class);
+        $seoMeta         = $this->createStub(SeoMetaRepositoryInterface::class);
+        $countryTaxRates = $this->createStub(CountryTaxRateRepositoryInterface::class);
+        $translator      = $this->createStub(Translator::class);
+        $seoState        = new SeoState();
+        $users           = $this->createStub(UserRepositoryInterface::class);
+        $orders          = $this->createStub(OrderRepositoryInterface::class);
+        $subscribers     = $this->createStub(SubscriberRepositoryInterface::class);
+
+        $settings->method('get')->willReturnCallback(static function (string $key, $default = null) {
+            return match ($key) {
+                'multi_language_content'          => '1',
+                'i18n_display_originals_fallback' => '1',
+                default                           => $default,
+            };
+        });
+
+        $products->method('findAll')->willReturn([]);
+        $products->method('count')->willReturn(0);
+
+        $captured = [];
+        $categories->expects(self::once())
+            ->method('findAll')
+            ->willReturnCallback(static function (?string $language = null, bool $fallback = false) use (&$captured): array {
+                $captured = [$language, $fallback];
+                return [];
+            });
+
+        $controller = new ShopController(
+            $twig,
+            $products,
+            $categories,
+            $votes,
+            $comments,
+            $session,
+            $media,
+            $settings,
+            $seoMeta,
+            $countryTaxRates,
+            $translator,
+            $seoState,
+            $users,
+            $orders,
+            new DeliveryEstimateService($settings),
+            $subscribers
+        );
+
+        $request = (new ServerRequestFactory())->createServerRequest('GET', '/en/shop');
+        $controller->index($request, $responseFactory->createResponse());
+
+        self::assertSame(['en', true], $captured);
+    }
+
     public function testIndexPassesVariationPriceRangeForZeroPriceVariableProduct(): void
     {
         $twigEnv    = new Environment(new ArrayLoader(['shop/index.twig' => 'Shop']));

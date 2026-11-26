@@ -35,6 +35,8 @@ class LocaleMiddlewareTest extends TestCase
 
     protected function setUp(): void
     {
+        $this->resetStaticSingletons();
+
         $this->settings     = $this->createStub(DbalSettingsRepository::class);
         $this->translator   = $this->createStub(Translator::class);
         $this->session      = $this->createStub(SessionManager::class);
@@ -46,6 +48,19 @@ class LocaleMiddlewareTest extends TestCase
         $this->handler      = $this->createStub(RequestHandlerInterface::class);
 
         $this->handler->method('handle')->willReturn(new Response());
+    }
+
+    /**
+     * The url() helper resolves its locale and multi-language flag from these
+     * singletons, which integration tests running in the same process leave
+     * populated by a real application. Reset them so menu URL assertions see
+     * a clean, single-language state.
+     */
+    private function resetStaticSingletons(): void
+    {
+        foreach ([Translator::class, DbalSettingsRepository::class] as $class) {
+            (new \ReflectionProperty($class, 'instance'))->setValue(null, null);
+        }
     }
 
     public function testLocaleFromUrlPrefix()

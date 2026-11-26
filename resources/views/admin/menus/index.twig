@@ -13,7 +13,7 @@
     menuName: '',
     menuLocation: '',
 
-    menuLanguage: '{{ current_locale() }}',
+    menuLanguage: '{{ default_locale }}',
     menuTranslationOf: '',
     allMenus: JSON.parse('{{ all_menus_json|json_encode|e('html_attr') }}'),
     // Menu details already fetched this page view — reopening a menu skips the
@@ -49,7 +49,7 @@
         this.editId = null;
         this.menuName = '';
         this.menuLocation = '';
-        this.menuLanguage = '{{ current_locale() }}';
+        this.menuLanguage = '{{ default_locale }}';
         this.menuTranslationOf = '';
         if (window.initLocationDropdown) window.initLocationDropdown('');
         document.getElementById('items-container').innerHTML = '';
@@ -63,7 +63,7 @@
         this.editId = id;
         this.menuName = '';
         this.menuLocation = '';
-        this.menuLanguage = '{{ current_locale() }}';
+        this.menuLanguage = '{{ default_locale }}';
         this.menuTranslationOf = '';
         this.open = true;
         document.getElementById('items-container').innerHTML = '';

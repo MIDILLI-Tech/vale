@@ -634,9 +634,15 @@ final class SettingsController
             $body['blocked_currencies'] = implode(',', $blocked);
         }
 
-        // When admin language is changed, also update default content locale
-        if (isset($body['locale'])) {
-            $body['default_locale'] = $body['locale'];
+        // Admin interface language (locale) and the site's default content
+        // language (default_locale) are independent — never mirror one onto
+        // the other, or content is authored in the admin's UI language.
+        if (array_key_exists('default_locale', $body)) {
+            $availableLocales       = array_keys($this->translator->getAllAvailableLocales());
+            $requestedDefaultLocale = is_string($body['default_locale']) ? $body['default_locale'] : '';
+            $body['default_locale'] = in_array($requestedDefaultLocale, $availableLocales, true)
+                ? $requestedDefaultLocale
+                : ($this->settings->get('default_locale', 'en') ?? 'en');
         }
 
         // Validate timezone against real IANA identifiers; apply immediately for this request

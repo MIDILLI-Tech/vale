@@ -46,7 +46,7 @@ final class TagController
         }
         $repoCt      = $contentType === 'all' ? null : $contentType;
         $lang        = $params['language'] ?? null;
-        if ($lang === '') {
+        if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
         $search = isset($params['search']) ? trim((string) $params['search']) : '';
@@ -153,7 +153,7 @@ final class TagController
             'supported_locales'      => $this->translator->getAvailableLocales(),
             'potential_originals'    => $this->tags->findPotentialOriginals(
                 $repoCt,
-                language: $lang ?: $this->translator->getLocale(),
+                language: $lang ?: $this->settings->get('default_locale', 'en'),
             ),
             'current_locale'         => $lang,
         ]);
@@ -345,7 +345,7 @@ final class TagController
             $contentType = null;
         }
         $lang = $params['language'] ?? null;
-        if ($lang === '') {
+        if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
         $q          = isset($params['q']) ? mb_strtolower(trim((string) $params['q'])) : '';

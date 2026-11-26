@@ -61,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }]) %}
 {% endfor %}
 <div x-data="{
-    addOpen: false, addName: '', addSlug: '', addSlugManually: false,     addLanguage: '{{ current_locale()|e('js') }}',
+    addOpen: false, addName: '', addSlug: '', addSlugManually: false,     addLanguage: '{{ (current_locale|default(default_locale))|e('js') }}',
     addContentType: '{{ defaultCt }}',
     addTranslationOf: '',
     addTranslationOfName: '',
     editOpen: false, editId: null, editName: '', editSlug: '', editSlugManually: false,
-    editContentType: 'post', editLanguage: '{{ current_locale()|e('js') }}', editTranslationOf: '',
+    editContentType: 'post', editLanguage: '{{ (current_locale|default(default_locale))|e('js') }}', editTranslationOf: '',
     allOriginals: {{ originalsList|json_encode|e('html_attr') }},
     translationsMap: {{ translations_map|json_encode|e('html_attr') }},
 
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         this.editId = id; this.editName = name; this.editSlug = slug;
         this.editSlugManually = slug !== '';
         this.editContentType = contentType || 'post';
-        this.editLanguage = language || '{{ current_locale()|e('js') }}';
+        this.editLanguage = language || '{{ (current_locale|default(default_locale))|e('js') }}';
         this.editTranslationOf = translationOf || '';
 
         const rootId = String(this.editTranslationOf || this.editId);

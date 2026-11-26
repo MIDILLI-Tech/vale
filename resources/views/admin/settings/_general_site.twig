@@ -163,8 +163,18 @@
         <hr class="border-gray-200">
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">{{ __('Localization') }}</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div {{ vl.attrs('general', __('Default Site and Admin Language'), 'locale', 'site', __('Localization'), 'language locale admin interface') }}>
-                <label class="block text-sm font-medium text-gray-700">{{ __('Default Site and Admin Language') }}</label>
+            <div {{ vl.attrs('general', __('Default Site Language'), 'default_locale', 'site', __('Localization'), 'language locale site content') }}>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Default Site Language') }}</label>
+                <select name="default_locale" class="mt-1 w-auto rounded-lg border-gray-300 dark:border-gray-700">
+                    {% set siteLocale = settings.default_locale ?? settings.locale ?? 'en' %}
+                    {% for code, name in all_locales %}
+                    <option value="{{ code }}" {{ siteLocale == code ? 'selected' }}>{{ locale_name(code) }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Language of new content and of the default site URLs.') }}</p>
+            </div>
+            <div {{ vl.attrs('general', __('Admin Interface Language'), 'locale', 'site', __('Localization'), 'language locale admin interface') }}>
+                <label class="block text-sm font-medium text-gray-700">{{ __('Admin Interface Language') }}</label>
                 <select name="locale" class="mt-1 w-auto rounded-lg border-gray-300 dark:border-gray-700">
                     {% set adminLocale = settings.locale ?? settings.default_locale ?? 'en' %}
                     {# Discovered from resources/lang/*.json — never a hardcoded list.
@@ -175,7 +185,7 @@
                     <option value="{{ code }}" {{ adminLocale == code ? 'selected' }}>{{ locale_name(code) }}</option>
                     {% endfor %}
                 </select>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Also used as the default content language.') }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Only changes the language of the admin panel. Site content is not affected.') }}</p>
             </div>
             <div {{ vl.attrs('general', __('Timezone'), 'timezone', 'site', __('Localization'), 'timezone utc gmt clock date time zone') }}>
                 <label class="block text-sm font-medium text-gray-700">{{ __('Timezone') }}</label>

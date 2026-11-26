@@ -255,4 +255,45 @@ final class SettingsControllerTest extends TestCase
             self::$db->update(VL_DB_PREFIX . 'settings', ['value' => $multiBefore], [$keyCol => 'multi_language_content']);
         }
     }
+
+    public function testAdminLanguageChangeKeepsSiteDefaultLanguage(): void
+    {
+        $keyCol = self::$db->quoteIdentifier('key');
+        $valCol = self::$db->quoteIdentifier('value');
+
+        $beforeDefault = self::$db->fetchOne(
+            "SELECT {$valCol} FROM " . VL_DB_PREFIX . "settings WHERE {$keyCol} = ?",
+            ['default_locale'],
+        );
+        $beforeAdmin = self::$db->fetchOne(
+            "SELECT {$valCol} FROM " . VL_DB_PREFIX . "settings WHERE {$keyCol} = ?",
+            ['locale'],
+        );
+
+        try {
+            $req = (new RequestFactory())->createRequest('PUT', '/admin/settings')
+                ->withHeader('X-CSRF-Token', 'test-token')
+                ->withParsedBody([
+                    '_group'         => 'general',
+                    '_subtab'        => 'site',
+                    'locale'         => 'en',
+                    'default_locale' => 'tr',
+                ]);
+
+            $res = $this->app->handle($req);
+
+            $this->assertSame(302, $res->getStatusCode());
+            $this->assertSame('tr', self::$db->fetchOne(
+                "SELECT {$valCol} FROM " . VL_DB_PREFIX . "settings WHERE {$keyCol} = ?",
+                ['default_locale'],
+            ));
+            $this->assertSame('en', self::$db->fetchOne(
+                "SELECT {$valCol} FROM " . VL_DB_PREFIX . "settings WHERE {$keyCol} = ?",
+                ['locale'],
+            ));
+        } finally {
+            self::$db->update(VL_DB_PREFIX . 'settings', ['value' => $beforeDefault], [$keyCol => 'default_locale']);
+            self::$db->update(VL_DB_PREFIX . 'settings', ['value' => $beforeAdmin], [$keyCol => 'locale']);
+        }
+    }
 }

@@ -165,7 +165,7 @@ final class PageController
 
     public function create(Request $request, Response $response): Response
     {
-        $lang          = $request->getQueryParams()['language']       ?? $this->translator->getLocale();
+        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 
@@ -238,7 +238,7 @@ final class PageController
         } catch (ValidationException $e) {
             $allPages           = $this->posts->findAll(new Pagination(1, 100), ['content_type' => 'page', 'status' => 'published']);
             $type               = $this->contentTypes->findBySlug(new Slug('page'));
-            $lang               = $body['language']       ?? $this->translator->getLocale();
+            $lang               = $body['language']       ?? $this->settings->get('default_locale', 'en');
             $translationOf      = $body['translation_of'] ?? null;
             $translations       = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
             $potentialOriginals = $this->posts->findPotentialOriginals('page', language: $lang);
@@ -369,7 +369,7 @@ final class PageController
             $post          = $this->posts->findById($id);
             $allPages      = $this->posts->findAll(new Pagination(1, 100), ['content_type' => 'page', 'status' => 'published']);
             $type          = $this->contentTypes->findBySlug(new Slug('page'));
-            $lang          = $body['language']       ?? ($post ? $post->getLanguage() : $this->translator->getLocale());
+            $lang          = $body['language']       ?? ($post ? $post->getLanguage() : $this->settings->get('default_locale', 'en'));
             $translationOf = $body['translation_of'] ?? ($post ? $post->getTranslationOf() : null);
             $originalId    = $translationOf ?: $id;
             $translations  = $this->posts->findTranslations((int) $originalId);

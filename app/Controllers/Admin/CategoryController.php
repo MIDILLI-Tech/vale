@@ -43,7 +43,7 @@ final class CategoryController
         $repoCt      = $contentType === 'all' ? null : $contentType;
 
         $lang        = $params['language'] ?? null;
-        if ($lang === '') {
+        if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
         $all         = $this->categories->findAll(null, null, $lang);
@@ -112,7 +112,7 @@ final class CategoryController
             'supported_locales'      => $this->translator->getAvailableLocales(),
             'potential_originals'    => $this->categories->findPotentialOriginals(
                 $repoCt,
-                language: $lang ?: $this->translator->getLocale(),
+                language: $lang ?: $this->settings->get('default_locale', 'en'),
             ),
             'current_locale'         => $lang,
         ]);

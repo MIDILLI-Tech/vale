@@ -300,7 +300,7 @@ final class PostController
         $type        = $this->contentTypes->findBySlug(new Slug($contentType))
                 ?? $this->contentTypes->findBySlug(new Slug('post'));
 
-        $lang          = $request->getQueryParams()['language']       ?? $this->translator->getLocale();
+        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 
@@ -432,7 +432,7 @@ final class PostController
             )->withStatus(302);
         } catch (ValidationException $e) {
             $type          = $this->contentTypes->findBySlug(new Slug($contentType));
-            $lang          = $body['language']       ?? $this->translator->getLocale();
+            $lang          = $body['language']       ?? $this->settings->get('default_locale', 'en');
             $translationOf = $body['translation_of'] ?? null;
             $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 

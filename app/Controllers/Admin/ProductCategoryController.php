@@ -34,7 +34,10 @@ final class ProductCategoryController
     public function index(Request $request, Response $response): Response
     {
         $params      = $request->getQueryParams();
-        $lang        = $params['language'] ?? $this->translator->getLocale();
+        $lang        = $params['language'] ?? null;
+        if (!is_string($lang) || $lang === '') {
+            $lang = null;
+        }
         $all         = $this->categories->findAll($lang);
         $categories  = TreeHelper::buildTree($all);
         $usageCounts = $this->categories->countUsage();
@@ -82,8 +85,11 @@ final class ProductCategoryController
             'multi_language_content' => $multiLanguage,
             'translations_map'       => $translationsMap,
             'supported_locales'      => $this->translator->getAvailableLocales(),
-            'potential_originals'    => $this->categories->findPotentialOriginals(language: $lang),
+            'potential_originals'    => $this->categories->findPotentialOriginals(language: $lang ?: ($this->settings->get('default_locale') ?: 'en')),
+            'filters'                => $params,
             'current_locale'         => $lang,
+
+            'default_category_language' => $lang ?: ($this->settings->get('default_locale') ?: 'en'),
         ]);
     }
 
