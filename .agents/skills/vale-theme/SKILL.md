@@ -84,6 +84,7 @@ Notes: drop `"parent"` (or omit) for standalone. If no `color_variables` is decl
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ site_title|default('Vale') }}{% endblock %}</title>
+    {% include 'partials/_pwa_head.twig' %}
     {{ theme_hook('head') }}
     <link rel="stylesheet" href="{{ asset('css/theme.css') }}">
 </head>
@@ -170,7 +171,7 @@ Only include the language-switcher partial when requested; remove `menu_primary`
 - `page.twig`: same pattern; respect an optional selected page template.
 - `shop/index.twig` / `shop/product.twig` (if requested): model after core `resources/views/shop/*.twig` — copy and restyle rather than inventing variable names.
 
-Rules: keep `{{ theme_hook('head') }}` in `<head>` (SEO meta + saved colors inject there, AFTER your own styles — saved values win). Escape everything by default; `|raw` only for trusted rendered bodies. Use `{{ __('...') }}` for user-facing strings.
+Rules: keep `{{ theme_hook('head') }}` in `<head>` (SEO meta + saved colors inject there, AFTER your own styles — saved values win) and include `partials/_pwa_head.twig` next to it — the installable app's manifest and service worker are not part of `theme_hook('head')`, so omitting the partial silently disables PWA on the theme. Escape everything by default; `|raw` only for trusted rendered bodies. Use `{{ __('...') }}` for user-facing strings.
 
 ### `assets/css/theme.css`
 
@@ -250,6 +251,7 @@ foreach (glob('themes/<slug>/templates/*.twig') ?: [] as $f) {
 - [ ] `theme.json` valid, slug === folder name, colors for preview in the listing
 - [ ] `templates/` files only for chosen scope
 - [ ] `theme_hook('head')` present in layout
+- [ ] `partials/_pwa_head.twig` included in layout `<head>` (PWA manifest + service worker)
 - [ ] Menus declared in theme.json match loops used
 - [ ] CSS consumes `--theme-*` vars; gradient defaults bound via `background`
 - [ ] Strings wrapped in `__()`
