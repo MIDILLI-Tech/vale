@@ -15,6 +15,11 @@
  * Force a side with `data-vl-tooltip-position="top|bottom|left|right"`. Without
  * it the bubble sits above the host and flips below when there is no room; a
  * requested side that would leave the viewport falls back to that auto rule.
+ *
+ * Touch and pen have no hover: a tap opens the bubble immediately and a second
+ * tap on the same control closes it. Tapping anywhere else, scrolling, pressing
+ * Escape or losing focus closes it. The tap itself is never cancelled, so links
+ * and buttons keep working.
  */
 (function () {
     'use strict';
@@ -154,10 +159,26 @@
     function request(host) {
         if (active && active.el === host.el) return;
         hide();
+        host.tap = false;
         active = host;
         timer = window.setTimeout(function () {
             show(host);
         }, SHOW_DELAY);
+    }
+
+    function isTouchLike(event) {
+        return !!event.pointerType && event.pointerType !== 'mouse';
+    }
+
+    function tap(host) {
+        if (active && active.el === host.el) {
+            hide();
+            return;
+        }
+        hide();
+        host.tap = true;
+        active = host;
+        show(host);
     }
 
     document.addEventListener('pointerover', function (event) {
@@ -168,6 +189,7 @@
     document.addEventListener('pointerout', function (event) {
         var host = resolveHost(event.target);
         if (!host) return;
+        if (active && active.el === host.el && active.tap) return;
         var next = event.relatedTarget;
         if (next && host.el.contains(next)) return;
         hide();
@@ -179,7 +201,18 @@
     }, true);
 
     document.addEventListener('focusout', hide, true);
-    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('pointerdown', function (event) {
+        var host = resolveHost(event.target);
+        if (!isTouchLike(event)) {
+            hide();
+            return;
+        }
+        if (host) {
+            tap(host);
+            return;
+        }
+        hide();
+    }, true);
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') hide();
     }, true);
