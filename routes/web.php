@@ -22,6 +22,7 @@ use ValeApp\App\Controllers\Front\AuthController;
 use ValeApp\App\Controllers\Front\AuthorController;
 use ValeApp\App\Controllers\Front\CheckoutController;
 use ValeApp\App\Controllers\Front\CommentController;
+use ValeApp\App\Controllers\Front\ConsentController;
 use ValeApp\App\Controllers\Front\CurrencyController;
 use ValeApp\App\Controllers\Front\DownloadController;
 use ValeApp\App\Controllers\Front\EmergencyResetController;
@@ -51,6 +52,11 @@ return function (App $app): void {
     // and executable extensions answer 404.
     $app->get('/plugin-assets/{slug}/{path:.+}', [PluginAssetController::class, 'show'])
         ->setName('plugin-asset');
+
+    // Cookie consent decision (banner). Plain form POST — CSRF middleware applies.
+    // The token is requested at click time so it never ends up in cached HTML.
+    $app->get('/consent/token', [ConsentController::class, 'token'])->setName('consent.token');
+    $app->post('/consent', [ConsentController::class, 'store'])->setName('consent.store');
 
     // SEO
     $app->get('/sitemap.xml', [SeoController::class, 'sitemap'])->setName('sitemap');

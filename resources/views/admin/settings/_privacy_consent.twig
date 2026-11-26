@@ -1,0 +1,155 @@
+{# ══ Consent sub-panel ══ #}
+{% import 'admin/macros/vl-setting.twig' as vl %}
+{% set default_lang = settings.default_locale|default('en') %}
+{% set content_lang_codes = settings.content_languages|default(default_lang)|split(',')|filter(c => c) %}
+{% set active_locales = supported_locales|filter((name, code) => code in content_lang_codes) %}
+{% if active_locales is empty %}
+    {% set active_locales = supported_locales|filter((name, code) => code == default_lang) %}
+{% endif %}
+{% set i18n_fields = settings.multi_language_content|default('0') == '1' and active_locales|length > 1 %}
+{% set field_locales = i18n_fields ? active_locales : active_locales|filter((name, code) => code == default_lang) %}
+<div id="privacy-tab-consent" class="privacy-tab-panel hidden">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+        {{ csrf_field() }}
+        <input type="hidden" name="_METHOD" value="PUT">
+        <input type="hidden" name="_group" value="privacy">
+        <input type="hidden" name="_subtab" value="consent">
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">{{ __('Cookie Consent') }}</h3>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Scripts and services assigned to a category are only rendered after the visitor accepts that category. Accepting reloads the page so the server can emit the gated code.') }}
+                </p>
+            </div>
+
+            <div {{ vl.attrs('privacy', __('Enable Consent Banner'), 'consent_enabled', 'consent', __('Cookie Consent'), 'consent banner cookie gdpr tdddg') }}>
+                <label class="flex items-start gap-3">
+                    <input type="hidden" name="consent_enabled" value="0">
+                    <input type="checkbox" name="consent_enabled" value="1"
+                           {{ settings.consent_enabled|default('0') == '1' ? 'checked' }}
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enable Consent Banner') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Replaces the simple cookie notice with an accept / reject banner and records every decision.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <div {{ vl.attrs('privacy', __('US Privacy Opt-Out'), 'consent_us_optout_enabled', 'consent', __('Cookie Consent'), 'ccpa cpra do not sell share gpc global privacy control us opt out') }}>
+                <label class="flex items-start gap-3">
+                    <input type="hidden" name="consent_us_optout_enabled" value="0">
+                    <input type="checkbox" name="consent_us_optout_enabled" value="1"
+                           {{ settings.consent_us_optout_enabled|default('0') == '1' ? 'checked' }}
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('US Privacy Opt-Out') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Adds a Do Not Sell or Share My Personal Information link to the banner and honours the browser Global Privacy Control signal by keeping marketing off.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <div {{ vl.attrs('privacy', __('Fallback Spam Protection to Honeypot or Math if the visitor does not consent'), 'consent_gate_captcha', 'consent', __('Cookie Consent'), 'captcha spam protection consent gate math honeypot fallback') }}>
+                <label class="flex items-start gap-3">
+                    <input type="hidden" name="consent_gate_captcha" value="0">
+                    <input type="checkbox" name="consent_gate_captcha" value="1"
+                           {{ settings.consent_gate_captcha|default('0') == '1' ? 'checked' }}
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Fallback Spam Protection to Honeypot or Math if the visitor does not consent') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Provider captchas wait for the Functional category. Visitors who decline get the local math question plus a hidden honeypot, so forms keep working.') }}</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div {{ vl.attrs('privacy', __('Consent Version'), 'consent_version', 'consent', __('Cookie Consent'), 'consent version policy') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Consent Version') }}</label>
+                    <input type="text" name="consent_version" value="{{ settings.consent_version|default('1') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Change this value when the banner text or the categories change. Earlier decisions are then asked again.') }}</p>
+                </div>
+                <div {{ vl.attrs('privacy', __('Consent Log Retention (days)'), 'consent_log_retention_days', 'consent', __('Cookie Consent'), 'consent log retention') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Consent Log Retention (days)') }}</label>
+                    <input type="number" min="30" name="consent_log_retention_days" value="{{ settings.consent_log_retention_days|default('365') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
+            </div>
+
+            <div {{ vl.attrs('privacy', __('Consent Categories'), 'consent_categories', 'consent', __('Cookie Consent'), 'consent categories analytics marketing functional') }}
+                 x-data="{
+                    selected: '{{ settings.consent_categories|default('functional,analytics,marketing')|e('js') }}'.split(',').map(function (v) { return v.trim(); }).filter(Boolean),
+                    has: function (category) { return this.selected.indexOf(category) !== -1; },
+                    toggle: function (category) {
+                        if (this.has(category)) { this.selected = this.selected.filter(function (c) { return c !== category; }); }
+                        else { this.selected.push(category); }
+                    }
+                 }">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Consent Categories') }}</label>
+                <input type="hidden" name="consent_categories" :value="selected.join(',')">
+                <div class="flex flex-wrap gap-4 mt-1">
+                    {% for category, label in {'functional': __('Functional'), 'analytics': __('Analytics'), 'marketing': __('Marketing')} %}
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" :checked="has('{{ category }}')" @change="toggle('{{ category }}')"
+                               class="rounded border-gray-300 dark:border-gray-600">
+                        {{ label }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Technically necessary storage is always allowed and is not shown to the visitor.') }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Only categories with a service assigned are offered to visitors (Settings → Advanced → Custom Scripts, or the advertisement code).') }}</p>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
+                {% include 'admin/components/i18n-setting-field.twig' with {
+                    vl_tab: 'privacy',
+                    vl_subtab: 'consent',
+                    vl_section: __('Cookie Consent'),
+                    vl_keywords: 'banner title',
+                    field: 'consent_banner_title',
+                    label: __('Banner Title'),
+                    type: 'text',
+                    settings: settings,
+                    active_locales: active_locales,
+                    field_locales: field_locales,
+                    default_lang: default_lang,
+                    i18n_fields: i18n_fields,
+                    placeholder: __('We value your privacy'),
+                } %}
+                <div>
+                    {% include 'admin/components/i18n-setting-field.twig' with {
+                        vl_tab: 'privacy',
+                        vl_subtab: 'consent',
+                        vl_section: __('Cookie Consent'),
+                        vl_keywords: 'banner text',
+                        field: 'consent_banner_text',
+                        label: __('Banner Text'),
+                        type: 'textarea',
+                        rows: 3,
+                        settings: settings,
+                        active_locales: active_locales,
+                        field_locales: field_locales,
+                        default_lang: default_lang,
+                        i18n_fields: i18n_fields,
+                        placeholder: __('Leave empty to use the text generated from your active integrations.'),
+                    } %}
+                    <div class="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+                        <p class="text-xs font-medium text-gray-600 dark:text-gray-300">{{ __('Text used when the field above is empty') }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ consent_generated_banner_text|default('') }}</p>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The generated text lists only the services that are actually switched on. It reads "only necessary cookies" when nothing else is active.') }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The Privacy Policy page selected under E-Commerce → Legal is linked from the banner.') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-5">
+            <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('What still needs your attention') }}</h4>
+            <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                <li>{{ __('Spam protection providers (reCAPTCHA, hCaptcha, Turnstile) load their scripts before consent. Switch to the math question or honeypot, or keep them only while you accept the risk.') }}</li>
+                <li>{{ __('Custom header/footer scripts and advertising code are only gated once you assign a consent category to them (Settings → Advanced → Custom Scripts).') }}</li>
+                <li>{{ __('This screen records decisions; it does not verify that your legal texts, registrations or contracts exist.') }}</li>
+            </ul>
+        </div>
+    </form>
+</div>

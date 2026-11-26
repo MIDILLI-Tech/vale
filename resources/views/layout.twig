@@ -879,7 +879,7 @@
     </main>
 
 {# ── Cookie Warning ─────────────────────────────────── #}
-{% if cookie_warning_enabled == '1' %}
+{% if cookie_warning_enabled == '1' and not consent_enabled %}
 <div x-data="{
         show: !localStorage.getItem('cookie_consent_accepted'),
         accept() {
@@ -980,5 +980,7 @@
     });
     </script>
     {% endif %}
+{% include 'partials/_embed_gate.twig' %}
+{% include 'partials/_consent_banner.twig' %}
 </body>
 </html>

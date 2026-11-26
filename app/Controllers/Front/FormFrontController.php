@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Views\Twig;
+use ValeApp\Application\Consent\CaptchaConsentGate;
 use ValeApp\Application\Form\FormAccessService;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Application\Mail\MailService;
@@ -643,7 +644,7 @@ final class FormFrontController
     /** @return array{captcha_type: string, captcha_question: ?string, captcha_site_key: ?string} */
     private function buildFormCaptchaData(Form $form): array
     {
-        $type     = $form->getCaptchaType();
+        $type     = CaptchaConsentGate::effectiveType($form->getCaptchaType());
         $question = null;
         $siteKey  = null;
 
@@ -668,7 +669,11 @@ final class FormFrontController
 
     private function validateFormCaptcha(Form $form, array $body): ?string
     {
-        $type = $form->getCaptchaType();
+        $type = CaptchaConsentGate::effectiveType($form->getCaptchaType());
+
+        if ($type === 'math' && !empty($body[$form->getHoneypotFieldName()])) {
+            return 'Spam detected.';
+        }
 
         if ($type === 'math') {
             $expected = (int) $this->session->get('captcha_answer', 0);

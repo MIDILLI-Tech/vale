@@ -172,6 +172,9 @@
         {% if captcha_type is defined and captcha_type != 'none' and captcha_type != 'honeypot' %}
         <div class="flex flex-col items-center justify-center py-2 max-w-full overflow-x-auto w-full bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             {% if captcha_type == 'math' %}
+                <div style="display:none">
+                    <input type="text" name="{{ form.honeypotFieldName }}" autocomplete="off" tabindex="-1" aria-hidden="true">
+                </div>
                 <div class="w-full text-center">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {{ captcha_question }} = ?

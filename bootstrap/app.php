@@ -16,6 +16,7 @@ use Slim\Views\TwigMiddleware;
 use ValeApp\App\Controllers\Front\PostController;
 use ValeApp\App\Middleware\BasePathMiddleware;
 use ValeApp\App\Middleware\CartExpireMiddleware;
+use ValeApp\App\Middleware\ConsentMiddleware;
 use ValeApp\App\Middleware\CsrfMiddleware;
 use ValeApp\App\Middleware\FlashMiddleware;
 use ValeApp\App\Middleware\LocaleMiddleware;
@@ -194,6 +195,9 @@ $app->add(TwigMiddleware::create($app, $twig));
 $app->add($container->get(TwoFactorForcedMiddleware::class));
 
 // Flash messages & user info injection into Twig
+// Consent runs *after* FlashMiddleware (added earlier = executed later), because
+// Flash publishes the `settings` global that the consent gate filters.
+$app->add($container->get(ConsentMiddleware::class));
 $app->add($container->get(FlashMiddleware::class));
 
 // CSRF protection

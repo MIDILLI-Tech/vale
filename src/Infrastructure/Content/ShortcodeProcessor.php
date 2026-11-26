@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ValeApp\Infrastructure\Content;
 
+use ValeApp\Application\Consent\CaptchaConsentGate;
 use ValeApp\Application\Form\FormAccessService;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Application\Shop\VariationPrice;
@@ -1429,6 +1430,10 @@ final class ShortcodeProcessor
         if ($captcha === 'none' || $captcha === 'off' || $captcha === '0') {
             $captcha = 'disabled';
         }
+        // Consent-gated visitors get the local math challenge instead of a
+        // provider script; the session value keeps submit-time validation in
+        // step with what was rendered.
+        $captcha = CaptchaConsentGate::effectiveType($captcha);
         // Custom honeypot field name, same pattern as regular forms. Only
         // alphanumerics, underscore and dash survive sanitization.
         $honeypotName = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($attrs['honeypot_name'] ?? ''));
@@ -2139,22 +2144,24 @@ final class ShortcodeProcessor
     }
 
     /**
-     * Wrap bare <iframe> tags in the responsive .vl-video-embed container.
+     * Turn third-party iframes into click-to-load placeholders and give bare
+     * ones the responsive .vl-video-embed container.
      *
-     * Already-wrapped embeds (inside .vl-video-embed) are left untouched via
-     * placeholder protection so their inner absolute-positioned iframe keeps
-     * working. Anything else — typically a pasted YouTube iframe carrying
+     * Embeds already sitting inside a .vl-video-embed wrapper (older stored
+     * content) keep their wrapper and are gated in place. Bare iframes —
+     * typically a YouTube iframe pasted from the share dialog, carrying
      * style="position:absolute;...width:100%;height:100%" — would otherwise
-     * position itself against the page and cover the whole screen.
+     * position themselves against the page and cover the whole screen, so they
+     * are wrapped first.
      */
     private function wrapBareVideoIframes(string $content): string
     {
         $protected = [];
         $content   = preg_replace_callback(
             '/<div[^>]*class="[^"]*vl-video-embed[^"]*"[^>]*>.*?<\/div>/is',
-            static function (array $m) use (&$protected): string {
+            function (array $m) use (&$protected): string {
                 $key             = "\x00VLBVID" . count($protected) . "\x00";
-                $protected[$key] = $m[0];
+                $protected[$key] = $this->gateEmbedIframes($m[0]);
 
                 return $key;
             },
@@ -2163,21 +2170,13 @@ final class ShortcodeProcessor
 
         $content = preg_replace_callback(
             '/(?:<p[^>]*>\s*)?(<iframe\b[^>]*>.*?<\/iframe>)(?:\s*<\/p>)?/is',
-            static function (array $m): string {
-                $iframe = $m[1];
-                if (!preg_match('/\bsrc=(["\'])(.*?)\1/i', $iframe, $sm)) {
+            function (array $m): string {
+                $src = $this->iframeSrc($m[1]);
+                if ($src === null) {
                     return $m[0];
                 }
-                $src = trim(html_entity_decode($sm[2], ENT_QUOTES, 'UTF-8'));
-                if (preg_match('#^https?://[^"\s<>]+$#i', $src) !== 1) {
-                    return $m[0];
-                }
-                $safeSrc = htmlspecialchars($src, ENT_QUOTES, 'UTF-8');
 
-                return '<div class="vl-video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:1.5rem 0">'
-                    . '<iframe src="' . $safeSrc . '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" '
-                    . 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>'
-                    . '</div>';
+                return $this->embedRatioBox($this->embedPlaceholder($this->privacyEmbedUrl($src)));
             },
             $content,
         ) ?? $content;
@@ -2187,6 +2186,92 @@ final class ShortcodeProcessor
         }
 
         return $content;
+    }
+
+    /**
+     * Replace every external iframe inside an existing wrapper with the
+     * click-to-load placeholder, keeping the wrapper's sizing.
+     */
+    private function gateEmbedIframes(string $html): string
+    {
+        return preg_replace_callback(
+            '/<iframe\b[^>]*>.*?<\/iframe>|<iframe\b[^>]*\/>/is',
+            function (array $m): string {
+                $src = $this->iframeSrc($m[0]);
+
+                return $src === null
+                    ? $m[0]
+                    : $this->embedPlaceholder($this->privacyEmbedUrl($src));
+            },
+            $html,
+        ) ?? $html;
+    }
+
+    /**
+     * Valid http(s) src of an iframe tag, or null when the tag must stay as is
+     * (no src, relative src, javascript:/data: payload).
+     */
+    private function iframeSrc(string $iframe): ?string
+    {
+        if (!preg_match('/\bsrc=(["\'])(.*?)\1/i', $iframe, $m)) {
+            return null;
+        }
+
+        $src = trim(html_entity_decode($m[2], ENT_QUOTES, 'UTF-8'));
+
+        return preg_match('#^https?://[^"\s<>]+$#i', $src) === 1 ? $src : null;
+    }
+
+    /**
+     * YouTube embeds are served from youtube-nocookie.com: in privacy-enhanced
+     * mode the player sets no tracking cookies even after the visitor loads it.
+     */
+    private function privacyEmbedUrl(string $src): string
+    {
+        return preg_replace(
+            '#^https?://(?:www\.)?youtube\.com/embed/#i',
+            'https://www.youtube-nocookie.com/embed/',
+            $src,
+        ) ?? $src;
+    }
+
+    /**
+     * Click-to-load placeholder for a third-party embed.
+     *
+     * Rendering a button instead of the iframe means the browser sends no
+     * request — and stores nothing — until the visitor actively clicks. The
+     * button fills its wrapper, so the same markup works in the 16:9 box, a
+     * card, a hero or a carousel slide.
+     */
+    private function embedPlaceholder(string $src): string
+    {
+        $host     = strtolower((string) parse_url($src, PHP_URL_HOST));
+        $host     = preg_replace('/^www\./', '', $host) ?? $host;
+        $provider = str_contains($host, 'youtube') ? 'YouTube'
+            : (str_contains($host, 'vimeo') ? 'Vimeo' : $host);
+        $isVideo  = $provider === 'YouTube' || $provider === 'Vimeo';
+
+        $label = $isVideo ? __('Load video') : __('Load content');
+        $hint  = $provider !== ''
+            ? __(':provider loads only after you click.', [':provider' => $provider])
+            : __('Third-party content loads only after you click.');
+
+        return '<button type="button" class="vl-embed-gate" data-vl-embed'
+            . ' data-vl-embed-src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '"'
+            . ' aria-label="' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '"'
+            . ' style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;'
+            . 'align-items:center;justify-content:center;gap:.5rem;padding:1rem;border:0;cursor:pointer;'
+            . 'background:#111827;color:#f9fafb;font:inherit;text-align:center">'
+            . '<svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
+            . '<span style="font-weight:600;font-size:.95rem">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>'
+            . '<span style="font-size:.78rem;opacity:.7;max-width:34ch">' . htmlspecialchars($hint, ENT_QUOTES, 'UTF-8') . '</span>'
+            . '</button>';
+    }
+
+    private function embedRatioBox(string $inner, string $extraStyle = 'margin:1.5rem 0;'): string
+    {
+        return '<div class="vl-video-embed" style="position:relative;padding-bottom:56.25%;height:0;'
+            . 'overflow:hidden;max-width:100%;' . $extraStyle . '">' . $inner . '</div>';
     }
 
     /**
@@ -2202,7 +2287,7 @@ final class ShortcodeProcessor
 
         $embedUrl = null;
         if (preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $m)) {
-            $embedUrl = $this->embedBase('youtube') . $m[1];
+            $embedUrl = $this->embedBase('youtube_nocookie') . $m[1];
         } elseif (preg_match('/vimeo\.com\/(\d+)/', $url, $m)) {
             $embedUrl = $this->embedBase('vimeo') . $m[1];
         }
@@ -2212,10 +2297,7 @@ final class ShortcodeProcessor
             return '<p><a href="' . $safe . '">' . $safe . '</a></p>';
         }
 
-        return '<div class="vl-video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;margin:1.5rem 0">'
-            . '<iframe src="' . $embedUrl . '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" '
-            . 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
-            . '</div>';
+        return $this->embedRatioBox($this->embedPlaceholder($embedUrl));
     }
 
     private function renderVideoSlide(string $url, string $fit, bool $autoplay): string
@@ -2225,16 +2307,16 @@ final class ShortcodeProcessor
 
         if (preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $ytMatch)) {
             $id       = htmlspecialchars($ytMatch[1], ENT_QUOTES, 'UTF-8');
-            $ytBase   = $this->embedBase('youtube');
+            $ytBase   = $this->embedBase('youtube_nocookie');
             $embedUrl = "{$ytBase}{$id}?autoplay=" . ($autoplay ? "1" : "0") . "&mute=1";
-            return '<iframe src="' . $embedUrl . '" style="width:100%;height:100%;border:none" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+            return $this->embedPlaceholder($embedUrl);
         }
 
         if (preg_match('/vimeo\.com\/(\d+)/', $url, $viMatch)) {
             $id       = htmlspecialchars($viMatch[1], ENT_QUOTES, 'UTF-8');
             $viBase   = $this->embedBase('vimeo');
             $embedUrl = "{$viBase}{$id}?autoplay=" . ($autoplay ? "1" : "0") . "&muted=1";
-            return '<iframe src="' . $embedUrl . '" style="width:100%;height:100%;border:none" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+            return $this->embedPlaceholder($embedUrl);
         }
 
         // Local video
@@ -2483,7 +2565,7 @@ final class ShortcodeProcessor
         }
         if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) {
             if (preg_match('~(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([A-Za-z0-9_-]{11})~', $url, $m) === 1) {
-                $src = 'https://www.youtube.com/embed/' . $m[1];
+                $src = 'https://www.youtube-nocookie.com/embed/' . $m[1];
                 if ($autoplay) {
                     $src .= '?autoplay=1&mute=1';
                 }
@@ -2646,10 +2728,7 @@ final class ShortcodeProcessor
                             } elseif ($isVideo) {
                                 // External embed (YouTube/Vimeo) - render as iframe.
                                 $embedUrl = $this->toEmbedUrl($image, $autoplay);
-                                $imgInner = '<div class="vl-video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;">'
-                                    . '<iframe src="' . htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8') . '" '
-                                    . 'style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" '
-                                    . 'allow="autoplay; fullscreen" allowfullscreen loading="lazy"></iframe></div>';
+                                $imgInner = $this->embedRatioBox($this->embedPlaceholder($embedUrl), '');
                             } else {
                                 $imgInner = '<img src="'
                                     . htmlspecialchars($image, ENT_QUOTES, 'UTF-8') . '"';
@@ -2974,10 +3053,7 @@ final class ShortcodeProcessor
                     } elseif ($isVideo) {
                         $embedUrl   = $this->toEmbedUrl($image, $mediaAutoplay);
                         $mediaInner = '<div class="vl-hero-media-inner" style="width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:' . $mediaRadius . ';background:' . $mediaBoxBg . ';display:flex;align-items:center;justify-content:center;">'
-                            . '<div class="vl-video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;width:100%;">'
-                            . '<iframe src="' . htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8') . '" '
-                            . 'style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" '
-                            . 'allow="autoplay; fullscreen" allowfullscreen loading="lazy"></iframe></div>'
+                            . $this->embedRatioBox($this->embedPlaceholder($embedUrl), 'width:100%;')
                             . '</div>';
                     } else {
                         $mediaInner = '<div class="vl-hero-media-inner" style="width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:' . $mediaRadius . ';background:' . $mediaBoxBg . ';display:flex;align-items:center;justify-content:center;">'

@@ -1,0 +1,37 @@
+{#
+    Click-to-load gate for third-party embeds.
+
+    The server renders a placeholder button instead of an <iframe>, so no
+    request reaches YouTube, Vimeo or any other provider (and no cookie is
+    stored) until the visitor clicks. Works for every embed the ShortcodeProcessor
+    renders — [embed], cards, heroes, carousels and pasted iframes — through one
+    delegated listener. Self-contained: no theme JS or CSS is required.
+#}
+<script nonce="{{ csp_nonce }}">
+(function () {
+    function load(frame) {
+        var src = frame.getAttribute('data-vl-embed-src');
+        if (!src) { return; }
+
+        var iframe = document.createElement('iframe');
+        iframe.src = src;
+        iframe.title = frame.getAttribute('aria-label') || '';
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+        iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('loading', 'lazy');
+        iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:0';
+
+        frame.parentNode.replaceChild(iframe, frame);
+        iframe.focus();
+    }
+
+    document.addEventListener('click', function (event) {
+        var target = event.target;
+        var button = target && target.closest ? target.closest('[data-vl-embed]') : null;
+        if (!button) { return; }
+
+        event.preventDefault();
+        load(button);
+    });
+})();
+</script>

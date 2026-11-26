@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Psr7\Response;
+use ValeApp\Application\Consent\ConsentService;
 use ValeApp\Infrastructure\Cache\PageCache;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
 use ValeApp\Infrastructure\Translation\Translator;
@@ -28,6 +29,7 @@ final class PageCacheMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly PageCache $cache,
         private readonly DbalSettingsRepository $settings,
+        private readonly ConsentService $consent,
     ) {
     }
 
@@ -69,6 +71,21 @@ final class PageCacheMiddleware implements MiddlewareInterface
         // under one locale (e.g. / -> en) are not served for another (e.g. /tr/).
         if ($locale !== '') {
             $url .= '?_locale=' . $locale;
+        }
+
+        // Consent-gated markup differs per visitor, so the key carries the
+        // consent variant (policy version + decision + accepted categories).
+        // The variant is bounded — it never includes the visitor's consent id —
+        // and the banner fetches its CSRF token separately, so one cached page
+        // is safe to share with every visitor in the same state.
+        if ($this->consent->enabled()) {
+            $rawConsent = $_COOKIE[$this->consent->cookieName()] ?? null;
+            // A GPC visitor receives a different page (no marketing), so the
+            // signal belongs in the cache key too.
+            $gpc     = $this->globalPrivacyControl();
+            $variant = $this->consent->cacheVariant(is_string($rawConsent) ? $rawConsent : null, $gpc);
+            $url .= (str_contains($url, '?') ? '&' : '?')
+                . '_consent=' . substr(hash('sha256', $variant), 0, 12);
         }
 
         // Try to serve from cache
@@ -134,6 +151,10 @@ final class PageCacheMiddleware implements MiddlewareInterface
             '/login*',
             '/register*',
             '/logout',
+            // Consent endpoints answer with a per-session token / set a cookie
+            // and must never be stored as a shared page.
+            '/consent',
+            '/consent/*',
         ];
 
         try {
@@ -183,6 +204,20 @@ final class PageCacheMiddleware implements MiddlewareInterface
         }
 
         return false;
+    }
+
+    /**
+     * Whether this request carries a Global Privacy Control opt-out that the
+     * operator has switched on. Such a visitor gets a page without marketing,
+     * so the signal must be part of the cache key.
+     */
+    private function globalPrivacyControl(): bool
+    {
+        if (($this->settings->get('consent_us_optout_enabled', '0') ?? '0') !== '1') {
+            return false;
+        }
+
+        return trim((string) ($_SERVER['HTTP_SEC_GPC'] ?? '')) === '1';
     }
 
     private function isHtmlResponse(ResponseInterface $response): bool

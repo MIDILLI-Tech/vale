@@ -439,6 +439,7 @@ return [
             'frame_src' => 'https://www.youtube.com',
         ],
         'youtube_nocookie' => [
+            'embed_url' => 'https://www.youtube-nocookie.com/embed/',
             'frame_src' => 'https://www.youtube-nocookie.com',
         ],
         'vimeo' => [

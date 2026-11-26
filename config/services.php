@@ -39,6 +39,7 @@ use ValeApp\App\Controllers\Api\OrderApiController;
 use ValeApp\App\Controllers\CronController;
 use ValeApp\App\Controllers\Front\AccountController;
 use ValeApp\App\Controllers\Front\CheckoutController;
+use ValeApp\App\Controllers\Front\ConsentController;
 use ValeApp\App\Controllers\Front\CurrencyController;
 use ValeApp\App\Controllers\Front\FormFrontController;
 use ValeApp\App\Controllers\Front\MembershipCheckoutController;
@@ -51,6 +52,7 @@ use ValeApp\App\Middleware\ApiAbilityMiddleware;
 use ValeApp\App\Middleware\ApiAuthMiddleware;
 use ValeApp\App\Middleware\AuthMiddleware;
 use ValeApp\App\Middleware\CartExpireMiddleware;
+use ValeApp\App\Middleware\ConsentMiddleware;
 use ValeApp\App\Middleware\CsrfMiddleware;
 use ValeApp\App\Middleware\FlashMiddleware;
 use ValeApp\App\Middleware\LocaleMiddleware;
@@ -63,6 +65,8 @@ use ValeApp\App\Middleware\PseudoCronMiddleware;
 use ValeApp\App\Middleware\RateLimitMiddleware;
 use ValeApp\App\Middleware\RedirectMiddleware;
 use ValeApp\Application\Auth\LoginUseCase;
+use ValeApp\Application\Consent\ConsentService;
+use ValeApp\Application\Consent\ConsentTextAdvisor;
 use ValeApp\Application\Content\BlogFeedService;
 use ValeApp\Application\Content\SaveCategoryUseCase;
 use ValeApp\Application\Content\SavePostUseCase;
@@ -108,6 +112,7 @@ use ValeApp\Application\Update\UpdateService;
 use ValeApp\Application\Webhook\OutboundWebhookService;
 use ValeApp\Domain\Analytics\Repository\PageviewRepositoryInterface;
 use ValeApp\Domain\Comment\Repository\CommentRepositoryInterface;
+use ValeApp\Domain\Consent\Repository\ConsentRepositoryInterface;
 use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Content\Repository\CategoryRepositoryInterface;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
@@ -553,6 +558,13 @@ return [
 
         $env->addGlobal('cookie_warning_enabled', $settings->get('cookie_warning_enabled', '0'));
         $env->addGlobal('cookie_warning_text', $settings->get('cookie_warning_text', ''));
+
+        // Consent gate for templates: {% if consent_allowed('marketing') %}
+        $consentService = $c->get(ConsentService::class);
+        $env->addFunction(new TwigFunction(
+            'consent_allowed',
+            static fn (string $category): bool => $consentService->isAllowed($category),
+        ));
         $env->addGlobal('shop_enabled', $settings->get('shop_enabled', '1'));
         $env->addGlobal('membership_enabled', $settings->get('membership_enabled', '1'));
         $env->addGlobal('subscriptions_enabled', $settings->get('subscriptions_enabled', '1'));
@@ -1290,6 +1302,7 @@ return [
         return new PageCacheMiddleware(
             $c->get(PageCache::class),
             $c->get(DbalSettingsRepository::class),
+            $c->get(ConsentService::class),
         );
     }),
 
@@ -1445,6 +1458,40 @@ return [
     }),
 
     SettingsRepositoryInterface::class => get(DbalSettingsRepository::class),
+
+    ConsentRepositoryInterface::class => factory(function ($c) {
+        return new \ValeApp\Infrastructure\Persistence\DbalConsentRepository($c->get(DbalConnection::class));
+    }),
+
+    ConsentService::class => factory(function ($c) {
+        return new ConsentService(
+            $c->get(SettingsRepositoryInterface::class),
+            $c->get(ConsentRepositoryInterface::class),
+            require dirname(__DIR__) . '/config/consent.php',
+            $c->get(ConsentTextAdvisor::class),
+        );
+    }),
+
+    ConsentTextAdvisor::class => factory(function ($c) {
+        return new ConsentTextAdvisor($c->get(SettingsRepositoryInterface::class));
+    }),
+
+    ConsentMiddleware::class => factory(function ($c) {
+        return new ConsentMiddleware(
+            $c->get(ConsentService::class),
+            $c->get(ConsentTextAdvisor::class),
+            $c->get(SettingsRepositoryInterface::class),
+            $c->get(Twig::class),
+        );
+    }),
+
+    ConsentController::class => factory(function ($c) {
+        return new ConsentController(
+            $c->get(ConsentService::class),
+            $c->get(SessionManager::class),
+            $c->get(CsrfManager::class),
+        );
+    }),
 
     ImageProcessor::class   => create(ImageProcessor::class),
     PwaSettings::class      => autowire(),
@@ -2023,6 +2070,7 @@ return [
             $c->get(EventDispatcherInterface::class),
             $c->get(PageCacheInvalidator::class),
             $c->get(ScheduledTaskNotificationService::class),
+            $c->get(ConsentRepositoryInterface::class),
         );
     }),
 

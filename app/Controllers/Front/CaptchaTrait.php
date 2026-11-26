@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ValeApp\App\Controllers\Front;
 
+use ValeApp\Application\Consent\CaptchaConsentGate;
 use ValeApp\Infrastructure\Content\CaptchaUrls;
 use ValeApp\Infrastructure\Payment\HttpTransport;
 
@@ -12,7 +13,7 @@ trait CaptchaTrait
     /** @return array{captcha_type: string, captcha_question: ?string, captcha_site_key: ?string} */
     private function buildCaptchaData(string $typeSettingKey, string $keyPrefix = 'captcha_'): array
     {
-        $type     = $this->settings->get($typeSettingKey, 'none');
+        $type     = CaptchaConsentGate::effectiveType((string) $this->settings->get($typeSettingKey, 'none'));
         $question = null;
         $siteKey  = null;
         $prefix   = str_replace('_type', '', $typeSettingKey) . '_answer';
@@ -38,7 +39,7 @@ trait CaptchaTrait
 
     private function validateCaptcha(array $body, string $typeSettingKey, ?\Psr\Http\Message\ServerRequestInterface $request = null): ?string
     {
-        $type     = $this->settings->get($typeSettingKey, 'none');
+        $type     = CaptchaConsentGate::effectiveType((string) $this->settings->get($typeSettingKey, 'none'));
         $prefix   = str_replace('_type', '', $typeSettingKey) . '_answer';
         $remoteIp = $request !== null ? vl_client_ip($request) : null;
 
@@ -57,6 +58,12 @@ trait CaptchaTrait
         string $honeypotField = '_hp_name',
         ?string $remoteIp = null,
     ): ?string {
+        // The math fallback carries a hidden honeypot as well: real visitors
+        // leave it empty, bots that fill every field are rejected cheaply.
+        if ($type === 'math' && !empty($body[$honeypotField])) {
+            return 'Spam detected.';
+        }
+
         if ($type === 'math') {
             $expected = (int) $this->session->get($answerSessionKey, 0);
             $given    = (int) ($body['captcha_answer'] ?? -999);

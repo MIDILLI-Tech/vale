@@ -1,0 +1,315 @@
+{#
+    Consent banner — shared by the core layout and every theme layout.
+
+    Rendered server-side only: accepting a category reloads the page so the
+    gated script blocks are emitted by PHP instead of being patched in the
+    browser. Self-contained styles/JS so a theme does not need Tailwind.
+#}
+{% if consent_enabled|default(false) %}
+{% set consent_category_labels = {
+    'functional': __('Functional'),
+    'analytics': __('Analytics'),
+    'marketing': __('Marketing'),
+} %}
+{% set consent_category_help = {
+    'functional': __('Remembers your preferences.'),
+    'analytics': __('Loads analytics services you have added.'),
+    'marketing': __('Used to measure and personalise advertising.'),
+} %}
+{% set consent_has_optional = consent_optional_categories|default([])|length > 0 %}
+<div id="vl-consent"
+     data-endpoint="{{ url('consent.store') }}"
+     data-token-endpoint="{{ url('consent.token') }}"
+     data-decided="{{ consent_decided|default(false) ? '1' : '0' }}"
+     data-accepted="{{ consent_state.categories|default([])|json_encode|e('html_attr') }}"
+     data-gpc="{{ consent_gpc|default(false) ? '1' : '0' }}"
+     data-version="{{ consent_version|default('1') }}">
+
+    <div class="vl-consent-panel" role="dialog" aria-modal="true" aria-labelledby="vl-consent-title" hidden>
+        <h2 id="vl-consent-title" class="vl-consent-title">
+            {{ consent_banner_title|default(__('We value your privacy')) }}
+        </h2>
+        <p class="vl-consent-text">
+            {{ consent_banner_text|default(__('We use technically necessary cookies to run this site. Analytics and marketing services are loaded only with your consent. You can change or withdraw your choice at any time.')) }}
+        </p>
+        {% if consent_gpc|default(false) %}
+        <p class="vl-consent-note">{{ __('Global Privacy Control detected — marketing stays off.') }}</p>
+        {% endif %}
+
+        <div class="vl-consent-options" hidden>
+            <div class="vl-consent-option vl-consent-option--locked">
+                <div>
+                    <strong>{{ __('Necessary') }}</strong>
+                    <span class="vl-consent-help">{{ __('Required for the site to work. Always active.') }}</span>
+                </div>
+                <input type="checkbox" checked disabled>
+            </div>
+            {% for category in consent_optional_categories|default([]) %}
+            <label class="vl-consent-option">
+                <div>
+                    <strong>{{ consent_category_labels[category]|default(category|capitalize) }}</strong>
+                    <span class="vl-consent-help">{{ consent_category_help[category]|default('') }}</span>
+                </div>
+                <input type="checkbox" value="{{ category }}" data-consent-category>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div class="vl-consent-actions">
+            <button type="button" class="vl-consent-btn vl-consent-btn--primary" data-consent-accept>
+                {{ __('Accept all') }}
+            </button>
+            {% if consent_has_optional %}
+            {# Same fill and weight as Accept all: rejecting must be as visible a
+               choice as accepting, not a de-emphasised link. #}
+            <button type="button" class="vl-consent-btn vl-consent-btn--primary" data-consent-reject>
+                {{ __('Reject optional') }}
+            </button>
+            <button type="button" class="vl-consent-btn vl-consent-btn--ghost" data-consent-settings>
+                {{ __('Settings') }}
+            </button>
+            <button type="button" class="vl-consent-btn vl-consent-btn--primary" data-consent-save hidden>
+                {{ __('Save selection') }}
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="vl-consent-meta">
+            {% if consent_policy_url|default('') %}
+            <a class="vl-consent-policy" href="{{ consent_policy_url }}">{{ __('Privacy Policy') }}</a>
+            {% endif %}
+            {% if consent_us_optout|default(false) %}
+            <button type="button" class="vl-consent-us" data-consent-do-not-sell>
+                {{ __('Do Not Sell or Share My Personal Information') }}
+            </button>
+            {% endif %}
+        </div>
+
+        <p class="vl-consent-error" hidden>{{ __('Your choice could not be saved. Please try again.') }}</p>
+    </div>
+
+    <button type="button" class="vl-consent-pill" data-consent-open hidden>
+        {{ __('Cookie settings') }}
+    </button>
+</div>
+
+<style nonce="{{ csp_nonce }}">
+#vl-consent { position: fixed; inset: auto 0 0 0; z-index: 9998; font-size: 14px; line-height: 1.5; }
+#vl-consent [hidden] { display: none !important; }
+#vl-consent .vl-consent-panel {
+    /* Bottom-right corner, like the simple cookie notice — full width on
+       small screens where a corner panel would cover the page. */
+    max-width: 420px; margin: 16px 16px 16px auto; padding: 20px;
+    border-radius: 14px; background: #111827; color: #f9fafb;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, .35);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+@media (max-width: 640px) {
+    #vl-consent .vl-consent-panel { max-width: none; margin: 12px; }
+}
+#vl-consent .vl-consent-title { margin: 0 0 8px; font-size: 17px; font-weight: 700; color: #fff; }
+#vl-consent .vl-consent-text { margin: 0 0 16px; color: #d1d5db; }
+#vl-consent .vl-consent-option {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, .08);
+}
+#vl-consent .vl-consent-option strong { display: block; color: #f3f4f6; font-weight: 600; }
+#vl-consent .vl-consent-help { display: block; color: #9ca3af; font-size: 12.5px; }
+#vl-consent .vl-consent-option input { margin-top: 3px; accent-color: #2563eb; }
+#vl-consent .vl-consent-option input:disabled,
+#vl-consent .vl-consent-option--locked { cursor: not-allowed; }
+#vl-consent .vl-consent-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+#vl-consent .vl-consent-btn {
+    cursor: pointer; border-radius: 9px; padding: 9px 16px; font-weight: 600; font-size: 14px;
+    background: transparent; color: #e5e7eb; border: 1px solid rgba(255, 255, 255, .25);
+}
+#vl-consent .vl-consent-btn:hover { border-color: rgba(255, 255, 255, .5); }
+#vl-consent .vl-consent-btn--primary { background: #fff; color: #111827; border-color: #fff; }
+#vl-consent .vl-consent-btn--primary:hover { background: #e5e7eb; }
+#vl-consent .vl-consent-btn--ghost { border-color: transparent; color: #9ca3af; text-decoration: underline; }
+#vl-consent .vl-consent-note {
+    margin: 0 0 12px; padding: 7px 10px; border-radius: 8px; font-size: 12px;
+    background: rgba(59, 130, 246, .18); color: #bfdbfe;
+}
+#vl-consent .vl-consent-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px;
+    font-size: 12px;
+}
+#vl-consent .vl-consent-policy { color: #93c5fd; text-decoration: underline; }
+#vl-consent .vl-consent-policy:hover { color: #bfdbfe; }
+#vl-consent .vl-consent-us {
+    padding: 0; border: 0; background: none; cursor: pointer; font: inherit;
+    color: #9ca3af; text-decoration: underline;
+}
+#vl-consent .vl-consent-us:hover { color: #e5e7eb; }
+#vl-consent .vl-consent-error { margin: 12px 0 0; color: #fca5a5; font-size: 13px; }
+#vl-consent .vl-consent-pill {
+    position: fixed; left: 12px; bottom: 12px; cursor: pointer;
+    border-radius: 999px; padding: 7px 13px; font-size: 12px; font-weight: 600;
+    background: #111827; color: #f9fafb; border: 1px solid rgba(255, 255, 255, .15);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .25); opacity: .85;
+}
+#vl-consent .vl-consent-pill:hover { opacity: 1; }
+.dark #vl-consent .vl-consent-panel { background: #0f172a; }
+@media (prefers-color-scheme: light) {
+    #vl-consent .vl-consent-panel { background: #fff; color: #111827; border-color: #e5e7eb; }
+    #vl-consent .vl-consent-title { color: #111827; }
+    #vl-consent .vl-consent-text { color: #4b5563; }
+    #vl-consent .vl-consent-option { border-top-color: #e5e7eb; }
+    #vl-consent .vl-consent-option strong { color: #1f2937; }
+    #vl-consent .vl-consent-help { color: #6b7280; }
+    #vl-consent .vl-consent-btn { color: #374151; border-color: #d1d5db; }
+    #vl-consent .vl-consent-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+    #vl-consent .vl-consent-btn--primary { background: #111827; color: #fff; border-color: #111827; }
+    #vl-consent .vl-consent-btn--primary:hover { background: #374151; color: #fff; border-color: #374151; }
+    #vl-consent .vl-consent-btn--ghost { color: #6b7280; }
+    #vl-consent .vl-consent-btn--ghost:hover { background: transparent; border-color: transparent; color: #1f2937; }
+    #vl-consent .vl-consent-note { background: #eff6ff; color: #1d4ed8; }
+    #vl-consent .vl-consent-policy { color: #1d4ed8; }
+    #vl-consent .vl-consent-policy:hover { color: #1e40af; }
+    #vl-consent .vl-consent-us { color: #6b7280; }
+    #vl-consent .vl-consent-us:hover { color: #1f2937; }
+    #vl-consent .vl-consent-error { color: #b91c1c; }
+    #vl-consent .vl-consent-pill { background: #fff; color: #111827; border-color: #d1d5db; }
+}
+</style>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    var root = document.getElementById('vl-consent');
+    if (!root) { return; }
+
+    var panel    = root.querySelector('.vl-consent-panel');
+    var options  = root.querySelector('.vl-consent-options');
+    var pill     = root.querySelector('[data-consent-open]');
+    var saveBtn  = root.querySelector('[data-consent-save]');
+    var settings = root.querySelector('[data-consent-settings]');
+    var reject   = root.querySelector('[data-consent-reject]');
+    var error    = root.querySelector('.vl-consent-error');
+    var boxes    = root.querySelectorAll('[data-consent-category]');
+
+    var accepted = [];
+    try { accepted = JSON.parse(root.dataset.accepted || '[]') || []; } catch (e) { accepted = []; }
+
+    // Global Privacy Control is a standing opt-out of sale/sharing: marketing
+    // stays off and cannot be switched back on from this banner.
+    var gpc = root.dataset.gpc === '1';
+
+    function showPanel(withOptions) {
+        panel.hidden = false;
+        pill.hidden = true;
+        options.hidden = !withOptions;
+        if (saveBtn) { saveBtn.hidden = !withOptions; }
+        if (settings) { settings.hidden = withOptions; }
+        if (withOptions) {
+            boxes.forEach(function (box) {
+                if (gpc && box.value === 'marketing') {
+                    box.checked = false;
+                    box.disabled = true;
+                    return;
+                }
+                box.checked = accepted.indexOf(box.value) !== -1;
+            });
+        }
+    }
+
+    function closePanel() {
+        panel.hidden = true;
+        pill.hidden = false;
+    }
+
+    // The token is per session, so it is fetched at click time instead of being
+    // baked into the markup — that keeps the page cacheable for guests.
+    function requestToken() {
+        return fetch(root.dataset.tokenEndpoint, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (response) {
+            if (!response.ok) { throw new Error('token_failed'); }
+            return response.json();
+        }).then(function (data) {
+            if (!data || !data.token) { throw new Error('token_missing'); }
+            return data.token;
+        });
+    }
+
+    function submit(categories, revoke) {
+        error.hidden = true;
+
+        requestToken().then(function (token) {
+            var body = new URLSearchParams();
+            body.set('_csrf_token', token);
+            if (revoke) { body.set('revoke', '1'); }
+            (categories || []).forEach(function (category) { body.append('categories[]', category); });
+
+            return fetch(root.dataset.endpoint, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: body.toString()
+            });
+        }).then(function (response) {
+            if (!response.ok) { throw new Error('consent_failed'); }
+            window.location.reload();
+        }).catch(function () {
+            error.hidden = false;
+        });
+    }
+
+    function allOptional() {
+        var list = [];
+        boxes.forEach(function (box) { if (!box.disabled) { list.push(box.value); } });
+        return list;
+    }
+
+    root.querySelector('[data-consent-accept]').addEventListener('click', function () {
+        submit(allOptional(), false);
+    });
+
+    if (reject) {
+        reject.addEventListener('click', function () { submit([], false); });
+    }
+
+    if (settings) {
+        settings.addEventListener('click', function () { showPanel(true); });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            var selected = [];
+            boxes.forEach(function (box) { if (box.checked) { selected.push(box.value); } });
+            submit(selected, false);
+        });
+    }
+
+    // CPRA opt-out link: keep every other choice, drop marketing.
+    var doNotSell = root.querySelector('[data-consent-do-not-sell]');
+    if (doNotSell) {
+        doNotSell.addEventListener('click', function () {
+            var selected = [];
+            boxes.forEach(function (box) {
+                if (box.checked && box.value !== 'marketing') { selected.push(box.value); }
+            });
+            submit(selected, false);
+        });
+    }
+
+    pill.addEventListener('click', function () { showPanel(false); });
+
+    window.vlConsent = {
+        open: function () { showPanel(true); },
+        withdraw: function () { submit([], true); }
+    };
+
+    if (root.dataset.decided === '1') {
+        closePanel();
+    } else {
+        showPanel(false);
+    }
+})();
+</script>
+{% endif %}

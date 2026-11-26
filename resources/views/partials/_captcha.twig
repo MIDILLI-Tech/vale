@@ -1,5 +1,8 @@
 <div class="flex flex-col py-2 max-w-full overflow-x-auto w-full bg-white dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800">
     {% if comment_captcha_type == 'math' %}
+        <div style="display:none">
+            <input type="text" name="_hp_name" autocomplete="off" tabindex="-1" aria-hidden="true">
+        </div>
         <div class="w-full">
             <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ml-1">
                 {{ __('Spam protection') }}: <strong>{{ comment_captcha_question }}</strong> = ?

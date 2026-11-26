@@ -307,7 +307,18 @@
                 </div>
             </div>
 
-            {# Cookies #}
+            {# Cookies — the consent banner supersedes this simple notice, so the
+               fields are not rendered (and never posted) while it is on. #}
+            {% if settings.consent_enabled|default('0') == '1' %}
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Cookies') }}</p>
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-4">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Display Cookie Warning') }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The consent banner is enabled, so this simple notice is not shown. Its text and behaviour are managed under Cookie Consent.') }}</p>
+                    <a href="{{ url('/admin/settings') }}?tab=privacy&subtab=consent" class="mt-2 inline-block text-xs font-medium text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">{{ __('Cookie Consent') }} →</a>
+                </div>
+            </div>
+            {% else %}
             <div x-data="{ cookieWarningEnabled: {{ settings.cookie_warning_enabled|default('0') == '1' ? 'true' : 'false' }} }">
                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">{{ __('Cookies') }}</p>
                 <div {{ vl.attrs('general', __('Display Cookie Warning'), 'cookie_warning_enabled', 'site', __('Cookies'), 'consent gdpr banner') }} class="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -340,6 +351,7 @@
                     } %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
     </form>

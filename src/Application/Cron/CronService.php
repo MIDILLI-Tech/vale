@@ -15,6 +15,7 @@ use ValeApp\Application\Update\BackupService;
 use ValeApp\Application\Update\UpdateNotificationService;
 use ValeApp\Application\Update\UpdateService;
 use ValeApp\Domain\Analytics\Repository\PageviewRepositoryInterface;
+use ValeApp\Domain\Consent\Repository\ConsentRepositoryInterface;
 use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
@@ -69,6 +70,7 @@ final class CronService
         private readonly ?EventDispatcherInterface $events = null,
         private readonly ?PageCacheInvalidator $pageCache = null,
         private readonly ?ScheduledTaskNotificationService $scheduledTaskNotifier = null,
+        private readonly ?ConsentRepositoryInterface $consentLog = null,
     ) {
     }
 
@@ -376,6 +378,19 @@ final class CronService
                 $result['trials_expired'] = $trialsExpired;
                 if ($trialsExpired > 0) {
                     error_log('[Cron] Trial expiration: ' . $trialsExpired . ' trials processed.');
+                }
+            } catch (\Throwable) {
+                // Non-critical
+            }
+        }
+
+        // ── Consent log retention ────────────────────────────────────
+        if ($this->consentLog !== null && $this->settings->bool('consent_enabled', false)) {
+            try {
+                $retentionDays = max(30, (int) ($this->settings->get('consent_log_retention_days', '365') ?? '365'));
+                $pruned        = $this->consentLog->pruneOlderThan($retentionDays);
+                if ($pruned > 0) {
+                    error_log('[Cron] Consent log: ' . $pruned . ' expired row(s) removed.');
                 }
             } catch (\Throwable) {
                 // Non-critical

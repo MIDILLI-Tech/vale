@@ -1773,7 +1773,9 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $this->processor->process($content);
 
         self::assertStringContainsString('vl-video-embed', $processed);
-        self::assertStringContainsString('https://www.youtube.com/embed/rwU6RgnkVbc', $processed);
+        self::assertStringContainsString('data-vl-embed-src="https://www.youtube-nocookie.com/embed/rwU6RgnkVbc"', $processed);
+        self::assertStringContainsString('Load video', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
         self::assertStringNotContainsString('[embed]', $processed);
     }
 
@@ -1782,7 +1784,7 @@ class ShortcodeProcessorTest extends TestCase
         $content   = '<p>[embed]https://youtu.be/rwU6RgnkVbc[/embed]</p>';
         $processed = $this->processor->process($content);
 
-        self::assertStringContainsString('https://www.youtube.com/embed/rwU6RgnkVbc', $processed);
+        self::assertStringContainsString('https://www.youtube-nocookie.com/embed/rwU6RgnkVbc', $processed);
         self::assertStringNotContainsString('[embed]', $processed);
     }
 
@@ -1791,7 +1793,7 @@ class ShortcodeProcessorTest extends TestCase
         $content   = '[embed]https://www.youtube.com/embed/rwU6RgnkVbc[/embed]';
         $processed = $this->processor->process($content);
 
-        self::assertStringContainsString('https://www.youtube.com/embed/rwU6RgnkVbc', $processed);
+        self::assertStringContainsString('https://www.youtube-nocookie.com/embed/rwU6RgnkVbc', $processed);
         self::assertStringNotContainsString('[embed]', $processed);
     }
 
@@ -1801,6 +1803,8 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $this->processor->process($content);
 
         self::assertStringContainsString('https://player.vimeo.com/video/123456789', $processed);
+        self::assertStringContainsString('Vimeo loads only after you click.', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
     }
 
     public function testEmbedNonVideoUrlFallsBackToLink(): void
@@ -1821,8 +1825,20 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $this->processor->process($content);
 
         self::assertStringContainsString('vl-video-embed', $processed);
-        self::assertStringContainsString('https://www.youtube.com/embed/rwU6RgnkVbc', $processed);
         self::assertStringContainsString('position:relative;padding-bottom:56.25%', $processed);
+        self::assertStringContainsString('data-vl-embed-src="https://www.youtube-nocookie.com/embed/rwU6RgnkVbc"', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
+    }
+
+    public function testBareIframeOfUnknownProviderGetsGenericGate(): void
+    {
+        $content   = '<p>Text</p><iframe src="https://player.example.com/embed/42"></iframe>';
+        $processed = $this->processor->process($content);
+
+        self::assertStringContainsString('data-vl-embed-src="https://player.example.com/embed/42"', $processed);
+        self::assertStringContainsString('player.example.com loads only after you click.', $processed);
+        self::assertStringContainsString('Load content', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
     }
 
     public function testBareIframeInParagraphGetsWrappedWithoutNestedP(): void
@@ -1843,6 +1859,8 @@ class ShortcodeProcessorTest extends TestCase
         $processed = $this->processor->process($content);
 
         self::assertSame(1, substr_count($processed, 'vl-video-embed'));
+        self::assertStringNotContainsString('<iframe', $processed);
+        self::assertStringContainsString('data-vl-embed-src="https://www.youtube-nocookie.com/embed/rwU6RgnkVbc"', $processed);
     }
 
     public function testBareIframeWithUnsafeSrcIsLeftAlone(): void
@@ -1983,8 +2001,8 @@ class ShortcodeProcessorTest extends TestCase
         $content   = '[carousel images="https://www.youtube.com/watch?v=dQw4w9WgXcQ"]';
         $processed = $this->processor->process($content);
 
-        self::assertStringContainsString('iframe', $processed);
-        self::assertStringContainsString('youtube.com/embed/dQw4w9WgXcQ', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
+        self::assertStringContainsString('data-vl-embed-src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', $processed);
     }
 
     public function testCarouselYouTubeShortUrl(): void
@@ -1992,8 +2010,8 @@ class ShortcodeProcessorTest extends TestCase
         $content   = '[carousel images="https://youtu.be/dQw4w9WgXcQ"]';
         $processed = $this->processor->process($content);
 
-        self::assertStringContainsString('iframe', $processed);
-        self::assertStringContainsString('youtube.com/embed/dQw4w9WgXcQ', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
+        self::assertStringContainsString('youtube-nocookie.com/embed/dQw4w9WgXcQ', $processed);
     }
 
     public function testCarouselVimeoVideoSlide(): void
@@ -2001,7 +2019,7 @@ class ShortcodeProcessorTest extends TestCase
         $content   = '[carousel images="https://vimeo.com/123456789"]';
         $processed = $this->processor->process($content);
 
-        self::assertStringContainsString('iframe', $processed);
+        self::assertStringNotContainsString('<iframe', $processed);
         self::assertStringContainsString('player.vimeo.com/video/123456789', $processed);
     }
 

@@ -5,6 +5,25 @@
 {% set needs_rating = (entity_type == 'product' and (_vs == 'enabled' or (_vs == 'use_global' and (global_star_ratings_enabled ?? true)))) %}
 {% set total_count = comments_total|default(items|length) %}
 
+{# Third-party comment services load only after a click — see the core
+   partial for the full rationale. #}
+{% macro third_party_comments(provider, inner) %}
+<div class="rounded-xl border border-white/10 bg-white/5 p-6 text-center" data-vl-comments-gate>
+    <p class="text-sm font-semibold text-slate-100">
+        {{ __('Comments are provided by :provider', {':provider': provider}) }}
+    </p>
+    <p class="mt-1 text-xs text-slate-400">
+        {{ __(':provider loads only after you click.', {':provider': provider}) }}
+    </p>
+    <button type="button" data-vl-comments-load
+            class="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-200">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        {{ __('Load comments') }}
+    </button>
+    <template data-vl-comments-template>{{ inner|raw }}</template>
+</div>
+{% endmacro %}
+
 {% if effective_on %}
 <section class="mt-12" id="comments" x-data="{ replyTo: null, replyName: '' }"
          @vl-comment-reply.window="replyTo = $event.detail.id; replyName = $event.detail.name; document.getElementById('comment-form-box').scrollIntoView({behavior:'smooth'})"
@@ -18,6 +37,7 @@
     {% if entity_type == 'post' and comment_system|default('local') != 'local' %}
         <div class="mb-10">
             {% if comment_system == 'disqus' %}
+                {% set comments_inner %}
                 <div id="disqus_thread"></div>
                 <script nonce="{{ csp_nonce }}">
                     var disqus_config = function () {
@@ -31,7 +51,10 @@
                         (d.head || d.body).appendChild(s);
                     })();
                 </script>
+                {% endset %}
+                {{ _self.third_party_comments('Disqus', comments_inner) }}
             {% elseif comment_system == 'giscus' %}
+                {% set comments_inner %}
                 <script nonce="{{ csp_nonce }}" src="https://giscus.app/client.js"
                         data-repo="{{ giscus_repo }}"
                         data-repo-id="{{ giscus_repo_id }}"
@@ -47,7 +70,10 @@
                         crossorigin="anonymous"
                         async>
                 </script>
+                {% endset %}
+                {{ _self.third_party_comments('Giscus', comments_inner) }}
             {% elseif comment_system == 'facebook' %}
+                {% set comments_inner %}
                 {% set fb_locales = {'tr': 'tr_TR', 'de': 'de_DE', 'fr': 'fr_FR', 'es': 'es_ES'} %}
                 {% set fb_locale = fb_locales[current_locale]|default('en_US') %}
                 {% set fb_sdk_template = media_embeds.facebook_comments.sdk_url|default('') %}
@@ -57,7 +83,29 @@
                     <script nonce="{{ csp_nonce }}" async defer crossorigin="anonymous" src="{{ fb_sdk_url }}"></script>
                     <div class="fb-comments" data-href="{{ current_url }}" data-width="100%" data-numposts="5"></div>
                 {% endif %}
+                {% endset %}
+                {{ _self.third_party_comments('Facebook', comments_inner) }}
             {% endif %}
+
+            <script nonce="{{ csp_nonce }}">
+            (function () {
+                document.addEventListener('click', function (event) {
+                    var button = event.target.closest ? event.target.closest('[data-vl-comments-load]') : null;
+                    if (!button) { return; }
+
+                    var gate     = button.closest('[data-vl-comments-gate]');
+                    var template = gate ? gate.querySelector('template[data-vl-comments-template]') : null;
+                    if (!template) { return; }
+
+                    event.preventDefault();
+                    var holder = document.createElement('div');
+                    holder.appendChild(template.content.cloneNode(true));
+                    gate.replaceChildren(holder);
+
+                    if (window.FB && window.FB.XFBML) { window.FB.XFBML.parse(holder); }
+                });
+            })();
+            </script>
         </div>
     {% else %}
     <div class="flex items-baseline justify-between mb-6">
