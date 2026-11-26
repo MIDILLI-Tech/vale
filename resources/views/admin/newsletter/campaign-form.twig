@@ -2,7 +2,7 @@
 
 {% set panel_rail = true %}
 
-{% block title %}{{ readonly ? 'View' : (is_edit ? 'Edit' : 'New') }} Campaign{% endblock %}
+{% block title %}{{ readonly ? __('View Campaign') : (is_edit ? __('Edit Campaign') : __('New Campaign')) }}{% endblock %}
 
 {% block content %}
 <div x-data="{
@@ -13,8 +13,8 @@
     recurringInterval: '{{ campaign.recurringInterval|default('weekly') }}'
 }">
 <div class="mb-6 flex items-center gap-3">
-    <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Campaigns</a>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ readonly ? 'View Campaign' : (is_edit ? 'Edit Campaign' : 'New Campaign') }}</h1>
+    <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ __('Campaigns') }}</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ readonly ? __('View Campaign') : (is_edit ? __('Edit Campaign') : __('New Campaign')) }}</h1>
     {% if not readonly %}
     {% if is_edit %}<span data-clean-badge class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
     <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
@@ -23,7 +23,7 @@
     {% set sc = {draft: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300', sent: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300', sending: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300', scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'} %}
     {% set status_labels = {draft: __('Draft'), sent: __('Sent'), sending: __('Sending'), scheduled: __('Scheduled'), queued: __('Queued'), processing: __('Processing')} %}
     <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium {{ sc[campaign.status]|default('bg-gray-100') }}">{{ status_labels[campaign.status]|default(campaign.status|capitalize) }}</span>
-    {% if campaign.sentAt %}<span class="text-sm text-gray-400">Sent {{ campaign.sentAt|local_date('medium', true) }}</span>{% endif %}
+    {% if campaign.sentAt %}<span class="text-sm text-gray-400">{{ __('Sent') }} {{ campaign.sentAt|local_date('medium', true) }}</span>{% endif %}
     {% endif %}
     {% include 'admin/components/rail-toggle.twig' %}
 </div>
@@ -52,10 +52,10 @@
                     <div class="mt-3 flex flex-col items-start gap-2">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" name="ab_test_enabled" x-model="abTest" class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
-                            <span class="text-sm font-medium text-gray-700">Enable A/B Test</span>
+                            <span class="text-sm font-medium text-gray-700">{{ __('Enable A/B Test') }}</span>
                         </label>
                         <div x-show="abTest" class="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase">Weight:</span>
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">{{ __('Weight:') }}</span>
                             <div class="flex items-center gap-2">
                                 <span class="text-xs text-gray-500">A: <span x-text="100 - (weightB || 50)"></span>%</span>
                                 <input type="range" name="variation_b_weight" min="1" max="99" x-model="weightB" class="w-24 accent-indigo-600">
@@ -71,23 +71,23 @@
                     <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700 mb-4">
                         <button type="button" @click="variantTab = 'a'"
                                 :class="variantTab === 'a' ? 'border-b-2 border-gray-900 dark:border-white text-gray-900 dark:text-white' : 'text-gray-400 hover:text-gray-600'"
-                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant A</button>
+                                class="pb-2 text-sm font-medium -mb-px transition-colors">{{ __('Variant A') }}</button>
                         <button type="button" @click="variantTab = 'b'"
                                 :class="variantTab === 'b' ? 'border-b-2 border-indigo-500 text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
-                                class="pb-2 text-sm font-medium -mb-px transition-colors">Variant B</button>
+                                class="pb-2 text-sm font-medium -mb-px transition-colors">{{ __('Variant B') }}</button>
                     </div>
                 </template>
 
                 {# Variant A #}
                 <div :class="abTest && variantTab !== 'a' ? 'hidden' : ''">
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject Line {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Subject Line') }} {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
                         <input type="text" name="subject" {% if not readonly %}required{% endif %} value="{{ campaign.subject|default('') }}"
                                {{ readonly ? 'disabled' : '' }}
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-default' : '' }}">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Email Body') }}</label>
                         {% if not readonly %}
                         {% include 'admin/newsletter/_template_vars.twig' %}
                         {% endif %}
@@ -105,13 +105,13 @@
                 {# Variant B #}
                 <div :class="!abTest || variantTab !== 'b' ? 'hidden' : ''" x-cloak>
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject Line {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Subject Line') }} {% if not readonly %}<span class="text-red-500">*</span>{% endif %}</label>
                         <input type="text" name="subject_b" value="{{ campaign.subjectB|default('') }}"
                                {{ readonly ? 'disabled' : '' }}
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs focus:border-gray-600 focus:ring-gray-500 {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-default' : '' }}">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Email Body') }}</label>
                         {% if not readonly %}
                         {% include 'admin/newsletter/_template_vars.twig' %}
                         {% endif %}
@@ -132,19 +132,19 @@
             <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-xs" data-panel-id="settings_card">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">{{ __('Send Settings') }}</h3>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('From Name') }}</label>
                     <input type="text" name="from_name" value="{{ campaign.fromName|default('') }}"
                            {{ readonly ? 'disabled' : '' }}
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">From Email</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('From Email') }}</label>
                     <input type="email" name="from_email" value="{{ campaign.fromEmail|default('') }}"
                            {{ readonly ? 'disabled' : '' }}
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tag Filter (optional)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tag Filter (optional)') }}</label>
                     {% if readonly %}
                     <div class="flex flex-wrap gap-2">
                         {% for tag in (campaign.tagFilter|default('')|split(',')) %}
@@ -180,83 +180,83 @@
                             </div>
                         </div>
                         <input type="hidden" name="tag_filter" :value="items.join(',')">
-                        <p class="text-xs text-gray-400 mt-1">Only send to subscribers matching any of the given tags. Leave blank to send to all.</p>
+                        <p class="text-xs text-gray-400 mt-1">{{ __('Only send to subscribers matching any of the given tags. Leave blank to send to all.') }}</p>
                     </div>
                     {% endif %}
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Source Form Filter</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Source Form Filter') }}</label>
                     <select name="source_form_filter" {{ readonly ? 'disabled' : '' }} class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         <option value="">{{ __('All subscribers') }}</option>
                         {% for f in forms|default([]) %}
                         <option value="{{ f.id }}" {{ campaign and campaign.sourceFormFilter == f.id ? 'selected' : '' }}>{{ f.name }}</option>
                         {% endfor %}
                     </select>
-                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Only send to subscribers who signed up via this form.</p>{% endif %}
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">{{ __('Only send to subscribers who signed up via this form.') }}</p>{% endif %}
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1 italic opacity-80 border-b pb-1">Segmentation Filters</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 italic opacity-80 border-b pb-1">{{ __('Segmentation Filters') }}</label>
                 </div>
                 {% if shop_enabled %}
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Order Count</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Order Count') }}</label>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Orders</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Min Orders') }}</span>
                             <input type="number" name="min_orders_filter" min="0" value="{{ campaign.minOrdersFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Orders</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Max Orders') }}</span>
                             <input type="number" name="max_orders_filter" min="0" value="{{ campaign.maxOrdersFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                     </div>
-                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Filter by completed order count.</p>{% endif %}
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">{{ __('Filter by completed order count.') }}</p>{% endif %}
                 </div>
                 {% endif %}
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Engagement Rates</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Engagement Rates') }}</label>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-4">
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Open %</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Min Open %') }}</span>
                             <input type="number" name="min_open_rate_filter" min="0" max="100" value="{{ campaign.minOpenRateFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Open %</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Max Open %') }}</span>
                             <input type="number" name="max_open_rate_filter" min="0" max="100" value="{{ campaign.maxOpenRateFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Min Click %</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Min Click %') }}</span>
                             <input type="number" name="min_click_rate_filter" min="0" max="100" value="{{ campaign.minClickRateFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                         <div>
-                            <span class="text-[10px] uppercase font-bold text-gray-400">Max Click %</span>
+                            <span class="text-[10px] uppercase font-bold text-gray-400">{{ __('Max Click %') }}</span>
                             <input type="number" name="max_click_rate_filter" min="0" max="100" value="{{ campaign.maxClickRateFilter }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm {{ readonly ? 'bg-gray-50 dark:bg-gray-800/50' : '' }}">
                         </div>
                     </div>
-                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">Target subscribers based on engagement (e.g., set Max Click 0% for inactive users).</p>{% endif %}
+                    {% if not readonly %}<p class="text-xs text-gray-400 mt-1">{{ __('Target subscribers based on engagement (e.g., set Max Click 0% for inactive users).') }}</p>{% endif %}
                 </div>
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Tracking</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ __('Tracking') }}</label>
                     {% if readonly %}
                     <div class="flex flex-wrap gap-1.5">
                         {% set t = campaign.trackingEnabled|default(3) %}
                         {% if t == 0 %}
                         <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Disabled') }}</span>
                         {% else %}
-                        {% if t b-and 1 %}<span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">Open ✓</span>{% endif %}
-                        {% if t b-and 2 %}<span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Click ✓</span>{% endif %}
+                        {% if t b-and 1 %}<span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">{{ __('Opens') }} ✓</span>{% endif %}
+                        {% if t b-and 2 %}<span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{{ __('Clicks') }} ✓</span>{% endif %}
                         {% endif %}
                     </div>
                     {% else %}
@@ -265,19 +265,19 @@
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" :checked="tracking &amp; 1" @change="tracking ^= 1"
                                    class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
-                            <span class="text-sm text-gray-700">Track opens</span>
+                            <span class="text-sm text-gray-700">{{ __('Track opens') }}</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" :checked="tracking &amp; 2" @change="tracking ^= 2"
                                    class="text-gray-900 dark:text-gray-100 focus:ring-gray-500">
-                            <span class="text-sm text-gray-700">Track clicks</span>
+                            <span class="text-sm text-gray-700">{{ __('Track clicks') }}</span>
                         </label>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Select one or both options, or leave both unchecked to disable tracking.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Select one or both options, or leave both unchecked to disable tracking.') }}</p>
                         <p x-show="tracking &amp; 1" x-cloak class="text-xs text-amber-600 dark:text-amber-400">
-                            ℹ️ Place <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code> before <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code> for open tracking to work.
+                            {{ __('ℹ️ Place :tag before :body for open tracking to work.', {':tag': '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code>', ':body': '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code>'})|raw }}
                         </p>
                         <p x-show="tracking &amp; 2" x-cloak class="text-xs text-amber-600 dark:text-amber-400">
-                            ℹ️ Click tracking is applied automatically to all links in your email body.
+                            {{ __('ℹ️ Click tracking is applied automatically to all links in your email body.') }}
                         </p>
                     </div>
                     {% endif %}
@@ -287,22 +287,22 @@
                     <label class="flex items-center gap-2 cursor-pointer mb-4">
                         <input type="checkbox" name="is_recurring" x-model="isRecurring" {{ readonly ? 'disabled' : '' }}
                                class="rounded-sm border-gray-300 text-gray-900 focus:ring-gray-500">
-                        <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">Recurring Campaign (Automation)</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ __('Recurring Campaign (Automation)') }}</span>
                     </label>
 
                     <div x-show="isRecurring" x-cloak class="space-y-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Repeat Every</label>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">{{ __('Repeat Every') }}</label>
                                 <select name="recurring_interval" x-model="recurringInterval" {{ readonly ? 'disabled' : '' }}
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
+                                    <option value="daily">{{ __('Daily') }}</option>
+                                    <option value="weekly">{{ __('Weekly') }}</option>
+                                    <option value="monthly">{{ __('Monthly') }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">At Time</label>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">{{ __('At Time') }}</label>
                                 <input type="time" name="recurring_time" value="{{ campaign.recurringTime|default('09:00') }}"
                                        {{ readonly ? 'disabled' : '' }}
                                        class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
@@ -310,9 +310,9 @@
                         </div>
 
                         <div x-show="recurringInterval === 'weekly'">
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">On Day(s)</label>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">{{ __('On Day(s)') }}</label>
                             <div class="flex flex-wrap gap-x-4 gap-y-2 mt-2">
-                                {% set days = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'} %}
+                                {% set days = {1: __('Mon'), 2: __('Tue'), 3: __('Wed'), 4: __('Thu'), 5: __('Fri'), 6: __('Sat'), 7: __('Sun')} %}
                                 {% set selectedDays = (campaign and campaign.recurringDay ? campaign.recurringDay|split(',') : []) %}
                                 {% for val, label in days %}
                                 <label class="flex items-center gap-1.5 cursor-pointer">
@@ -326,26 +326,26 @@
                         </div>
 
                         <div x-show="recurringInterval === 'monthly'">
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">On Day of Month</label>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">{{ __('On Day of Month') }}</label>
                             <input type="number" name="recurring_day_monthly" min="1" max="31" value="{{ campaign.recurringDay|default(1) }}"
                                    {{ readonly ? 'disabled' : '' }}
                                    class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                         </div>
 
                         <div class="border-t dark:border-gray-700 pt-4">
-                            <h4 class="text-xs font-bold text-gray-500 uppercase mb-3">Trigger & Filter Settings</h4>
+                            <h4 class="text-xs font-bold text-gray-500 uppercase mb-3">{{ __('Trigger & Filter Settings') }}</h4>
 
                             <div class="space-y-3">
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Min New Posts to Trigger</label>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ __('Min New Posts to Trigger') }}</label>
                                     <input type="number" name="recurring_post_count" min="0" value="{{ campaign.recurringPostCount|default(0) }}"
                                            {{ readonly ? 'disabled' : '' }}
                                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                                    <p class="text-[10px] text-gray-400 mt-1">Set to 0 to send every time (ignoring new post count).</p>
+                                    <p class="text-[10px] text-gray-400 mt-1">{{ __('Set to 0 to send every time (ignoring new post count).') }}</p>
                                 </div>
 
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Post Types</label>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ __('Post Types') }}</label>
                                     <div class="relative" data-multi data-name="recurring_post_types" data-array="0" data-mode="client" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringPostTypes|default('') }}">
                                         <input data-search type="text" placeholder="{{ __('Search post types...') }}" {{ readonly ? 'disabled' : '' }}
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 shadow-xs text-sm">
@@ -353,11 +353,11 @@
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
                                         <div data-hidden class="hidden"></div>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Posts of ANY selected type are counted (OR).</p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{{ __('Posts of ANY selected type are counted (OR).') }}</p>
                                 </div>
 
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Category</label>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ __('Category') }}</label>
                                     <div class="relative" data-multi data-name="recurring_category_ids" data-array="1" data-mode="fetch" data-fetch="/admin/categories/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringCategoryIds|default('') }}">
                                         <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for c in allCategories|default([]) %}{"value":{{ c.id }},"label":{{ c.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                                         <input data-search type="text" placeholder="{{ __('Search categories...') }}" {{ readonly ? 'disabled' : '' }}
@@ -366,11 +366,11 @@
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
                                         <div data-hidden class="hidden"></div>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Match posts in ANY selected category (OR).</p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{{ __('Match posts in ANY selected category (OR).') }}</p>
                                 </div>
 
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tag</label>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ __('Tag') }}</label>
                                     <div class="relative" data-multi data-name="recurring_tag_ids" data-array="1" data-mode="fetch" data-fetch="/admin/tags/list-json" data-readonly="{{ readonly ? '1' : '0' }}" data-selected="{{ campaign.recurringTagIds|default('') }}">
                                         <script nonce="{{ csp_nonce }}" type="application/json" data-labelmap>[{% for t in allContentTags|default([]) %}{"value":{{ t.id }},"label":{{ t.name|json_encode|raw }}}{% if not loop.last %},{% endif %}{% endfor %}]</script>
                                         <input data-search type="text" placeholder="{{ __('Search tags...') }}" {{ readonly ? 'disabled' : '' }}
@@ -379,8 +379,8 @@
                                         <div data-drop class="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg hidden"></div>
                                         <div data-hidden class="hidden"></div>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Match posts with ANY selected tag (OR).</p>
-                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Selected groups are combined with AND — a post must match at least one item from every group you choose.</p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{{ __('Match posts with ANY selected tag (OR).') }}</p>
+                                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">{{ __('Selected groups are combined with AND — a post must match at least one item from every group you choose.') }}</p>
                                 </div>
 
                                 <script nonce="{{ csp_nonce }}">
@@ -392,8 +392,8 @@
                                     var RO = {{ readonly ? 'true' : 'false' }};
                                     function buildClientTypes(){
                                         var out=[];
-                                        if(window._VL_BLOG_ENABLED !== '0') out.push({value:'post',label:_t('Posts')});
-                                        if(window._VL_PAGES_ENABLED === '1') out.push({value:'page',label:_t('Pages')});
+                                        if(window._VL_BLOG_ENABLED !== '0') out.push({value:'post',label:'{{ __('Posts')|e('js') }}'});
+                                        if(window._VL_PAGES_ENABLED === '1') out.push({value:'page',label:'{{ __('Pages')|e('js') }}'});
                                         var cpts=window._VL_ACTIVE_CPTS||[]; var have={}; out.forEach(function(o){have[o.value]=1;});
                                         cpts.forEach(function(ct){ var slug=(ct.slug && typeof ct.slug==='object')?ct.slug.value:ct.slug; if(slug && !have[slug]){ have[slug]=1; out.push({value:slug,label:ct.name||slug}); } });
                                         return out;
@@ -438,7 +438,7 @@
                                         function renderDrop(items){
                                             drop.innerHTML='';
                                             var shown=items.filter(function(o){ return !selected.some(function(s){ return s.value===o.value; }); });
-                                            if(!shown.length){ var e=document.createElement('div'); e.className='px-3 py-2 text-sm text-gray-400 dark:text-gray-500 italic'; e.textContent=_t('None'); drop.appendChild(e); }
+                                            if(!shown.length){ var e=document.createElement('div'); e.className='px-3 py-2 text-sm text-gray-400 dark:text-gray-500 italic'; e.textContent='{{ __('None')|e('js') }}'; drop.appendChild(e); }
                                             else { shown.forEach(function(o){
                                                 var it=document.createElement('div'); it.className='px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'; it.textContent=o.label;
                                                 it.addEventListener('mousedown',function(ev){ ev.preventDefault(); selected.push(o); renderChips(); renderDrop(options); }); drop.appendChild(it);
@@ -497,10 +497,10 @@
 
                                 {% if multi_language_content %}
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Language</label>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">{{ __('Language') }}</label>
                                     <select name="recurring_language" {{ readonly ? 'disabled' : '' }}
                                             class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
-                                        <option value="">All Languages</option>
+                                        <option value="">{{ __('All Languages') }}</option>
                                         {% for code in supported_locales|default([]) %}
                                         <option value="{{ code }}" {{ campaign and campaign.recurringLanguage == code ? 'selected' : '' }}>{{ locale_name(code) }}</option>
                                         {% endfor %}
@@ -513,7 +513,7 @@
                 </div>
 
                 <div class="mb-4" x-show="!isRecurring">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ readonly ? 'Scheduled At' : 'Schedule (optional)' }}</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ readonly ? __('Scheduled At') : __('Schedule (optional)') }}</label>
                     <input type="datetime-local" name="scheduled_at"
                            value="{{ campaign.scheduledAt ? campaign.scheduledAt|date('Y-m-d\\TH:i') : '' }}"
                            {{ readonly ? 'disabled' : '' }}
@@ -521,29 +521,29 @@
                 </div>
                 {% if not readonly %}
                 <button type="submit" class="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-                    {{ is_edit ? 'Update' : 'Save' }} Campaign
+                    {{ is_edit ? __('Update Campaign') : __('Save Campaign') }}
                 </button>
                 {% if is_edit and campaign and (campaign.isDraft or campaign.status == 'scheduled') %}
-                <a href="#" onclick="event.preventDefault(); if(confirm('Send this campaign now?')) document.getElementById('send-form').submit();"
+                <a href="#" onclick="event.preventDefault(); if(confirm('{{ __('Send this campaign now?')|e('js') }}')) document.getElementById('send-form').submit();"
                    class="block w-full mt-2 text-center rounded-lg bg-green-600 dark:bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 dark:hover:bg-green-800">
-                    ▶ Send Now
+                    ▶ {{ __('Send Now') }}
                 </a>
                 {% endif %}
                 {% if is_edit and campaign %}
                 <button type="submit" formaction="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/clone') }}"
                         class="w-full mt-2 rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50 cursor-pointer">
-                    ⧉ Clone as Draft
+                    ⧉ {{ __('Clone as Draft') }}
                 </button>
                 {% endif %}
                 {% else %}
                 <form method="POST" action="{{ url('/admin/newsletter/campaigns/' ~ campaign.id ~ '/clone') }}" class="mb-2">
                     {{ csrf_field() }}
                     <button type="submit" class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
-                        ⧉ Clone as Draft
+                        ⧉ {{ __('Clone as Draft') }}
                     </button>
                 </form>
                 <a href="{{ url('/admin/newsletter/campaigns') }}" class="block w-full text-center rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">
-                    ← Back to Campaigns
+                    ← {{ __('Back to Campaigns') }}
                 </a>
                 {% endif %}
             </div>

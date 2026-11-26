@@ -1,7 +1,7 @@
 {% extends "admin/layout.twig" %}
 {% import "admin/partials/_row_actions.twig" as actions %}
 
-{% block title %}Email Automations{% endblock %}
+{% block title %}{{ __('Email Automations') }}{% endblock %}
 
 {% block content %}
 <div x-data="{
@@ -17,11 +17,11 @@
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Email Automations') }}</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ sequences|length }} sequence{{ sequences|length != 1 ? 's' : '' }}</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ sequences|length }} {{ sequences|length != 1 ? __('sequences') : __('sequence') }}</p>
     </div>
     <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <a href="{{ url('/admin/newsletter/campaigns') }}" class="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:bg-gray-800/50">{{ __('Campaigns') }}</a>
-        <a href="{{ url('/admin/newsletter/automations/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ New Sequence</a>
+        <a href="{{ url('/admin/newsletter/automations/create') }}" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">+ {{ __('New Sequence') }}</a>
     </div>
 </div>
 
@@ -93,13 +93,13 @@
             {% set step_count = stepSummaries[seq.id].count ?? 0 %}
             {% set total_min  = stepSummaries[seq.id].total_minutes ?? 0 %}
             {% if total_min >= 10080 %}
-                {% set duration = (total_min / 10080)|round ~ ' wk' ~ ((total_min / 10080)|round != 1 ? 's' : '') %}
+                {% set duration = (total_min / 10080)|round ~ ' ' ~ ((total_min / 10080)|round != 1 ? __('wks') : __('wk')) %}
             {% elseif total_min >= 1440 %}
-                {% set duration = (total_min / 1440)|round ~ ' day' ~ ((total_min / 1440)|round != 1 ? 's' : '') %}
+                {% set duration = (total_min / 1440)|round ~ ' ' ~ ((total_min / 1440)|round != 1 ? __('days') : __('day')) %}
             {% elseif total_min >= 60 %}
-                {% set duration = (total_min / 60)|round ~ ' hr' ~ ((total_min / 60)|round != 1 ? 's' : '') %}
+                {% set duration = (total_min / 60)|round ~ ' ' ~ ((total_min / 60)|round != 1 ? __('hrs') : __('hr')) %}
             {% else %}
-                {% set duration = total_min ~ ' min' %}
+                {% set duration = total_min ~ ' ' ~ __('min') %}
             {% endif %}
             {% if seq.triggerType == 'subscribe' %}
                 {% set trigger_label = __('Subscribe') %}
@@ -110,7 +110,7 @@
             {% else %}
                 {% set trigger_label = seq.triggerType %}
             {% endif %}
-            {% set search_text = (seq.name ~ ' ' ~ trigger_label ~ ' ' ~ (seq.isActive() ? __('Active') ~ ' active' : __('Paused') ~ ' paused'))|lower|e('js') %}
+            {% set search_text = (seq.name ~ ' ' ~ trigger_label ~ ' ' ~ (seq.isActive() ? __('Active') ~ ' ' ~ __('active') : __('Paused') ~ ' ' ~ __('paused')))|lower|e('js') %}
             <tr data-row
                 data-sort-Name="{{ seq.name|lower|e('html_attr') }}"
                 data-sort-Trigger="{{ trigger_label|lower|e('html_attr') }}"
@@ -124,7 +124,7 @@
                 <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {{ trigger_label }}
                     {% if seq.triggerFormId %}
-                    <span class="ml-1 text-gray-400">(form #{{ seq.triggerFormId }})</span>
+                    <span class="ml-1 text-gray-400">{{ __('(form #:id)', {':id': seq.triggerFormId}) }}</span>
                     {% endif %}
                     {% if seq.triggerTag %}
                     {% set tags = seq.triggerTag|split(',') %}
@@ -135,14 +135,14 @@
                     {% endif %}
                     {% endfor %}
                     {% if seq.triggerTagMatch == 'all' %}
-                    <span class="ml-1 text-xs text-gray-400 italic">(all)</span>
+                    <span class="ml-1 text-xs text-gray-400 italic">{{ __('(all)') }}</span>
                     {% endif %}
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     {% if step_count > 0 %}
                     <a href="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/edit') }}" class="text-gray-700 hover:underline">
-                        {{ step_count }} step{{ step_count != 1 ? 's' : '' }}
+                        {{ step_count }} {{ step_count != 1 ? __('steps') : __('step') }}
                         {% if total_min > 0 %}<span class="text-gray-400">({{ duration }})</span>{% endif %}
                     </a>
                     {% else %}
@@ -150,9 +150,9 @@
                     {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span class="font-medium text-gray-700">{{ cnt.active }}</span> active
+                    <span class="font-medium text-gray-700">{{ cnt.active }}</span> {{ __('active') }}
                     <span class="mx-1 text-gray-300">/</span>
-                    <span class="text-gray-400">{{ cnt.completed }} done</span>
+                    <span class="text-gray-400">{{ cnt.completed }} {{ __('done') }}</span>
                 </td>
                 <td class="whitespace-nowrap px-6 py-4">
                     {% if seq.isActive() %}
@@ -172,11 +172,11 @@
 
                         <form method="POST" action="{{ url('/admin/newsletter/automations/' ~ seq.id ~ '/toggle') }}" class="inline-flex">
                             {{ csrf_field() }}
-                            {{ actions.submit(seq.isActive() ? 'pause' : 'play', seq.isActive() ? 'Pause' : 'Activate', seq.isActive() ? 'warning' : 'success') }}
+                            {{ actions.submit(seq.isActive() ? 'pause' : 'play', seq.isActive() ? __('Pause') : __('Activate'), seq.isActive() ? 'warning' : 'success') }}
                         </form>
 
                         <form method="POST" action="{{ url('/admin/newsletter/automations/' ~ seq.id) }}" class="inline-flex"
-                              onsubmit="return confirm('Delete this automation sequence? Enrolled subscribers will not receive further emails.')">
+                              onsubmit="return confirm('{{ __('Delete this automation sequence? Enrolled subscribers will not receive further emails.')|e('js') }}')">
                             {{ csrf_field() }}
                             <input type="hidden" name="_METHOD" value="DELETE">
                             {{ actions.submit('trash', __('Delete'), 'danger') }}
@@ -188,7 +188,7 @@
             <tr>
                 <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
                     {{ __('No automation sequences yet.') }}
-                    <a href="{{ url('/admin/newsletter/automations/create') }}" class="ml-1 font-medium text-gray-700 hover:underline">Create one →</a>
+                    <a href="{{ url('/admin/newsletter/automations/create') }}" class="ml-1 font-medium text-gray-700 hover:underline">{{ __('Create one') }} →</a>
                 </td>
             </tr>
             {% endfor %}

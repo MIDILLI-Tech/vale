@@ -7,7 +7,7 @@
 <div x-data="dataTable({perPage: {{ per_page }}, serverSide: true, page: {{ page }}, totalItems: {{ total }}, baseUrl: '{{ base_url|e('js') }}', search: '{{ (search|default(''))|e('js') }}', sort: '{{ (sort|default(''))|e('js') }}', dir: '{{ (dir|default('desc'))|e('js') }}'})">
 <div class="mb-6 flex items-center justify-between">
     <div>
-        <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">&larr; Back to Campaigns</a>
+        <a href="{{ url('/admin/newsletter/campaigns') }}" class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">&larr; {{ __('Back to Campaigns') }}</a>
         <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{{ campaign.subject }}</h1>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">
             <span class="inline-flex items-center gap-1.5">

@@ -68,7 +68,7 @@
                     {% endif %}
                     {% if c.abTestEnabled %}
                         <div class="mt-1 flex items-center gap-1.5">
-                            <span class="inline-flex items-center rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 border border-indigo-100">A/B TEST</span>
+                            <span class="inline-flex items-center rounded-sm bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 border border-indigo-100">{{ __('A/B TEST') }}</span>
                         </div>
                     {% endif %}
                 </td>
@@ -132,8 +132,8 @@
                         {% if t == 0 %}
                         <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">—</span>
                         {% else %}
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 1 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 1 ? 'Open tracking on' : 'Open tracking off' }}">O</span>
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 2 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 2 ? 'Click tracking on' : 'Click tracking off' }}">C</span>
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 1 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 1 ? __('Open tracking on') : __('Open tracking off') }}">{{ __('Opens')|slice(0, 1) }}</span>
+                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold {{ t b-and 2 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 text-gray-300 dark:bg-gray-700 dark:text-gray-500' }}" title="{{ t b-and 2 ? __('Click tracking on') : __('Click tracking off') }}">{{ __('Clicks')|slice(0, 1) }}</span>
                         {% endif %}
                     </div>
                 </td>

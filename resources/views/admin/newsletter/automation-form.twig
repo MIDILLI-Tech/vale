@@ -2,7 +2,7 @@
 
 {% set panel_rail = true %}
 
-{% block title %}{{ sequence ? 'Edit' : 'New' }} Automation{% endblock %}
+{% block title %}{{ sequence ? __('Edit Automation') : __('New Automation') }}{% endblock %}
 
 {% block content %}
 <style>.drag-handle { cursor: move; }</style>
@@ -10,8 +10,8 @@
 <div x-data="automationForm({{ steps|json_encode|e('html_attr') }})">
 
 <div class="mb-6 flex items-center gap-3 flex-wrap">
-    <a href="{{ url('/admin/newsletter/automations') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← Automations</a>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ sequence ? 'Edit Automation' : 'New Automation Sequence' }}</h1>
+    <a href="{{ url('/admin/newsletter/automations') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ __('Automations') }}</a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ sequence ? __('Edit Automation') : __('New Automation Sequence') }}</h1>
     {% if sequence %}<span x-show="!isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">✓ {{ __('Saved') }}</span>{% endif %}
     <span x-show="isDirty" x-cloak class="px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
     {% include 'admin/components/rail-toggle.twig' %}
@@ -63,7 +63,7 @@
                 </div>
 
                 <template x-if="steps.length === 0">
-                    <p class="text-sm text-gray-400 py-4 text-center">No steps yet. Click "Add Step" to start building the sequence.</p>
+                    <p class="text-sm text-gray-400 py-4 text-center">{{ __('No steps yet. Click "Add Step" to start building the sequence.') }}</p>
                 </template>
 
                 <div id="steps-sortable" class="space-y-6">
@@ -77,32 +77,32 @@
                                             x-html="step.collapsed ? '&#9654;' : '&#9660;'"></button>
                                     <span class="drag-handle text-gray-300 hover:text-gray-500 dark:text-gray-400 select-none text-lg leading-none cursor-grab">⠿</span>
                                     <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-                                          x-text="'Step ' + (i + 1)"></span>
+                                          x-text="'{{ __('Step')|e('js') }} ' + (i + 1)"></span>
                                     <span x-show="step.collapsed" class="text-sm text-gray-500 dark:text-gray-400 ml-1 truncate max-w-xs"
-                                          x-text="step.subject || '(no subject)'"></span>
+                                          x-text="step.subject || '{{ __('(no subject)')|e('js') }}'"></span>
                                     <span x-show="step.collapsed" class="text-xs text-gray-400 ml-2"
-                                          x-text="'Send after ' + step.delay + ' ' + step.delay_unit + (i === 0 ? ' (from subscription)' : ' (from previous step)')"></span>
+                                          x-text="'{{ __('Send after')|e('js') }} ' + step.delay + ' ' + unitLabel(step.delay_unit) + (i === 0 ? ' {{ __('(from subscription)')|e('js') }}' : ' {{ __('(from previous step)')|e('js') }}')"></span>
                                     <div x-show="step.collapsed" class="flex gap-4 ml-4">
                                         <div class="flex items-center gap-1">
                                             <span class="text-[10px] font-bold text-gray-400 uppercase">A:</span>
-                                            <span class="text-[10px] text-gray-500" x-text="(step.opens_count || 0) + ' opens, ' + (step.clicks_count || 0) + ' clicks'"></span>
+                                            <span class="text-[10px] text-gray-500" x-text="(step.opens_count || 0) + ' {{ __('opens')|e('js') }}, ' + (step.clicks_count || 0) + ' {{ __('clicks')|e('js') }}'"></span>
                                         </div>
                                         <template x-if="step.ab_test_enabled">
                                             <div class="flex items-center gap-1">
                                                 <span class="text-[10px] font-bold text-indigo-400 uppercase">B:</span>
-                                                <span class="text-[10px] text-indigo-500" x-text="(step.opens_count_b || 0) + ' opens, ' + (step.clicks_count_b || 0) + ' clicks'"></span>
+                                                <span class="text-[10px] text-indigo-500" x-text="(step.opens_count_b || 0) + ' {{ __('opens')|e('js') }}, ' + (step.clicks_count_b || 0) + ' {{ __('clicks')|e('js') }}'"></span>
                                             </div>
                                         </template>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" @click="moveStepTop(i)" title="Move to top"
+                                    <button type="button" @click="moveStepTop(i)" title="{{ __('Move to top') }}"
                                             class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">⇈</button>
-                                    <button type="button" @click="moveStepUp(i)" title="Move up"
+                                    <button type="button" @click="moveStepUp(i)" title="{{ __('Move up') }}"
                                             class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">↑</button>
-                                    <button type="button" @click="moveStepDown(i)" title="Move down"
+                                    <button type="button" @click="moveStepDown(i)" title="{{ __('Move down') }}"
                                             class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">↓</button>
-                                    <button type="button" @click="moveStepBottom(i)" title="Move to bottom"
+                                    <button type="button" @click="moveStepBottom(i)" title="{{ __('Move to bottom') }}"
                                             class="text-xs text-gray-400 hover:text-gray-700 px-1 leading-none">⇊</button>
                                     <span class="mx-1 text-gray-300">|</span>
                                     <button type="button" @click="removeStep(i)"
@@ -115,17 +115,17 @@
                                 {# Delay #}
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        <span x-text="i === 0 ? 'Send after (from subscription)' : 'Send after (from previous step)'"></span>
+                                        <span x-text="i === 0 ? '{{ __('Send after (from subscription)')|e('js') }}' : '{{ __('Send after (from previous step)')|e('js') }}'"></span>
                                     </label>
                                     <div class="flex gap-2 items-center">
                                         <input type="number" min="0" x-model.number="step.delay"
                                                class="w-28 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                                         <select x-model="step.delay_unit"
                                                 class="rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
-                                            <option value="minutes">minutes</option>
-                                            <option value="hours">hours</option>
-                                            <option value="days">days</option>
-                                            <option value="weeks">weeks</option>
+                                            <option value="minutes">{{ __('minutes') }}</option>
+                                            <option value="hours">{{ __('hours') }}</option>
+                                            <option value="days">{{ __('days') }}</option>
+                                            <option value="weeks">{{ __('weeks') }}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -151,7 +151,7 @@
                             {# Stats display in expanded mode #}
                             <div class="mb-4 flex gap-8 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
                                 <div>
-                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase mb-1" x-text="step.ab_test_enabled ? 'Variant A Stats' : 'Step Stats'">{{ __('Stats') }}</h5>
+                                    <h5 class="text-[10px] font-bold text-gray-400 uppercase mb-1" x-text="step.ab_test_enabled ? '{{ __('Variant A Stats')|e('js') }}' : '{{ __('Step Stats')|e('js') }}'">{{ __('Stats') }}</h5>
                                     <div class="flex gap-4">
                                         <div class="flex flex-col">
                                             <span class="text-lg font-bold text-gray-700 dark:text-gray-200" x-text="step.opens_count || 0"></span>
@@ -187,7 +187,7 @@
                                           x-html="step.segmentationCollapsed ? '&#9654;' : '&#9660;'"></span>
                                     <span class="text-xs font-bold uppercase text-gray-500">{{ __('Segmentation') }}</span>
                                     <span class="text-[10px] text-gray-400 ml-1"
-                                          x-text="_hasActiveFilters(step) ? '(filters active)' : '(no filters)'"></span>
+                                          x-text="_hasActiveFilters(step) ? '{{ __('(filters active)')|e('js') }}' : '{{ __('(no filters)')|e('js') }}'"></span>
                                 </button>
                                 <div x-show="!step.segmentationCollapsed" x-cloak class="grid grid-cols-2 gap-8">
                                     <template x-if="window._VL_SHOP_ENABLED"><div class="space-y-4">
@@ -241,22 +241,22 @@
                                         <label class="block text-xs font-bold uppercase text-gray-500 mb-2">{{ __('Engagement Rates') }}</label>
                                         <div class="grid grid-cols-2 gap-4">
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[10px] text-gray-500 uppercase">Min Open %:</span>
+                                                <span class="text-[10px] text-gray-500 uppercase">{{ __('Min Open %:') }}</span>
                                                 <input type="number" min="0" max="100" x-model.number="step.min_open_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[10px] text-gray-500 uppercase">Max Open %:</span>
+                                                <span class="text-[10px] text-gray-500 uppercase">{{ __('Max Open %:') }}</span>
                                                 <input type="number" min="0" max="100" x-model.number="step.max_open_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[10px] text-gray-500 uppercase">Min Click %:</span>
+                                                <span class="text-[10px] text-gray-500 uppercase">{{ __('Min Click %:') }}</span>
                                                 <input type="number" min="0" max="100" x-model.number="step.min_click_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <span class="text-[10px] text-gray-500 uppercase">Max Click %:</span>
+                                                <span class="text-[10px] text-gray-500 uppercase">{{ __('Max Click %:') }}</span>
                                                 <input type="number" min="0" max="100" x-model.number="step.max_click_rate_filter" placeholder="{{ __('any') }}"
                                                        class="w-20 rounded-sm border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:ring-gray-500">
                                             </div>
@@ -265,9 +265,9 @@
                                 </div>
                                 <p x-show="step.segmentationCollapsed" x-cloak class="text-xs text-gray-400"
                                    x-text="_hasActiveFilters(step)
-                                       ? 'Segmentation filters are active — click the header to adjust them.'
-                                       : 'No segmentation filters set — applies to all subscribers.'"></p>
-                                <p class="text-[10px] text-gray-400 mt-1">If set, step will only execute for subscribers matching these criteria.</p>
+                                       ? '{{ __('Segmentation filters are active — click the header to adjust them.')|e('js') }}'
+                                       : '{{ __('No segmentation filters set — applies to all subscribers.')|e('js') }}'"></p>
+                                <p class="text-[10px] text-gray-400 mt-1">{{ __('If set, step will only execute for subscribers matching these criteria.') }}</p>
                             </div>
 
                             {# Subject & Content with Variant tabs #}
@@ -291,7 +291,7 @@
                                     </template>
                                     {# Subject #}
                                     <div class="mb-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Subject') }} <span class="text-red-500">*</span></label>
                                         <input type="text" x-model="step.subject"
                                                placeholder="{{ __('Email subject line') }}"
                                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
@@ -319,15 +319,15 @@
 
                                 {# Variant B content #}
                                 <div :class="!step.ab_test_enabled || step.variantTab !== 'b' ? 'hidden' : ''" x-cloak>
-                                    <h4 class="text-xs font-bold uppercase text-indigo-500">Variant B</h4>
+                                    <h4 class="text-xs font-bold uppercase text-indigo-500">{{ __('Variant B') }}</h4>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject <span class="text-red-500">*</span></label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Subject') }} <span class="text-red-500">*</span></label>
                                         <input type="text" x-model="step.subject_b"
                                                placeholder="{{ __('Email subject line') }}"
                                                class="w-full rounded-lg border-indigo-200 dark:border-indigo-800 shadow-xs text-sm focus:border-indigo-600 focus:ring-indigo-500">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Body</label>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Email Body') }}</label>
 {% include 'admin/newsletter/_template_vars.twig' %}
                                         <div x-init="$nextTick(() => { const ta = $el.querySelector('textarea[data-editor]'); if (ta && window.vlInitEditor) window.vlInitEditor(ta); })">
                                             <textarea :name="'steps[' + i + '][body_html_b]'"
@@ -365,7 +365,7 @@
                 <div class="mt-6 flex justify-end">
                     <button type="button" @click="addStep"
                             class="rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
-                        + Add Step
+                        + {{ __('Add Step') }}
                     </button>
                 </div>
             </div>
@@ -378,23 +378,23 @@
 
                 <div x-data="{ triggerType: '{{ (sequence ? sequence.triggerType : 'subscribe')|e('js') }}' }">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Trigger Type</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Trigger Type') }}</label>
                     <select name="trigger_type" x-model="triggerType"
                             class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
                         <option value="subscribe" {{ (not sequence or sequence.triggerType == 'subscribe') ? 'selected' : '' }}>
-                            New subscriber confirms (double opt-in)
+                            {{ __('New subscriber confirms (double opt-in)') }}
                         </option>
                         <option value="manual" {{ sequence and sequence.triggerType == 'manual' ? 'selected' : '' }}>
-                            Manual enrollment only (admin-triggered)
+                            {{ __('Manual enrollment only (admin-triggered)') }}
                         </option>
                         <option value="tag_assigned" {{ sequence and sequence.triggerType == 'tag_assigned' ? 'selected' : '' }}>
-                            Tag is assigned to subscriber
+                            {{ __('Tag is assigned to subscriber') }}
                         </option>
                     </select>
                     <p class="text-xs text-gray-400 mt-1">
-                        <strong>Subscribe</strong> — auto-enrolls when a subscriber confirms double opt-in.<br>
-                        <strong>Manual</strong> — never auto-enrolls; use the admin subscriber edit to enroll manually.<br>
-                        <strong>Tag Assigned</strong> — auto-enrolls when the specified tag is added to a subscriber.
+                        {{ __('<strong>Subscribe</strong> — auto-enrolls when a subscriber confirms double opt-in.')|raw }}<br>
+                        {{ __('<strong>Manual</strong> — never auto-enrolls; use the admin subscriber edit to enroll manually.')|raw }}<br>
+                        {{ __('<strong>Tag Assigned</strong> — auto-enrolls when the specified tag is added to a subscriber.')|raw }}
                     </p>
                 </div>
 
@@ -402,7 +402,7 @@
                 <template x-if="triggerType === 'subscribe'">
                 <div>
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tag Filter (optional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tag Filter (optional)') }}</label>
                         <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '{{ sequence.triggerTag|default('')|e('js') }}' })">
                             <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
                                 <template x-for="(item, i) in items" :key="i">
@@ -429,28 +429,28 @@
                             <input type="hidden" name="trigger_tag" :value="items.join(',')">
                         </div>
                         <div class="flex items-center gap-2 mt-1.5">
-                            <label class="text-xs text-gray-500 dark:text-gray-400">Match:</label>
+                            <label class="text-xs text-gray-500 dark:text-gray-400">{{ __('Match:') }}</label>
                             <select name="trigger_tag_match"
                                     class="rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-xs focus:border-gray-600 focus:ring-gray-500">
-                                <option value="any" {{ sequence.triggerTagMatch|default('any') == 'any' ? 'selected' : '' }}>any (subscriber has at least one)</option>
-                                <option value="all" {{ sequence.triggerTagMatch|default('any') == 'all' ? 'selected' : '' }}>all (subscriber has every tag)</option>
+                                <option value="any" {{ sequence.triggerTagMatch|default('any') == 'any' ? 'selected' : '' }}>{{ __('any (subscriber has at least one)') }}</option>
+                                <option value="all" {{ sequence.triggerTagMatch|default('any') == 'all' ? 'selected' : '' }}>{{ __('all (subscriber has every tag)') }}</option>
                             </select>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">Comma-separated tags. Leave blank for all subscribers.</p>
+                        <p class="text-xs text-gray-400 mt-1">{{ __('Comma-separated tags. Leave blank for all subscribers.') }}</p>
                     </div>
 
 <div class="mb-6">
                         <template x-if="window._VL_FORMS_ENABLED">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Source Form Filter (optional)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Source Form Filter (optional)') }}</label>
                                 <select name="trigger_form_id"
                                         class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
-                                    <option value="">— All forms —</option>
+                                    <option value="">{{ __('— All forms —') }}</option>
                                     {% for f in forms|default([]) %}
                                     <option value="{{ f.id }}" {{ sequence and sequence.triggerFormId == f.id ? 'selected' : '' }}>{{ f.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <p class="text-xs text-gray-400 mt-1">Only enroll subscribers from this specific form.</p>
+                                <p class="text-xs text-gray-400 mt-1">{{ __('Only enroll subscribers from this specific form.') }}</p>
                             </div>
                         </template>
                     </div>
@@ -460,7 +460,7 @@
                 {# Tag assigned: which tag triggers enrollment? #}
                 <template x-if="triggerType === 'tag_assigned'">
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Trigger Tag <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Trigger Tag') }} <span class="text-red-500">*</span></label>
                     <div x-data="tagInput({ allTags: {{ allTags|default([])|json_encode|e('html_attr') }}, initial: '{{ sequence.triggerTag|default('')|e('js') }}' })">
                         <div class="flex flex-wrap gap-2 mb-2" x-show="items.length > 0" x-cloak>
                             <template x-for="(item, i) in items" :key="i">
@@ -486,47 +486,47 @@
                         </div>
                         <input type="hidden" name="trigger_tag" :value="items.join(',')">
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">Enroll subscribers when this tag is assigned. Only a single tag is supported.</p>
+                    <p class="text-xs text-gray-400 mt-1">{{ __('Enroll subscribers when this tag is assigned. Only a single tag is supported.') }}</p>
                 </div>
                 </template>
                 </div>
 
                 <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <div x-data="{ tracking: {{ (sequence ? sequence.trackingEnabled : 3)|default(3) }} }">
-                        <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Tracking</h4>
+                        <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{{ __('Tracking') }}</h4>
                         <input type="hidden" name="tracking_enabled" :value="tracking">
                         <label class="flex items-center gap-2 cursor-pointer mb-2">
                             <input type="checkbox" :checked="tracking &amp; 1" @change="tracking ^= 1"
                                    class="text-gray-900 dark:text-gray-100 focus:ring-gray-500 rounded-sm">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Track opens</span>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Track opens') }}</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" :checked="tracking &amp; 2" @change="tracking ^= 2"
                                    class="text-gray-900 dark:text-gray-100 focus:ring-gray-500 rounded-sm">
-                            <span class="text-sm text-gray-700 dark:text-gray-300">Track clicks</span>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ __('Track clicks') }}</span>
                         </label>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Select one or both, or leave both unchecked to disable.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Select one or both, or leave both unchecked to disable.') }}</p>
                         <p x-show="tracking &amp; 1" x-cloak class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                            ℹ️ Place <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code> before <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code> for open tracking to work.
+                            {{ __('ℹ️ Place :tag before :body for open tracking to work.', {':tag': '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">[open_pixel]</code>', ':body': '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-sm">&lt;/body&gt;</code>'})|raw }}
                         </p>
                         <p x-show="tracking &amp; 2" x-cloak class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                            ℹ️ Click tracking is applied automatically to all links in your email body.
+                            {{ __('ℹ️ Click tracking is applied automatically to all links in your email body.') }}
                         </p>
                     </div>
                 </div>
 
                 <button type="submit"
                         class="mt-6 w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-                    {{ sequence ? 'Update Sequence' : 'Save Sequence' }}
+                    {{ sequence ? __('Update Sequence') : __('Save Sequence') }}
                 </button>
 
                 {% if sequence %}
                 <div class="mt-2">
                     {# Delete button triggers the separate delete form below (outside main form) #}
                     <button type="button"
-                            onclick="if(confirm('Delete this automation? This cannot be undone.')) document.getElementById('delete-sequence-form').submit()"
+                            onclick="if(confirm('{{ __('Delete this automation? This cannot be undone.')|e('js') }}')) document.getElementById('delete-sequence-form').submit()"
                             class="w-full rounded-lg border border-red-300 dark:border-red-700 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
-                        Delete Sequence
+                        {{ __('Delete Sequence') }}
                     </button>
                 </div>
                 {% endif %}
@@ -620,6 +620,15 @@ function automationForm(initialSteps) {
             ].some(v => v !== null && v !== undefined && v !== '');
         },
 
+        unitLabel(unit) {
+            return {
+                minutes: '{{ __('minutes')|e('js') }}',
+                hours: '{{ __('hours')|e('js') }}',
+                days: '{{ __('days')|e('js') }}',
+                weeks: '{{ __('weeks')|e('js') }}',
+            }[unit] || unit;
+        },
+
         addStep() {
             this.steps.push({
                 _key: Math.random(),
@@ -687,16 +696,16 @@ function automationForm(initialSteps) {
                 const step = this.steps[i];
                 if (!step.ab_test_enabled) {
                     if (!step.subject || step.subject.trim() === '') {
-                        alert('Step ' + (i + 1) + ': Subject is required.');
+                        alert('{{ __('Step :step: Subject is required.')|e('js') }}'.replace(':step', i + 1));
                         return;
                     }
                 } else {
                     if (!step.subject || step.subject.trim() === '') {
-                        alert('Step ' + (i + 1) + ': Variant A subject is required.');
+                        alert('{{ __('Step :step: Variant A subject is required.')|e('js') }}'.replace(':step', i + 1));
                         return;
                     }
                     if (!step.subject_b || step.subject_b.trim() === '') {
-                        alert('Step ' + (i + 1) + ': Variant B subject is required.');
+                        alert('{{ __('Step :step: Variant B subject is required.')|e('js') }}'.replace(':step', i + 1));
                         return;
                     }
                 }
