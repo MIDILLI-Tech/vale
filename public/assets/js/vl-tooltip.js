@@ -11,6 +11,10 @@
  * block editor (ProseMirror, composed blocks) and article bodies (`.prose`)
  * keep their authored `title` attributes — those are part of the document,
  * not UI hints.
+ *
+ * Force a side with `data-vl-tooltip-position="top|bottom|left|right"`. Without
+ * it the bubble sits above the host and flips below when there is no room; a
+ * requested side that would leave the viewport falls back to that auto rule.
  */
 (function () {
     'use strict';
@@ -20,6 +24,7 @@
         OBJECT: 1, EMBED: 1, VIDEO: 1, AUDIO: 1, CANVAS: 1
     };
     var SKIP_SCOPE = '.ProseMirror, [contenteditable="true"], .vl-editor-content, .CodeMirror, .cm-editor, .prose, [data-vl-tooltip-skip]';
+    var POSITIONS = { top: 1, bottom: 1, left: 1, right: 1 };
     var SHOW_DELAY = 140;
     var GAP = 8;
     var EDGE = 8;
@@ -60,6 +65,15 @@
         return text ? { el: el, text: text } : null;
     }
 
+    function preferredPosition(el) {
+        var value = (el.getAttribute('data-vl-tooltip-position') || '').toLowerCase();
+        return POSITIONS[value] ? value : 'auto';
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
     function position(host) {
         var el = bubbleNode();
         var rect = host.el.getBoundingClientRect();
@@ -70,19 +84,54 @@
         el.style.top = '0px';
         var box = el.getBoundingClientRect();
 
-        var below = rect.top - box.height - GAP < EDGE;
-        var top = below ? rect.bottom + GAP : rect.top - box.height - GAP;
-        if (top + box.height > viewportHeight - EDGE) {
-            top = Math.max(EDGE, viewportHeight - box.height - EDGE);
+        var placement = preferredPosition(host.el);
+        if (placement === 'left' && rect.left - box.width - GAP < EDGE) placement = 'auto';
+        if (placement === 'right' && rect.right + box.width + GAP > viewportWidth - EDGE) placement = 'auto';
+        if (placement === 'top' && rect.top - box.height - GAP < EDGE) placement = 'auto';
+        if (placement === 'bottom' && rect.bottom + box.height + GAP > viewportHeight - EDGE) placement = 'auto';
+        if (placement === 'auto') {
+            placement = rect.top - box.height - GAP < EDGE ? 'bottom' : 'top';
         }
 
-        var left = rect.left + rect.width / 2 - box.width / 2;
-        left = Math.max(EDGE, Math.min(left, viewportWidth - box.width - EDGE));
+        var left;
+        var top;
 
-        el.style.left = Math.round(left) + 'px';
-        el.style.top = Math.round(top) + 'px';
-        el.style.setProperty('--vl-tooltip-arrow-x', Math.round(rect.left + rect.width / 2 - left) + 'px');
-        el.classList.toggle('is-below', below);
+        if (placement === 'left' || placement === 'right') {
+            top = Math.round(clamp(
+                rect.top + rect.height / 2 - box.height / 2,
+                EDGE,
+                viewportHeight - box.height - EDGE
+            ));
+            left = placement === 'left' ? rect.left - box.width - GAP : rect.right + GAP;
+            left = Math.round(clamp(left, EDGE, viewportWidth - box.width - EDGE));
+            el.style.setProperty('--vl-tooltip-arrow-y', Math.round(clamp(
+                rect.top + rect.height / 2 - top,
+                8,
+                box.height - 8
+            )) + 'px');
+        } else {
+            top = Math.round(clamp(
+                placement === 'bottom' ? rect.bottom + GAP : rect.top - box.height - GAP,
+                EDGE,
+                viewportHeight - box.height - EDGE
+            ));
+            left = Math.round(clamp(
+                rect.left + rect.width / 2 - box.width / 2,
+                EDGE,
+                viewportWidth - box.width - EDGE
+            ));
+            el.style.setProperty('--vl-tooltip-arrow-x', Math.round(clamp(
+                rect.left + rect.width / 2 - left,
+                8,
+                box.width - 8
+            )) + 'px');
+        }
+
+        el.style.left = left + 'px';
+        el.style.top = top + 'px';
+        el.classList.toggle('is-below', placement === 'bottom');
+        el.classList.toggle('is-left', placement === 'left');
+        el.classList.toggle('is-right', placement === 'right');
     }
 
     function show(host) {
