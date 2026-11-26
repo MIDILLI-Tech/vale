@@ -323,6 +323,9 @@ final class ProductController
             'gmc_enabled'            => $this->settings->get('google_merchant_enabled', '0') === '1',
             'auto_redirect_enabled'  => $this->settings->get('auto_redirect_enabled', '1')   === '1',
             'country_codes'          => is_array($referenceData['country_codes'] ?? null) ? $referenceData['country_codes'] : [],
+            'refund_period_days'     => max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14)),
+            'digital_waiver_enabled' => ($this->settings->get('compliance_digital_waiver', '0') ?? '0') === '1',
+            'manualFiles'            => [],
             'shipping_countries'     => $this->settings->get('shipping_countries', ''),
             'shop_country'           => $this->settings->get('shop_country', ''),
             'multi_language_content' => $this->settings->get('multi_language_content', '0') === '1',
@@ -465,6 +468,9 @@ final class ProductController
             'gmc_enabled'            => $this->settings->get('google_merchant_enabled', '0') === '1',
             'auto_redirect_enabled'  => $this->settings->get('auto_redirect_enabled', '1')   === '1',
             'country_codes'          => is_array($referenceData['country_codes'] ?? null) ? $referenceData['country_codes'] : [],
+            'refund_period_days'     => max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14)),
+            'digital_waiver_enabled' => ($this->settings->get('compliance_digital_waiver', '0') ?? '0') === '1',
+            'manualFiles'            => [],
             'shipping_countries'     => $this->settings->get('shipping_countries', ''),
             'shop_country'           => $this->settings->get('shop_country', ''),
             'multi_language_content' => $this->settings->get('multi_language_content', '0') === '1',
@@ -705,6 +711,21 @@ final class ProductController
     }
 
     /** POST /admin/products/{id}/preview-draft — stores form data in session, does NOT touch the DB */
+    /** @param int[] $ids @return list<array{id: int, name: string}> */
+    private function manualFiles(array $ids): array
+    {
+        $files = [];
+        foreach ($ids as $id) {
+            $media = $this->media->findById((int) $id);
+            if ($media !== null) {
+                $files[] = ['id' => (int) $media->getId(), 'name' => $media->getOriginalName() ?: $media->getFilename()];
+            }
+        }
+
+        return $files;
+    }
+
+    /** POST /admin/products/{id}/preview-draft — stores form data in session, does NOT touch the DB */
     public function previewDraft(Request $request, Response $response, array $args): Response
     {
         $product = $this->products->findById((int) $args['id']);
@@ -735,6 +756,18 @@ final class ProductController
             'width'                   => !empty($body['width']) ? (float) str_replace(',', '.', $body['width']) : $product->getWidth(),
             'height'                  => !empty($body['height']) ? (float) str_replace(',', '.', $body['height']) : $product->getHeight(),
             'dimensions'              => $product->getDimensions(),
+            'unit'                    => $body['unit'] ?? $product->getUnit(),
+            'base_amount'             => !empty($body['base_amount']) ? (float) str_replace(',', '.', (string) $body['base_amount']) : $product->getBaseAmount(),
+            'manufacturer_name'       => !empty($body['manufacturer_name']) ? trim((string) $body['manufacturer_name']) : $product->getManufacturerName(),
+            'manufacturer_address'    => !empty($body['manufacturer_address']) ? trim((string) $body['manufacturer_address']) : $product->getManufacturerAddress(),
+            'eu_responsible_name'     => !empty($body['eu_responsible_name']) ? trim((string) $body['eu_responsible_name']) : $product->getEuResponsibleName(),
+            'eu_responsible_address'  => !empty($body['eu_responsible_address']) ? trim((string) $body['eu_responsible_address']) : $product->getEuResponsibleAddress(),
+            'country_of_origin'       => $body['country_of_origin'] ?? $product->getCountryOfOrigin(),
+            'safety_warnings'         => !empty($body['safety_warnings']) ? trim((string) $body['safety_warnings']) : $product->getSafetyWarnings(),
+            'manual_url'              => !empty($body['manual_url']) ? trim((string) $body['manual_url']) : $product->getManualUrl(),
+            'manual_label'            => !empty($body['manual_label']) ? trim((string) $body['manual_label']) : $product->getManualLabel(),
+            'digital_waiver'          => (bool) $product->hasDigitalWaiver(),
+            'manual_file_ids'         => json_encode($product->getManualFileIds() ?: new \stdClass()),
             'featured_image_id'       => !empty($body['featured_image_id']) ? (int) $body['featured_image_id'] : $product->getFeaturedImageId(),
             'status'                  => $product->getStatus(), // keep original — do NOT publish
             'comment_status'          => $body['comment_status'] ?? $product->getCommentStatus(),
@@ -985,6 +1018,36 @@ final class ProductController
         $product->setStockStatus($stockStatus);
         $product->setTotalSold((int) ($body['total_sold'] ?? 0));
         $product->setWeight(!empty($body['weight']) ? (float) str_replace(',', '.', $body['weight']) : null);
+
+        // Product compliance: unit price basis and GPSR contact details.
+        $allowedUnits = ['piece', 'g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl_oz', 'gal', 'm', 'm2', 'ft', 'ft2'];
+        $unit         = (string) ($body['unit'] ?? '');
+        $product->setUnit(in_array($unit, $allowedUnits, true) ? $unit : null);
+        $baseAmount = trim((string) ($body['base_amount'] ?? ''));
+        $product->setBaseAmount($baseAmount !== '' ? max(0.0, (float) str_replace(',', '.', $baseAmount)) : null);
+        $product->setManufacturerName(trim((string) ($body['manufacturer_name'] ?? '')) ?: null);
+        $product->setManufacturerAddress(trim((string) ($body['manufacturer_address'] ?? '')) ?: null);
+        $product->setEuResponsibleName(trim((string) ($body['eu_responsible_name'] ?? '')) ?: null);
+        $product->setEuResponsibleAddress(trim((string) ($body['eu_responsible_address'] ?? '')) ?: null);
+        $origin = strtoupper(trim((string) ($body['country_of_origin'] ?? '')));
+        $product->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
+        $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
+        $product->setManualUrl(trim((string) ($body['manual_url'] ?? '')) ?: null);
+        $product->setManualLabel(trim((string) ($body['manual_label'] ?? '')) ?: null);
+        $product->setDigitalWaiver(!empty($body['digital_waiver']));
+        $manualSource = (string) ($body['manual_source'] ?? '');
+        if ($manualSource === 'none') {
+            $product->setManualUrl(null);
+            $product->setManualFileIds([]);
+        } elseif ($manualSource === 'external') {
+            $product->setManualFileIds([]);
+        } elseif ($manualSource === 'internal') {
+            $product->setManualUrl(null);
+            $product->setManualFileIds((array) ($body['manual_file_ids'] ?? []));
+        } else {
+            $product->setManualFileIds((array) ($body['manual_file_ids'] ?? []));
+        }
+
         $product->setFeaturedImageId(!empty($body['featured_image_id']) ? (int) $body['featured_image_id'] : null);
         $allowedStatuses = ['draft', 'published', 'unlisted', 'archived', 'scheduled'];
         $status          = in_array($body['status'] ?? 'draft', $allowedStatuses, true) ? ($body['status'] ?? 'draft') : 'draft';
@@ -1541,6 +1604,19 @@ final class ProductController
             'width'                      => $product->getWidth(),
             'height'                     => $product->getHeight(),
             'dimensions'                 => $product->getDimensions(),
+            'unit'                       => $product->getUnit(),
+            'base_amount'                => $product->getBaseAmount(),
+            'manufacturer_name'          => $product->getManufacturerName(),
+            'manufacturer_address'       => $product->getManufacturerAddress(),
+            'eu_responsible_name'        => $product->getEuResponsibleName(),
+            'eu_responsible_address'     => $product->getEuResponsibleAddress(),
+            'country_of_origin'          => $product->getCountryOfOrigin(),
+            'safety_warnings'            => $product->getSafetyWarnings(),
+            'manual_url'                 => $product->getManualUrl(),
+            'manual_label'               => $product->getManualLabel(),
+            'digital_waiver'             => $product->hasDigitalWaiver() ? 1 : 0,
+            'manual_file_ids'            => json_encode($product->getManualFileIds() ?: new \stdClass()),
+            'manualFiles'                => $this->manualFiles($product->getManualFileIds()),
             'featured_image_id'          => $product->getFeaturedImageId(),
             'featured_image_url'         => $getMediaUrl($product->getFeaturedImageId()),
             'gallery'                    => json_encode($galleryUrls ?: new \stdClass()),

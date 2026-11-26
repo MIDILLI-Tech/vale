@@ -14,7 +14,8 @@
         returns:    __('Return Policy'),
         withdrawal: __('Withdrawal (Widerruf)'),
         consent:    __('Cookie Consent'),
-        us_optout:  __('Do Not Sell or Share (US)'),
+        us_optout:      __('Do Not Sell or Share (US)'),
+        digital_waiver: __('Digital withdrawal waiver'),
     } %}
     {% set legal_item_notes = {
         imprint:    __('Business name, address, contact details and registration number on a dedicated page.'),
@@ -90,6 +91,19 @@
                     </li>
                 {% endfor %}
             </ul>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                <label class="flex items-start gap-3">
+                    <input type="hidden" name="compliance_digital_waiver" value="0">
+                    <input type="checkbox" name="compliance_digital_waiver" value="1"
+                           {{ settings.compliance_digital_waiver|default('0') == '1' ? 'checked' }}
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Digital withdrawal waiver') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Adds a per-product switch for digital content whose purchase waives the withdrawal right. The period comes from Cancellation & Refund Settings.') }}</span>
+                    </span>
+                </label>
+            </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">

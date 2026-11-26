@@ -26,6 +26,22 @@ class Product extends BaseEntity
     private string $stockStatus                 = 'in_stock'; // in_stock|out_of_stock|backorder
     private ?float $weight                      = null;
     private ?string $dimensions                 = null;
+
+    // ── Product compliance (unit price, GPSR) ───────────────
+    private ?string $unit                       = null;
+    private ?float $baseAmount                  = null;
+    private ?string $manufacturerName           = null;
+    private ?string $manufacturerAddress        = null;
+    private ?string $euResponsibleName          = null;
+    private ?string $euResponsibleAddress       = null;
+    private ?string $countryOfOrigin            = null;
+    private ?string $safetyWarnings             = null;
+    private ?string $manualUrl                  = null;
+    private ?string $manualLabel                = null;
+    private bool $digitalWaiver                 = false;
+
+    /** @var int[] */
+    private array $manualFileIds                = [];
     private ?int $featuredImageId               = null;
     private string $status                      = 'draft'; // draft|published|unlisted|scheduled|trash
     private bool $publishScheduled              = false;
@@ -170,6 +186,56 @@ class Product extends BaseEntity
     public function getDimensions(): ?string
     {
         return $this->dimensions;
+    }
+    public function getUnit(): ?string
+    {
+        return $this->unit;
+    }
+    public function getBaseAmount(): ?float
+    {
+        return $this->baseAmount;
+    }
+    public function getManufacturerName(): ?string
+    {
+        return $this->manufacturerName;
+    }
+    public function getManufacturerAddress(): ?string
+    {
+        return $this->manufacturerAddress;
+    }
+    public function getEuResponsibleName(): ?string
+    {
+        return $this->euResponsibleName;
+    }
+    public function getEuResponsibleAddress(): ?string
+    {
+        return $this->euResponsibleAddress;
+    }
+    public function getCountryOfOrigin(): ?string
+    {
+        return $this->countryOfOrigin;
+    }
+    public function getSafetyWarnings(): ?string
+    {
+        return $this->safetyWarnings;
+    }
+    public function getManualUrl(): ?string
+    {
+        return $this->manualUrl;
+    }
+    public function getManualLabel(): ?string
+    {
+        return $this->manualLabel;
+    }
+    public function hasDigitalWaiver(): bool
+    {
+        return $this->digitalWaiver;
+    }
+
+    /** @return int[] */
+    public function getManualFileIds(): array
+    {
+        return $this->manualFileIds;
     }
     public function getFeaturedImageId(): ?int
     {
@@ -519,6 +585,56 @@ class Product extends BaseEntity
     {
         $this->dimensions = $d;
     }
+    public function setUnit(?string $unit): void
+    {
+        $this->unit = $unit;
+    }
+    public function setBaseAmount(?float $amount): void
+    {
+        $this->baseAmount = $amount;
+    }
+    public function setManufacturerName(?string $name): void
+    {
+        $this->manufacturerName = $name;
+    }
+    public function setManufacturerAddress(?string $address): void
+    {
+        $this->manufacturerAddress = $address;
+    }
+    public function setEuResponsibleName(?string $name): void
+    {
+        $this->euResponsibleName = $name;
+    }
+    public function setEuResponsibleAddress(?string $address): void
+    {
+        $this->euResponsibleAddress = $address;
+    }
+    public function setCountryOfOrigin(?string $code): void
+    {
+        $this->countryOfOrigin = $code;
+    }
+    public function setSafetyWarnings(?string $warnings): void
+    {
+        $this->safetyWarnings = $warnings;
+    }
+    public function setManualUrl(?string $url): void
+    {
+        $this->manualUrl = $url;
+    }
+    public function setManualLabel(?string $label): void
+    {
+        $this->manualLabel = $label;
+    }
+    public function setDigitalWaiver(bool $waiver): void
+    {
+        $this->digitalWaiver = $waiver;
+    }
+
+    /** @param int[] $ids */
+    public function setManualFileIds(array $ids): void
+    {
+        $this->manualFileIds = array_values(array_unique(array_map('intval', $ids)));
+    }
     public function setFeaturedImageId(?int $id): void
     {
         $this->featuredImageId = $id;
@@ -760,44 +876,58 @@ class Product extends BaseEntity
             new Slug($row['slug']),
         );
 
-        $product->id                 = (int) $row['id'];
-        $product->language           = $row['language']     ?? 'en';
-        $product->translationOf      = isset($row['translation_of']) ? (int) $row['translation_of'] : null;
-        $product->sku                = $row['sku']               ?? null;
-        $product->description        = $row['description']       ?? null;
-        $product->shortDescription   = $row['short_description'] ?? null;
-        $product->price              = (float) ($row['price'] ?? 0);
-        $product->salePrice          = isset($row['sale_price']) && $row['sale_price'] !== null ? (float) $row['sale_price'] : null;
-        $product->salePriceStart     = !empty($row['sale_price_start']) ? new \DateTimeImmutable($row['sale_price_start']) : null;
-        $product->salePriceEnd       = !empty($row['sale_price_end']) ? new \DateTimeImmutable($row['sale_price_end']) : null;
-        $product->stockQuantity      = (int) ($row['stock_quantity'] ?? 0);
-        $product->stockStatus        = $row['stock_status'] ?? 'in_stock';
-        $product->weight             = isset($row['weight']) ? (float) $row['weight'] : null;
-        $product->dimensions         = $row['dimensions'] ?? null;
-        $product->featuredImageId    = isset($row['featured_image_id']) ? (int) $row['featured_image_id'] : null;
-        $product->status             = $row['status'] ?? 'draft';
-        $product->publishScheduled   = (bool) ($row['publish_scheduled'] ?? false);
-        $product->publishedAt        = !empty($row['published_at']) ? new \DateTimeImmutable($row['published_at']) : null;
-        $product->expiresAt          = !empty($row['expires_at']) ? new \DateTimeImmutable($row['expires_at']) : null;
-        $product->commentStatus      = $row['comment_status'] ?? 'use_global';
-        $product->voteStatus         = $row['vote_status']    ?? 'use_global';
-        $product->type               = $row['type']           ?? 'simple';
-        $product->shippingClass      = $row['shipping_class'] ?? 'use_global';
-        $product->shippingCost       = isset($row['shipping_cost'])     && $row['shipping_cost']     !== null ? (float) $row['shipping_cost'] : null;
-        $product->shippingTimeMin    = isset($row['shipping_time_min']) && $row['shipping_time_min'] !== null ? (int) $row['shipping_time_min'] : null;
-        $product->shippingTimeMax    = isset($row['shipping_time_max']) && $row['shipping_time_max'] !== null ? (int) $row['shipping_time_max'] : null;
-        $product->vatMode            = $row['vat_mode'] ?? 'use_global';
-        $product->vatRate            = isset($row['vat_rate']) && $row['vat_rate'] !== null ? (float) $row['vat_rate'] : null;
-        $product->refundMode         = $row['refund_mode']     ?? 'use_global';
-        $product->downloadSource     = $row['download_source'] ?? 'none';
-        $product->downloadFileId     = isset($row['download_file_id']) && $row['download_file_id'] !== null ? (int) $row['download_file_id'] : null;
-        $product->downloadUrl        = $row['download_url'] ?? null;
-        $product->downloadUrlProxy   = (bool) ($row['download_url_proxy'] ?? true);
-        $product->downloadLimit      = (int) ($row['download_limit'] ?? 0);
-        $product->downloadExpiryDays = (int) ($row['download_expiry_days'] ?? 0);
-        $product->metaTitle          = $row['meta_title']       ?? null;
-        $product->metaDescription    = $row['meta_description'] ?? null;
-        $product->totalSold          = (int) ($row['total_sold'] ?? 0);
+        $product->id                   = (int) $row['id'];
+        $product->language             = $row['language']     ?? 'en';
+        $product->translationOf        = isset($row['translation_of']) ? (int) $row['translation_of'] : null;
+        $product->sku                  = $row['sku']               ?? null;
+        $product->description          = $row['description']       ?? null;
+        $product->shortDescription     = $row['short_description'] ?? null;
+        $product->price                = (float) ($row['price'] ?? 0);
+        $product->salePrice            = isset($row['sale_price']) && $row['sale_price'] !== null ? (float) $row['sale_price'] : null;
+        $product->salePriceStart       = !empty($row['sale_price_start']) ? new \DateTimeImmutable($row['sale_price_start']) : null;
+        $product->salePriceEnd         = !empty($row['sale_price_end']) ? new \DateTimeImmutable($row['sale_price_end']) : null;
+        $product->stockQuantity        = (int) ($row['stock_quantity'] ?? 0);
+        $product->stockStatus          = $row['stock_status'] ?? 'in_stock';
+        $product->weight               = isset($row['weight']) ? (float) $row['weight'] : null;
+        $product->dimensions           = $row['dimensions'] ?? null;
+        $product->unit                 = $row['unit']       ?? null;
+        $product->baseAmount           = isset($row['base_amount']) && $row['base_amount'] !== null ? (float) $row['base_amount'] : null;
+        $product->manufacturerName     = $row['manufacturer_name']      ?? null;
+        $product->manufacturerAddress  = $row['manufacturer_address']   ?? null;
+        $product->euResponsibleName    = $row['eu_responsible_name']    ?? null;
+        $product->euResponsibleAddress = $row['eu_responsible_address'] ?? null;
+        $product->countryOfOrigin      = $row['country_of_origin']      ?? null;
+        $product->safetyWarnings       = $row['safety_warnings']        ?? null;
+        $product->manualUrl            = $row['manual_url']             ?? null;
+        $product->manualLabel          = $row['manual_label']           ?? null;
+        $product->digitalWaiver        = (bool) ($row['digital_waiver'] ?? false);
+        $product->manualFileIds        = isset($row['manual_file_ids']) && is_string($row['manual_file_ids']) && $row['manual_file_ids'] !== ''
+            ? array_values(array_map('intval', json_decode($row['manual_file_ids'], true) ?: []))
+            : [];
+        $product->featuredImageId      = isset($row['featured_image_id']) ? (int) $row['featured_image_id'] : null;
+        $product->status               = $row['status'] ?? 'draft';
+        $product->publishScheduled     = (bool) ($row['publish_scheduled'] ?? false);
+        $product->publishedAt          = !empty($row['published_at']) ? new \DateTimeImmutable($row['published_at']) : null;
+        $product->expiresAt            = !empty($row['expires_at']) ? new \DateTimeImmutable($row['expires_at']) : null;
+        $product->commentStatus        = $row['comment_status'] ?? 'use_global';
+        $product->voteStatus           = $row['vote_status']    ?? 'use_global';
+        $product->type                 = $row['type']           ?? 'simple';
+        $product->shippingClass        = $row['shipping_class'] ?? 'use_global';
+        $product->shippingCost         = isset($row['shipping_cost'])     && $row['shipping_cost']     !== null ? (float) $row['shipping_cost'] : null;
+        $product->shippingTimeMin      = isset($row['shipping_time_min']) && $row['shipping_time_min'] !== null ? (int) $row['shipping_time_min'] : null;
+        $product->shippingTimeMax      = isset($row['shipping_time_max']) && $row['shipping_time_max'] !== null ? (int) $row['shipping_time_max'] : null;
+        $product->vatMode              = $row['vat_mode'] ?? 'use_global';
+        $product->vatRate              = isset($row['vat_rate']) && $row['vat_rate'] !== null ? (float) $row['vat_rate'] : null;
+        $product->refundMode           = $row['refund_mode']     ?? 'use_global';
+        $product->downloadSource       = $row['download_source'] ?? 'none';
+        $product->downloadFileId       = isset($row['download_file_id']) && $row['download_file_id'] !== null ? (int) $row['download_file_id'] : null;
+        $product->downloadUrl          = $row['download_url'] ?? null;
+        $product->downloadUrlProxy     = (bool) ($row['download_url_proxy'] ?? true);
+        $product->downloadLimit        = (int) ($row['download_limit'] ?? 0);
+        $product->downloadExpiryDays   = (int) ($row['download_expiry_days'] ?? 0);
+        $product->metaTitle            = $row['meta_title']       ?? null;
+        $product->metaDescription      = $row['meta_description'] ?? null;
+        $product->totalSold            = (int) ($row['total_sold'] ?? 0);
 
         $product->gtin                     = $row['gtin']                    ?? null;
         $product->mpn                      = $row['mpn']                     ?? null;

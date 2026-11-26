@@ -383,13 +383,30 @@
         </div>
     </div>
 
-    {# Full description #}
-    {% if product.description %}
-    <div class="mb-12">
-        <h2 class="text-xl font-bold text-gray-900 mb-4">{{ __('Description') }}</h2>
-        <div class="prose max-w-none text-gray-700">{{ product.description|shortcodes(product)|nl2br }}</div>
-    </div>
-    {% endif %}
+    {% include 'shop/partials/_product_tabs.twig' with {
+        product: product,
+        variant: 'light',
+        comments_ctx: {
+            entity_type: 'product',
+            entity_id: product.id,
+            entity_comment_status: product.commentStatus,
+            items: comments,
+            vote_status: product.voteStatus,
+            user_vote: user_vote,
+            user_comment: user_comment,
+            comment_ratings: comment_ratings,
+            global_star_ratings_enabled: global_star_ratings_enabled,
+            global_comments_enabled: global_comments_enabled,
+            allow_review_editing: allow_review_editing,
+            show_verified_badge: show_verified_badge,
+            only_logged_in_can_review: only_logged_in_can_review,
+            only_verified_buyers_can_review: only_verified_buyers_can_review,
+            user_has_purchased: user_has_purchased,
+            cpage: cpage|default(1),
+            comments_total_pages: comments_total_pages|default(1),
+            comments_total: comments_total|default(0)
+        }
+    } %}
 
     {# Cross-sells #}
     {% if cross_sells is defined and cross_sells|length > 0 %}
@@ -415,27 +432,6 @@
     </div>
     {% endif %}
 
-    {# Comments #}
-    {% include 'partials/comments.twig' with {
-        entity_type: 'product',
-        entity_id: product.id,
-        entity_comment_status: product.commentStatus,
-        items: comments,
-        vote_status: product.voteStatus,
-        user_vote: user_vote,
-        user_comment: user_comment,
-        comment_ratings: comment_ratings,
-        global_star_ratings_enabled: global_star_ratings_enabled,
-        global_comments_enabled: global_comments_enabled,
-        allow_review_editing: allow_review_editing,
-        show_verified_badge: show_verified_badge,
-        only_logged_in_can_review: only_logged_in_can_review,
-        only_verified_buyers_can_review: only_verified_buyers_can_review,
-        user_has_purchased: user_has_purchased,
-        cpage: cpage|default(1),
-        comments_total_pages: comments_total_pages|default(1),
-        comments_total: comments_total|default(0)
-    } %}
 
 </div>
 

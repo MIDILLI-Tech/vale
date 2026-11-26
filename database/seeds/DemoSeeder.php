@@ -358,6 +358,9 @@ class DemoSeeder extends AbstractSeed
         // 5. Sample Pages
         $pageCount = $this->fetchRow("SELECT COUNT(*) as count FROM {$prefix}posts WHERE content_type = 'page'");
         if ((int) ($pageCount['count'] ?? 0) === 0) {
+            // Demo legal text is placeholder copy, never a reviewed policy.
+            $legalWarning = '<div style="border:1px solid #f59e0b;background:#fffbeb;color:#92400e;padding:12px 16px;border-radius:8px;margin-bottom:16px;"><strong>Replace this placeholder text with your own legally reviewed content before going live.</strong></div>';
+
             $samplePages = [
                 [
                     'content_type'   => 'page',
@@ -433,7 +436,7 @@ class DemoSeeder extends AbstractSeed
                     'author_id'    => $adminId,
                     'title'        => 'Privacy Policy',
                     'slug'         => 'privacy-policy',
-                    'body'         => '<h2>Privacy Policy</h2><p>We value your privacy and process all personal data strictly in accordance with GDPR regulations.</p>',
+                    'body'         => $legalWarning . '<h2>Privacy Policy</h2><p>We value your privacy and process all personal data strictly in accordance with GDPR regulations.</p>',
                     'status'       => 'published',
                     'published_at' => $now,
                     'created_at'   => $now,
@@ -444,13 +447,66 @@ class DemoSeeder extends AbstractSeed
                     'author_id'    => $adminId,
                     'title'        => 'Terms of Service',
                     'slug'         => 'terms-of-service',
-                    'body'         => '<h2>Terms of Service</h2><p>By accessing this site, you agree to comply with our terms and conditions.</p>',
+                    'body'         => $legalWarning . '<h2>Terms of Service</h2><p>By accessing this site, you agree to comply with our terms and conditions.</p>',
+                    'status'       => 'published',
+                    'published_at' => $now,
+                    'created_at'   => $now,
+                ],
+                [
+                    'content_type' => 'page',
+                    'language'     => 'en',
+                    'author_id'    => $adminId,
+                    'title'        => 'Return Policy',
+                    'slug'         => 'return-policy',
+                    'body'         => $legalWarning . '<h2>Return Policy</h2><p>Describe your return window, the condition items must be in, who pays return shipping and how refunds are processed.</p>',
+                    'status'       => 'published',
+                    'published_at' => $now,
+                    'created_at'   => $now,
+                ],
+                [
+                    'content_type' => 'page',
+                    'language'     => 'en',
+                    'author_id'    => $adminId,
+                    'title'        => 'Imprint',
+                    'slug'         => 'imprint',
+                    'body'         => $legalWarning . '<h2>Imprint</h2><p><strong>Company name</strong><br>Street and number<br>Postal code and city<br>Country</p><p>Email: hello@example.com<br>Phone: +00 000 000 00 00</p><p>Register number: HRB 000000<br>VAT ID: DE000000000</p><p>Responsible for content: Your Name</p>',
                     'status'       => 'published',
                     'published_at' => $now,
                     'created_at'   => $now,
                 ],
             ];
             $postsTable->insert($samplePages)->saveData();
+
+            // Point the Legal & Compliance page pickers at the demo documents.
+            $legalPages = [
+                'policy_page_privacy' => 'privacy-policy',
+                'policy_page_terms'   => 'terms-of-service',
+                'policy_page_returns' => 'return-policy',
+                'policy_page_imprint' => 'imprint',
+            ];
+            foreach ($legalPages as $settingKey => $slug) {
+                $legalPage = $this->fetchRow(
+                    "SELECT id FROM {$prefix}posts WHERE content_type = 'page' AND language = 'en' AND slug = '{$slug}' LIMIT 1"
+                );
+                if (!$legalPage) {
+                    continue;
+                }
+
+                $legalSettingExists = $this->fetchRow(
+                    "SELECT id FROM {$prefix}settings WHERE group_name = 'ecommerce' AND {$q}key{$q} = '{$settingKey}' LIMIT 1"
+                );
+                if (!$legalSettingExists) {
+                    $this->table($prefix . 'settings')->insert([
+                        'group_name'  => 'ecommerce',
+                        'key'         => $settingKey,
+                        'value'       => $slug,
+                        'type'        => 'string',
+                        'is_autoload' => true,
+                        'created_at'  => $now,
+                        'updated_at'  => $now,
+                    ])->saveData();
+                }
+            }
 
             $servicesPage = $this->fetchRow("SELECT id FROM {$prefix}posts WHERE content_type = 'page' AND slug = 'services' LIMIT 1");
             if ($servicesPage) {

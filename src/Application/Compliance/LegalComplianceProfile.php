@@ -277,14 +277,15 @@ final class LegalComplianceProfile
     private function label(string $key): string
     {
         return match ($key) {
-            'imprint'    => __('Imprint'),
-            'privacy'    => __('Privacy Policy'),
-            'terms'      => __('Terms & Conditions'),
-            'returns'    => __('Return Policy'),
-            'withdrawal' => __('Withdrawal (Widerruf)'),
-            'consent'    => __('Cookie Consent'),
-            'us_optout'  => __('Do Not Sell or Share (US)'),
-            default      => $key,
+            'imprint'        => __('Imprint'),
+            'privacy'        => __('Privacy Policy'),
+            'terms'          => __('Terms & Conditions'),
+            'returns'        => __('Return Policy'),
+            'withdrawal'     => __('Withdrawal (Widerruf)'),
+            'consent'        => __('Cookie Consent'),
+            'us_optout'      => __('Do Not Sell or Share (US)'),
+            'digital_waiver' => __('Digital withdrawal waiver'),
+            default          => $key,
         };
     }
 

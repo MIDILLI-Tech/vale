@@ -441,6 +441,20 @@ final class ShopController
             $galleryImageIds,
         )));
 
+        $manualFiles = [];
+        foreach ($product->getManualFileIds() as $fileId) {
+            $file = $this->media->findById((int) $fileId);
+            if ($file === null) {
+                continue;
+            }
+            $manualFiles[] = [
+                'id'   => (int) $file->getId(),
+                'name' => (string) ($file->getTitle() ?: $file->getOriginalName()),
+                'url'  => $file->getUrl(site_url('/uploads')),
+                'mime' => strtolower((string) $file->getMimeType()),
+            ];
+        }
+
         $userId           = $this->session->get('user_id');
         $userEmail        = $userId !== null ? (string) $this->users->findById($userId)?->getEmail() : null;
         $userComment      = null;
@@ -552,6 +566,7 @@ final class ShopController
             'comment_page_map'                                                                                      => $commentPageMap,
             'featured_image'                                                                                        => $this->resolveProductImage($product->getFeaturedImageId()),
             'gallery_images'                                                                                        => $galleryImages,
+            'manual_files'                                                                                          => $manualFiles,
             'variations'                                                                                            => $variations,
             'price_min'                                                                                             => $priceMin,
             'price_max'                                                                                             => $priceMax,

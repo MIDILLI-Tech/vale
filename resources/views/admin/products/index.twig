@@ -183,7 +183,7 @@
     {% if filters[key] is defined and filters[key] is not empty %}{% set exportQuery = exportQuery|merge({(key): filters[key]}) %}{% endif %}
 {% endfor %}
 {% include 'admin/partials/_bulk_bar.twig' with {action: 'products', extraFields: exportQuery|merge({bulk_scope: 'listing'}), extraActions: [
-    {label: __('Publish Now'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
+    {label: __('Publish'), action: 'publish', class: 'bg-green-600/10 text-green-700 dark:text-green-400 hover:bg-green-600/20'},
     {label: __('Draft'), action: 'draft', class: 'bg-yellow-600/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-600/20'},
     {label: __('Archive'), action: 'archive', class: 'bg-gray-600/10 text-gray-700 dark:text-gray-400 hover:bg-gray-600/20'},
     {label: __('Export'), name: 'export_scope', value: 'selected', formaction: url('/admin/products/bulk-export', {}, exportQuery), class: 'bg-blue-600/10 text-blue-700 dark:text-blue-400 hover:bg-blue-600/20', attributes: 'data-no-disable="true"'},
