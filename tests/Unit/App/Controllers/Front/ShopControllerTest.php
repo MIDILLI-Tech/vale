@@ -14,6 +14,7 @@ use ValeApp\App\Controllers\Front\CheckoutController;
 use ValeApp\App\Controllers\Front\ShopController;
 use ValeApp\Application\Seo\SeoState;
 use ValeApp\Application\Shop\DeliveryEstimateService;
+use ValeApp\Application\Shop\UnitPriceCalculator;
 use ValeApp\Application\Webhook\OutboundWebhookService;
 use ValeApp\Domain\Comment\Repository\CommentRepositoryInterface;
 use ValeApp\Domain\Form\Repository\FormRepositoryInterface;
@@ -28,6 +29,7 @@ use ValeApp\Domain\Shop\Repository\CountryTaxRateRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\CouponRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
+use ValeApp\Domain\Shop\Repository\ProductPriceHistoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductVoteRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
@@ -98,7 +100,9 @@ final class ShopControllerTest extends TestCase
             $users,
             $orders,
             new DeliveryEstimateService($settings),
-            $subscribers
+            $subscribers,
+            new UnitPriceCalculator(),
+            $this->createStub(ProductPriceHistoryRepositoryInterface::class)
         );
 
         $request  = (new ServerRequestFactory())->createServerRequest('GET', '/shop?category=electronics');
@@ -166,7 +170,9 @@ final class ShopControllerTest extends TestCase
             $users,
             $orders,
             new DeliveryEstimateService($settings),
-            $subscribers
+            $subscribers,
+            new UnitPriceCalculator(),
+            $this->createStub(ProductPriceHistoryRepositoryInterface::class)
         );
 
         $request = (new ServerRequestFactory())->createServerRequest('GET', '/en/shop');
@@ -247,7 +253,9 @@ final class ShopControllerTest extends TestCase
             $users,
             $orders,
             new DeliveryEstimateService($settings),
-            $subscribers
+            $subscribers,
+            new UnitPriceCalculator(),
+            $this->createStub(ProductPriceHistoryRepositoryInterface::class)
         );
 
         $request  = (new ServerRequestFactory())->createServerRequest('GET', '/shop');
@@ -327,7 +335,9 @@ final class ShopControllerTest extends TestCase
             $users,
             $orders,
             $deliveryEstimate,
-            $subscribers
+            $subscribers,
+            new UnitPriceCalculator(),
+            $this->createStub(ProductPriceHistoryRepositoryInterface::class)
         );
 
         $request  = (new ServerRequestFactory())->createServerRequest('GET', '/shop/vip-product');
@@ -392,7 +402,9 @@ final class ShopControllerTest extends TestCase
             $users,
             $orders,
             new DeliveryEstimateService($settings),
-            $subscribers
+            $subscribers,
+            new UnitPriceCalculator(),
+            $this->createStub(ProductPriceHistoryRepositoryInterface::class)
         );
 
         $request = (new ServerRequestFactory())->createServerRequest('POST', '/cart/add')

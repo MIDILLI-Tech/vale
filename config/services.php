@@ -141,6 +141,7 @@ use ValeApp\Domain\Shop\Repository\DownloadRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderLogRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
+use ValeApp\Domain\Shop\Repository\ProductPriceHistoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductVoteRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
@@ -198,6 +199,7 @@ use ValeApp\Infrastructure\Persistence\DbalOrderRepository;
 use ValeApp\Infrastructure\Persistence\DbalPageviewRepository;
 use ValeApp\Infrastructure\Persistence\DbalPostRepository;
 use ValeApp\Infrastructure\Persistence\DbalProductCategoryRepository;
+use ValeApp\Infrastructure\Persistence\DbalProductPriceHistoryRepository;
 use ValeApp\Infrastructure\Persistence\DbalProductRepository;
 use ValeApp\Infrastructure\Persistence\DbalProductVoteRepository;
 use ValeApp\Infrastructure\Persistence\DbalRevisionRepository;
@@ -1710,6 +1712,10 @@ return [
     // ── M8: Shop ──────────────────────────────────────────────────
     ProductRepositoryInterface::class => factory(function ($c) {
         return new DbalProductRepository($c->get(DbalConnection::class));
+    }),
+
+    ProductPriceHistoryRepositoryInterface::class => factory(function ($c) {
+        return new DbalProductPriceHistoryRepository($c->get(DbalConnection::class));
     }),
 
     DeliveryEstimateService::class => factory(function ($c) {

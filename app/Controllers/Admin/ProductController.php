@@ -766,6 +766,7 @@ final class ProductController
             'safety_warnings'         => !empty($body['safety_warnings']) ? trim((string) $body['safety_warnings']) : $product->getSafetyWarnings(),
             'manual_url'              => !empty($body['manual_url']) ? trim((string) $body['manual_url']) : $product->getManualUrl(),
             'manual_label'            => !empty($body['manual_label']) ? trim((string) $body['manual_label']) : $product->getManualLabel(),
+            'manual_urls'             => json_encode($product->getManualUrls() ?: new \stdClass()),
             'digital_waiver'          => (bool) $product->hasDigitalWaiver(),
             'manual_file_ids'         => json_encode($product->getManualFileIds() ?: new \stdClass()),
             'featured_image_id'       => !empty($body['featured_image_id']) ? (int) $body['featured_image_id'] : $product->getFeaturedImageId(),
@@ -1032,17 +1033,21 @@ final class ProductController
         $origin = strtoupper(trim((string) ($body['country_of_origin'] ?? '')));
         $product->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
         $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
-        $product->setManualUrl(trim((string) ($body['manual_url'] ?? '')) ?: null);
+        $manualUrls = array_map('strval', (array) ($body['manual_urls'] ?? []));
+        if ($manualUrls === [] && !empty($body['manual_url'])) {
+            $manualUrls = [(string) $body['manual_url']];
+        }
+        $product->setManualUrls($manualUrls);
         $product->setManualLabel(trim((string) ($body['manual_label'] ?? '')) ?: null);
         $product->setDigitalWaiver(!empty($body['digital_waiver']));
         $manualSource = (string) ($body['manual_source'] ?? '');
         if ($manualSource === 'none') {
-            $product->setManualUrl(null);
+            $product->setManualUrls([]);
             $product->setManualFileIds([]);
         } elseif ($manualSource === 'external') {
             $product->setManualFileIds([]);
         } elseif ($manualSource === 'internal') {
-            $product->setManualUrl(null);
+            $product->setManualUrls([]);
             $product->setManualFileIds((array) ($body['manual_file_ids'] ?? []));
         } else {
             $product->setManualFileIds((array) ($body['manual_file_ids'] ?? []));
@@ -1614,6 +1619,7 @@ final class ProductController
             'safety_warnings'            => $product->getSafetyWarnings(),
             'manual_url'                 => $product->getManualUrl(),
             'manual_label'               => $product->getManualLabel(),
+            'manual_urls'                => $product->getManualUrls(),
             'digital_waiver'             => $product->hasDigitalWaiver() ? 1 : 0,
             'manual_file_ids'            => json_encode($product->getManualFileIds() ?: new \stdClass()),
             'manualFiles'                => $this->manualFiles($product->getManualFileIds()),

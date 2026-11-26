@@ -155,6 +155,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
             'safety_warnings'            => $product->getSafetyWarnings(),
             'manual_url'                 => $product->getManualUrl(),
             'manual_label'               => $product->getManualLabel(),
+            'manual_urls'                => json_encode($product->getManualUrls() ?: new \stdClass()),
             'digital_waiver'             => $product->hasDigitalWaiver() ? 1 : 0,
             'manual_file_ids'            => json_encode($product->getManualFileIds() ?: new \stdClass()),
             'featured_image_id'          => $product->getFeaturedImageId(),
@@ -233,11 +234,43 @@ final class DbalProductRepository implements ProductRepositoryInterface
             $this->db->insert(VL_DB_PREFIX . 'product_to_categories', ['product_id' => $productId, 'category_id' => $catId]);
         }
 
+        $this->recordPriceHistory($product);
+
         return $product;
+    }
+
+    /**
+     * Keep a price log so the 30-day lowest price (EU Omnibus) can be shown.
+     * Only a changed regular price creates a new row.
+     */
+    private function recordPriceHistory(Product $product): void
+    {
+        $productId = $product->getId();
+        if ($productId === null) {
+            return;
+        }
+
+        $price = (float) $product->getPrice();
+        $last  = $this->db->fetchOne(
+            'SELECT price FROM ' . VL_DB_PREFIX . 'product_price_history'
+            . ' WHERE product_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1',
+            [$productId],
+            [ParameterType::INTEGER],
+        );
+        if ($last !== false && $last !== null && abs((float) $last - $price) < 0.005) {
+            return;
+        }
+
+        $this->db->insert(VL_DB_PREFIX . 'product_price_history', [
+            'product_id'  => $productId,
+            'price'       => $price,
+            'recorded_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ], ['product_id' => ParameterType::INTEGER]);
     }
 
     public function delete(int $id): void
     {
+        $this->db->delete(VL_DB_PREFIX . 'product_price_history', ['product_id' => $id]);
         $this->db->delete(VL_DB_PREFIX . 'products', ['id' => $id]);
     }
 

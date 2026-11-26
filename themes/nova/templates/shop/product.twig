@@ -129,6 +129,12 @@
                     <p class="mt-1 text-xs text-slate-400">{{ tax_policy.zero_reason }}</p>
                     {% endif %}
                 {% endif %}
+                {% if unit_price is defined and unit_price %}
+                <p class="mt-1 text-xs text-slate-400">{{ (unit_price.price * fx_rate)|price(current_currency) }} / {{ unit_price.label }}</p>
+                {% endif %}
+                {% if lowest_price_30 is defined and lowest_price_30 %}
+                <p class="mt-1 text-xs text-slate-400">{{ __('Lowest price in the last 30 days: :price', {':price': (lowest_price_30 * fx_rate)|price(current_currency)}) }}</p>
+                {% endif %}
             </div>
 
             {% if product.shortDescription %}

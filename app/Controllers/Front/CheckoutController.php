@@ -319,8 +319,13 @@ final class CheckoutController
         $billingCountries      = $this->mergeUserCountry($allCountries, $this->resolveCheckoutCountries($items, false), $userBillingCountry);
         $shippingOptions       = $this->mergeUserCountry($allCountries, $this->resolveCheckoutCountries($items, true), $userShippingCountry !== '' ? $userShippingCountry : $userBillingCountry);
 
+        $waiverRequired = $this->requiresDigitalWaiver($items);
+        $waiverDays     = $this->refundPeriodDays();
+
         return $this->twig->render($response, 'shop/checkout.twig', [
             'items'                    => $items,
+            'waiver_required'          => $waiverRequired,
+            'waiver_days'              => $waiverDays,
             'checkout_base_url'        => $this->checkoutUrl(''),
             'subtotal'                 => $subtotal,
             'shipping'                 => $shipping,
@@ -542,6 +547,8 @@ final class CheckoutController
 
             return $this->twig->render($response->withStatus(422), 'shop/checkout.twig', [
                 'items'                 => $items,
+                'waiver_required'       => $this->requiresDigitalWaiver($items),
+                'waiver_days'           => $this->refundPeriodDays(),
                 'checkout_base_url'     => $this->checkoutUrl(''),
                 'subtotal'              => $subtotal,
                 'shipping'              => $shipping,
@@ -687,7 +694,16 @@ final class CheckoutController
             'extra_fields' => $this->extractCheckoutExtraFields($body, $checkoutFields),
         ];
 
+        $waiverRequired = $this->requiresDigitalWaiver($items);
+        if ($waiverRequired && empty($body['withdrawal_waiver'])) {
+            $this->session->set('flash_error', $this->translator->get('Please confirm that you want the download to start immediately and that you lose your right of withdrawal.'));
+            return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
+        }
+
         $order = new Order($this->orders->generateOrderNumber(), $billing, $this->session->get('user_id'));
+        if ($waiverRequired) {
+            $order->setWithdrawalWaiverAcceptedAt(new \DateTimeImmutable());
+        }
         $order->setLocale($this->translator?->getLocale() ?? 'en');
         $this->session->set('last_billing_country', strtoupper(trim((string) ($billing['country'] ?? ''))));
 
@@ -3242,6 +3258,28 @@ final class CheckoutController
     }
 
     /** @param array<string, scalar> $queryParams */
+    /** @param array<int, array<string, mixed>> $items */
+    private function requiresDigitalWaiver(array $items): bool
+    {
+        if ($this->settings->get('compliance_digital_waiver', '0') !== '1') {
+            return false;
+        }
+
+        foreach ($items as $item) {
+            $product = $item['product'] ?? null;
+            if ($product instanceof Product && $product->hasDigitalWaiver()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function refundPeriodDays(): int
+    {
+        return max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14));
+    }
+
     private function checkoutUrl(string $suffix = '', array $queryParams = []): string
     {
         return absolute_url($this->checkoutPath($suffix), [], $queryParams);

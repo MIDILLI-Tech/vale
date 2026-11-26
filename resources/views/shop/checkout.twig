@@ -599,6 +599,16 @@
                     </div>
                     {% endif %}
 
+                    {% if waiver_required|default(false) %}
+                    <div class="mt-4 border-t dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-400">
+                        <label class="flex items-start gap-2 cursor-pointer">
+                            <input type="checkbox" name="withdrawal_waiver" value="1" required
+                                   class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                            <span>{{ __('I agree that my digital content is delivered immediately and that I lose my :days-day right of withdrawal once the download starts.', {':days': waiver_days|default(14)}) }}</span>
+                        </label>
+                    </div>
+                    {% endif %}
+
                     {% set _hasGateway = stripe_enabled or paypal_enabled or mollie_enabled or twocheckout_enabled or checkoutcom_enabled or banktransfer_enabled %}
                     <button type="submit"
                             class="mt-4 w-full rounded-lg btn-primary px-4 py-3 text-sm font-bold transition-colors"{% if _hasGateway %}

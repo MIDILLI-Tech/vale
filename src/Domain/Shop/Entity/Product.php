@@ -38,6 +38,9 @@ class Product extends BaseEntity
     private ?string $safetyWarnings             = null;
     private ?string $manualUrl                  = null;
     private ?string $manualLabel                = null;
+
+    /** @var string[] */
+    private array $manualUrls                   = [];
     private bool $digitalWaiver                 = false;
 
     /** @var int[] */
@@ -226,6 +229,14 @@ class Product extends BaseEntity
     public function getManualLabel(): ?string
     {
         return $this->manualLabel;
+    }
+
+    /** @return string[] */
+    public function getManualUrls(): array
+    {
+        return $this->manualUrls !== []
+            ? $this->manualUrls
+            : ($this->manualUrl !== null && $this->manualUrl !== '' ? [$this->manualUrl] : []);
     }
     public function hasDigitalWaiver(): bool
     {
@@ -625,6 +636,21 @@ class Product extends BaseEntity
     {
         $this->manualLabel = $label;
     }
+
+    /** @param string[] $urls */
+    public function setManualUrls(array $urls): void
+    {
+        $clean = [];
+        foreach ($urls as $url) {
+            $url = trim((string) $url);
+            if ($url !== '' && !in_array($url, $clean, true)) {
+                $clean[] = $url;
+            }
+        }
+
+        $this->manualUrls = $clean;
+        $this->manualUrl  = $clean[0] ?? null;
+    }
     public function setDigitalWaiver(bool $waiver): void
     {
         $this->digitalWaiver = $waiver;
@@ -900,6 +926,12 @@ class Product extends BaseEntity
         $product->safetyWarnings       = $row['safety_warnings']        ?? null;
         $product->manualUrl            = $row['manual_url']             ?? null;
         $product->manualLabel          = $row['manual_label']           ?? null;
+        $decodedManualUrls             = isset($row['manual_urls']) && is_string($row['manual_urls']) && $row['manual_urls'] !== ''
+            ? json_decode($row['manual_urls'], true)
+            : null;
+        $product->manualUrls           = is_array($decodedManualUrls)
+            ? array_values(array_filter(array_map('strval', $decodedManualUrls), static fn (string $url): bool => trim($url) !== ''))
+            : [];
         $product->digitalWaiver        = (bool) ($row['digital_waiver'] ?? false);
         $product->manualFileIds        = isset($row['manual_file_ids']) && is_string($row['manual_file_ids']) && $row['manual_file_ids'] !== ''
             ? array_values(array_map('intval', json_decode($row['manual_file_ids'], true) ?: []))

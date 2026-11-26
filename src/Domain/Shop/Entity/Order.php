@@ -12,31 +12,32 @@ class Order extends BaseEntity
 {
     private string $orderNumber;
     private ?int $userId;
-    private string $status              = 'pending';
-    private string $locale              = 'en';
-    private string $currency            = 'USD';
-    private float $subtotal             = 0.0;
-    private float $tax                  = 0.0;
-    private float $shipping             = 0.0;
-    private float $discount             = 0.0;
-    private float $total                = 0.0;
-    private ?string $couponCode         = null;
-    private array $billing              = [];
-    private array $shippingAddress      = [];
-    private ?string $customerNote       = null;
-    private ?string $paymentMethod      = null;
-    private ?string $transactionId      = null;
-    private ?string $paymentToken       = null;
-    private ?\DateTimeImmutable $paidAt = null;
-    private ?string $carrier            = null;
-    private ?string $trackingNumber     = null;
-    private string $orderType           = 'shop';
-    private ?int $planId                = null;
-    private ?string $subscriptionId     = null;
-    private ?string $planName           = null;
-    private ?bool $_inventory_processed = null;
-    private ?bool $_inventory_restored  = null;
-    private ?bool $_coupon_returned     = null;
+    private string $status                                  = 'pending';
+    private string $locale                                  = 'en';
+    private string $currency                                = 'USD';
+    private float $subtotal                                 = 0.0;
+    private float $tax                                      = 0.0;
+    private float $shipping                                 = 0.0;
+    private float $discount                                 = 0.0;
+    private float $total                                    = 0.0;
+    private ?string $couponCode                             = null;
+    private array $billing                                  = [];
+    private array $shippingAddress                          = [];
+    private ?string $customerNote                           = null;
+    private ?string $paymentMethod                          = null;
+    private ?string $transactionId                          = null;
+    private ?string $paymentToken                           = null;
+    private ?\DateTimeImmutable $paidAt                     = null;
+    private ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null;
+    private ?string $carrier                                = null;
+    private ?string $trackingNumber                         = null;
+    private string $orderType                               = 'shop';
+    private ?int $planId                                    = null;
+    private ?string $subscriptionId                         = null;
+    private ?string $planName                               = null;
+    private ?bool $_inventory_processed                     = null;
+    private ?bool $_inventory_restored                      = null;
+    private ?bool $_coupon_returned                         = null;
 
     /** @var array<int, array<string,mixed>> */
     private array $items = [];
@@ -117,6 +118,10 @@ class Order extends BaseEntity
     }    public function getPaidAt(): ?\DateTimeImmutable
     {
         return $this->paidAt;
+    }
+    public function getWithdrawalWaiverAcceptedAt(): ?\DateTimeImmutable
+    {
+        return $this->withdrawalWaiverAcceptedAt;
     }
     public function getCarrier(): ?string
     {
@@ -236,6 +241,10 @@ class Order extends BaseEntity
     {
         $this->paidAt = $at;
     }
+    public function setWithdrawalWaiverAcceptedAt(?\DateTimeImmutable $at): void
+    {
+        $this->withdrawalWaiverAcceptedAt = $at;
+    }
     public function setCarrier(?string $carrier): void
     {
         $this->carrier = $carrier;
@@ -338,6 +347,9 @@ class Order extends BaseEntity
         }
         if (!empty($row['paid_at'])) {
             $order->paidAt = new \DateTimeImmutable($row['paid_at']);
+        }
+        if (!empty($row['withdrawal_waiver_accepted_at'])) {
+            $order->withdrawalWaiverAcceptedAt = new \DateTimeImmutable($row['withdrawal_waiver_accepted_at']);
         }
         if (!empty($row['created_at'])) {
             $order->createdAt = new \DateTimeImmutable($row['created_at']);

@@ -21,6 +21,7 @@ final class AddProductComplianceFields extends AbstractMigration
             ->addColumn('safety_warnings', 'text', ['null' => true, 'default' => null])
             ->addColumn('manual_url', 'string', ['limit' => 500, 'null' => true, 'default' => null])
             ->addColumn('manual_label', 'string', ['limit' => 191, 'null' => true, 'default' => null])
+            ->addColumn('manual_urls', 'text', ['null' => true, 'default' => null])
             ->addColumn('digital_waiver', 'boolean', ['default' => false])
             ->addColumn('manual_file_ids', 'text', ['null' => true, 'default' => null])
             ->update();

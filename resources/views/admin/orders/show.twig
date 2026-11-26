@@ -545,6 +545,9 @@
             <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ __('Order Info') }}</h3>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Order Number') }}:</span> {{ order.orderNumber }}</p>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Payment') }}:</span> {{ payment_methods[order.paymentMethod]|default(order.paymentMethod|default('—')|replace({'_': ' '})|title) }}</p>
+            {% if order.withdrawalWaiverAcceptedAt %}
+            <p><span class="text-gray-500 dark:text-gray-400">{{ __('Digital withdrawal waiver') }}:</span> {{ __('Accepted on :date', {':date': order.withdrawalWaiverAcceptedAt|date('Y-m-d H:i')}) }}</p>
+            {% endif %}
             {% if order.transactionId %}
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Transaction ID') }}:</span> <code class="font-mono text-xs">{{ order.transactionId }}</code></p>
             {% endif %}

@@ -576,7 +576,12 @@
                               placeholder="{{ __('Warnings required by product safety rules') }}">{{ product.safetyWarnings|default('') }}</textarea>
                 </div>
 
-                <div class="mt-4" x-data="{ manualSource: '{{ product.manualFileIds|default([])|length ? 'internal' : (product.manualUrl|default('') ? 'external' : 'none') }}' }">
+                <div class="mt-4" x-data="{
+                    manualSource: '{{ product.manualFileIds|default([])|length ? 'internal' : (product.manualUrls|default([])|length ? 'external' : 'none') }}',
+                    manualUrls: {{ product.manualUrls|default([])|json_encode|raw }},
+                    addManualUrl() { this.manualUrls.push(''); },
+                    removeManualUrl(index) { this.manualUrls.splice(index, 1); }
+                }">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Manual / Instructions') }}</label>
                     <select name="manual_source" x-model="manualSource" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                         <option value="none">{{ __('Not provided') }}</option>
@@ -611,10 +616,23 @@
                         </div>
                     </div>
 
-                    <div x-show="manualSource === 'external'" x-cloak class="mt-2">
-                        <input type="url" name="manual_url" value="{{ product.manualUrl|default('') }}"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
-                               placeholder="https://">
+                    <div x-show="manualSource === 'external'" x-cloak class="mt-2 space-y-2"
+                         x-init="if (!manualUrls.length) manualUrls.push('')">
+                        <template x-for="(url, index) in manualUrls" :key="'manual-url-' + index">
+                            <div class="flex items-center gap-2">
+                                <input type="url" name="manual_urls[]" x-model="manualUrls[index]"
+                                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                                       placeholder="https://">
+                                <button type="button" @click.prevent="removeManualUrl(index)"
+                                        class="shrink-0 text-red-500 hover:text-red-700" title="{{ __('Remove') }}">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <button type="button" @click.prevent="addManualUrl()"
+                                class="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            + {{ __('Add URL') }}
+                        </button>
                     </div>
                 </div>
 

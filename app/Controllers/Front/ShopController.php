@@ -9,6 +9,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Slim\Views\Twig;
 use ValeApp\Application\Seo\SeoState;
 use ValeApp\Application\Shop\DeliveryEstimateService;
+use ValeApp\Application\Shop\UnitPriceCalculator;
 use ValeApp\Application\Shop\VariationPrice;
 use ValeApp\Domain\Comment\Entity\Comment;
 use ValeApp\Domain\Comment\Repository\CommentRepositoryInterface;
@@ -24,6 +25,7 @@ use ValeApp\Domain\Shop\Entity\ProductVote;
 use ValeApp\Domain\Shop\Repository\CountryTaxRateRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
+use ValeApp\Domain\Shop\Repository\ProductPriceHistoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductVoteRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
@@ -52,6 +54,8 @@ final class ShopController
         private readonly OrderRepositoryInterface $orders,
         private readonly DeliveryEstimateService $deliveryEstimate,
         private readonly SubscriberRepositoryInterface $subscribers,
+        private readonly UnitPriceCalculator $unitPriceCalculator,
+        private readonly ProductPriceHistoryRepositoryInterface $priceHistory,
     ) {
     }
     private function isFallbackNoticeEnabled(): bool
@@ -455,6 +459,19 @@ final class ShopController
             ];
         }
 
+        $unitPrice = $this->settings->get('compliance_grundpreis', '1') === '1'
+            ? $this->unitPriceCalculator->resolve($product->getUnit(), $product->getBaseAmount(), (float) $product->getPrice())
+            : null;
+
+        $lowestPrice30 = null;
+        if ($this->settings->get('compliance_price_history', '1') === '1' && $product->isSaleActive()) {
+            $lowestPrice30 = $this->priceHistory->lowestBetween(
+                (int) $product->getId(),
+                new \DateTimeImmutable('-30 days'),
+                new \DateTimeImmutable(),
+            );
+        }
+
         $userId           = $this->session->get('user_id');
         $userEmail        = $userId !== null ? (string) $this->users->findById($userId)?->getEmail() : null;
         $userComment      = null;
@@ -567,6 +584,8 @@ final class ShopController
             'featured_image'                                                                                        => $this->resolveProductImage($product->getFeaturedImageId()),
             'gallery_images'                                                                                        => $galleryImages,
             'manual_files'                                                                                          => $manualFiles,
+            'unit_price'                                                                                            => $unitPrice,
+            'lowest_price_30'                                                                                       => $lowestPrice30,
             'variations'                                                                                            => $variations,
             'price_min'                                                                                             => $priceMin,
             'price_max'                                                                                             => $priceMax,
