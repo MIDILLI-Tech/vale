@@ -543,6 +543,7 @@
     {% if settings.custom_header_scripts %}
     {{ settings.custom_header_scripts|csp_nonce|raw }}
     {% endif %}
+    {% include 'partials/_tooltip_assets.twig' %}
 </head>
 <body class="min-h-screen antialiased{{ theme_has_custom_colors is defined and theme_has_custom_colors ? ' vl-custom-colors' : '' }}" style="background-color: var(--theme-bg); color: var(--theme-text);">
 

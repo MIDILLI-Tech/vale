@@ -2015,6 +2015,7 @@
     {# Shared drag-drop upload (transport + drop zone UI) for every media
        picker modal — featured image, gallery, library, download files #}
     <script nonce="{{ csp_nonce }}" defer src="{{ asset('assets/js/media-upload.js') }}"></script>
+    {% include 'partials/_tooltip_assets.twig' %}
     {% set _sa = user.hasRole('super_admin') %}
     {% set _can_upload_media = _sa or (user_permissions is defined and 'media.upload' in user_permissions) %}
     {# Upload permission gate for client-side upload surfaces (drag-drop in

@@ -1,0 +1,68 @@
+/* ── Tooltip (assets/js/vl-tooltip.js) ─────────────────────────
+   Shared by the admin panel and every front-end theme (core, dark,
+   nova, vivid). One fixed-position bubble replaces the native `title`
+   tooltip; JS only sets left/top and --vl-tooltip-arrow-x. */
+
+:root {
+  --vl-tooltip-bg: #1f2937;
+  --vl-tooltip-text: #f9fafb;
+  --vl-tooltip-shadow: 0 8px 22px rgba(17, 24, 39, 0.24);
+  --vl-tooltip-bg-dark: #e5e7eb;
+  --vl-tooltip-text-dark: #111827;
+  --vl-tooltip-shadow-dark: 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+
+.vl-tooltip {
+  position: fixed;
+  z-index: 9000;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  text-align: left;
+  overflow-wrap: break-word;
+  color: var(--vl-tooltip-text);
+  background: var(--vl-tooltip-bg);
+  box-shadow: var(--vl-tooltip-shadow);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.vl-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.vl-tooltip::after {
+  content: "";
+  position: absolute;
+  left: var(--vl-tooltip-arrow-x, 50%);
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.vl-tooltip.is-below::after {
+  top: -4px;
+  bottom: auto;
+}
+
+.dark .vl-tooltip {
+  color: var(--vl-tooltip-text-dark);
+  background: var(--vl-tooltip-bg-dark);
+  box-shadow: var(--vl-tooltip-shadow-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vl-tooltip {
+    transition: none;
+  }
+}

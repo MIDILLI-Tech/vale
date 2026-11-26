@@ -552,6 +552,7 @@
     {% if settings.custom_header_scripts %}
     {{ settings.custom_header_scripts|raw }}
     {% endif %}
+    {% include 'partials/_tooltip_assets.twig' %}
 </head>
     <body class="min-h-screen selection:bg-blue-500/30 selection:text-blue-200" style="background-color: var(--theme-bg); color: var(--theme-text);">
 
