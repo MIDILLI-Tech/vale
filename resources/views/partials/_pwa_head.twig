@@ -18,4 +18,26 @@
         });
     }
 </script>
+{% else %}
+<script nonce="{{ csp_nonce }}">
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+            registrations.forEach(function (registration) {
+                var worker = registration.active || registration.waiting || registration.installing;
+                if (worker && worker.scriptURL.replace(/[?#].*$/, '').endsWith('/sw.js')) {
+                    registration.unregister();
+                }
+            });
+        }).catch(function () {});
+        if (window.caches) {
+            caches.keys().then(function (keys) {
+                keys.filter(function (key) {
+                    return key.indexOf('vale-pwa-') === 0;
+                }).forEach(function (key) {
+                    caches.delete(key);
+                });
+            }).catch(function () {});
+        }
+    }
+</script>
 {% endif %}
