@@ -402,6 +402,7 @@ final class LocaleMiddleware implements MiddlewareInterface
         $contentLang = $multiLang ? $locale : null;
 
         $definedMenus = $this->themeManager->getDefinedMenus();
+        $footerUrls   = [];
 
         $locationsToInject = array_unique(array_merge(
             array_keys($definedMenus),
@@ -524,7 +525,66 @@ final class LocaleMiddleware implements MiddlewareInterface
             $env = $this->twig->getEnvironment();
             $this->setGlobalSafe($env, 'menu_' . $location, $allItems);
             $this->setGlobalSafe($env, 'menu_' . $location . '_groups', $groups);
+
+            if ($location === 'footer') {
+                foreach ($allItems as $footerItem) {
+                    $footerItemUrl = $footerItem->getUrl();
+                    if (is_string($footerItemUrl) && $footerItemUrl !== '') {
+                        $footerUrls[] = $footerItemUrl;
+                    }
+                }
+            }
         }
+
+        $this->injectLegalFooterLinks($footerUrls);
+    }
+
+    /**
+     * Renders links configured under E-Commerce → Legal & Compliance in the
+     * footer unless the footer menu already points at the same page.
+     *
+     * @param list<string> $footerUrls
+     */
+    private function injectLegalFooterLinks(array $footerUrls): void
+    {
+        $definitions = [
+            'policy_page_imprint' => __('Imprint'),
+            'policy_page_privacy' => __('Privacy Policy'),
+            'policy_page_terms'   => __('Terms & Conditions'),
+            'policy_page_returns' => __('Return Policy'),
+        ];
+
+        $known      = array_map(static fn (string $url): string => rtrim($url, '/'), $footerUrls);
+        $pagePrefix = (string) $this->settings->get('routing_page_prefix', '');
+        $pagePrefix = $pagePrefix ? ('/' . ltrim($pagePrefix, '/')) : '';
+        $links      = [];
+
+        foreach ($definitions as $settingKey => $label) {
+            $slug = trim((string) ($this->settings->get($settingKey, '') ?? ''));
+            if ($slug === '') {
+                continue;
+            }
+
+            // Drafts stay out of the footer — a link to an unpublished page
+            // would be a 404 for every visitor.
+            try {
+                $page = $this->posts->findBySlug(new Slug($slug), 'page');
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($page === null || !$page->isPublished()) {
+                continue;
+            }
+
+            $linkUrl = site_url($pagePrefix . '/') . $this->posts->buildPagePath($page);
+            if (in_array(rtrim($linkUrl, '/'), $known, true)) {
+                continue;
+            }
+
+            $links[] = ['label' => $label, 'url' => $linkUrl];
+        }
+
+        $this->setGlobalSafe($this->twig->getEnvironment(), 'legal_footer_links', $links);
     }
 
     /**

@@ -9,7 +9,8 @@
 {% set i18n_fields = settings.multi_language_content|default('0') == '1' and active_locales|length > 1 %}
 {% set field_locales = i18n_fields ? active_locales : active_locales|filter((name, code) => code == default_lang) %}
 <div id="privacy-tab-consent" class="privacy-tab-panel hidden">
-    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
+    <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6"
+          x-data="{ consentOn: {{ settings.consent_enabled|default('0') == '1' ? 'true' : 'false' }} }">
         {{ csrf_field() }}
         <input type="hidden" name="_METHOD" value="PUT">
         <input type="hidden" name="_group" value="privacy">
@@ -28,6 +29,7 @@
                     <input type="hidden" name="consent_enabled" value="0">
                     <input type="checkbox" name="consent_enabled" value="1"
                            {{ settings.consent_enabled|default('0') == '1' ? 'checked' }}
+                           @change="consentOn = $event.target.checked"
                            class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
                     <span>
                         <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enable Consent Banner') }}</span>
@@ -36,6 +38,7 @@
                 </label>
             </div>
 
+            <div x-show="consentOn" x-cloak class="space-y-5">
             <div {{ vl.attrs('privacy', __('US Privacy Opt-Out'), 'consent_us_optout_enabled', 'consent', __('Cookie Consent'), 'ccpa cpra do not sell share gpc global privacy control us opt out') }}>
                 <label class="flex items-start gap-3">
                     <input type="hidden" name="consent_us_optout_enabled" value="0">
@@ -141,9 +144,10 @@
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('The Privacy Policy page selected under E-Commerce → Legal is linked from the banner.') }}</p>
                 </div>
             </div>
+            </div>{# /consent banner options #}
         </div>
 
-        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-5">
+        <div class="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-5" x-show="consentOn" x-cloak>
             <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('What still needs your attention') }}</h4>
             <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
                 <li>{{ __('Spam protection providers (reCAPTCHA, hCaptcha, Turnstile) load their scripts before consent. Switch to the math question or honeypot, or keep them only while you accept the risk.') }}</li>

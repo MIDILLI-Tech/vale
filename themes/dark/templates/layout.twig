@@ -857,6 +857,10 @@
             </nav>
             {% endif %}
             {% endif %}
+            {% include 'partials/_legal_footer.twig' with {
+                legal_nav_class: 'mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2',
+                legal_link_class: 'text-sm text-gray-400 hover:text-white transition-colors',
+            } %}
             <p class="text-center text-sm text-gray-600">
                 &copy; {{ "now"|date("Y") }} {{ site_name }}. {{ __('All rights reserved.') }}
             </p>

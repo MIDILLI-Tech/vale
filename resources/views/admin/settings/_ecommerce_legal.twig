@@ -1,5 +1,37 @@
-    {# ══ Legal sub-panel ══ #}
+    {# ══ Legal & Compliance sub-panel ══ #}
 {% import 'admin/macros/vl-setting.twig' as vl %}
+    {% set legal_status_badges = {
+        configured:  { label: __('Configured'),   class: 'bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-800' },
+        partial:     { label: __('Partial'),      class: 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:ring-amber-800' },
+        missing:     { label: __('Missing'),      class: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-800' },
+        unavailable:  { label: __('Not in Vale yet'), class: 'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700' },
+        acknowledged: { label: __('Handled outside Vale'), class: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-800' },
+    } %}
+    {% set legal_item_labels = {
+        imprint:    __('Imprint'),
+        privacy:    __('Privacy Policy'),
+        terms:      __('Terms & Conditions'),
+        returns:    __('Return Policy'),
+        withdrawal: __('Withdrawal (Widerruf)'),
+        consent:    __('Cookie Consent'),
+        us_optout:  __('Do Not Sell or Share (US)'),
+    } %}
+    {% set legal_item_notes = {
+        imprint:    __('Business name, address, contact details and registration number on a dedicated page.'),
+        withdrawal: __('Vale does not provide a withdrawal page or an online withdrawal function yet.'),
+        consent:    __('Consent is only recorded while the cookie consent banner is on.'),
+        us_optout:  __('Adds a "Do Not Sell or Share" action and honours Global Privacy Control signals.'),
+    } %}
+    {% set legal_other_region = legal_regions.other|default({ label: '', consent_model: 'opt-in', items: [] }) %}
+    {% set legal_region_labels = {
+        eu:   __('European Union / EEA'),
+        de_at: __('Germany / Austria'),
+        uk:   __('United Kingdom'),
+        us:   __('United States'),
+        ca:   __('Canada'),
+        anz:  __('Australia / New Zealand'),
+        other: __('No specific profile'),
+    } %}
     <div id="ec-tab-legal" class="ec-tab-panel hidden">
     <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
         {{ csrf_field() }}
@@ -7,7 +39,92 @@
         <input type="hidden" name="_group" value="ecommerce">
         <input type="hidden" name="_subtab" value="legal">
 
-        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Legal & Compliance Profile') }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Pick the country where you operate. The list below shows the documents and settings that are commonly expected there. It is a checklist, not legal advice, and it never changes a setting on its own.') }}</p>
+
+            <div class="max-w-sm">
+                <label for="legal-profile-country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country of operation') }}</label>
+                <select id="legal-profile-country" name="legal_profile_country" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-100">
+                    <option value=""
+                            data-region-label="{{ __('No country selected') }}"
+                            data-consent-label="{{ __('Opt-in (EU/UK style)') }}"
+                            data-items="{{ legal_other_region.items|join(',') }}"
+                            {{ legal_profile.key == 'other' and settings.legal_profile_country|default('') == '' ? 'selected' }}>{{ __('Not set') }}</option>
+                    {% for code in country_codes|default([]) %}
+                        {% set region_key = attribute(legal_country_regions, code)|default('other') %}
+                        {% set region = attribute(legal_regions, region_key)|default(legal_other_region) %}
+                        <option value="{{ code }}"
+                                data-region-label="{{ attribute(legal_region_labels, region_key)|default(region.label)|e('html_attr') }}"
+                                data-consent-label="{{ region.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}"
+                                data-items="{{ region.items|join(',') }}"
+                                {{ settings.legal_profile_country|default('') == code ? 'selected' }}>{{ country_name(code) }} ({{ code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <ul class="space-y-2">
+                {% for item in legal_checklist|default([]) %}
+                    {% set badge = attribute(legal_status_badges, item.status)|default(legal_status_badges.missing) %}
+                    <li data-legal-req="{{ item.key }}" class="flex flex-col gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ attribute(legal_item_labels, item.key)|default(item.key) }}</p>
+                            {% set item_note = attribute(legal_item_notes, item.key)|default('') %}
+                            {% if item_note is not empty %}
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ item_note }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="flex shrink-0 flex-col items-end gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ item.level == 'required' ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300' }}">{{ item.level == 'required' ? __('Required') : __('Recommended') }}</span>
+                                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 {{ badge.class }}">{{ badge.label }}</span>
+                            </div>
+                            <label class="inline-flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                <input type="hidden" name="legal_ack_{{ item.key }}" value="0">
+                                <input type="checkbox" name="legal_ack_{{ item.key }}" value="1"
+                                       class="rounded border-gray-300 text-gray-900 dark:border-gray-600"
+                                       {{ item.acknowledged ? 'checked' }}>
+                                {{ __('I handled this myself') }}
+                            </label>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested region') }}</p>
+                    <p id="legal-profile-region" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ attribute(legal_region_labels, legal_profile.key)|default(legal_profile.label) }}</p>
+                </div>
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested banner model') }}</p>
+                    <p id="legal-profile-consent-model" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ legal_profile.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}</p>
+                    <button type="submit" name="apply_consent_model" value="1"
+                            class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
+                        {{ __('Use this banner model') }}
+                    </button>
+                    <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Turns the cookie consent banner on and sets the US opt-out control to match this region.') }}</p>
+                </div>
+            </div>
+
+            {% if legal_findings|default([])|length > 0 %}
+            <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
+                <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('Open items for this profile') }}</h4>
+                <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                    {% for finding in legal_findings %}
+                    <li>
+                        {{ finding.message }}
+                        {% if finding.link is not empty %}
+                        <a href="{{ url(finding.link) }}" class="font-medium underline">{{ finding.link_text }}</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-5">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Legal Pages') }}</h3>
             <div x-data="{ open: false }" class="rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-200">
                 <button type="button" @click="open = !open" class="w-full flex items-center justify-between p-3.5 font-medium text-amber-900 dark:text-amber-200 focus:outline-hidden text-left cursor-pointer">
@@ -25,16 +142,16 @@
                     </svg>
                 </button>
                 <div x-show="open" x-cloak class="px-4 pb-4 border-t border-amber-200/60 dark:border-amber-700 pt-3 space-y-2 text-amber-800 dark:text-amber-200">
-                    <p>{{ __('You need to check your local regulations to comply with legal requirements for online stores. The three pages below — Return Policy, Privacy Policy, and Terms & Conditions — are commonly required in many jurisdictions.') }}</p>
-                    <p>{{ __('Depending on your country, an additional :imprint page may be mandatory. It typically includes your business name, address, contact information, and registration details. In some regions you may also need to display this in the footer or on a dedicated page.', {':imprint': 'Imprint (Legal Notice)'}) }}</p>
+                    <p>{{ __('You need to check your local regulations to comply with legal requirements for online stores. The four pages below — Return Policy, Privacy Policy, Terms & Conditions and Imprint — are the documents most commonly required.') }}</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Select existing pages to link as policy documents. These appear on the checkout page and in order confirmation emails.') }}</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Select existing pages to link as policy documents. Privacy, terms and returns appear on the checkout page and in order confirmation emails; the imprint is linked from the site footer.') }}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 {% set legal_fields = [
                     { key: 'policy_page_returns', label: __('Return Policy Page'), seed: pagePickerSeeds.policy_returns|default(null), attrs_key: 'policy_page_returns', keywords: 'returns refund policy' },
                     { key: 'policy_page_privacy', label: __('Privacy Policy Page'), seed: pagePickerSeeds.policy_privacy|default(null), attrs_key: 'policy_page_privacy', keywords: 'privacy gdpr policy' },
                     { key: 'policy_page_terms', label: __('Terms & Conditions Page'), seed: pagePickerSeeds.policy_terms|default(null), attrs_key: 'policy_page_terms', keywords: 'terms conditions tos' },
+                    { key: 'policy_page_imprint', label: __('Imprint Page'), seed: pagePickerSeeds.policy_imprint|default(null), attrs_key: 'policy_page_imprint', keywords: 'imprint impressum legal notice' },
                 ] %}
                 {% for field in legal_fields %}
                 <div {{ vl.attrs('ecommerce', field.label, field.attrs_key, 'legal', __('Legal Pages'), field.keywords) }}>
@@ -53,7 +170,7 @@
                 <a href="{{ url('/admin/pages/create') }}" target="_blank"
                    class="inline-flex items-center gap-1.5 text-sm text-gray-900 dark:text-gray-100 hover:text-gray-800 dark:hover:text-gray-300 transition-colors font-medium">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                     </svg>
                     {{ __('Create a new page') }} →
                 </a>
@@ -62,3 +179,38 @@
 
     </form>
     </div>{# /ec-tab-legal #}
+<script nonce="{{ csp_nonce }}">
+(function () {
+    var select = document.getElementById('legal-profile-country');
+    if (!select) {
+        return;
+    }
+
+    var regionLabel = document.getElementById('legal-profile-region');
+    var consentLabel = document.getElementById('legal-profile-consent-model');
+    var rows = document.querySelectorAll('[data-legal-req]');
+
+    function render() {
+        var option = select.options[select.selectedIndex];
+        if (!option) {
+            return;
+        }
+
+        var keys = (option.getAttribute('data-items') || '').split(',').filter(Boolean);
+
+        rows.forEach(function (row) {
+            row.style.display = keys.indexOf(row.getAttribute('data-legal-req')) === -1 ? 'none' : '';
+        });
+
+        if (regionLabel) {
+            regionLabel.textContent = option.getAttribute('data-region-label') || '';
+        }
+        if (consentLabel) {
+            consentLabel.textContent = option.getAttribute('data-consent-label') || '';
+        }
+    }
+
+    select.addEventListener('change', render);
+    render();
+})();
+</script>

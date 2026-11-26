@@ -12,6 +12,7 @@ use Slim\Psr7\UploadedFile;
 use Slim\Views\Twig;
 use Symfony\Component\Process\Process;
 use ValeApp\App\Controllers\Admin\PaymentController;
+use ValeApp\Application\Compliance\LegalComplianceProfile;
 use ValeApp\Application\Maintenance\ExportImportService;
 use ValeApp\Application\Seo\AiCrawlerList;
 use ValeApp\Application\Shop\ProductImporter;
@@ -101,6 +102,12 @@ final class SettingsController
 
         $settings = array_merge($general, $content, $discussion, $seo, $ecommerce, $privacy, $analytics, $registration, $customScripts);
 
+        $legalCatalog   = is_array($referenceData['legal_compliance'] ?? null) ? $referenceData['legal_compliance'] : [];
+        $legalProfile   = new LegalComplianceProfile($legalCatalog);
+        $legalCountry   = strtoupper(trim((string) ($ecommerce['legal_profile_country'] ?? '')));
+        $legalChecklist = $legalProfile->checklist($legalCountry, $settings);
+        $legalFindings  = $legalProfile->findings($legalCountry, $settings);
+
         $paymentConfig                    = PaymentController::buildConfig($this->settings);
         $paymentConfig['default_gateway'] = $this->settings->get('payment_active_gateway', 'stripe');
 
@@ -127,6 +134,7 @@ final class SettingsController
             'policy_returns'  => $this->pagePickerSeed((string) ($settings['policy_page_returns'] ?? ''), 'slug'),
             'policy_privacy'  => $this->pagePickerSeed((string) ($settings['policy_page_privacy'] ?? ''), 'slug'),
             'policy_terms'    => $this->pagePickerSeed((string) ($settings['policy_page_terms'] ?? ''), 'slug'),
+            'policy_imprint'  => $this->pagePickerSeed((string) ($settings['policy_page_imprint'] ?? ''), 'slug'),
         ];
 
         $checkoutForms = array_values(array_filter(
@@ -321,6 +329,11 @@ final class SettingsController
             'cronConfig'                   => $cronConfig,
             'currency_catalog'             => $currencyCatalog,
             'country_codes'                => $countryCodes,
+            'legal_regions'                => $legalProfile->regions(),
+            'legal_country_regions'        => $legalProfile->countryRegions($countryCodes),
+            'legal_profile'                => $legalProfile->summary($legalCountry),
+            'legal_checklist'              => $legalChecklist,
+            'legal_findings'               => $legalFindings,
             'signup_urls'                  => $signupUrls,
             'stripe_payment_methods'       => $stripeMethods,
             'captcha_urls'                 => $captchaUrls,
@@ -632,6 +645,38 @@ final class SettingsController
             $body['currency']           = $default;
             $body['allowed_currencies'] = implode(',', $additional);
             $body['blocked_currencies'] = implode(',', $blocked);
+        }
+
+        if ($group === 'ecommerce' && $subtab === 'legal') {
+            $legalCodes                    = is_array($refData['country_codes'] ?? null) ? $refData['country_codes'] : [];
+            $legalCountry                  = strtoupper(trim((string) ($body['legal_profile_country'] ?? '')));
+            $body['legal_profile_country'] = in_array($legalCountry, $legalCodes, true) ? $legalCountry : '';
+
+            // "I handled this myself" acknowledgements: a per-item admin record,
+            // not a claim that Vale verified the document.
+            $existingAcks = json_decode((string) ($this->settings->get('legal_acknowledgements', '') ?? ''), true);
+            $existingAcks = is_array($existingAcks) ? $existingAcks : [];
+            $acks         = [];
+            foreach (['imprint', 'privacy', 'terms', 'returns', 'withdrawal', 'consent', 'us_optout'] as $legalKey) {
+                $field = 'legal_ack_' . $legalKey;
+                if (($body[$field] ?? '') === '1') {
+                    $acks[$legalKey] = (string) ($existingAcks[$legalKey] ?? date('Y-m-d'));
+                }
+                unset($body[$field]);
+            }
+            $body['legal_acknowledgements'] = json_encode($acks);
+
+            // "Use this banner model": the opt-out control only makes sense in
+            // the US model, and both models need the banner itself to be on.
+            if (!empty($body['apply_consent_model'])) {
+                $legalCatalog = is_array($refData['legal_compliance'] ?? null) ? $refData['legal_compliance'] : [];
+                $regionKey    = (new LegalComplianceProfile($legalCatalog))->regionFor((string) ($body['legal_profile_country'] ?? ''));
+                $regionModel  = (string) ($legalCatalog['regions'][$regionKey]['consent_model'] ?? 'opt-in');
+
+                $this->settings->set('consent_enabled', '1', 'privacy', 'boolean');
+                $this->settings->set('consent_us_optout_enabled', $regionModel === 'opt-out' ? '1' : '0', 'privacy', 'boolean');
+            }
+            unset($body['apply_consent_model']);
         }
 
         // Admin interface language (locale) and the site's default content

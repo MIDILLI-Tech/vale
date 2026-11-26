@@ -102,6 +102,181 @@ return [
         'SV', 'SY', 'SZ', 'TD', 'TG', 'TH', 'TJ', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ',
         'UA', 'UG', 'US', 'UY', 'UZ', 'VC', 'VE', 'VN', 'VU', 'WS', 'YE', 'ZA', 'ZM', 'ZW',
     ],
+    // Legal & compliance catalog — drives the checklist under E-Commerce →
+    // Legal & Compliance and the dashboard advisories. Levels are advisory:
+    // they describe what is commonly expected in a region, never that a store
+    // is compliant. `items` maps a document to the setting that satisfies it
+    // (`available => false` = Vale has no module for it yet). `audits` maps an
+    // active integration to the regions where it is a consent problem and the
+    // condition that triggers it.
+    'legal_compliance' => [
+        'items' => [
+            'imprint'    => ['setting' => 'policy_page_imprint'],
+            'privacy'    => ['setting' => 'policy_page_privacy'],
+            'terms'      => ['setting' => 'policy_page_terms'],
+            'returns'    => ['setting' => 'policy_page_returns'],
+            'withdrawal' => ['available' => false],
+            'consent'    => ['setting' => 'consent_enabled', 'fallback_setting' => 'cookie_warning_enabled'],
+            'us_optout'  => ['setting' => 'consent_us_optout_enabled'],
+        ],
+        'regions' => [
+            'eu' => [
+                'label'         => 'European Union / EEA',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint'    => 'recommended',
+                    'privacy'    => 'required',
+                    'terms'      => 'recommended',
+                    'returns'    => 'recommended',
+                    'withdrawal' => 'required',
+                    'consent'    => 'required',
+                ],
+            ],
+            'de_at' => [
+                'label'         => 'Germany / Austria',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint'    => 'required',
+                    'privacy'    => 'required',
+                    'terms'      => 'required',
+                    'returns'    => 'recommended',
+                    'withdrawal' => 'required',
+                    'consent'    => 'required',
+                ],
+            ],
+            'uk' => [
+                'label'         => 'United Kingdom',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint'    => 'recommended',
+                    'privacy'    => 'required',
+                    'terms'      => 'recommended',
+                    'returns'    => 'recommended',
+                    'withdrawal' => 'required',
+                    'consent'    => 'required',
+                ],
+            ],
+            'us' => [
+                'label'         => 'United States',
+                'consent_model' => 'opt-out',
+                'levels'        => [
+                    'imprint'   => 'recommended',
+                    'privacy'   => 'recommended',
+                    'terms'     => 'recommended',
+                    'returns'   => 'recommended',
+                    'consent'   => 'recommended',
+                    'us_optout' => 'required',
+                ],
+            ],
+            'ca' => [
+                'label'         => 'Canada',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint'   => 'recommended',
+                    'privacy'   => 'required',
+                    'terms'     => 'recommended',
+                    'returns'   => 'recommended',
+                    'consent'   => 'required',
+                    'us_optout' => 'recommended',
+                ],
+            ],
+            'anz' => [
+                'label'         => 'Australia / New Zealand',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint' => 'recommended',
+                    'privacy' => 'required',
+                    'terms'   => 'recommended',
+                    'returns' => 'recommended',
+                    'consent' => 'required',
+                ],
+            ],
+            'other' => [
+                'label'         => 'No specific profile',
+                'consent_model' => 'opt-in',
+                'levels'        => [
+                    'imprint' => 'recommended',
+                    'privacy' => 'recommended',
+                    'terms'   => 'recommended',
+                    'returns' => 'recommended',
+                    'consent' => 'recommended',
+                ],
+            ],
+        ],
+        'countries' => [
+            'AT' => 'de_at', 'DE' => 'de_at',
+            'BE' => 'eu', 'BG' => 'eu', 'HR' => 'eu', 'CY' => 'eu', 'CZ' => 'eu',
+            'DK' => 'eu', 'EE' => 'eu', 'FI' => 'eu', 'FR' => 'eu', 'GR' => 'eu',
+            'HU' => 'eu', 'IE' => 'eu', 'IT' => 'eu', 'LV' => 'eu', 'LT' => 'eu',
+            'LU' => 'eu', 'MT' => 'eu', 'NL' => 'eu', 'PL' => 'eu', 'PT' => 'eu',
+            'RO' => 'eu', 'SK' => 'eu', 'SI' => 'eu', 'ES' => 'eu', 'SE' => 'eu',
+            'IS' => 'eu', 'LI' => 'eu', 'NO' => 'eu',
+            'GB' => 'uk', 'US' => 'us', 'CA' => 'ca', 'AU' => 'anz', 'NZ' => 'anz',
+        ],
+        'default_region' => 'other',
+        'audits'         => [
+            'consent_banner_off' => [
+                'regions'   => ['eu', 'de_at', 'uk', 'ca'],
+                'severity'  => 'warning',
+                'when'      => [
+                    ['setting' => 'consent_enabled', 'not' => '1'],
+                ],
+                'link'      => '/admin/settings?tab=privacy&subtab=consent',
+                'link_text' => 'Cookie Consent',
+            ],
+            'captcha_before_consent' => [
+                'regions'   => ['eu', 'de_at', 'uk', 'ca'],
+                'severity'  => 'warning',
+                'when'      => [
+                    ['any' => [
+                        ['setting' => 'login_captcha_type', 'in' => ['hcaptcha', 'recaptcha', 'turnstile']],
+                        ['setting' => 'register_captcha_type', 'in' => ['hcaptcha', 'recaptcha', 'turnstile']],
+                        ['setting' => 'comment_captcha_type', 'in' => ['hcaptcha', 'recaptcha', 'turnstile']],
+                        ['setting' => 'review_captcha_type', 'in' => ['hcaptcha', 'recaptcha', 'turnstile']],
+                    ]],
+                    ['setting' => 'consent_gate_captcha', 'not' => '1'],
+                ],
+                'link'      => '/admin/settings?tab=privacy&subtab=consent',
+                'link_text' => 'Cookie Consent',
+            ],
+            'third_party_ads' => [
+                'regions'   => ['eu', 'de_at', 'uk', 'ca'],
+                'severity'  => 'warning',
+                'when'      => [
+                    ['setting' => 'advertisement_enabled', 'is' => '1'],
+                    ['setting' => 'advertisement_code', 'non_empty' => true],
+                ],
+                'link'      => '/admin/settings?tab=content&subtab=ads',
+                'link_text' => 'Advertisement',
+            ],
+            'ungated_custom_scripts' => [
+                'regions'   => ['eu', 'de_at', 'uk', 'ca'],
+                'severity'  => 'warning',
+                'when'      => [
+                    ['any' => [
+                        ['setting' => 'custom_header_scripts', 'non_empty' => true],
+                        ['setting' => 'custom_footer_scripts', 'non_empty' => true],
+                    ]],
+                    ['any' => [
+                        ['setting' => 'custom_header_scripts_category', 'is' => ''],
+                        ['setting' => 'custom_footer_scripts_category', 'is' => ''],
+                    ]],
+                ],
+                'link'      => '/admin/settings?tab=advanced',
+                'link_text' => 'Advanced Settings',
+            ],
+            'us_optout_off' => [
+                'regions'   => ['us'],
+                'severity'  => 'info',
+                'when'      => [
+                    ['setting' => 'consent_enabled', 'is' => '1'],
+                    ['setting' => 'consent_us_optout_enabled', 'not' => '1'],
+                ],
+                'link'      => '/admin/settings?tab=privacy&subtab=consent',
+                'link_text' => 'Cookie Consent',
+            ],
+        ],
+    ],
     // BCP 47 / ISO 639-1 language codes — used anywhere a *language* must be
     // picked (subtitle `srclang`, …). Display names are resolved at render time
     // with Intl.DisplayNames in the viewer's own language, so only the codes

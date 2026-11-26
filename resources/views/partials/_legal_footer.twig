@@ -1,0 +1,9 @@
+{% if legal_footer_links is defined and legal_footer_links|length > 0 %}
+{% set legal_nav_class = legal_nav_class|default('mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2') %}
+{% set legal_link_class = legal_link_class|default('text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors') %}
+<nav class="{{ legal_nav_class }}" aria-label="{{ __('Legal') }}">
+    {% for link in legal_footer_links %}
+    <a href="{{ link.url }}" class="{{ legal_link_class }}">{{ link.label }}</a>
+    {% endfor %}
+</nav>
+{% endif %}

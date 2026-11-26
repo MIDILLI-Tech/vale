@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Views\Twig;
+use ValeApp\Application\Compliance\LegalComplianceProfile;
 use ValeApp\Application\Form\FormCaptchaService;
 use ValeApp\Application\Plugin\PluginUpdateService;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
@@ -225,25 +226,42 @@ final class DashboardController
         $shopEnabled          = ($this->settings->get('shop_enabled', '1') ?? '1')          === '1';
         $subscriptionsEnabled = ($this->settings->get('subscriptions_enabled', '1') ?? '1') === '1'
             || ($this->settings->get('membership_enabled', '1') ?? '1')                     === '1';
-        if ($shopEnabled || $subscriptionsEnabled) {
-            $policyKeys = [
-                'policy_page_returns'  => __('Returns / Cancellation Policy'),
-                'policy_page_privacy'  => __('Privacy Policy'),
-                'policy_page_terms'    => __('Terms & Conditions'),
+        $legalCountry = strtoupper(trim((string) ($this->settings->get('legal_profile_country', '') ?? '')));
+        if (($shopEnabled || $subscriptionsEnabled) && $legalCountry === '') {
+            $status[] = [
+                'type'     => 'info',
+                'message'  => __('Choose the country where you operate to see which legal documents and consent settings are expected.'),
+                'link'     => '/admin/settings?tab=ecommerce&subtab=legal',
+                'linkText' => __('Legal & Compliance'),
             ];
-            $missingPolicies = [];
-            foreach ($policyKeys as $key => $label) {
-                $slug = trim($this->settings->get($key, '') ?? '');
-                if ($slug === '') {
-                    $missingPolicies[] = $label;
-                }
+        }
+
+        // Consent and document advisories for the selected legal profile.
+        // They stay on the dashboard until the setting changes or the item is
+        // acknowledged as handled outside Vale.
+        if ($legalCountry !== '') {
+            $legalReference = require dirname(__DIR__, 3) . '/config/reference-data.php';
+            $legalCatalog   = is_array($legalReference['legal_compliance'] ?? null) ? $legalReference['legal_compliance'] : [];
+            $legalSettings  = [];
+            $legalKeys      = [
+                'policy_page_imprint', 'policy_page_privacy', 'policy_page_terms', 'policy_page_returns',
+                'legal_acknowledgements', 'consent_enabled', 'consent_us_optout_enabled', 'consent_gate_captcha',
+                'advertisement_enabled', 'advertisement_code',
+                'custom_header_scripts', 'custom_footer_scripts',
+                'custom_header_scripts_category', 'custom_footer_scripts_category',
+                'login_captcha_type', 'register_captcha_type', 'comment_captcha_type', 'review_captcha_type',
+            ];
+            foreach ($legalKeys as $legalKey) {
+                $legalSettings[$legalKey] = (string) ($this->settings->get($legalKey, '') ?? '');
             }
-            if (!empty($missingPolicies)) {
+
+            $legalProfile = new LegalComplianceProfile($legalCatalog);
+            foreach ($legalProfile->findings($legalCountry, $legalSettings) as $legalFinding) {
                 $status[] = [
-                    'type'     => 'info',
-                    'message'  => __('Legal pages not configured: :pages.', [':pages' => implode(', ', $missingPolicies)]),
-                    'link'     => '/admin/settings?tab=ecommerce&subtab=legal',
-                    'linkText' => __('E-Commerce → Legal'),
+                    'type'     => $legalFinding['severity'] === 'warning' ? 'warning' : 'info',
+                    'message'  => $legalFinding['message'],
+                    'link'     => $legalFinding['link'],
+                    'linkText' => $legalFinding['link_text'],
                 ];
             }
         }
