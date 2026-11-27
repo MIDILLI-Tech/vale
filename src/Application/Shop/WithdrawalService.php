@@ -50,6 +50,24 @@ final class WithdrawalService
     }
 
     /**
+     * An open declaration for the same order and customer email means a
+     * repeat submission: the customer already has a dated confirmation.
+     *
+     * @param array<string, mixed> $input
+     */
+    public function findDuplicate(array $input): ?WithdrawalRequest
+    {
+        $orderNumber = strtoupper(trim((string) ($input['order_number'] ?? '')));
+        $email       = mb_strtolower(trim((string) ($input['email'] ?? '')));
+
+        if ($orderNumber === '' || $email === '') {
+            return null;
+        }
+
+        return $this->requests->findOpenByOrderAndEmail($orderNumber, $email);
+    }
+
+    /**
      * @param array<string, mixed> $input
      */
     public function submit(array $input, string $ipAddress, string $locale): WithdrawalRequest

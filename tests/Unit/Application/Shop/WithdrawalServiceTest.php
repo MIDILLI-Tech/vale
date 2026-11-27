@@ -78,6 +78,42 @@ final class WithdrawalServiceTest extends TestCase
         self::assertMatchesRegularExpression('/^W-\d{8}-[A-F0-9]{6}$/', $withdrawal->getReference());
     }
 
+    public function testFindDuplicateNormalizesOrderNumberAndEmail(): void
+    {
+        $existing  = new WithdrawalRequest('VL-2026-0003', 'buyer@example.com', 'W-20261127-ABCDEF');
+        $requested = [];
+
+        $requests = $this->createStub(WithdrawalRequestRepositoryInterface::class);
+        $requests->method('findOpenByOrderAndEmail')->willReturnCallback(
+            static function (string $orderNumber, string $email) use (&$requested, $existing): ?WithdrawalRequest {
+                $requested = [$orderNumber, $email];
+
+                return $existing;
+            },
+        );
+
+        $service = new WithdrawalService($requests, $this->createStub(OrderRepositoryInterface::class));
+
+        $duplicate = $service->findDuplicate([
+            'order_number' => '  vl-2026-0003 ',
+            'email'        => ' Buyer@Example.com ',
+        ]);
+
+        self::assertSame($existing, $duplicate);
+        self::assertSame(['VL-2026-0003', 'buyer@example.com'], $requested);
+    }
+
+    public function testFindDuplicateReturnsNullWithoutOrderOrEmail(): void
+    {
+        $service = new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        );
+
+        self::assertNull($service->findDuplicate(['order_number' => 'VL-1']));
+        self::assertNull($service->findDuplicate(['email' => 'buyer@example.com']));
+    }
+
     public function testSubmitDoesNotLinkOrderWhenEmailDiffers(): void
     {
         $order = new Order('VL-2026-0002', ['email' => 'owner@example.com']);

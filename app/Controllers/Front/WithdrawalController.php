@@ -65,6 +65,20 @@ final class WithdrawalController
             ]);
         }
 
+        $existing = $this->service->findDuplicate($body);
+        if ($existing !== null) {
+            return $this->render($response, [
+                'success'    => true,
+                'duplicate'  => true,
+                'errors'     => [],
+                'old'        => $body,
+                'withdrawal' => $existing,
+                'order'      => $existing->getOrderId() !== null
+                    ? $this->orders->findById((int) $existing->getOrderId())
+                    : null,
+            ]);
+        }
+
         $ipMode = (string) ($this->settings->get('ip_privacy_mode', 'mask') ?? 'mask');
         $locale = $this->translator->getLocale();
 

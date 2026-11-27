@@ -39,6 +39,19 @@ final class DbalWithdrawalRequestRepository implements WithdrawalRequestReposito
         return $row === false ? null : WithdrawalRequest::fromRow($row);
     }
 
+    public function findOpenByOrderAndEmail(string $orderNumber, string $email): ?WithdrawalRequest
+    {
+        $row = $this->db->fetchAssociative(
+            'SELECT * FROM ' . VL_DB_PREFIX . 'withdrawal_requests'
+            . " WHERE order_number = ? AND LOWER(customer_email) = ? AND status IN ('pending', 'accepted', 'completed')"
+            . ' ORDER BY id DESC',
+            [$orderNumber, mb_strtolower(trim($email))],
+            [ParameterType::STRING, ParameterType::STRING],
+        );
+
+        return $row === false ? null : WithdrawalRequest::fromRow($row);
+    }
+
     /** @return WithdrawalRequest[] */
     public function findAll(Pagination $pagination, array $filters = []): array
     {

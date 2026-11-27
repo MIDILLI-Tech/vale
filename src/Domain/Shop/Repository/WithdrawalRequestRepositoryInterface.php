@@ -13,6 +13,8 @@ interface WithdrawalRequestRepositoryInterface
 
     public function findByReference(string $reference): ?WithdrawalRequest;
 
+    public function findOpenByOrderAndEmail(string $orderNumber, string $email): ?WithdrawalRequest;
+
     /** @return WithdrawalRequest[] */
     public function findAll(Pagination $pagination, array $filters = []): array;
 
