@@ -12,7 +12,7 @@
         privacy:    __('Privacy Policy'),
         terms:      __('Terms & Conditions'),
         returns:    __('Return Policy'),
-        withdrawal: __('Withdrawal (Widerruf)'),
+        withdrawal: __('Withdrawal'),
         consent:    __('Cookie Consent'),
         us_optout:      __('Do Not Sell or Share (US)'),
         digital_waiver: __('Digital withdrawal waiver'),
@@ -240,37 +240,6 @@
                 </div>
                 {% endfor %}
             </div>
-            {% set footer_menu = legal_footer|default({ menu_id: null, menu_name: '', has_heading: false, links: 0 }) %}
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="min-w-0">
-                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('Footer menu') }}</p>
-                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                            {% if footer_menu.menu_id %}
-                                {% if footer_menu.has_heading %}
-                                    {{ __(':menu is the footer menu. The Legal column has :count links.', {':menu': footer_menu.menu_name, ':count': footer_menu.links}) }}
-                                {% else %}
-                                    {{ __(':menu is the footer menu, but it has no Legal column yet.', {':menu': footer_menu.menu_name}) }}
-                                {% endif %}
-                            {% else %}
-                                {{ __('No footer menu is defined yet. The links above are printed as a plain row in the footer until a menu is created.') }}
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div class="flex shrink-0 items-center gap-2">
-                        {% if footer_menu.menu_id %}
-                        <a href="{{ url('/admin/menus') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Open menu builder') }}</a>
-                        {% endif %}
-                        <form method="post" action="{{ url('/admin/settings/legal-footer') }}">
-                            {{ csrf_field() }}
-                            <button type="submit" class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
-                                {{ footer_menu.menu_id ? __('Add Legal section') : __('Create footer menu') }}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
             <div class="pt-2">
                 <a href="{{ url('/admin/pages/create') }}" target="_blank"
                    class="inline-flex items-center gap-1.5 text-sm text-gray-900 dark:text-gray-100 hover:text-gray-800 dark:hover:text-gray-300 transition-colors font-medium">
@@ -283,6 +252,37 @@
         </div>
 
     </form>
+
+    {% set footer_menu = legal_footer|default({ menu_id: null, menu_name: '', has_heading: false, links: 0 }) %}
+    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('Footer menu') }}</p>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {% if footer_menu.menu_id %}
+                        {% if footer_menu.has_heading %}
+                            {{ __(':menu is the footer menu. The Legal column has :count links.', {':menu': footer_menu.menu_name, ':count': footer_menu.links}) }}
+                        {% else %}
+                            {{ __(':menu is the footer menu, but it has no Legal column yet.', {':menu': footer_menu.menu_name}) }}
+                        {% endif %}
+                    {% else %}
+                        {{ __('No footer menu is defined yet. The links above are printed as a plain row in the footer until a menu is created.') }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+                {% if footer_menu.menu_id %}
+                <a href="{{ url('/admin/menus') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Open menu builder') }}</a>
+                {% endif %}
+                <form method="post" action="{{ url('/admin/settings/legal-footer') }}">
+                    {{ csrf_field() }}
+                    <button type="submit" class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
+                        {{ footer_menu.menu_id ? __('Add Legal section') : __('Create footer menu') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
     </div>{# /ec-tab-legal #}
 <script nonce="{{ csp_nonce }}">
 (function () {

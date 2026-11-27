@@ -283,7 +283,7 @@ final class LegalComplianceProfile
             'privacy'          => __('Privacy Policy'),
             'terms'            => __('Terms & Conditions'),
             'returns'          => __('Return Policy'),
-            'withdrawal'       => __('Withdrawal (Widerruf)'),
+            'withdrawal'       => __('Withdrawal'),
             'consent'          => __('Cookie Consent'),
             'us_optout'        => __('Do Not Sell or Share (US)'),
             'digital_waiver'   => __('Digital withdrawal waiver'),
