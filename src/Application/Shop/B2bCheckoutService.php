@@ -51,7 +51,7 @@ final class B2bCheckoutService
                 'vat_number' => $vatNumber,
                 'validation' => null,
                 'error'      => null,
-                'warning'    => __('VAT numbers outside the EU cannot be validated online, so VAT is charged.'),
+                'warning'    => __('Tax ID saved. Tax IDs outside the EU cannot be validated online.'),
             ];
         }
 

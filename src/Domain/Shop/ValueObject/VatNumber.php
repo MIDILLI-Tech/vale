@@ -79,6 +79,12 @@ final class VatNumber
         return null;
     }
 
+    /** @return list<string> */
+    public static function euCountries(): array
+    {
+        return self::EU_COUNTRIES;
+    }
+
     public static function isEuCountry(string $country): bool
     {
         $country = strtoupper(trim($country));

@@ -34,6 +34,7 @@ use ValeApp\Domain\Shop\Repository\DownloadRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderLogRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
+use ValeApp\Domain\Shop\ValueObject\VatNumber;
 use ValeApp\Infrastructure\ExchangeRate\ExchangeRateService;
 use ValeApp\Infrastructure\Payment\Money;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -355,6 +356,7 @@ final class CheckoutController
             'non_refundable_items'                  => $nonRefundableItems,
             'return_shipping_payer'                 => $returnShippingPayer,
             'b2b_enabled'                           => $this->b2b?->isEnabled() ?? false,
+            'eu_countries'                          => VatNumber::euCountries(),
             'checkout_base_url'                     => $this->checkoutUrl(''),
             'subtotal'                              => $subtotal,
             'shipping'                              => $shipping,
@@ -661,6 +663,7 @@ final class CheckoutController
                 'shipping_enabled'      => $shippingEnabled,
                 'shipping_error'        => $shippingError,
                 'b2b_enabled'           => $this->b2b?->isEnabled() ?? false,
+                'eu_countries'          => VatNumber::euCountries(),
                 'saved_address_error'   => '',
                 'user_shipping_address' => $userShippingAddress,
                 'has_physical_items'    => $hasPhysicalItems,

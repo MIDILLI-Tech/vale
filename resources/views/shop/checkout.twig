@@ -67,7 +67,7 @@
                                        class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
                                 <span>
                                     <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('I am buying as a business') }}</span>
-                                    <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Add your company details and VAT number. Valid EU business customers are invoiced without VAT (reverse charge).') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400" x-text="b2bHelpText()">{{ __('Add your company details and VAT number.') }}</span>
                                 </span>
                             </label>
                             <div class="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" x-show="business" x-cloak>
@@ -79,8 +79,8 @@
                                     {% if errors.company_name|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.company_name }}</p>{% endif %}
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('VAT Number') }} *</label>
-                                    <input type="text" name="vat_number" value="{{ old.vat_number ?? '' }}" placeholder="DE123456789" data-vl-vat :required="business" x-model="vatNumber"
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"><span x-text="b2bVatLabel()">{{ __('VAT Number') }}</span> *</label>
+                                    <input type="text" name="vat_number" value="{{ old.vat_number ?? '' }}" :placeholder="isEuBilling() ? 'DE123456789' : ''" data-vl-vat :required="business" x-model="vatNumber"
                                            @keydown.enter.prevent="checkBusinessVat()"
                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm uppercase">
                                     {% if errors.vat_number|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.vat_number }}</p>{% endif %}
@@ -766,6 +766,8 @@
         b2bMessage:     '',
         companyName:    {{ old.company_name|default('')|json_encode|raw }},
         vatNumber:      {{ old.vat_number|default('')|json_encode|raw }},
+        euCountries:    {{ eu_countries|default([])|json_encode|raw }},
+        billingCountry: '',
         taxAmount:      parseFloat('{{ tax_amount|default(0) }}') || 0,
         _baseTaxAmount: parseFloat('{{ tax_amount|default(0) }}') || 0,
         _csrfToken:     '{{ csrf_token() }}',
@@ -776,6 +778,22 @@
 
         isNormalVat() {
             return this.taxRegime === 'normal_vat' && this.taxRate > 0;
+        },
+
+        isEuBilling() {
+            return this.euCountries.includes((this.billingCountry || '').toUpperCase());
+        },
+
+        b2bVatLabel() {
+            return this.isEuBilling()
+                ? {{ __('VAT Number')|json_encode|raw }}
+                : {{ __('Tax ID')|json_encode|raw }};
+        },
+
+        b2bHelpText() {
+            return this.isEuBilling()
+                ? {{ __('Add your company details and VAT number.')|json_encode|raw }}
+                : {{ __('Add your company details and tax ID.')|json_encode|raw }};
         },
 
         getBillingEmail() {
@@ -958,7 +976,9 @@
         async init() {
             const countryInput = document.querySelector('[name="country"]');
             if (countryInput) {
+                this.billingCountry = countryInput.value;
                 countryInput.addEventListener('change', () => {
+                    this.billingCountry = countryInput.value;
                     this.refreshQuote().then(() => this.validateShippingCountry());
                 });
             }
