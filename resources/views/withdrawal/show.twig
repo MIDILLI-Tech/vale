@@ -48,7 +48,7 @@
 
     {% if deadline is defined and deadline.deadline %}
     <div class="mb-6 rounded-lg border {{ deadline.late ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400' }} p-4 text-sm">
-        <p>{{ __('Withdrawal period for this order: until :date.', {':date': deadline.deadline|date('d M Y')}) }}{% if deadline.estimated %} {{ __('(estimated from the payment date — the period starts when the goods arrive)') }}{% endif %}</p>
+        <p>{{ __('Withdrawal period for this order: until :date.', {':date': deadline.deadline|date('d M Y')}) }}{% if deadline.estimated %} {{ __('(estimated from the payment date — the period starts when the goods arrive)') }}{% elseif deadline.provisional %} {{ __('Based on the delivery date recorded for this order.') }}{% endif %}</p>
         {% if deadline.late %}
         <p class="mt-1 font-medium">{{ __('The regular withdrawal period has passed. You can still submit the declaration and we will review it.') }}</p>
         {% endif %}

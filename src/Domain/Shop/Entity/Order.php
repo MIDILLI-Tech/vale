@@ -10,6 +10,12 @@ use ValeApp\Infrastructure\Payment\Money;
 
 class Order extends BaseEntity
 {
+    /** Delivery date entered by an operator — evidence the goods arrived. */
+    public const DELIVERY_SOURCE_MANUAL = 'manual';
+
+    /** Delivery date guessed when the status moved to Completed. */
+    public const DELIVERY_SOURCE_STATUS = 'status';
+
     private string $orderNumber;
     private ?int $userId;
     private string $status                                  = 'pending';
@@ -29,6 +35,7 @@ class Order extends BaseEntity
     private ?string $paymentToken                           = null;
     private ?\DateTimeImmutable $paidAt                     = null;
     private ?\DateTimeImmutable $deliveredAt                = null;
+    private ?string $deliveredAtSource                      = null;
     private ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null;
     private ?\DateTimeImmutable $ageConfirmedAt             = null;
     private ?string $carrier                                = null;
@@ -122,9 +129,34 @@ class Order extends BaseEntity
         return $this->deliveredAt;
     }
 
+    public function getDeliveredAtSource(): ?string
+    {
+        return $this->deliveredAtSource;
+    }
+
+    public function setDeliveredAtSource(?string $source): void
+    {
+        $this->deliveredAtSource = in_array($source, [self::DELIVERY_SOURCE_MANUAL, self::DELIVERY_SOURCE_STATUS], true)
+            ? $source
+            : null;
+    }
+
     public function setDeliveredAt(?\DateTimeImmutable $at): void
     {
         $this->deliveredAt = $at;
+
+        if ($at === null) {
+            $this->deliveredAtSource = null;
+        }
+    }
+
+    /**
+     * A date that only came from a status change is a guess, not proof that
+     * the goods arrived; the withdrawal period must not be judged on it.
+     */
+    public function hasConfirmedDelivery(): bool
+    {
+        return $this->deliveredAt !== null && $this->deliveredAtSource !== self::DELIVERY_SOURCE_STATUS;
     }
 
     public function getPaidAt(): ?\DateTimeImmutable
@@ -370,6 +402,9 @@ class Order extends BaseEntity
         }
         if (!empty($row['delivered_at'])) {
             $order->deliveredAt = new \DateTimeImmutable($row['delivered_at']);
+        }
+        if (!empty($row['delivered_at_source'])) {
+            $order->setDeliveredAtSource((string) $row['delivered_at_source']);
         }
         if (!empty($row['withdrawal_waiver_accepted_at'])) {
             $order->withdrawalWaiverAcceptedAt = new \DateTimeImmutable($row['withdrawal_waiver_accepted_at']);

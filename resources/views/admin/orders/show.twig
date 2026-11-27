@@ -650,9 +650,14 @@
                            class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
                     <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">{{ __('Save') }}</button>
                 </div>
+                {% if order.deliveredAtSource == 'status' %}
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    {{ __('Estimated from the order status — confirm the actual delivery date.') }}
+                </p>
+                {% endif %}
                 <p class="text-xs text-gray-500 dark:text-gray-400">
                     {% if withdrawal_deadline %}
-                    {{ withdrawal_deadline_estimated and not order.deliveredAt ? __('Withdrawal period (estimated): until :date', {':date': withdrawal_deadline|date('Y-m-d')}) : __('Withdrawal period: until :date', {':date': withdrawal_deadline|date('Y-m-d')}) }}
+                    {{ withdrawal_deadline_estimated ? __('Withdrawal period (estimated): until :date', {':date': withdrawal_deadline|date('Y-m-d')}) : __('Withdrawal period: until :date', {':date': withdrawal_deadline|date('Y-m-d')}) }}
                     {% else %}
                     {{ __('Withdrawal period: set the delivery date or the payment date to start the :days-day window.', {':days': withdrawal_days}) }}
                     {% endif %}

@@ -63,7 +63,19 @@ final class ChangeOrderStatusUseCase
         $autoDelivered = false;
         if ($newStatus === OrderStatus::COMPLETED && $order->getDeliveredAt() === null) {
             $order->setDeliveredAt(new \DateTimeImmutable());
+            $order->setDeliveredAtSource(Order::DELIVERY_SOURCE_STATUS);
             $autoDelivered = true;
+        }
+
+        // A date that only came from a status change is a guess. Leaving
+        // Completed (a mis-click, a returned parcel) must not leave a
+        // withdrawal period running from a date the order never reached.
+        $autoDeliveryCleared = $oldStatus === OrderStatus::COMPLETED
+            && $newStatus !== OrderStatus::COMPLETED
+            && $order->getDeliveredAtSource() === Order::DELIVERY_SOURCE_STATUS;
+
+        if ($autoDeliveryCleared) {
+            $order->setDeliveredAt(null);
         }
 
         $this->orders->save($order);
@@ -84,9 +96,17 @@ final class ChangeOrderStatusUseCase
             $this->orderLogs->add(
                 (int) $order->getId(),
                 'delivery_date',
-                __('Delivery recorded on :date — the withdrawal period starts here.', [
+                __('Automatic delivery date :date recorded from the status change — confirm the actual delivery date.', [
                     ':date' => $order->getDeliveredAt()?->format('Y-m-d') ?? '',
                 ])
+            );
+        }
+
+        if ($autoDeliveryCleared) {
+            $this->orderLogs->add(
+                (int) $order->getId(),
+                'delivery_date',
+                __('Automatic delivery date cleared because the order left Completed.')
             );
         }
 

@@ -212,9 +212,53 @@ final class ChangeOrderStatusUseCaseTest extends TestCase
         self::assertTrue($useCase->execute($order, 'completed'));
 
         self::assertNotNull($order->getDeliveredAt());
+        self::assertSame(Order::DELIVERY_SOURCE_STATUS, $order->getDeliveredAtSource());
+        self::assertFalse($order->hasConfirmedDelivery());
         self::assertSame('status_changed', $this->logged[0][0]);
         self::assertSame('delivery_date', $this->logged[1][0]);
         self::assertStringContainsString($order->getDeliveredAt()->format('Y-m-d'), $this->logged[1][1]);
+    }
+
+    public function testLeavingCompletedClearsAnAutomaticDeliveryDate(): void
+    {
+        $order   = $this->makeOrder('shipped');
+        $useCase = $this->makeUseCase();
+
+        self::assertTrue($useCase->execute($order, 'completed'));
+        self::assertSame(Order::DELIVERY_SOURCE_STATUS, $order->getDeliveredAtSource());
+
+        // A status change back (mis-click, parcel returned) must undo the guess.
+        self::assertTrue($useCase->execute($order, 'processing'));
+
+        self::assertNull($order->getDeliveredAt());
+        self::assertNull($order->getDeliveredAtSource());
+
+        $last = $this->logged[count($this->logged) - 1];
+        self::assertSame('delivery_date', $last[0]);
+        self::assertSame('Automatic delivery date cleared because the order left Completed.', $last[1]);
+    }
+
+    public function testLeavingCompletedKeepsAConfirmedDeliveryDate(): void
+    {
+        $order = Order::fromRow([
+            'id'                  => 7,
+            'order_number'        => 'VL-7780',
+            'status'              => 'completed',
+            'currency'            => 'EUR',
+            'total'               => '49.00',
+            'paid_at'             => '2026-10-01 10:00:00',
+            'delivered_at'        => '2026-10-05 12:00:00',
+            'delivered_at_source' => Order::DELIVERY_SOURCE_MANUAL,
+            'created_at'          => '2026-10-01 09:59:00',
+            'billing'             => json_encode(['email' => 'ada@example.com']),
+        ]);
+
+        $useCase = $this->makeUseCase();
+
+        self::assertTrue($useCase->execute($order, 'processing'));
+
+        self::assertSame('2026-10-05', $order->getDeliveredAt()?->format('Y-m-d'));
+        self::assertTrue($order->hasConfirmedDelivery());
     }
 
     public function testCompletingKeepsAnExistingDeliveryDate(): void
@@ -236,6 +280,8 @@ final class ChangeOrderStatusUseCaseTest extends TestCase
         self::assertTrue($useCase->execute($order, 'completed'));
 
         self::assertSame('2026-10-05', $order->getDeliveredAt()?->format('Y-m-d'));
+        self::assertNull($order->getDeliveredAtSource());
+        self::assertTrue($order->hasConfirmedDelivery());
         self::assertCount(1, $this->logged);
     }
 

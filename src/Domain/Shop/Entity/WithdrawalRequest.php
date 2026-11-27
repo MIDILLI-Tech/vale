@@ -24,18 +24,19 @@ final class WithdrawalRequest extends BaseEntity
     private string $orderNumber;
     private string $customerEmail;
     private string $reference;
-    private ?int $orderId                    = null;
-    private ?string $customerName            = null;
-    private string $status                   = self::STATUS_PENDING;
-    private string $locale                   = 'en';
-    private string $source                   = 'online';
-    private ?string $reason                  = null;
-    private ?string $itemsNote               = null;
-    private ?string $items                   = null;
-    private ?string $adminNote               = null;
-    private ?string $ipAddress               = null;
-    private ?\DateTimeImmutable $deadlineAt  = null;
-    private ?\DateTimeImmutable $processedAt = null;
+    private ?int $orderId                     = null;
+    private ?string $customerName             = null;
+    private string $status                    = self::STATUS_PENDING;
+    private string $locale                    = 'en';
+    private string $source                    = 'online';
+    private ?string $reason                   = null;
+    private ?string $itemsNote                = null;
+    private ?string $items                    = null;
+    private ?string $adminNote                = null;
+    private ?string $ipAddress                = null;
+    private ?\DateTimeImmutable $deadlineAt   = null;
+    private bool $deadlineEstimated           = false;
+    private ?\DateTimeImmutable $processedAt  = null;
 
     public function __construct(string $orderNumber, string $customerEmail, string $reference)
     {
@@ -121,10 +122,22 @@ final class WithdrawalRequest extends BaseEntity
         return $this->deadlineAt;
     }
 
-    /** Regular period already passed, but the declaration stays recorded for review. */
+    /** The snapshot was derived from a guessed delivery date, not a confirmed one. */
+    public function isDeadlineEstimated(): bool
+    {
+        return $this->deadlineEstimated;
+    }
+
+    /**
+     * Regular period already passed, but the declaration stays recorded for
+     * review. A deadline estimated at submission time never counts as late —
+     * the customer keeps the benefit of the doubt.
+     */
     public function isLate(): bool
     {
-        return $this->deadlineAt !== null && new \DateTimeImmutable() > $this->deadlineAt;
+        return $this->deadlineAt !== null
+            && !$this->deadlineEstimated
+            && new \DateTimeImmutable() > $this->deadlineAt;
     }
 
     public function getProcessedAt(): ?\DateTimeImmutable
@@ -197,6 +210,11 @@ final class WithdrawalRequest extends BaseEntity
         $this->deadlineAt = $at;
     }
 
+    public function setDeadlineEstimated(bool $estimated): void
+    {
+        $this->deadlineEstimated = $estimated;
+    }
+
     public function markProcessed(): void
     {
         $this->processedAt = new \DateTimeImmutable();
@@ -240,6 +258,7 @@ final class WithdrawalRequest extends BaseEntity
         if (!empty($row['deadline_at'])) {
             $request->deadlineAt = new \DateTimeImmutable($row['deadline_at']);
         }
+        $request->deadlineEstimated = !empty($row['deadline_estimated']);
         if (!empty($row['processed_at'])) {
             $request->processedAt = new \DateTimeImmutable($row['processed_at']);
         }

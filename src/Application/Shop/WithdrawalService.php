@@ -83,12 +83,30 @@ final class WithdrawalService
      * The regular period starts when the goods arrive; without a delivery date
      * the payment/creation date is the best available estimate.
      *
-     * @return array{deadline: ?\DateTimeImmutable, late: bool, expired: bool, estimated: bool}
+     * Nothing here is a hard answer unless the delivery was confirmed by an
+     * operator: a guessed date must never make a declaration "late" or
+     * "expired", so the customer keeps the benefit of the doubt.
+     *
+     * @return array{
+     *     deadline: ?\DateTimeImmutable,
+     *     late: bool,
+     *     expired: bool,
+     *     estimated: bool,
+     *     provisional: bool,
+     *     confirmed: bool,
+     * }
      */
     public function deadline(?Order $order, int $days): array
     {
         $days = max(1, $days);
-        $none = ['deadline' => null, 'late' => false, 'expired' => false, 'estimated' => false];
+        $none = [
+            'deadline'    => null,
+            'late'        => false,
+            'expired'     => false,
+            'estimated'   => false,
+            'provisional' => false,
+            'confirmed'   => false,
+        ];
 
         if ($order === null) {
             return $none;
@@ -100,16 +118,19 @@ final class WithdrawalService
             return $none;
         }
 
-        $deadline = $start->modify('+' . $days . ' days');
-        $now      = new \DateTimeImmutable();
+        $confirmed = $order->hasConfirmedDelivery();
+        $deadline  = $start->modify('+' . $days . ' days');
+        $now       = new \DateTimeImmutable();
 
         return [
-            'deadline' => $deadline,
-            'late'     => $now > $deadline,
+            'deadline'    => $deadline,
+            'late'        => $confirmed && $now > $deadline,
             // CRD Article 10: a trader that never informed the consumer gets a
             // 12-month extension on top of the regular period.
-            'expired'   => $now > $deadline->modify('+12 months'),
-            'estimated' => $delivered === null,
+            'expired'     => $confirmed && $now > $deadline->modify('+12 months'),
+            'estimated'   => $delivered === null,
+            'provisional' => $delivered !== null && !$confirmed,
+            'confirmed'   => $confirmed,
         ];
     }
 
@@ -121,6 +142,7 @@ final class WithdrawalService
         string $ipAddress,
         string $locale,
         ?\DateTimeImmutable $deadline = null,
+        bool $estimated = false,
     ): WithdrawalRequest {
         $orderNumber = strtoupper(trim((string) ($input['order_number'] ?? '')));
         $email       = mb_strtolower(trim((string) ($input['email'] ?? '')));
@@ -136,6 +158,7 @@ final class WithdrawalService
         $request->setIpAddress($ipAddress);
         if ($linked) {
             $request->setDeadlineAt($deadline);
+            $request->setDeadlineEstimated($estimated);
         }
         $request->setReason((string) ($input['reason'] ?? ''));
         $request->setItemsNote((string) ($input['items_note'] ?? ''));

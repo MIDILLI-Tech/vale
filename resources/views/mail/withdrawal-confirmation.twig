@@ -22,7 +22,7 @@
   {% if withdrawal.deadlineAt %}
   <tr style="border-bottom:1px solid {{ email_border }};">
     <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Withdrawal period ended') }}</td>
-    <td style="padding:8px 0;">{{ withdrawal.deadlineAt|date('d M Y') }}</td>
+    <td style="padding:8px 0;">{{ withdrawal.deadlineAt|date('d M Y') }}{% if withdrawal.deadlineEstimated %} ({{ __('estimated') }}){% endif %}</td>
   </tr>
   {% endif %}
 </table>

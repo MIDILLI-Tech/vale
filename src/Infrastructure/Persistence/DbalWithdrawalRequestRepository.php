@@ -114,17 +114,18 @@ final class DbalWithdrawalRequestRepository implements WithdrawalRequestReposito
             'items'          => $request->getItems() === []
                 ? null
                 : (string) json_encode($request->getItems(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            'items_note'     => $request->getItemsNote(),
-            'reason'         => $request->getReason(),
-            'status'         => $request->getStatus(),
-            'reference'      => $request->getReference(),
-            'locale'         => $request->getLocale(),
-            'source'         => $request->getSource(),
-            'admin_note'     => $request->getAdminNote(),
-            'ip_address'     => $request->getIpAddress(),
-            'deadline_at'    => $request->getDeadlineAt()?->format('Y-m-d H:i:s'),
-            'processed_at'   => $request->getProcessedAt()?->format('Y-m-d H:i:s'),
-            'updated_at'     => date('Y-m-d H:i:s'),
+            'items_note'         => $request->getItemsNote(),
+            'reason'             => $request->getReason(),
+            'status'             => $request->getStatus(),
+            'reference'          => $request->getReference(),
+            'locale'             => $request->getLocale(),
+            'source'             => $request->getSource(),
+            'admin_note'         => $request->getAdminNote(),
+            'ip_address'         => $request->getIpAddress(),
+            'deadline_at'        => $request->getDeadlineAt()?->format('Y-m-d H:i:s'),
+            'deadline_estimated' => $request->isDeadlineEstimated(),
+            'processed_at'       => $request->getProcessedAt()?->format('Y-m-d H:i:s'),
+            'updated_at'         => date('Y-m-d H:i:s'),
         ];
 
         if ($request->isNew()) {

@@ -131,7 +131,7 @@ final class WithdrawalServiceTest extends TestCase
         self::assertFalse($deadline['estimated']);
     }
 
-    public function testDeadlineFallsBackToPaymentDateAndFlagsLate(): void
+    public function testDeadlineFallsBackToPaymentDateWithoutAHardAnswer(): void
     {
         $order = new Order('VL-2026-0005', ['email' => 'buyer@example.com']);
         $order->setPaidAt(new \DateTimeImmutable('-20 days'));
@@ -141,9 +141,45 @@ final class WithdrawalServiceTest extends TestCase
             $this->createStub(OrderRepositoryInterface::class),
         ))->deadline($order, 14);
 
-        self::assertTrue($deadline['late']);
+        // No confirmed delivery: the estimate must not reject the customer.
+        self::assertFalse($deadline['late']);
         self::assertFalse($deadline['expired']);
         self::assertTrue($deadline['estimated']);
+        self::assertFalse($deadline['confirmed']);
+    }
+
+    public function testGuessedDeliveryDateNeverMarksTheDeclarationLate(): void
+    {
+        $order = new Order('VL-2026-0009', ['email' => 'buyer@example.com']);
+        $order->setDeliveredAt(new \DateTimeImmutable('-20 days'));
+        $order->setDeliveredAtSource(Order::DELIVERY_SOURCE_STATUS);
+
+        $deadline = (new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        ))->deadline($order, 14);
+
+        self::assertFalse($deadline['confirmed']);
+        self::assertTrue($deadline['provisional']);
+        self::assertFalse($deadline['estimated']);
+        self::assertFalse($deadline['late']);
+        self::assertSame($order->getDeliveredAt()?->modify('+14 days')->format('Y-m-d'), $deadline['deadline']?->format('Y-m-d'));
+    }
+
+    public function testConfirmedDeliveryDateMarksLate(): void
+    {
+        $order = new Order('VL-2026-0010', ['email' => 'buyer@example.com']);
+        $order->setDeliveredAt(new \DateTimeImmutable('-20 days'));
+        $order->setDeliveredAtSource(Order::DELIVERY_SOURCE_MANUAL);
+
+        $deadline = (new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        ))->deadline($order, 14);
+
+        self::assertTrue($deadline['confirmed']);
+        self::assertFalse($deadline['provisional']);
+        self::assertTrue($deadline['late']);
     }
 
     public function testDeadlineExpiresAfterLongStop(): void
@@ -179,6 +215,29 @@ final class WithdrawalServiceTest extends TestCase
         ], '127.0.0.0', 'en', $deadline);
 
         self::assertSame($deadline, $withdrawal->getDeadlineAt());
+        self::assertFalse($withdrawal->isDeadlineEstimated());
+    }
+
+    public function testSubmitKeepsAnEstimatedDeadlineCompliant(): void
+    {
+        $order = new Order('VL-2026-0011', ['email' => 'buyer@example.com']);
+        $order->setId(12);
+
+        $orders = $this->createStub(OrderRepositoryInterface::class);
+        $orders->method('findByOrderNumber')->willReturn($order);
+
+        $requests = $this->createStub(WithdrawalRequestRepositoryInterface::class);
+        $requests->method('findByReference')->willReturn(null);
+        $requests->method('save')->willReturnCallback(static fn (WithdrawalRequest $request): WithdrawalRequest => $request);
+
+        $withdrawal = (new WithdrawalService($requests, $orders))->submit([
+            'order_number' => 'VL-2026-0011',
+            'email'        => 'buyer@example.com',
+            'confirm'      => '1',
+        ], '127.0.0.0', 'de', new \DateTimeImmutable('-1 day'), true);
+
+        self::assertTrue($withdrawal->isDeadlineEstimated());
+        self::assertFalse($withdrawal->isLate());
     }
 
     public function testSubmitDoesNotLinkOrderWhenEmailDiffers(): void

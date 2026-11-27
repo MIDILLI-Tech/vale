@@ -256,7 +256,7 @@ final class OrderController
             'invoice_snapshot'              => $this->extractInvoiceSnapshotFromLogs($logs),
             'invoice_versions'              => $invoiceVersions,
             'withdrawal_deadline'           => $withdrawalDeadline,
-            'withdrawal_deadline_estimated' => $order->getDeliveredAt() === null,
+            'withdrawal_deadline_estimated' => !$order->hasConfirmedDelivery(),
             'withdrawal_days'               => $withdrawalDays,
             'invoice_version_map'           => $versionMap,
             'status_labels'                 => OrderStatus::STATUSES,
@@ -1254,7 +1254,13 @@ final class OrderController
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
-        $order->setDeliveredAt($value !== '' ? new \DateTimeImmutable($value . ' 12:00:00') : null);
+        if ($value !== '') {
+            $order->setDeliveredAt(new \DateTimeImmutable($value . ' 12:00:00'));
+            $order->setDeliveredAtSource(Order::DELIVERY_SOURCE_MANUAL);
+        } else {
+            $order->setDeliveredAt(null);
+        }
+
         $this->orders->save($order);
         $this->orderLogs->add(
             (int) $order->getId(),
@@ -1286,7 +1292,7 @@ final class OrderController
         if (!isset($snapshot['delivery_date']) || (string) $snapshot['delivery_date'] === '') {
             $delivered                           = $order->getDeliveredAt();
             $snapshot['delivery_date']           = ($delivered ?? $order->getPaidAt() ?? $order->getCreatedAt())?->format('Y-m-d');
-            $snapshot['delivery_date_estimated'] = $delivered === null;
+            $snapshot['delivery_date_estimated'] = !$order->hasConfirmedDelivery();
         }
 
         $snapshot['shop']['tax_number'] ??= (string) ($this->settings->get('shop_tax_number', '') ?? '');
@@ -1815,7 +1821,7 @@ final class OrderController
             'issued_at'               => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
             'order_number'            => $order->getOrderNumber(),
             'delivery_date'           => ($order->getDeliveredAt() ?? $order->getPaidAt() ?? $order->getCreatedAt())?->format('Y-m-d'),
-            'delivery_date_estimated' => $order->getDeliveredAt() === null,
+            'delivery_date_estimated' => !$order->hasConfirmedDelivery(),
             'currency'                => $order->getCurrency(),
             'age_confirmed_at'        => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
             'shop'                    => [

@@ -103,6 +103,9 @@ final class DbalOrderRepository implements OrderRepositoryInterface
             'payment_token'                 => $order->getPaymentToken(),
             'paid_at'                       => $order->getPaidAt()?->format('Y-m-d H:i:s'),
             'delivered_at'                  => $order->getDeliveredAt()?->format('Y-m-d H:i:s'),
+            'delivered_at_source'           => $order->getDeliveredAt() === null
+                ? null
+                : ($order->getDeliveredAtSource() ?? Order::DELIVERY_SOURCE_MANUAL),
             'withdrawal_waiver_accepted_at' => $order->getWithdrawalWaiverAcceptedAt()?->format('Y-m-d H:i:s'),
             'age_confirmed_at'              => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
             'carrier'                       => $order->getCarrier(),

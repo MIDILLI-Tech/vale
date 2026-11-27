@@ -105,6 +105,7 @@ final class WithdrawalController
             $this->ipAnonymizer->anonymize(vl_client_ip($request), $ipMode),
             $locale,
             $deadline['deadline'],
+            !$deadline['confirmed'],
         );
 
         $order = $withdrawal->getOrderId() !== null
