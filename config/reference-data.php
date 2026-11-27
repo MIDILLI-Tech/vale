@@ -130,6 +130,7 @@ return [
                 'link'      => '/admin/settings?tab=ecommerce&subtab=product',
                 'link_text' => 'Review settings',
             ],
+            'warranty'         => ['setting' => 'compliance_warranty_note', 'feature' => 'shop'],
         ],
         'regions' => [
             'eu' => [
@@ -145,6 +146,7 @@ return [
                     'price_history'    => 'required',
                     'consent'          => 'required',
                     'verified_reviews' => 'required',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'de_at' => [
@@ -160,6 +162,7 @@ return [
                     'price_history'    => 'required',
                     'consent'          => 'required',
                     'verified_reviews' => 'required',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'uk' => [
@@ -175,6 +178,7 @@ return [
                     'price_history'    => 'required',
                     'consent'          => 'required',
                     'verified_reviews' => 'required',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'us' => [
@@ -190,6 +194,7 @@ return [
                     'price_history'    => 'recommended',
                     'us_optout'        => 'required',
                     'verified_reviews' => 'required',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'ca' => [
@@ -205,6 +210,7 @@ return [
                     'price_history'    => 'recommended',
                     'us_optout'        => 'recommended',
                     'verified_reviews' => 'recommended',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'anz' => [
@@ -219,6 +225,7 @@ return [
                     'digital_waiver'   => 'recommended',
                     'price_history'    => 'recommended',
                     'verified_reviews' => 'recommended',
+                    'warranty'         => 'recommended',
                 ],
             ],
             'other' => [
@@ -233,6 +240,7 @@ return [
                     'digital_waiver'   => 'recommended',
                     'price_history'    => 'recommended',
                     'verified_reviews' => 'recommended',
+                    'warranty'         => 'recommended',
                 ],
             ],
         ],

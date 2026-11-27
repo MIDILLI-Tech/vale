@@ -199,11 +199,15 @@
                         </div>
                         {% endif %}
 
-                        {% if checkout_fields is defined and checkout_fields|length > 0 %}
+                        {% set warranty_note = compliance_warranty_note|default('') %}
+                        {% if (checkout_fields is defined and checkout_fields|length > 0) or warranty_note is not empty %}
                             <div class="col-span-2 mt-2 border-t border-gray-200 dark:border-gray-700 pt-4">
                                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Additional Information') }}</h3>
+                                {% if warranty_note is not empty %}
+                                <p class="mt-1.5 text-sm leading-6 text-gray-600 dark:text-gray-400 whitespace-pre-line">{{ warranty_note }}</p>
+                                {% endif %}
                             </div>
-                            {% for field in checkout_fields %}
+                            {% for field in checkout_fields|default([]) %}
                                 {% set fieldName = field.name %}
                                 {% set oldVal = fieldName ? attribute(old|default({}), fieldName)|default('') : '' %}
                                 {% set fieldClass = field.type == 'textarea' or field.type == 'static_text' ? 'col-span-2' : '' %}

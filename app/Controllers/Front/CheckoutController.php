@@ -347,6 +347,7 @@ final class CheckoutController
         }
         $nonRefundableItems  = array_values(array_unique($nonRefundableItems));
         $returnShippingPayer = (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer');
+        $warrantyNote        = trim((string) ($this->settings->get('compliance_warranty_note', '') ?? ''));
 
         return $this->twig->render($response, 'shop/checkout.twig', [
             'items'                                 => $items,
@@ -355,6 +356,7 @@ final class CheckoutController
             'waiver_days'                           => $waiverDays,
             'non_refundable_items'                  => $nonRefundableItems,
             'return_shipping_payer'                 => $returnShippingPayer,
+            'compliance_warranty_note'              => $warrantyNote,
             'b2b_enabled'                           => $this->b2b?->isEnabled() ?? false,
             'eu_countries'                          => VatNumber::euCountries(),
             'checkout_base_url'                     => $this->checkoutUrl(''),

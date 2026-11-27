@@ -328,6 +328,7 @@ final class LegalComplianceProfile
             'digital_waiver'   => __('Digital withdrawal waiver'),
             'price_history'    => __('Lowest price in the last 30 days'),
             'verified_reviews' => __('Verified reviews'),
+            'warranty'         => __('Warranty & guarantee'),
             default            => $key,
         };
     }
