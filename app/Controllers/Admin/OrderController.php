@@ -1455,6 +1455,21 @@ final class OrderController
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
+    /**
+     * Invoices are legal documents: they are always issued in the store's
+     * default frontend language, never in the customer's or the admin's
+     * locale, so the document stays identical for every recipient and for the
+     * tax office. Returns the locale that was active before the switch.
+     */
+    private function applyStorefrontLocale(): string
+    {
+        $default  = (string) ($this->settings->get('default_locale', $this->settings->get('locale', 'en')) ?? 'en');
+        $original = $this->translator->getLocale();
+        $this->translator->setLocale($default !== '' ? $default : 'en');
+
+        return $original;
+    }
+
     /** GET /admin/orders/{id}/invoice */
     public function viewInvoice(Request $request, Response $response, array $args): Response
     {
@@ -1476,15 +1491,20 @@ final class OrderController
         $latest     = end($versions);
         $isLatest   = $resolved['log_id'] === $latest['log_id'];
 
-        return $this->twig->render($response, 'admin/orders/invoice.twig', [
-            'order'          => $order,
-            'invoice'        => $snapshot,
-            'logo_data_uri'  => $this->invoiceLogoDataUri(),
-            'pdf_available'  => $this->pdfGenerator?->isAvailable() ?? false,
-            'is_latest'      => $isLatest,
-            'latest_invoice' => $isLatest ? null : $latest['snapshot'],
-            'prev_number'    => $this->previousInvoiceNumber($snapshot),
-        ]);
+        $originalLocale = $this->applyStorefrontLocale();
+        try {
+            return $this->twig->render($response, 'admin/orders/invoice.twig', [
+                'order'          => $order,
+                'invoice'        => $snapshot,
+                'logo_data_uri'  => $this->invoiceLogoDataUri(),
+                'pdf_available'  => $this->pdfGenerator?->isAvailable() ?? false,
+                'is_latest'      => $isLatest,
+                'latest_invoice' => $isLatest ? null : $latest['snapshot'],
+                'prev_number'    => $this->previousInvoiceNumber($snapshot),
+            ]);
+        } finally {
+            $this->translator->setLocale($originalLocale);
+        }
     }
 
     /** GET /admin/orders/{id}/invoice/pdf */
@@ -1513,14 +1533,19 @@ final class OrderController
             return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
         }
 
-        $html = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
-            'order'          => $order,
-            'invoice'        => $snapshot,
-            'logo_data_uri'  => $this->invoiceLogoDataUri(),
-            'is_latest'      => $isLatest,
-            'latest_invoice' => $isLatest ? null : $latest['snapshot'],
-            'prev_number'    => $this->previousInvoiceNumber($snapshot),
-        ]);
+        $originalLocale = $this->applyStorefrontLocale();
+        try {
+            $html = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
+                'order'          => $order,
+                'invoice'        => $snapshot,
+                'logo_data_uri'  => $this->invoiceLogoDataUri(),
+                'is_latest'      => $isLatest,
+                'latest_invoice' => $isLatest ? null : $latest['snapshot'],
+                'prev_number'    => $this->previousInvoiceNumber($snapshot),
+            ]);
+        } finally {
+            $this->translator->setLocale($originalLocale);
+        }
 
         $pdfBinary = $this->pdfGenerator->generate($html);
         $filename  = preg_replace('/[^A-Za-z0-9._-]+/', '', (string) ($snapshot['invoice_number'] ?? 'invoice')) . '.pdf';
@@ -1572,8 +1597,7 @@ final class OrderController
             $pdfAvailable = $this->pdfGenerator !== null && $this->pdfGenerator->isAvailable();
 
             if ($mailDriver !== 'log' && $pdfAvailable) {
-                $originalLocale = $this->translator->getLocale();
-                $this->translator->setLocale($order->getLocale());
+                $originalLocale = $this->applyStorefrontLocale();
                 try {
                     $pdfHtml = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
                         'order'          => $order,
