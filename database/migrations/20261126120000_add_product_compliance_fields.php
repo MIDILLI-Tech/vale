@@ -34,6 +34,7 @@ final class AddProductComplianceFields extends AbstractMigration
         $this->table($p . 'product_variations')
             ->addColumn('unit', 'string', ['limit' => 16, 'null' => true, 'default' => null])
             ->addColumn('base_amount', 'decimal', ['precision' => 12, 'scale' => 3, 'null' => true, 'default' => null])
+            ->addColumn('manual_documents', 'text', ['null' => true, 'default' => null])
             ->update();
 
         $this->table($p . 'product_price_history')

@@ -1428,23 +1428,65 @@ final class CheckoutController
     }
 
     /**
-     * Manual / instruction documents of every ordered product, keyed by product id.
-     * Variation items inherit their product's documents.
+     * Manual / instruction documents of every ordered product, keyed by
+     * "productId:variationId" (product documents plus the variation's own
+     * documents). The product-id key keeps the parent documents available.
      *
-     * @return array<int, list<array{type: string, value: int|string, label: string, name: string, url: string}>>
+     * @return array<int|string, list<array{type: string, value: int|string, label: string, name: string, url: string}>>
      */
     private function orderManualDocuments(Order $order): array
     {
-        $manuals = [];
+        $manuals             = [];
+        $variationsByProduct = [];
+
         foreach ($order->getItems() as $item) {
-            $productId = (int) ($item['product_id'] ?? 0);
-            if ($productId <= 0 || array_key_exists($productId, $manuals)) {
+            $productId   = (int) ($item['product_id'] ?? 0);
+            $variationId = (int) ($item['variation_id'] ?? 0);
+            $key         = $productId . ':' . $variationId;
+            if ($productId <= 0 || array_key_exists($key, $manuals)) {
                 continue;
             }
+
             $product = $this->products->findById($productId);
-            if ($product !== null) {
-                $manuals[$productId] = $product->getManualDocuments();
+            if ($product === null) {
+                continue;
             }
+
+            $documents          = $product->getManualDocuments();
+            $manuals[$productId] ??= $documents;
+
+            if ($variationId > 0) {
+                $variationsByProduct[$productId] ??= $this->products->findVariationsByProductId($productId);
+                foreach ($variationsByProduct[$productId] as $variation) {
+                    if ((int) ($variation['id'] ?? 0) !== $variationId) {
+                        continue;
+                    }
+                    $variationDocuments = is_string($variation['manual_documents'] ?? null)
+                        ? json_decode($variation['manual_documents'], true)
+                        : ($variation['manual_documents'] ?? []);
+                    if (is_array($variationDocuments)) {
+                        foreach ($variationDocuments as $document) {
+                            if (is_array($document) && !empty($document['url'])) {
+                                $documents[] = $document;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+
+            $seen      = [];
+            $documents = array_values(array_filter($documents, static function ($document) use (&$seen): bool {
+                $url = (string) ($document['url'] ?? '');
+                if ($url === '' || isset($seen[$url])) {
+                    return false;
+                }
+                $seen[$url] = true;
+
+                return true;
+            }));
+
+            $manuals[$key] = $documents;
         }
 
         return $manuals;

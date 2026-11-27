@@ -584,7 +584,7 @@
                     addManualUrl() { this.manualUrls.push(''); this.manualUrlLabels.push(''); },
                     removeManualUrl(index) { this.manualUrls.splice(index, 1); this.manualUrlLabels.splice(index, 1); }
                 }">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Manual / Instructions') }}</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Product Documents') }}</label>
                     <select name="manual_source" x-model="manualSource" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                         <option value="none">{{ __('Not provided') }}</option>
                         <option value="internal">{{ __('Media library files') }}</option>
@@ -595,7 +595,7 @@
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ __('Document name') }}</label>
                         <input type="text" name="manual_label" value="{{ product.manualLabel|default('') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
-                               placeholder="{{ __('Manual / Instructions') }}">
+                               placeholder="{{ __('Product Documents') }}">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Used as the heading of the document list on the product page. Leave empty for the default; each document can have its own name below.') }}</p>
                     </div>
 
@@ -851,6 +851,63 @@
                                 <label class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Amount') }}</label>
                                 <input type="number" step="0.001" min="0" :name="'variations[' + idx + '][base_amount]'" x-model="item.base_amount"
                                        class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                            </div>
+                        </div>
+
+                        {# Variation documents (manual / instructions) #}
+                        <div class="mt-3 border-t border-gray-200 pt-3">
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ __('Product Documents') }}</label>
+                            <select :name="'variations[' + idx + '][manual_source]'" x-model="item.manual_source"
+                                    class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                <option value="none">{{ __('Not provided') }}</option>
+                                <option value="internal">{{ __('Media library files') }}</option>
+                                <option value="external">{{ __('External URL') }}</option>
+                            </select>
+
+                            <div x-show="item.manual_source === 'internal'" x-cloak class="mt-2">
+                                <template x-for="fid in item.manual_file_ids" :key="'var-manual-hidden-' + idx + '-' + fid">
+                                    <input type="hidden" :name="'variations[' + idx + '][manual_file_ids][]'" :value="fid">
+                                </template>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click.prevent="$dispatch('open-shared-download-modal', { target: 'variation-manual', index: idx })"
+                                            class="rounded-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-100">
+                                        📎 {{ __('Add / Manage files') }}
+                                    </button>
+                                    <button x-show="item.manual_file_ids.length" type="button" @click.prevent="item.manual_file_ids = []; item.manual_files = []"
+                                            class="text-xs text-red-500 hover:text-red-700">✕ {{ __('Clear') }}</button>
+                                </div>
+                                <div x-show="item.manual_files.length" class="mt-2 space-y-1">
+                                    <template x-for="f in item.manual_files" :key="'var-manual-file-' + idx + '-' + f.id">
+                                        <div class="flex items-center gap-2 rounded-sm border border-gray-200 bg-white dark:bg-gray-900 px-2 py-1 text-xs">
+                                            <span class="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300" x-text="f.name"></span>
+                                            <input type="text" :name="'variations[' + idx + '][manual_file_labels][' + f.id + ']'"
+                                                   :value="(item.manual_file_labels || {})[f.id] || ''"
+                                                   @input="item.manual_file_labels[f.id] = $event.target.value"
+                                                   placeholder="{{ __('Document name') }}"
+                                                   class="w-32 shrink-0 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                            <button type="button" @click.prevent="removeVarManualFile(idx, f.id)" class="text-red-500 hover:text-red-700">✕</button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div x-show="item.manual_source === 'external'" x-cloak class="mt-2 space-y-2"
+                                 x-init="if (!item.manual_urls.length) { item.manual_urls.push(''); item.manual_url_labels.push(''); }">
+                                <template x-for="(url, ui) in item.manual_urls" :key="'var-manual-url-' + idx + '-' + ui">
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" :name="'variations[' + idx + '][manual_url_labels][]'" x-model="item.manual_url_labels[ui]"
+                                               class="w-1/3 shrink-0 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1"
+                                               placeholder="{{ __('Document name') }}">
+                                        <input type="url" :name="'variations[' + idx + '][manual_urls][]'" x-model="item.manual_urls[ui]"
+                                               class="w-full rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1"
+                                               placeholder="https://">
+                                        <button type="button" @click.prevent="removeVarManualUrl(idx, ui)" class="shrink-0 text-red-500 hover:text-red-700" title="{{ __('Remove') }}">✕</button>
+                                    </div>
+                                </template>
+                                <button type="button" @click.prevent="addVarManualUrl(idx)"
+                                        class="rounded-sm border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs hover:bg-gray-50 dark:bg-gray-800/50 dark:text-gray-100">
+                                    + {{ __('Add URL') }}
+                                </button>
                             </div>
                         </div>
 
@@ -1960,8 +2017,8 @@ function digitalSection() {
             return window.__lpVariationsManager || null;
         },
         async openSharedDownloadModal(detail = {}) {
-            this.sharedDlTarget = detail && ['variation', 'manual'].includes(detail.target) ? detail.target : 'product';
-            this.sharedDlVariationIdx = this.sharedDlTarget === 'variation'
+            this.sharedDlTarget = detail && ['variation', 'variation-manual', 'manual'].includes(detail.target) ? detail.target : 'product';
+            this.sharedDlVariationIdx = ['variation', 'variation-manual'].includes(this.sharedDlTarget)
                 ? Number(detail.index ?? -1)
                 : null;
             this.dlShowModal = true;
@@ -1987,6 +2044,11 @@ function digitalSection() {
                 const vm = this.getVariationManager();
                 if (vm && this.sharedDlVariationIdx !== null && this.sharedDlVariationIdx >= 0) {
                     uploaded.forEach(item => vm.toggleSharedFile(this.sharedDlVariationIdx, item));
+                }
+            } else if (this.sharedDlTarget === 'variation-manual') {
+                const vm = this.getVariationManager();
+                if (vm && this.sharedDlVariationIdx !== null && this.sharedDlVariationIdx >= 0) {
+                    uploaded.forEach(item => vm.toggleSharedManualFile(this.sharedDlVariationIdx, item));
                 }
             } else if (this.sharedDlTarget === 'manual') {
                 uploaded.forEach(item => {
@@ -2016,6 +2078,13 @@ function digitalSection() {
                 }
                 return vm.isSharedFileSelected(this.sharedDlVariationIdx, nid);
             }
+            if (this.sharedDlTarget === 'variation-manual') {
+                const vm = this.getVariationManager();
+                if (!vm || this.sharedDlVariationIdx === null || this.sharedDlVariationIdx < 0) {
+                    return false;
+                }
+                return vm.isSharedManualSelected(this.sharedDlVariationIdx, nid);
+            }
             if (this.sharedDlTarget === 'manual') {
                 return this.manualFileIds.map(Number).includes(nid);
             }
@@ -2029,6 +2098,15 @@ function digitalSection() {
                     return;
                 }
                 vm.toggleSharedFile(this.sharedDlVariationIdx, item);
+                return;
+            }
+
+            if (this.sharedDlTarget === 'variation-manual') {
+                const vm = this.getVariationManager();
+                if (!vm || this.sharedDlVariationIdx === null || this.sharedDlVariationIdx < 0) {
+                    return;
+                }
+                vm.toggleSharedManualFile(this.sharedDlVariationIdx, item);
                 return;
             }
 
@@ -2237,6 +2315,15 @@ function variationsManager() {
         sectionOpen: {{ (is_edit and not _variations_empty) ? 'true' : 'false' }},
         items: existing.map(v => {
             const attrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes || '{}') : (v.attributes || {});
+            let manualDocs = v.manual_documents;
+            if (typeof manualDocs === 'string') {
+                try { manualDocs = JSON.parse(manualDocs || '[]'); } catch (e) { manualDocs = []; }
+            }
+            if (!Array.isArray(manualDocs)) manualDocs = [];
+            const manualUrlDocs = manualDocs.filter(d => d && d.type === 'url');
+            const manualFileDocs = manualDocs.filter(d => d && d.type === 'file');
+            const manualFileLabels = {};
+            manualFileDocs.forEach(d => { manualFileLabels[Number(d.value)] = d.label || ''; });
             return {
                 _key: nextKey(),
                 id: v.id || null,
@@ -2268,6 +2355,12 @@ function variationsManager() {
                 unit_mode: v.unit ? 'custom' : 'use_parent',
                 unit: v.unit || '',
                 base_amount: v.base_amount || '',
+                manual_source: manualUrlDocs.length ? 'external' : (manualFileDocs.length ? 'internal' : 'none'),
+                manual_urls: manualUrlDocs.map(d => d.value || ''),
+                manual_url_labels: manualUrlDocs.map(d => d.label || ''),
+                manual_file_ids: manualFileDocs.map(d => Number(d.value)),
+                manual_file_labels: manualFileLabels,
+                manual_files: manualFileDocs.map(d => ({ id: Number(d.value), name: d.name || ('#' + d.value) })),
                 refund_mode: v.refund_mode || 'use_parent',
                 shipping_country_overrides: v.shipping_country_overrides || '{}',
                 showCO: false,
@@ -2407,6 +2500,35 @@ function variationsManager() {
             this.items[idx].image_id = null;
             this.items[idx].imageThumb = '';
         },
+        addVarManualUrl(idx) {
+            this.items[idx].manual_urls.push('');
+            this.items[idx].manual_url_labels.push('');
+        },
+        removeVarManualUrl(idx, ui) {
+            this.items[idx].manual_urls.splice(ui, 1);
+            this.items[idx].manual_url_labels.splice(ui, 1);
+        },
+        removeVarManualFile(idx, id) {
+            const nid = Number(id);
+            this.items[idx].manual_file_ids = this.items[idx].manual_file_ids.filter((fid) => Number(fid) !== nid);
+            this.items[idx].manual_files = this.items[idx].manual_files.filter((f) => Number(f.id) !== nid);
+            delete this.items[idx].manual_file_labels[nid];
+        },
+        toggleSharedManualFile(idx, item) {
+            const id = Number(item.id);
+            const variation = this.items[idx];
+            if (!variation) return;
+            if (variation.manual_file_ids.map(Number).includes(id)) {
+                this.removeVarManualFile(idx, id);
+                return;
+            }
+            variation.manual_file_ids.push(id);
+            variation.manual_files.push({ id, name: item.name || item.filename || ('#' + id) });
+        },
+        isSharedManualSelected(idx, id) {
+            const variation = this.items[idx];
+            return !!variation && variation.manual_file_ids.map(Number).includes(Number(id));
+        },
         addVariation() {
             this.sectionOpen = true;
             this.items.push({
@@ -2438,6 +2560,12 @@ function variationsManager() {
                 unit_mode: 'use_parent',
                 unit: '',
                 base_amount: '',
+                manual_source: 'none',
+                manual_urls: [],
+                manual_url_labels: [],
+                manual_file_ids: [],
+                manual_file_labels: {},
+                manual_files: [],
                 refund_mode: 'use_parent',
                 shipping_country_overrides: '{}',
                 showCO: false,

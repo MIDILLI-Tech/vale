@@ -1036,51 +1036,9 @@ final class ProductController
         $origin = strtoupper(trim((string) ($body['country_of_origin'] ?? '')));
         $product->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
         $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
-        $manualUrls = array_map('strval', (array) ($body['manual_urls'] ?? []));
-        if ($manualUrls === [] && !empty($body['manual_url'])) {
-            $manualUrls = [(string) $body['manual_url']];
-        }
         $product->setManualLabel(trim((string) ($body['manual_label'] ?? '')) ?: null);
         $product->setDigitalWaiver(!empty($body['digital_waiver']));
-        $manualSource     = (string) ($body['manual_source'] ?? '');
-        $manualUrlLabels  = array_map('strval', (array) ($body['manual_url_labels'] ?? []));
-        $manualFileLabels = (array) ($body['manual_file_labels'] ?? []);
-        $manualFileIds    = array_map('intval', (array) ($body['manual_file_ids'] ?? []));
-        $documents        = [];
-
-        if ($manualSource !== 'none' && $manualSource !== 'internal') {
-            foreach ($manualUrls as $index => $url) {
-                $url = trim((string) $url);
-                if ($url === '') {
-                    continue;
-                }
-                $documents[] = [
-                    'type'  => 'url',
-                    'value' => $url,
-                    'label' => trim($manualUrlLabels[$index] ?? ''),
-                    'name'  => '',
-                    'url'   => $url,
-                ];
-            }
-        }
-
-        if ($manualSource !== 'none' && $manualSource !== 'external') {
-            foreach ($manualFileIds as $fileId) {
-                if ($fileId <= 0) {
-                    continue;
-                }
-                $media       = $this->media->findById($fileId);
-                $documents[] = [
-                    'type'  => 'file',
-                    'value' => $fileId,
-                    'label' => trim((string) ($manualFileLabels[$fileId] ?? '')),
-                    'name'  => $media !== null ? ($media->getOriginalName() ?: $media->getFilename()) : '',
-                    'url'   => $media !== null ? $media->getUrl(site_url('/uploads')) : '',
-                ];
-            }
-        }
-
-        $product->setManualDocuments($documents);
+        $product->setManualDocuments($this->buildComplianceDocuments($body));
 
         $product->setFeaturedImageId(!empty($body['featured_image_id']) ? (int) $body['featured_image_id'] : null);
         $allowedStatuses = ['draft', 'published', 'unlisted', 'archived', 'scheduled'];
@@ -1387,6 +1345,64 @@ final class ProductController
     }
 
     /** @return array<int,array<string,mixed>> */
+    /**
+     * Manual / instruction documents from the manual_source, manual_urls,
+     * manual_file_ids and label fields of a product or variation payload.
+     *
+     * @return list<array{type: string, value: int|string, label: string, name: string, url: string}>
+     */
+    private function buildComplianceDocuments(array $input): array
+    {
+        $source = (string) ($input['manual_source'] ?? '');
+        if ($source === 'none') {
+            return [];
+        }
+
+        $documents = [];
+
+        if ($source !== 'internal') {
+            $urls = array_map('strval', (array) ($input['manual_urls'] ?? []));
+            if ($urls === [] && !empty($input['manual_url'])) {
+                $urls = [(string) $input['manual_url']];
+            }
+            $labels = array_map('strval', (array) ($input['manual_url_labels'] ?? []));
+
+            foreach ($urls as $index => $url) {
+                $url    = trim((string) $url);
+                $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+                if ($url === '' || !in_array($scheme, ['http', 'https'], true)) {
+                    continue;
+                }
+                $documents[] = [
+                    'type'  => 'url',
+                    'value' => $url,
+                    'label' => trim($labels[$index] ?? ''),
+                    'name'  => '',
+                    'url'   => $url,
+                ];
+            }
+        }
+
+        if ($source !== 'external') {
+            $fileLabels = (array) ($input['manual_file_labels'] ?? []);
+            foreach (array_map('intval', (array) ($input['manual_file_ids'] ?? [])) as $fileId) {
+                if ($fileId <= 0) {
+                    continue;
+                }
+                $media       = $this->media->findById($fileId);
+                $documents[] = [
+                    'type'  => 'file',
+                    'value' => $fileId,
+                    'label' => trim((string) ($fileLabels[$fileId] ?? '')),
+                    'name'  => $media !== null ? ($media->getOriginalName() ?: $media->getFilename()) : '',
+                    'url'   => $media !== null ? $media->getUrl(site_url('/uploads')) : '',
+                ];
+            }
+        }
+
+        return $documents;
+    }
+
     private function parseVariations(array $body): array
     {
         $raw = $body['variations'] ?? [];
@@ -1528,6 +1544,7 @@ final class ProductController
                 'vat_rate'             => $varVatMode === 'custom' ? max(0.0, (float) str_replace(',', '.', (string) ($v['vat_rate'] ?? 0.0))) : null,
                 'unit'                 => $varUnit,
                 'base_amount'          => $varBaseAmount,
+                'manual_documents'     => $this->buildComplianceDocuments($v),
                 'refund_mode'          => $varRefundMode,
                 'weight'               => isset($v['weight']) && $v['weight'] !== '' ? (float) str_replace(',', '.', (string) $v['weight']) : null,
                 'length'               => isset($v['length']) && $v['length'] !== '' ? (float) str_replace(',', '.', (string) $v['length']) : null,

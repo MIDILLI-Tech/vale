@@ -173,7 +173,7 @@
                     {% endfor %}
                 </div>
                 {% endif %}
-                {% set item_manuals = (manuals|default({}))[item.product_id]|default([]) %}
+                {% set item_manuals = (manuals|default({}))[item.product_id ~ ':' ~ (item.variation_id|default(0))]|default((manuals|default({}))[item.product_id]|default([])) %}
                 {% if item_manuals|length > 0 %}
                 <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                     {% for doc in item_manuals %}

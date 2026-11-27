@@ -456,6 +456,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
                 'vat_rate'             => !empty($v['vat_rate']) ? (float) $v['vat_rate'] : null,
                 'unit'                 => !empty($v['unit']) ? (string) $v['unit'] : null,
                 'base_amount'          => isset($v['base_amount']) && $v['base_amount'] !== '' ? (float) $v['base_amount'] : null,
+                'manual_documents'     => !empty($v['manual_documents']) ? json_encode($v['manual_documents']) : null,
                 'refund_mode'          => $v['refund_mode'] ?? 'use_parent',
                 'weight'               => !empty($v['weight']) ? (float) $v['weight'] : null,
                 'length'               => !empty($v['length']) ? (float) $v['length'] : null,

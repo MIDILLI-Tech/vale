@@ -421,6 +421,18 @@ final class ShopController
             $v['image_url']         = $this->resolveProductImage(!empty($v['image_id']) ? (int) $v['image_id'] : null);
             $v['shipping_estimate'] = $this->deliveryEstimate->estimateForProduct($product, $v);
 
+            $variationDocuments        = is_string($v['manual_documents'] ?? null)
+                ? json_decode($v['manual_documents'], true)
+                : ($v['manual_documents'] ?? []);
+            $v['manual_documents']     = is_array($variationDocuments)
+                ? array_values(array_filter(
+                    $variationDocuments,
+                    static fn ($document): bool => is_array($document) && ($document['type'] ?? '') === 'file'
+                        ? (bool) ($document['url'] ?? '')
+                        : (bool) ($document['value'] ?? ''),
+                ))
+                : [];
+
             $variationUnit   = !empty($v['unit']) ? (string) $v['unit'] : $product->getUnit();
             $variationAmount = isset($v['base_amount']) && $v['base_amount'] !== null
                 ? (float) $v['base_amount']

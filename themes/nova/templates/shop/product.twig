@@ -235,6 +235,21 @@
                 </button>
             </div>
 
+            <template x-if="selectedManualDocuments.length > 0">
+                <div class="mb-3">
+                    <p class="mb-1 text-xs font-medium text-slate-200">{{ __('Product Documents') }}</p>
+                    <ul class="space-y-1 text-xs">
+                        <template x-for="(doc, di) in selectedManualDocuments" :key="'var-doc-' + di">
+                            <li>
+                                <a :href="doc.url" target="_blank" rel="noopener nofollow"
+                                   class="text-blue-400 hover:underline"
+                                   x-text="doc.label || doc.name || doc.value"></a>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+
             <template x-if="isDigitalParent && selectedVariationId > 0">
                 <div class="flex items-center gap-2 mb-3">
                     <template x-if="selectedShippingClass === 'digital' || (selectedShippingClass === 'use_parent' && selectedDownloadMode !== 'non_digital')">
@@ -433,6 +448,7 @@ function productVariations() {
         selectedDownloadMode: null,
         selectedShippingClass: null,
         selectedShippingEstimate: null,
+        selectedManualDocuments: [],
         parentShippingEstimate: {{ shipping_estimate|json_encode|raw }},
         isDigitalParent: {{ product.shippingClass == 'digital' ? 'true' : 'false' }},
 
@@ -529,6 +545,7 @@ function productVariations() {
             this.selectedDownloadMode = null;
             this.selectedShippingClass = null;
             this.selectedShippingEstimate = null;
+            this.selectedManualDocuments = [];
             window.dispatchEvent(new CustomEvent('variation-image', { detail: null }));
             this.updateUrl();
         },
@@ -596,6 +613,7 @@ function productVariations() {
                 this.selectedDownloadMode = match.download_mode || null;
                 this.selectedShippingClass = match.shipping_class || 'use_parent';
                 this.selectedShippingEstimate = match.shipping_estimate || null;
+                this.selectedManualDocuments = Array.isArray(match.manual_documents) ? match.manual_documents : [];
                 window.dispatchEvent(new CustomEvent('variation-image', { detail: match.image_url || null }));
             } else {
                 this.selectedVariationId = 0;
@@ -607,6 +625,7 @@ function productVariations() {
                 this.selectedDownloadMode = null;
                 this.selectedShippingClass = null;
                 this.selectedShippingEstimate = null;
+                this.selectedManualDocuments = [];
                 window.dispatchEvent(new CustomEvent('variation-image', { detail: null }));
             }
 
