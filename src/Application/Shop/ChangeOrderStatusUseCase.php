@@ -60,6 +60,12 @@ final class ChangeOrderStatusUseCase
             $order->setPaidAt(new \DateTimeImmutable());
         }
 
+        $autoDelivered = false;
+        if ($newStatus === OrderStatus::COMPLETED && $order->getDeliveredAt() === null) {
+            $order->setDeliveredAt(new \DateTimeImmutable());
+            $autoDelivered = true;
+        }
+
         $this->orders->save($order);
 
         $this->effects->syncDownloadRevocation($order, $newStatus);
@@ -73,6 +79,16 @@ final class ChangeOrderStatusUseCase
                 ':to'   => __(OrderStatus::label($newStatus)),
             ])
         );
+
+        if ($autoDelivered) {
+            $this->orderLogs->add(
+                (int) $order->getId(),
+                'delivery_date',
+                __('Delivery recorded on :date — the withdrawal period starts here.', [
+                    ':date' => $order->getDeliveredAt()?->format('Y-m-d') ?? '',
+                ])
+            );
+        }
 
         $wasPaid = OrderStatus::isPaid($oldStatus);
         $isPaid  = OrderStatus::isPaid($newStatus);

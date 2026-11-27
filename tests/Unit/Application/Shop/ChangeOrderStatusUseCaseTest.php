@@ -204,6 +204,41 @@ final class ChangeOrderStatusUseCaseTest extends TestCase
         self::assertSame('cancelled', $order->getStatus());
     }
 
+    public function testCompletingAnOrderRecordsTheDeliveryDate(): void
+    {
+        $order   = $this->makeOrder('shipped');
+        $useCase = $this->makeUseCase();
+
+        self::assertTrue($useCase->execute($order, 'completed'));
+
+        self::assertNotNull($order->getDeliveredAt());
+        self::assertSame('status_changed', $this->logged[0][0]);
+        self::assertSame('delivery_date', $this->logged[1][0]);
+        self::assertStringContainsString($order->getDeliveredAt()->format('Y-m-d'), $this->logged[1][1]);
+    }
+
+    public function testCompletingKeepsAnExistingDeliveryDate(): void
+    {
+        $order = Order::fromRow([
+            'id'           => 7,
+            'order_number' => 'VL-7779',
+            'status'       => 'shipped',
+            'currency'     => 'EUR',
+            'total'        => '49.00',
+            'paid_at'      => '2026-10-01 10:00:00',
+            'delivered_at' => '2026-10-05 12:00:00',
+            'created_at'   => '2026-10-01 09:59:00',
+            'billing'      => json_encode(['email' => 'ada@example.com']),
+        ]);
+
+        $useCase = $this->makeUseCase();
+
+        self::assertTrue($useCase->execute($order, 'completed'));
+
+        self::assertSame('2026-10-05', $order->getDeliveredAt()?->format('Y-m-d'));
+        self::assertCount(1, $this->logged);
+    }
+
     public function testStatusEmailIsSkippedWithoutMailService(): void
     {
         $order   = $this->makeOrder('on-hold');
