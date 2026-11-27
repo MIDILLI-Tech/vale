@@ -115,9 +115,8 @@ final class ShopController
         if (!empty($params['sort'])) {
             $filters['sort'] = $params['sort'];
         }
-        if (isset($params['exclude_stock']) && $params['exclude_stock'] !== 'false' && $params['exclude_stock'] !== '') {
-            $filters['exclude_stock'] = true;
-        }
+        $filters['exclude_stock'] = !isset($params['exclude_stock'])
+            || !in_array((string) $params['exclude_stock'], ['0', 'false', ''], true);
 
         $pagination = new Pagination($page, $perPage);
         $products   = $this->products->findAll($pagination, $filters);
@@ -191,21 +190,25 @@ final class ShopController
             $pid     = $p->getId();
             $summary = $summaries[$pid] ?? ['average' => 0.0, 'count' => 0];
 
-            $range = $variableRanges[$pid] ?? null;
+            $range         = $variableRanges[$pid] ?? null;
+            $minAge        = $p->getMinAge();
+            $ageRestricted = $minAge !== null && $minAge > 0;
 
             $formattedProducts[] = [
-                'id'           => $pid,
-                'name'         => $p->getName(),
-                'slug'         => (string) $p->getSlug(),
-                'price'        => (float) $p->getPrice(),
-                'sale_price'   => $p->isSaleActive() && $p->getSalePrice() ? (float) $p->getSalePrice() : null,
-                'min_price'    => $range['min'] ?? null,
-                'max_price'    => $range['max'] ?? null,
-                'stock_status' => $p->getStockStatus(),
-                'thumbnail'    => $img['thumbnail'] ?? $img['url'] ?? null,
-                'url'          => site_url($shopPrefix . '/' . (string) $p->getSlug()),
-                'rating_avg'   => $summary['average'],
-                'rating_count' => $summary['count'],
+                'id'             => $pid,
+                'name'           => $p->getName(),
+                'min_age'        => $minAge,
+                'age_restricted' => $ageRestricted,
+                'slug'           => (string) $p->getSlug(),
+                'price'          => (float) $p->getPrice(),
+                'sale_price'     => $p->isSaleActive() && $p->getSalePrice() ? (float) $p->getSalePrice() : null,
+                'min_price'      => $range['min'] ?? null,
+                'max_price'      => $range['max'] ?? null,
+                'stock_status'   => $p->getStockStatus(),
+                'thumbnail'      => $ageRestricted ? null : ($img['thumbnail'] ?? $img['url'] ?? null),
+                'url'            => site_url($shopPrefix . '/' . (string) $p->getSlug()),
+                'rating_avg'     => $summary['average'],
+                'rating_count'   => $summary['count'],
             ];
         }
 

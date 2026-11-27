@@ -4,7 +4,7 @@
 {% block meta_description %}{{ __('Explore our full product catalog, search items, and sort by price or popularity.') }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-2 pb-12 md:pt-12"
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-2 pb-12"
      x-data="{ catOpen: false }"
      x-effect="document.body.style.overflow = catOpen ? 'hidden' : ''"
      @keydown.escape.window="if (catOpen) { catOpen = false; document.getElementById('shop-cat-trigger')?.focus() }"
@@ -86,11 +86,18 @@
             <div x-show="visibleProducts.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" x-cloak>
                 <template x-for="p in visibleProducts" :key="p.id">
                     <a :href="p.url" class="group rounded-xl border bg-white shadow-xs hover:shadow-md transition overflow-hidden">
-                        <div class="aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                            <template x-if="p.thumbnail">
+                        <div class="relative aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                            <template x-if="p.age_restricted">
+                                <div class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900">
+                                    <span class="text-4xl" aria-hidden="true">🔞</span>
+                                    <span class="mt-2 rounded-full bg-red-600 px-3 py-0.5 text-xs font-bold text-white" x-text="p.min_age + '+' "></span>
+                                    <span class="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-300">{{ __('Age-restricted') }}</span>
+                                </div>
+                            </template>
+                            <template x-if="!p.age_restricted && p.thumbnail">
                                 <img :src="p.thumbnail" :alt="p.name" class="w-full h-full object-contain">
                             </template>
-                            <template x-if="!p.thumbnail">
+                            <template x-if="!p.age_restricted && !p.thumbnail">
                                 <div class="w-full h-full flex items-center justify-center text-gray-300">
                                     <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -99,7 +106,13 @@
                             </template>
                         </div>
                         <div class="p-4">
-                            <h3 class="text-sm font-semibold text-gray-900 group-hover:text-gray-900 line-clamp-2" x-text="p.name"></h3>
+                            <h3 class="text-sm font-semibold text-gray-900 group-hover:text-gray-900 line-clamp-2"
+                                x-data="{ truncated: false }"
+                                x-init="$nextTick(() => { truncated = $el.scrollHeight > $el.clientHeight + 1 })"
+                                @resize.window.debounce.150ms="truncated = $el.scrollHeight > $el.clientHeight + 1"
+                                :title="truncated ? p.name : null">
+                                <span x-show="p.age_restricted" class="mr-1 inline-flex align-middle rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700 ring-1 ring-red-200 dark:bg-red-950 dark:text-red-300 dark:ring-red-800" x-text="p.min_age + '+' "></span><span x-text="p.name"></span>
+                            </h3>
                             <div class="mt-2 flex items-center gap-2">
                                 <template x-if="p.min_price">
                                     <span class="font-bold text-gray-900">
@@ -293,8 +306,7 @@ document.addEventListener('alpine:init', () => {
             if (this.filters.sort) url.searchParams.set('sort', this.filters.sort);
             else url.searchParams.delete('sort');
 
-            if (this.filters.exclude_stock) url.searchParams.set('exclude_stock', '1');
-            else url.searchParams.delete('exclude_stock');
+            url.searchParams.set('exclude_stock', this.filters.exclude_stock ? '1' : '0');
 
             window.history.pushState({page}, '', url.toString());
 
@@ -310,7 +322,7 @@ document.addEventListener('alpine:init', () => {
                 const apiParams = new URLSearchParams();
                 if (this.filters.search) apiParams.set('search', this.filters.search);
                 if (this.filters.sort && typeof this.filters.sort === 'string') apiParams.set('sort', this.filters.sort);
-                if (this.filters.exclude_stock) apiParams.set('exclude_stock', '1');
+                apiParams.set('exclude_stock', this.filters.exclude_stock ? '1' : '0');
                 if (this.filters.category) apiParams.set('category', this.filters.category);
 
                 apiParams.set('page', apiPage);
