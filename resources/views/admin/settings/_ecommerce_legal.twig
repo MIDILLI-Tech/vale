@@ -26,6 +26,9 @@
         verified_reviews: __('Only buyers who purchased the product can review it, and the review form says so. The EU Omnibus, the UK DMCCA and the US FTC review rule expect verified reviews and a clear disclosure.'),
     } %}
     {% set legal_other_region = legal_regions.other|default({ label: '', consent_model: 'opt-in', items: [] }) %}
+    {% set legal_link_texts = {
+        verified_reviews: __('Review settings'),
+    } %}
     {% set legal_region_labels = {
         eu:   __('European Union / EEA'),
         de_at: __('Germany / Austria'),
@@ -77,7 +80,7 @@
                             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ item_note }}</p>
                             {% endif %}
                             {% if item.link is not empty %}
-                            <a href="{{ url(item.link) }}" class="mt-1 inline-block text-xs font-medium underline text-gray-700 dark:text-gray-300">{{ __(item.link_text|default('Configure')) }}</a>
+                            <a href="{{ url(item.link) }}" class="mt-1 inline-block text-xs font-medium underline text-gray-700 dark:text-gray-300">{{ attribute(legal_link_texts, item.key)|default(item.link_text|default(__('Configure'))) }}</a>
                             {% endif %}
                         </div>
                         <div class="flex shrink-0 flex-col items-end gap-2">
