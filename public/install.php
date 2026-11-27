@@ -1649,17 +1649,17 @@ if (!$installFailed) {
     echo '<div style="margin-top:1.25rem;text-align:left;font-size:.85rem;color:var(--text-secondary);">';
     echo '<strong style="color:var(--text-primary);">Next steps:</strong>';
     echo '<ul style="margin:.5rem 0 1rem 1.25rem;list-style:disc;">';
-    echo '<li>Go to <em>Settings → Mail</em> to configure your email provider and send a test email.</li>';
-    echo '<li>Go to <em>Settings → Cron</em> to enable scheduled tasks (newsletters, auto-updates, etc.).</li>';
+    echo '<li>Go to <em>Settings → Mail → Mail Setup</em> to configure your email provider and send a test email.</li>';
+    echo '<li>Go to <em>Settings → Maintenance → Scheduled Tasks</em> to enable cron (newsletters, auto-updates, etc.).</li>';
     echo '<li>Create your first page or post.</li>';
     if ($shopEnabled) {
-        echo '<li>Go to <em>Settings → Shop → Payment</em> to configure your payment gateway.</li>';
-        echo '<li>Create <em>Terms &amp; Conditions</em>, <em>Return Policy</em> pages under <em>Settings → Shop → Policies</em>.</li>';
-        echo '<li>Configure tax rates and shipping options under <em>Settings → Shop → Tax / Shipping</em>.</li>';
+        echo '<li>Go to <em>Settings → E-Commerce → Payment</em> to configure your payment gateway.</li>';
+        echo '<li>Review VAT and tax rules under <em>Settings → E-Commerce → Shop</em>, and shipping options under <em>Settings → E-Commerce → Shipping</em>.</li>';
         echo '<li>Add your company name, address, VAT/Tax ID, and commercial register info to your store.</li>';
     }
+    echo '<li>Assign your Imprint, Privacy Policy, Terms &amp; Conditions and Return Policy pages under <em>Settings → Legal &amp; Compliance</em>.</li>';
     echo '</ul>';
-    echo '<p style="color:var(--text-muted);">You may also need to follow legal regulations and tax rules in your jurisdiction.</p>';
+    echo '<p style="color:var(--text-muted);">Legal and compliance are your responsibility: Vale provides no legal or tax advice. Make sure your legal pages, VAT handling and invoices match the rules of your jurisdiction before going live.</p>';
     echo '</div>';
 
     $envTestUrl = h($appUrl . '/.env');
@@ -1714,17 +1714,17 @@ if (!$installFailed) {
     <div style="margin-top:1.25rem;text-align:left;font-size:.85rem;color:var(--text-secondary);">
       <strong style="color:var(--text-primary);">Next steps:</strong>
       <ul style="margin:.5rem 0 1rem 1.25rem;list-style:disc;">
-        <li>Go to <em>Settings → Mail</em> to configure your email provider and send a test email.</li>
-        <li>Go to <em>Settings → Cron</em> to enable scheduled tasks (newsletters, auto-updates, etc.).</li>
+        <li>Go to <em>Settings → Mail → Mail Setup</em> to configure your email provider and send a test email.</li>
+        <li>Go to <em>Settings → Maintenance → Scheduled Tasks</em> to enable cron (newsletters, auto-updates, etc.).</li>
         <li>Create your first page or post.</li>
         <?php if ($shopEnabled) : ?>
-        <li>Go to <em>Settings → Shop → Payment</em> to configure your payment gateway.</li>
-        <li>Create <em>Terms &amp; Conditions</em>, <em>Return Policy</em> pages under <em>Settings → Shop → Policies</em>.</li>
-        <li>Configure tax rates and shipping options under <em>Settings → Shop → Tax / Shipping</em>.</li>
+        <li>Go to <em>Settings → E-Commerce → Payment</em> to configure your payment gateway.</li>
+        <li>Review VAT and tax rules under <em>Settings → E-Commerce → Shop</em>, and shipping options under <em>Settings → E-Commerce → Shipping</em>.</li>
         <li>Add your company name, address, VAT/Tax ID, and commercial register info to your store.</li>
         <?php endif; ?>
+        <li>Assign your Imprint, Privacy Policy, Terms &amp; Conditions and Return Policy pages under <em>Settings → Legal &amp; Compliance</em>.</li>
       </ul>
-      <p style="color:var(--text-muted);">You may also need to follow legal regulations and tax rules in your jurisdiction.</p>
+      <p style="color:var(--text-muted);">Legal and compliance are your responsibility: Vale provides no legal or tax advice. Make sure your legal pages, VAT handling and invoices match the rules of your jurisdiction before going live.</p>
     </div>
 
     <?php $envTestUrl = h(detectAppUrl() . '/.env'); ?>
