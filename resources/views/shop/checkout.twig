@@ -70,7 +70,7 @@
                                     <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Add your company details and VAT number. Valid EU business customers are invoiced without VAT (reverse charge).') }}</span>
                                 </span>
                             </label>
-                            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="business" x-cloak>
+                            <div class="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" x-show="business" x-cloak>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Company Name') }}</label>
                                     <input type="text" name="company_name" value="{{ old.company_name ?? '' }}"
@@ -84,13 +84,15 @@
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Include the country code. EU numbers are checked against VIES.') }}</p>
                                     {% if errors.vat_number|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.vat_number }}</p>{% endif %}
                                 </div>
-                                <div class="col-span-full flex flex-wrap items-center gap-3">
+                                <div class="sm:col-span-2 md:col-span-1 md:pt-6">
                                     <button type="button" @click="checkBusinessVat()" :disabled="b2bChecking"
-                                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                            class="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed md:w-auto">
                                         <span x-show="!b2bChecking">{{ __('Check VAT & recalculate') }}</span>
                                         <span x-show="b2bChecking" x-cloak>{{ __('Checking…') }}</span>
                                     </button>
-                                    <p x-show="b2bMessage" x-cloak x-text="b2bMessage"
+                                </div>
+                                <div class="sm:col-span-2 md:col-span-3" x-show="b2bMessage" x-cloak>
+                                    <p x-text="b2bMessage"
                                        :class="b2bStatus === 'invalid' ? 'text-red-600 dark:text-red-400' : (b2bStatus === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-green-700 dark:text-green-400')"
                                        class="text-xs"></p>
                                 </div>
