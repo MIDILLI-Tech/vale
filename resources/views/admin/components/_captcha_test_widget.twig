@@ -96,7 +96,7 @@
 }" class="mt-2">
     <button type="button" @click="showTest = !showTest" class="text-[10px] font-medium text-blue-600 hover:underline flex items-center gap-1">
         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-        <span x-text="showTest ? '{{ __('Hide Test') }}' : '{{ __('Test this captcha') }}'"></span>
+        <span x-text="showTest ? '{{ __('Hide Test')|e('js') }}' : '{{ __('Test this captcha')|e('js') }}'"></span>
     </button>
 
     <div x-show="showTest" x-cloak class="mt-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 space-y-3">
