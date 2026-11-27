@@ -18,6 +18,10 @@ function normalizeVatInput(el) {
 
     el.value = clean;
 
+    // Notify x-model (and any other listener) that the value changed outside a
+    // native input event; the listener re-runs once and returns early.
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+
     if (document.activeElement === el && el.selectionStart !== null) {
         el.setSelectionRange(cleanCaret, cleanCaret);
     }
