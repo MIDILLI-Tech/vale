@@ -7,10 +7,6 @@
     <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Edit Comment') }}</h1>
 </div>
 
-{% if flash_error is defined and flash_error %}
-<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>
-{% endif %}
-
 <div class="max-w-lg">
     <form method="POST" action="{{ url('/admin/comments/' ~ comment.id ~ '') }}" class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
         {{ csrf_field() }}

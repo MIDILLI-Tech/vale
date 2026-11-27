@@ -30,13 +30,6 @@
            class="w-full max-w-sm rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm focus:border-gray-600 focus:ring-gray-500">
 </div>
 
-{% if flash_success %}
-<div class="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">{{ flash_success }}</div>
-{% endif %}
-{% if flash_error %}
-<div class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{{ flash_error }}</div>
-{% endif %}
-
 {% if cronConfig.cron_mode|default('none') == 'none' %}
 <div class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
     <svg class="mt-0.5 h-4 w-4 shrink-0 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

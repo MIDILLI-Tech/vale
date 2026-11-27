@@ -7,10 +7,6 @@
     <span data-dirty-badge class="hidden px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">● {{ __('Unsaved changes') }}</span>
 </div>
 
-{% if flash_error %}
-<div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4 text-red-700 text-sm">{{ flash_error }}</div>
-{% endif %}
-
 <form method="POST" action="{{ url('/admin/orders') }}"
       x-data="manualOrder()"
       class="space-y-6">
