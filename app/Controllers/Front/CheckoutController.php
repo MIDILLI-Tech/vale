@@ -774,6 +774,12 @@ final class CheckoutController
             return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
         }
 
+        $termsSlug = trim((string) ($this->settings->get('policy_page_terms', '') ?? ''));
+        if ($termsSlug !== '' && empty($body['accept_terms'])) {
+            $this->session->set('flash_error', $this->translator->get('Please accept the Terms & Conditions and the Privacy Policy before placing the order.'));
+            return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
+        }
+
         $order = new Order($this->orders->generateOrderNumber(), $billing, $this->session->get('user_id'));
         if ($waiverRequired) {
             $order->setWithdrawalWaiverAcceptedAt(new \DateTimeImmutable());
@@ -929,6 +935,7 @@ final class CheckoutController
         }
         $order->setItems($orderItems);
         $this->orders->save($order);
+        $this->recordPolicyConsent($order, $request, $termsSlug);
 
         // Mark abandoned cart as recovered — members by user id, guests by
         // billing email (guest carts have no user_id).
@@ -3983,6 +3990,52 @@ final class CheckoutController
             'all_non_refundable'    => $nonRefundableCount === $total,
             'reasons'               => array_values(array_unique($reasons)),
         ];
+    }
+
+    /**
+     * Appends an append-only evidence entry to the order timeline: which policy
+     * text was accepted, when, and from which masked address.
+     */
+    private function recordPolicyConsent(Order $order, Request $request, string $termsSlug): void
+    {
+        if ($this->orderLogs === null || $order->getId() === null) {
+            return;
+        }
+
+        $ipMode  = (string) ($this->settings->get('ip_privacy_mode', 'mask') ?? 'mask');
+        $ip      = (new IpAnonymizer())->anonymize(vl_client_ip($request), $ipMode);
+        $uaHash  = substr(hash('sha256', $request->getHeaderLine('User-Agent')), 0, 16);
+        $version = $this->policyPageVersion($termsSlug) ?? 'n/a';
+        $note    = __(
+            'Terms and Privacy Policy accepted - version :version, :date, IP :ip, device :device',
+            [
+                ':version' => $version,
+                ':date'    => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+                ':ip'      => $ip,
+                ':device'  => $uaHash,
+            ],
+        );
+
+        $this->orderLogs->add((int) $order->getId(), 'consent_accepted', $note, 'system');
+    }
+
+    /** Short fingerprint of the accepted terms page, so a later edit changes the version. */
+    private function policyPageVersion(string $slug): ?string
+    {
+        if ($slug === '' || $this->db === null) {
+            return null;
+        }
+
+        $updated = $this->db->fetchOne(
+            'SELECT updated_at FROM ' . VL_DB_PREFIX . 'posts WHERE slug = ? AND content_type = ?',
+            [$slug, 'page'],
+        );
+
+        if (!is_string($updated) || $updated === '') {
+            return null;
+        }
+
+        return substr(hash('sha256', $slug . '|' . $updated), 0, 10);
     }
 
     /**

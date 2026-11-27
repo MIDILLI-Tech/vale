@@ -340,6 +340,8 @@
                         'billing_updated':          __('Billing Details Updated'),
                         'shipping_updated':         __('Shipping Details Updated'),
                         'tracking_updated':         __('Tracking Updated'),
+                        'delivery_date':            __('Delivery Date Recorded'),
+                        'consent_accepted':         __('Consent Accepted'),
                         'tracking_email_sent':      __('Tracking Email Sent'),
                         'tracking_email_skipped':   __('Tracking Email Skipped'),
                         'tracking_email_failed':    __('Tracking Email Failed'),
@@ -636,6 +638,25 @@
                         {{ __('Save & Notify') }}
                     </button>
                 </div>
+            </form>
+
+            <form method="POST" action="{{ url('/admin/orders/' ~ order.id ~ '/delivered') }}" class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2"
+                  x-data="{ delivered: '{{ order.deliveredAt ? order.deliveredAt|date('Y-m-d') : '' }}' }">
+                {{ csrf_field() }}
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400" for="delivered-at">{{ __('Delivery date (starts the withdrawal period)') }}</label>
+                <div class="flex gap-2">
+                    <input type="date" id="delivered-at" name="delivered_at" x-model="delivered"
+                           value="{{ order.deliveredAt ? order.deliveredAt|date('Y-m-d') : '' }}"
+                           class="flex-1 rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                    <button type="submit" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">{{ __('Save') }}</button>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    {% if withdrawal_deadline %}
+                    {{ withdrawal_deadline_estimated and not order.deliveredAt ? __('Withdrawal period (estimated): until :date', {':date': withdrawal_deadline|date('Y-m-d')}) : __('Withdrawal period: until :date', {':date': withdrawal_deadline|date('Y-m-d')}) }}
+                    {% else %}
+                    {{ __('Withdrawal period: set the delivery date or the payment date to start the :days-day window.', {':days': withdrawal_days}) }}
+                    {% endif %}
+                </p>
             </form>
         </div>
 

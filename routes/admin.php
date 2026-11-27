@@ -369,6 +369,7 @@ return function (App $app): void {
             $g->post('/orders/{id}/refund/reject', [OrderController::class, 'rejectRefundRequest']);
             $g->post('/withdrawals/{id:[0-9]+}/status', [WithdrawalController::class, 'updateStatus'])->setName('admin.withdrawals.status');
             $g->post('/orders/{id}/tracking', [OrderController::class, 'updateTracking']);
+            $g->post('/orders/{id}/delivered', [OrderController::class, 'updateDeliveredAt']);
             $g->post('/orders/{id}/logs/{logId}/delete', [OrderController::class, 'deleteLog']);
             $g->post('/orders/{id}/downloads/{dlId}/revoke', [OrderController::class, 'revokeDownload']);
             $g->post('/orders/{id}/downloads/{dlId}/regenerate', [OrderController::class, 'regenerateDownloadToken']);

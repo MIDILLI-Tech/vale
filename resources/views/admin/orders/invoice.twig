@@ -53,6 +53,10 @@
             <div class="flex flex-col gap-1 border-b border-gray-200 pb-4 text-sm sm:items-end">
                 <p><span class="font-semibold text-gray-700">{{ __('Invoice Number') }}:</span> {{ invoice.invoice_number|default('') }}</p>
                 <p><span class="font-semibold text-gray-700">{{ __('Invoice Date') }}:</span> {{ invoice.issued_at|default('') ? (invoice.issued_at|date('Y-m-d')) : '' }}</p>
+                <p><span class="font-semibold text-gray-700">{{ __('Order Number') }}:</span> {{ invoice.order_number|default(order.orderNumber) }}</p>
+                {% if invoice.delivery_date|default('') %}
+                <p><span class="font-semibold text-gray-700">{{ __('Delivery date') }}:</span> {{ invoice.delivery_date }}{% if invoice.delivery_date_estimated|default(false) %} <span class="text-xs text-gray-500 dark:text-gray-400">({{ __('estimated') }})</span>{% endif %}</p>
+                {% endif %}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -66,6 +70,7 @@
                     {% if invoice.shop.phone %}<p>{{ __('Phone') }}: {{ invoice.shop.phone }}</p>{% endif %}
                     {% if invoice.shop.email %}<p>{{ __('Email') }}: {{ invoice.shop.email }}</p>{% endif %}
                     {% if invoice.shop.vat_number %}<p>{{ __('VAT') }}: {{ invoice.shop.vat_number }}</p>{% endif %}
+                    {% if invoice.shop.tax_number|default('') %}<p>{{ __('Tax number') }}: {{ invoice.shop.tax_number }}</p>{% endif %}
                 </div>
                 <div>
                     <h2 class="font-semibold text-gray-800 mb-2">{{ __('Bill To') }}</h2>
@@ -120,6 +125,31 @@
                 <div class="flex justify-between"><span>{{ __('VAT (reverse charge)') }}</span><span>0.00 {{ invoice.currency }}</span></div>
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ __('Reverse charge — VAT not charged (Article 196, EU Directive 2006/112/EC).') }}</div>
                 {% else %}
+                {% set _vatRows = invoice.vat_breakdown|default([]) %}
+                {% if _vatRows|length > 1 %}
+                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                    <table class="w-full text-xs">
+                        <thead class="bg-gray-50 dark:bg-gray-800/60">
+                            <tr>
+                                <th class="px-2 py-1 text-left">{{ __('VAT rate') }}</th>
+                                <th class="px-2 py-1 text-right">{{ __('Net') }}</th>
+                                <th class="px-2 py-1 text-right">{{ __('VAT') }}</th>
+                                <th class="px-2 py-1 text-right">{{ __('Gross') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in _vatRows %}
+                            <tr class="border-t border-gray-100 dark:border-gray-800">
+                                <td class="px-2 py-1">{{ row.rate|number_format(1, '.', ',') }}%</td>
+                                <td class="px-2 py-1 text-right">{{ row.net|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+                                <td class="px-2 py-1 text-right">{{ row.tax|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+                                <td class="px-2 py-1 text-right">{{ (row.net + row.tax)|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
                 <div class="flex justify-between">
                     <span>
                         {{ __('Included VAT') }}
@@ -129,6 +159,7 @@
                     </span>
                     <span>{{ invoice.tax|number_format(2, '.', ',') }} {{ invoice.currency }}</span>
                 </div>
+                {% endif %}
                 {% if invoice.tax_regime|default('normal_vat') != 'normal_vat' and invoice.tax_zero_reason|default('') != '' %}
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.tax_zero_reason }}</div>
                 {% endif %}

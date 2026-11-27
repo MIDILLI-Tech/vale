@@ -33,6 +33,11 @@
                     <input type="text" name="shop_vat_number" value="{{ settings.shop_vat_number|default('') }}" data-vl-vat
                            class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm uppercase">
                 </div>
+                <div {{ vl.attrs('ecommerce', __('Tax Number'), 'shop_tax_number', 'shop', __('Shop'), 'tax number steuernummer fiscal invoice') }}>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tax Number') }}</label>
+                    <input type="text" name="shop_tax_number" value="{{ settings.shop_tax_number|default('') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+                </div>
                 <div {{ vl.attrs('ecommerce', __('Shop Email'), 'shop_email', 'shop', __('Shop'), 'contact email store') }}>
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Shop Email') }}</label>
                     <input type="email" name="shop_email" value="{{ settings.shop_email|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm">

@@ -55,6 +55,7 @@
                 <th class="px-4 py-3">{{ __('Submitted') }}</th>
                 <th class="px-4 py-3">{{ __('Order') }}</th>
                 <th class="px-4 py-3">{{ __('Customer') }}</th>
+                <th class="px-4 py-3">{{ __('Withdrawal period') }}</th>
                 <th class="px-4 py-3">{{ __('Status') }}</th>
                 <th class="px-4 py-3 text-right">{{ __('Actions') }}</th>
             </tr>
@@ -75,6 +76,16 @@
                     <span class="block text-gray-900 dark:text-gray-100">{{ item.customerName ?: '—' }}</span>
                     <span class="block text-xs text-gray-500 dark:text-gray-400">{{ item.customerEmail }}</span>
                 </td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    {% if item.deadlineAt %}
+                    <span class="block text-gray-700 dark:text-gray-300">{{ item.deadlineAt|date('Y-m-d') }}</span>
+                    {% if item.late %}
+                    <span class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ __('Late') }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-gray-400">—</span>
+                    {% endif %}
+                </td>
                 <td class="px-4 py-3">
                     <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ status_colors[item.status]|default('bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300') }}">
                         {{ status_labels[item.status]|default(item.status|capitalize) }}
@@ -86,7 +97,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">{{ __('No withdrawal requests yet.') }}</td>
+                <td colspan="7" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">{{ __('No withdrawal requests yet.') }}</td>
             </tr>
             {% endfor %}
         </tbody>

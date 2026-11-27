@@ -19,6 +19,12 @@
     <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Email') }}</td>
     <td style="padding:8px 0;">{{ withdrawal.customerEmail }}</td>
   </tr>
+  {% if withdrawal.deadlineAt %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Withdrawal period ended') }}</td>
+    <td style="padding:8px 0;">{{ withdrawal.deadlineAt|date('d M Y') }}</td>
+  </tr>
+  {% endif %}
 </table>
 
 {% if withdrawal.items is not empty %}

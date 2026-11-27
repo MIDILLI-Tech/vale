@@ -660,7 +660,7 @@
                     {% if policy_links.returns is defined %}{% set _policyLinks = _policyLinks|merge(['<a href="' ~ policy_links.returns ~ '" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-100 dark:text-gray-300">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
                     <div class="mt-4 border-t dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-400">
                         <label class="flex items-start gap-2 cursor-pointer">
-                            <input type="checkbox" required class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
+                            <input type="checkbox" name="accept_terms" value="1" required class="mt-0.5 rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-gray-500 dark:focus:ring-gray-400">
                             <span>{{ __('I have read and agree to the :links.', {':links': _policyLinks|join(', ')})|raw }}</span>
                         </label>
                     </div>

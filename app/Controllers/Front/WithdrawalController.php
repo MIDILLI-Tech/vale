@@ -37,12 +37,15 @@ final class WithdrawalController
 
         $query = $request->getQueryParams();
 
+        $order = $this->service->resolveOrder(['order_number' => (string) ($query['order'] ?? '')]);
+
         return $this->render($response, [
             'success'    => false,
             'errors'     => [],
             'old'        => ['order_number' => trim((string) ($query['order'] ?? ''))],
             'withdrawal' => null,
-            'order'      => null,
+            'order'      => $order,
+            'deadline'   => $this->service->deadline($order, $this->withdrawalDays()),
         ]);
     }
 
@@ -79,6 +82,21 @@ final class WithdrawalController
             ]);
         }
 
+        $days     = $this->withdrawalDays();
+        $order    = $this->service->resolveOrder($body);
+        $deadline = $this->service->deadline($order, $days);
+
+        if ($deadline['expired']) {
+            return $this->render($response->withStatus(422), [
+                'success'    => false,
+                'errors'     => [__('The withdrawal period for this order has expired.')],
+                'old'        => $body,
+                'withdrawal' => null,
+                'order'      => $order,
+                'deadline'   => $deadline,
+            ]);
+        }
+
         $ipMode = (string) ($this->settings->get('ip_privacy_mode', 'mask') ?? 'mask');
         $locale = $this->translator->getLocale();
 
@@ -86,6 +104,7 @@ final class WithdrawalController
             $body,
             $this->ipAnonymizer->anonymize(vl_client_ip($request), $ipMode),
             $locale,
+            $deadline['deadline'],
         );
 
         $order = $withdrawal->getOrderId() !== null
@@ -100,7 +119,13 @@ final class WithdrawalController
             'old'        => $body,
             'withdrawal' => $withdrawal,
             'order'      => $order,
+            'deadline'   => $deadline,
         ]);
+    }
+
+    private function withdrawalDays(): int
+    {
+        return max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14));
     }
 
     private function isEnabled(): bool

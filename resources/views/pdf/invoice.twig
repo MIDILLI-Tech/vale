@@ -22,6 +22,11 @@
   table.items th { text-align: left; border-bottom: 1px solid #d1d5db; padding: 6pt 4pt; font-size: 9pt; color: #6b7280; }
   table.items td { border-bottom: 1px solid #f3f4f6; padding: 6pt 4pt; }
   table.items td.text-right { text-align: right; }
+  table.vat { width: 100%; border-collapse: collapse; margin-bottom: 12pt; font-size: 8pt; }
+  table.vat th { text-align: right; border-bottom: 1px solid #d1d5db; padding: 4pt; color: #6b7280; font-weight: normal; }
+  table.vat th:first-child { text-align: left; }
+  table.vat td { padding: 4pt; text-align: right; border-bottom: 1px solid #f3f4f6; }
+  table.vat td:first-child { text-align: left; }
   table.totals { width: 260pt; border-collapse: collapse; margin-left: auto; font-size: 9pt; }
   table.totals td { padding: 3pt 0; }
   table.totals td.label { text-align: left; }
@@ -41,6 +46,10 @@
         <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}{{ __('Invoice') }}{% endif %}</h1>
         <p>{{ __('Invoice #:number', {':number': invoice.invoice_number|default('')}) }}</p>
         <p>{{ __('Issued: :date', {':date': invoice.issued_at|default('')}) }}</p>
+        <p>{{ __('Order Number') }}: {{ invoice.order_number|default(order.orderNumber) }}</p>
+        {% if invoice.delivery_date|default('') %}
+        <p>{{ __('Delivery date') }}: {{ invoice.delivery_date }}{% if invoice.delivery_date_estimated|default(false) %} ({{ __('estimated') }}){% endif %}</p>
+        {% endif %}
       </td>
       {% if logo_data_uri|default('') %}
       <td class="logo"><img src="{{ logo_data_uri }}" alt=""></td>
@@ -69,6 +78,7 @@
     {% if invoice.shop.phone %}<p>{{ __('Phone') }}: {{ invoice.shop.phone }}</p>{% endif %}
     {% if invoice.shop.email %}<p>{{ invoice.shop.email }}</p>{% endif %}
     {% if invoice.shop.vat_number %}<p>{{ __('VAT') }}: {{ invoice.shop.vat_number }}</p>{% endif %}
+    {% if invoice.shop.tax_number|default('') %}<p>{{ __('Tax number') }}: {{ invoice.shop.tax_number }}</p>{% endif %}
   </td>
   <td>
     <h2>{{ __('Bill To') }}</h2>
@@ -108,6 +118,30 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% set _vatRows = invoice.vat_breakdown|default([]) %}
+{% if _vatRows|length > 1 %}
+<table class="vat">
+  <thead>
+    <tr>
+      <th>{{ __('VAT rate') }}</th>
+      <th>{{ __('Net') }}</th>
+      <th>{{ __('VAT') }}</th>
+      <th>{{ __('Gross') }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in _vatRows %}
+    <tr>
+      <td>{{ row.rate|number_format(1, '.', ',') }}%</td>
+      <td>{{ row.net|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+      <td>{{ row.tax|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+      <td>{{ (row.net + row.tax)|number_format(2, '.', ',') }} {{ invoice.currency }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 
 <table class="totals">
   <tr><td class="label">{{ __('Subtotal') }}</td><td class="value">{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</td></tr>

@@ -28,6 +28,7 @@ class Order extends BaseEntity
     private ?string $transactionId                          = null;
     private ?string $paymentToken                           = null;
     private ?\DateTimeImmutable $paidAt                     = null;
+    private ?\DateTimeImmutable $deliveredAt                = null;
     private ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null;
     private ?\DateTimeImmutable $ageConfirmedAt             = null;
     private ?string $carrier                                = null;
@@ -116,7 +117,17 @@ class Order extends BaseEntity
     }    public function getPaymentToken(): ?string
     {
         return $this->paymentToken;
-    }    public function getPaidAt(): ?\DateTimeImmutable
+    }    public function getDeliveredAt(): ?\DateTimeImmutable
+    {
+        return $this->deliveredAt;
+    }
+
+    public function setDeliveredAt(?\DateTimeImmutable $at): void
+    {
+        $this->deliveredAt = $at;
+    }
+
+    public function getPaidAt(): ?\DateTimeImmutable
     {
         return $this->paidAt;
     }
@@ -356,6 +367,9 @@ class Order extends BaseEntity
         }
         if (!empty($row['paid_at'])) {
             $order->paidAt = new \DateTimeImmutable($row['paid_at']);
+        }
+        if (!empty($row['delivered_at'])) {
+            $order->deliveredAt = new \DateTimeImmutable($row['delivered_at']);
         }
         if (!empty($row['withdrawal_waiver_accepted_at'])) {
             $order->withdrawalWaiverAcceptedAt = new \DateTimeImmutable($row['withdrawal_waiver_accepted_at']);

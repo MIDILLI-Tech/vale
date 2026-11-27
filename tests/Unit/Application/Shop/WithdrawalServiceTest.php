@@ -114,6 +114,73 @@ final class WithdrawalServiceTest extends TestCase
         self::assertNull($service->findDuplicate(['email' => 'buyer@example.com']));
     }
 
+    public function testDeadlineStartsAtDelivery(): void
+    {
+        $order = new Order('VL-2026-0004', ['email' => 'buyer@example.com']);
+        $order->setDeliveredAt(new \DateTimeImmutable('-10 days'));
+
+        $deadline = (new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        ))->deadline($order, 14);
+
+        self::assertNotNull($deadline['deadline']);
+        self::assertSame($order->getDeliveredAt()->modify('+14 days')->format('Y-m-d'), $deadline['deadline']->format('Y-m-d'));
+        self::assertFalse($deadline['late']);
+        self::assertFalse($deadline['expired']);
+        self::assertFalse($deadline['estimated']);
+    }
+
+    public function testDeadlineFallsBackToPaymentDateAndFlagsLate(): void
+    {
+        $order = new Order('VL-2026-0005', ['email' => 'buyer@example.com']);
+        $order->setPaidAt(new \DateTimeImmutable('-20 days'));
+
+        $deadline = (new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        ))->deadline($order, 14);
+
+        self::assertTrue($deadline['late']);
+        self::assertFalse($deadline['expired']);
+        self::assertTrue($deadline['estimated']);
+    }
+
+    public function testDeadlineExpiresAfterLongStop(): void
+    {
+        $order = new Order('VL-2026-0006', ['email' => 'buyer@example.com']);
+        $order->setDeliveredAt(new \DateTimeImmutable('-13 months'));
+
+        $deadline = (new WithdrawalService(
+            $this->createStub(WithdrawalRequestRepositoryInterface::class),
+            $this->createStub(OrderRepositoryInterface::class),
+        ))->deadline($order, 14);
+
+        self::assertTrue($deadline['expired']);
+    }
+
+    public function testSubmitStoresDeadlineForLinkedOrder(): void
+    {
+        $order = new Order('VL-2026-0007', ['email' => 'buyer@example.com']);
+        $order->setId(11);
+
+        $orders = $this->createStub(OrderRepositoryInterface::class);
+        $orders->method('findByOrderNumber')->willReturn($order);
+
+        $requests = $this->createStub(WithdrawalRequestRepositoryInterface::class);
+        $requests->method('findByReference')->willReturn(null);
+        $requests->method('save')->willReturnCallback(static fn (WithdrawalRequest $request): WithdrawalRequest => $request);
+
+        $deadline   = new \DateTimeImmutable('+4 days');
+        $withdrawal = (new WithdrawalService($requests, $orders))->submit([
+            'order_number' => 'VL-2026-0007',
+            'email'        => 'buyer@example.com',
+            'confirm'      => '1',
+        ], '127.0.0.0', 'en', $deadline);
+
+        self::assertSame($deadline, $withdrawal->getDeadlineAt());
+    }
+
     public function testSubmitDoesNotLinkOrderWhenEmailDiffers(): void
     {
         $order = new Order('VL-2026-0002', ['email' => 'owner@example.com']);

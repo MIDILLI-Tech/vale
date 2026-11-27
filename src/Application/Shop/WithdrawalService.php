@@ -67,18 +67,65 @@ final class WithdrawalService
         return $this->requests->findOpenByOrderAndEmail($orderNumber, $email);
     }
 
+    /** @param array<string, mixed> $input */
+    public function resolveOrder(array $input): ?Order
+    {
+        $orderNumber = strtoupper(trim((string) ($input['order_number'] ?? '')));
+        if ($orderNumber === '') {
+            return null;
+        }
+
+        return $this->orders->findByOrderNumber($orderNumber)
+            ?? $this->orders->findByOrderNumber(trim((string) ($input['order_number'] ?? '')));
+    }
+
+    /**
+     * The regular period starts when the goods arrive; without a delivery date
+     * the payment/creation date is the best available estimate.
+     *
+     * @return array{deadline: ?\DateTimeImmutable, late: bool, expired: bool, estimated: bool}
+     */
+    public function deadline(?Order $order, int $days): array
+    {
+        $days = max(1, $days);
+        $none = ['deadline' => null, 'late' => false, 'expired' => false, 'estimated' => false];
+
+        if ($order === null) {
+            return $none;
+        }
+
+        $delivered = $order->getDeliveredAt();
+        $start     = $delivered ?? $order->getPaidAt() ?? $order->getCreatedAt();
+        if ($start === null) {
+            return $none;
+        }
+
+        $deadline = $start->modify('+' . $days . ' days');
+        $now      = new \DateTimeImmutable();
+
+        return [
+            'deadline' => $deadline,
+            'late'     => $now > $deadline,
+            // CRD Article 10: a trader that never informed the consumer gets a
+            // 12-month extension on top of the regular period.
+            'expired'   => $now > $deadline->modify('+12 months'),
+            'estimated' => $delivered === null,
+        ];
+    }
+
     /**
      * @param array<string, mixed> $input
      */
-    public function submit(array $input, string $ipAddress, string $locale): WithdrawalRequest
-    {
+    public function submit(
+        array $input,
+        string $ipAddress,
+        string $locale,
+        ?\DateTimeImmutable $deadline = null,
+    ): WithdrawalRequest {
         $orderNumber = strtoupper(trim((string) ($input['order_number'] ?? '')));
         $email       = mb_strtolower(trim((string) ($input['email'] ?? '')));
 
-        $order = $this->orders->findByOrderNumber($orderNumber);
-        if ($order === null) {
-            $order = $this->orders->findByOrderNumber(trim((string) ($input['order_number'] ?? '')));
-        }
+        $order = $this->resolveOrder($input);
 
         $billing      = $order?->getBilling() ?? [];
         $billingEmail = mb_strtolower(trim((string) ($billing['email'] ?? '')));
@@ -87,6 +134,9 @@ final class WithdrawalService
         $request = new WithdrawalRequest($orderNumber, $email, $this->generateReference());
         $request->setLocale($locale);
         $request->setIpAddress($ipAddress);
+        if ($linked) {
+            $request->setDeadlineAt($deadline);
+        }
         $request->setReason((string) ($input['reason'] ?? ''));
         $request->setItemsNote((string) ($input['items_note'] ?? ''));
 

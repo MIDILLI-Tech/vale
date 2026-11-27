@@ -34,6 +34,7 @@ final class WithdrawalRequest extends BaseEntity
     private ?string $items                   = null;
     private ?string $adminNote               = null;
     private ?string $ipAddress               = null;
+    private ?\DateTimeImmutable $deadlineAt  = null;
     private ?\DateTimeImmutable $processedAt = null;
 
     public function __construct(string $orderNumber, string $customerEmail, string $reference)
@@ -115,6 +116,17 @@ final class WithdrawalRequest extends BaseEntity
         return $this->ipAddress;
     }
 
+    public function getDeadlineAt(): ?\DateTimeImmutable
+    {
+        return $this->deadlineAt;
+    }
+
+    /** Regular period already passed, but the declaration stays recorded for review. */
+    public function isLate(): bool
+    {
+        return $this->deadlineAt !== null && new \DateTimeImmutable() > $this->deadlineAt;
+    }
+
     public function getProcessedAt(): ?\DateTimeImmutable
     {
         return $this->processedAt;
@@ -180,6 +192,11 @@ final class WithdrawalRequest extends BaseEntity
         $this->ipAddress = $ip;
     }
 
+    public function setDeadlineAt(?\DateTimeImmutable $at): void
+    {
+        $this->deadlineAt = $at;
+    }
+
     public function markProcessed(): void
     {
         $this->processedAt = new \DateTimeImmutable();
@@ -220,6 +237,9 @@ final class WithdrawalRequest extends BaseEntity
         $request->adminNote     = $row['admin_note'] ?? null;
         $request->ipAddress     = $row['ip_address'] ?? null;
 
+        if (!empty($row['deadline_at'])) {
+            $request->deadlineAt = new \DateTimeImmutable($row['deadline_at']);
+        }
         if (!empty($row['processed_at'])) {
             $request->processedAt = new \DateTimeImmutable($row['processed_at']);
         }

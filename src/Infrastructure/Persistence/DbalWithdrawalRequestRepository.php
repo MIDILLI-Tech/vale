@@ -122,6 +122,7 @@ final class DbalWithdrawalRequestRepository implements WithdrawalRequestReposito
             'source'         => $request->getSource(),
             'admin_note'     => $request->getAdminNote(),
             'ip_address'     => $request->getIpAddress(),
+            'deadline_at'    => $request->getDeadlineAt()?->format('Y-m-d H:i:s'),
             'processed_at'   => $request->getProcessedAt()?->format('Y-m-d H:i:s'),
             'updated_at'     => date('Y-m-d H:i:s'),
         ];

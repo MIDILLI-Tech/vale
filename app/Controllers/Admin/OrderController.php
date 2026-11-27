@@ -11,6 +11,7 @@ use ValeApp\Application\Mail\MailService;
 use ValeApp\Application\Membership\SubscriptionService;
 use ValeApp\Application\Shop\BankTransferDetailsService;
 use ValeApp\Application\Shop\ChangeOrderStatusUseCase;
+use ValeApp\Application\Shop\InvoiceVatBreakdown;
 use ValeApp\Application\Shop\OrderShippingEstimator;
 use ValeApp\Application\Shop\OrderStatusEffects;
 use ValeApp\Application\Shop\UpdateOrderTrackingUseCase;
@@ -222,6 +223,7 @@ final class OrderController
             'phone'        => (string) ($this->settings->get('shop_phone', '') ?? ''),
             'email'        => (string) ($this->settings->get('shop_email', '') ?? ''),
             'vat_number'   => (string) ($this->settings->get('shop_vat_number', '') ?? ''),
+            'tax_number'   => (string) ($this->settings->get('shop_tax_number', '') ?? ''),
         ];
     }
 
@@ -237,6 +239,10 @@ final class OrderController
 
         $isBankTransfer = BankTransferDetailsService::isBankTransferMethod($order->getPaymentMethod());
 
+        $withdrawalDays     = max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14));
+        $withdrawalStart    = $order->getDeliveredAt() ?? $order->getPaidAt() ?? $order->getCreatedAt();
+        $withdrawalDeadline = $withdrawalStart?->modify('+' . $withdrawalDays . ' days');
+
         $invoiceVersions = $this->extractAllInvoiceVersions($logs);
         $versionMap      = [];
         foreach ($invoiceVersions as $version) {
@@ -244,20 +250,23 @@ final class OrderController
         }
 
         return $this->twig->render($response, 'admin/orders/show.twig', [
-            'order'               => $order,
-            'logs'                => $logs,
-            'refund_id'           => $this->extractRefundIdFromLogs($logs),
-            'invoice_snapshot'    => $this->extractInvoiceSnapshotFromLogs($logs),
-            'invoice_versions'    => $invoiceVersions,
-            'invoice_version_map' => $versionMap,
-            'status_labels'       => OrderStatus::STATUSES,
-            'payment_methods'     => $this->availablePaymentMethods(),
-            'country_codes'       => $refData['country_codes']     ?? [],
-            'shipping_carriers'   => $this->carrierCatalog->all(),
-            'payment_link'        => $this->session->flash('payment_link'),
-            'downloads'           => $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [],
-            'is_bank_transfer'    => $isBankTransfer,
-            'bank_details'        => $isBankTransfer && $this->bankTransferDetails !== null
+            'order'                         => $order,
+            'logs'                          => $logs,
+            'refund_id'                     => $this->extractRefundIdFromLogs($logs),
+            'invoice_snapshot'              => $this->extractInvoiceSnapshotFromLogs($logs),
+            'invoice_versions'              => $invoiceVersions,
+            'withdrawal_deadline'           => $withdrawalDeadline,
+            'withdrawal_deadline_estimated' => $order->getDeliveredAt() === null,
+            'withdrawal_days'               => $withdrawalDays,
+            'invoice_version_map'           => $versionMap,
+            'status_labels'                 => OrderStatus::STATUSES,
+            'payment_methods'               => $this->availablePaymentMethods(),
+            'country_codes'                 => $refData['country_codes']     ?? [],
+            'shipping_carriers'             => $this->carrierCatalog->all(),
+            'payment_link'                  => $this->session->flash('payment_link'),
+            'downloads'                     => $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [],
+            'is_bank_transfer'              => $isBankTransfer,
+            'bank_details'                  => $isBankTransfer && $this->bankTransferDetails !== null
                 ? $this->bankTransferDetails->forOrder($order)
                 : null,
         ]);
@@ -1229,6 +1238,66 @@ final class OrderController
         return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
     }
 
+    /** POST /admin/orders/{id}/delivered — starts the withdrawal period. */
+    public function updateDeliveredAt(Request $request, Response $response, array $args): Response
+    {
+        $order = $this->orders->findById((int) $args['id']);
+        if ($order === null) {
+            return $response->withStatus(404);
+        }
+
+        $body  = (array) $request->getParsedBody();
+        $value = trim((string) ($body['delivered_at'] ?? ''));
+
+        if ($value !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
+            $this->session->flash('error', $this->translator->get('Enter a valid delivery date.'));
+            return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
+        }
+
+        $order->setDeliveredAt($value !== '' ? new \DateTimeImmutable($value . ' 12:00:00') : null);
+        $this->orders->save($order);
+        $this->orderLogs->add(
+            (int) $order->getId(),
+            'delivery_date',
+            $value !== ''
+                ? $this->translator->get('Delivery recorded on :date — the withdrawal period starts here.', [':date' => $value])
+                : $this->translator->get('Delivery date cleared.'),
+            'system',
+            (int) ($this->session->get('user_id') ?? 0),
+            (string) ($this->session->get('user_name') ?? 'Admin'),
+        );
+        $this->session->flash('success', $value !== '' ? $this->translator->get('Delivery date saved.') : $this->translator->get('Delivery date cleared.'));
+
+        return $response->withHeader('Location', admin_url('/orders/' . $args['id']))->withStatus(302);
+    }
+
+    /**
+     * Invoices issued before the legal fields existed carry no delivery date,
+     * tax number or rate split; fill those from the order and the settings so
+     * older invoices still render a complete document.
+     *
+     * @param array<string, mixed> $snapshot
+     * @return array<string, mixed>
+     */
+    private function enrichInvoiceSnapshot(array $snapshot, Order $order): array
+    {
+        $snapshot['order_number'] ??= $order->getOrderNumber();
+
+        if (!isset($snapshot['delivery_date']) || (string) $snapshot['delivery_date'] === '') {
+            $delivered                           = $order->getDeliveredAt();
+            $snapshot['delivery_date']           = ($delivered ?? $order->getPaidAt() ?? $order->getCreatedAt())?->format('Y-m-d');
+            $snapshot['delivery_date_estimated'] = $delivered === null;
+        }
+
+        $snapshot['shop']['tax_number'] ??= (string) ($this->settings->get('shop_tax_number', '') ?? '');
+
+        if (!isset($snapshot['vat_breakdown']) || !is_array($snapshot['vat_breakdown'])) {
+            $snapshot['vat_breakdown'] = (new InvoiceVatBreakdown())->build($order, (float) ($snapshot['tax_rate'] ?? 0));
+        }
+
+        return $snapshot;
+    }
+
     /**
      * Builds policy page URLs from settings (returns/privacy/terms).
      */
@@ -1397,7 +1466,7 @@ final class OrderController
 
         $query      = $request->getQueryParams();
         $resolved   = $this->resolveInvoiceVersion($versions, (int) ($query['log'] ?? 0));
-        $snapshot   = $resolved['snapshot'];
+        $snapshot   = $this->enrichInvoiceSnapshot($resolved['snapshot'], $order);
         $latest     = end($versions);
         $isLatest   = $resolved['log_id'] === $latest['log_id'];
 
@@ -1429,7 +1498,7 @@ final class OrderController
 
         $query    = $request->getQueryParams();
         $resolved = $this->resolveInvoiceVersion($versions, (int) ($query['log'] ?? 0));
-        $snapshot = $resolved['snapshot'];
+        $snapshot = $this->enrichInvoiceSnapshot($resolved['snapshot'], $order);
         $latest   = end($versions);
         $isLatest = $resolved['log_id'] === $latest['log_id'];
 
@@ -1479,7 +1548,10 @@ final class OrderController
 
         $body     = (array) $request->getParsedBody();
         $query    = $request->getQueryParams();
-        $snapshot = $this->resolveInvoiceVersion($versions, (int) ($body['log'] ?? $query['log'] ?? 0))['snapshot'];
+        $snapshot = $this->enrichInvoiceSnapshot(
+            $this->resolveInvoiceVersion($versions, (int) ($body['log'] ?? $query['log'] ?? 0))['snapshot'],
+            $order,
+        );
 
         $email = (string) ($snapshot['billing']['email'] ?? '');
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -1739,11 +1811,14 @@ final class OrderController
         $taxZeroReason  = $taxPolicy['zero_reason'];
 
         return [
-            'invoice_number'   => 'INV-' . $order->getOrderNumber(),
-            'issued_at'        => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
-            'currency'         => $order->getCurrency(),
-            'age_confirmed_at' => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
-            'shop'             => [
+            'invoice_number'          => 'INV-' . $order->getOrderNumber(),
+            'issued_at'               => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'order_number'            => $order->getOrderNumber(),
+            'delivery_date'           => ($order->getDeliveredAt() ?? $order->getPaidAt() ?? $order->getCreatedAt())?->format('Y-m-d'),
+            'delivery_date_estimated' => $order->getDeliveredAt() === null,
+            'currency'                => $order->getCurrency(),
+            'age_confirmed_at'        => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
+            'shop'                    => [
                 'company_name' => (string) ($this->settings->get('shop_company_name', '') ?? ''),
                 'address_1'    => (string) ($this->settings->get('shop_address_1', '') ?? ''),
                 'address_2'    => (string) ($this->settings->get('shop_address_2', '') ?? ''),
@@ -1754,7 +1829,9 @@ final class OrderController
                 'phone'        => (string) ($this->settings->get('shop_phone', '') ?? ''),
                 'email'        => (string) ($this->settings->get('shop_email', '') ?? ''),
                 'vat_number'   => (string) ($this->settings->get('shop_vat_number', '') ?? ''),
+                'tax_number'   => (string) ($this->settings->get('shop_tax_number', '') ?? ''),
             ],
+            'vat_breakdown'   => (new InvoiceVatBreakdown())->build($order, $taxRate),
             'billing'         => $order->getBilling(),
             'reverse_charge'  => ((string) ($order->getBilling()['reverse_charge'] ?? '') === '1'),
             'vat_exempted'    => (float) ($order->getBilling()['vat_exempted'] ?? 0),
