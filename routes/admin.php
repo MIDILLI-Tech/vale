@@ -40,6 +40,7 @@ use ValeApp\App\Controllers\Admin\ThemeController;
 use ValeApp\App\Controllers\Admin\UpdateController;
 use ValeApp\App\Controllers\Admin\UserController;
 use ValeApp\App\Controllers\Admin\WebhookAdminController;
+use ValeApp\App\Controllers\Admin\WithdrawalController;
 use ValeApp\App\Controllers\Api\FeedController;
 use ValeApp\App\Controllers\CronController;
 use ValeApp\App\Middleware\AdminCacheBustMiddleware;
@@ -343,6 +344,8 @@ return function (App $app): void {
             $g->get('/orders/reports/pdf', [OrderController::class, 'reportsPdf'])
                 ->setName('admin.orders.reports.pdf');
             $g->get('/orders/{id:[0-9]+}', [OrderController::class, 'show'])->setName('admin.orders.show');
+            $g->get('/withdrawals', [WithdrawalController::class, 'index'])->setName('admin.withdrawals');
+            $g->get('/withdrawals/{id:[0-9]+}', [WithdrawalController::class, 'show'])->setName('admin.withdrawals.show');
             $g->get('/orders/{id}/invoice', [OrderController::class, 'viewInvoice']);
             $g->get('/orders/{id}/invoice/pdf', [OrderController::class, 'downloadPdf']);
         })->add(new PermissionMiddleware($session, ['orders.list']));
@@ -363,6 +366,7 @@ return function (App $app): void {
             $g->post('/orders/{id}/invoice/send', [OrderController::class, 'sendInvoiceToCustomer']);
             $g->post('/orders/{id}/refund/approve', [OrderController::class, 'approveRefundRequest']);
             $g->post('/orders/{id}/refund/reject', [OrderController::class, 'rejectRefundRequest']);
+            $g->post('/withdrawals/{id:[0-9]+}/status', [WithdrawalController::class, 'updateStatus'])->setName('admin.withdrawals.status');
             $g->post('/orders/{id}/tracking', [OrderController::class, 'updateTracking']);
             $g->post('/orders/{id}/logs/{logId}/delete', [OrderController::class, 'deleteLog']);
             $g->post('/orders/{id}/downloads/{dlId}/revoke', [OrderController::class, 'revokeDownload']);

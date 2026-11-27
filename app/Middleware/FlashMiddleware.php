@@ -395,7 +395,7 @@ final class FlashMiddleware implements MiddlewareInterface
         $this->setGlobal('_VL_COUPONS', $couponsData);
         $this->setGlobal('_VL_COUPONS_TRUNCATED', $couponsTruncated);
 
-        $shopOnlyChildren = ['products', 'product_categories'];
+        $shopOnlyChildren = ['products', 'product_categories', 'withdrawals'];
         $subsOnlyChildren = ['subscriptions'];
 
         if (!$shopEnabled && !$subscriptionsEnabled) {

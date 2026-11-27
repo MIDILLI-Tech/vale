@@ -1,0 +1,48 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('New withdrawal request') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('New withdrawal request') }}</h2>
+<p>{{ __('A customer submitted an online withdrawal declaration.') }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Reference') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">{{ withdrawal.reference }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ withdrawal.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Customer') }}</td>
+    <td style="padding:8px 0;">{{ withdrawal.customerName ?: '—' }}<br><span style="color:{{ email_text_muted }}; font-size:13px;">{{ withdrawal.customerEmail }}</span></td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Submitted') }}</td>
+    <td style="padding:8px 0;">{{ withdrawal.createdAt ? withdrawal.createdAt|date('d M Y, H:i') : '—' }}</td>
+  </tr>
+</table>
+
+{% if withdrawal.items is not empty %}
+<p style="font-weight:600; margin:16px 0 6px;">{{ __('Items') }}</p>
+<ul style="margin:0 0 16px 18px; padding:0; font-size:14px; color:{{ email_text }};">
+  {% for item in withdrawal.items %}
+  <li>{{ item.quantity }} × {{ item.product_name }}{% if item.variation %} ({{ item.variation }}){% endif %}</li>
+  {% endfor %}
+</ul>
+{% elseif withdrawal.itemsNote %}
+<p style="font-size:14px;"><strong>{{ __('Items:') }}</strong> {{ withdrawal.itemsNote }}</p>
+{% endif %}
+
+{% if withdrawal.reason %}
+<p style="margin-top:14px; padding:10px 12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text }};">
+  <strong>{{ __('Reason:') }}</strong> {{ withdrawal.reason }}
+</p>
+{% endif %}
+
+<p style="margin-top:16px;">
+  <a href="{{ admin_url }}" class="btn" style="display:inline-block; margin:0; padding:10px 16px; background-color:{{ email_primary }}; color:{{ email_primary_text }} !important; border-radius:6px; text-decoration:none; font-weight:600; font-size:14px;">{{ __('Open in admin') }}</a>
+</p>
+{% endblock %}

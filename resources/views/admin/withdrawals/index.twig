@@ -1,0 +1,109 @@
+{% extends "admin/layout.twig" %}
+
+{% block title %}{{ __('Withdrawals') }}{% endblock %}
+
+{% block content %}
+{% set status_labels = {
+    pending:   __('Pending'),
+    accepted:  __('Accepted'),
+    rejected:  __('Rejected'),
+    completed: __('Completed')
+} %}
+{% set status_colors = {
+    pending:   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    accepted:  'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    rejected:  'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    completed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+} %}
+
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Withdrawals') }}</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Online withdrawal declarations submitted by customers.') }}</p>
+    </div>
+    <a href="{{ url('/admin/settings?tab=ecommerce&subtab=legal') }}" class="text-sm text-gray-600 dark:text-gray-300 underline">{{ __('Legal & Compliance settings') }}</a>
+</div>
+
+<div class="mb-5 flex flex-wrap gap-2">
+    <a href="{{ url('/admin/withdrawals') }}"
+       class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 {{ filters.status == '' ? 'bg-gray-900 text-white ring-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:ring-gray-100' : 'bg-white text-gray-700 ring-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-700' }}">
+        {{ __('All') }} ({{ counts|reduce((carry, v) => carry + v, 0) }})
+    </a>
+    {% for key, label in status_labels %}
+    <a href="{{ url('/admin/withdrawals') }}?status={{ key }}"
+       class="rounded-full px-3 py-1.5 text-xs font-medium ring-1 {{ filters.status == key ? 'bg-gray-900 text-white ring-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:ring-gray-100' : 'bg-white text-gray-700 ring-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-700' }}">
+        {{ label }} ({{ counts[key]|default(0) }})
+    </a>
+    {% endfor %}
+</div>
+
+<form method="get" action="{{ url('/admin/withdrawals') }}" class="mb-5 flex flex-wrap items-center gap-2">
+    {% if filters.status %}<input type="hidden" name="status" value="{{ filters.status }}">{% endif %}
+    <input type="text" name="search" value="{{ filters.search }}" placeholder="{{ __('Search reference, order, name or email…') }}"
+           class="w-full max-w-sm rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+    <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white dark:bg-gray-100 dark:text-gray-900">{{ __('Search') }}</button>
+    {% if filters.search %}
+    <a href="{{ url('/admin/withdrawals') }}{{ filters.status ? '?status=' ~ filters.status : '' }}" class="text-sm text-gray-500 dark:text-gray-400 underline">{{ __('Clear') }}</a>
+    {% endif %}
+</form>
+
+<div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-800/60">
+            <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <th class="px-4 py-3">{{ __('Reference') }}</th>
+                <th class="px-4 py-3">{{ __('Submitted') }}</th>
+                <th class="px-4 py-3">{{ __('Order') }}</th>
+                <th class="px-4 py-3">{{ __('Customer') }}</th>
+                <th class="px-4 py-3">{{ __('Status') }}</th>
+                <th class="px-4 py-3 text-right">{{ __('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            {% for item in requests %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td class="px-4 py-3 font-mono text-xs text-gray-900 dark:text-gray-100">{{ item.reference }}</td>
+                <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ item.createdAt ? item.createdAt|date('Y-m-d H:i') : '—' }}</td>
+                <td class="px-4 py-3">
+                    {% if item.orderId %}
+                    <a href="{{ url('/admin/orders/' ~ item.orderId) }}" class="font-mono text-xs underline text-gray-900 dark:text-gray-100">#{{ item.orderNumber }}</a>
+                    {% else %}
+                    <span class="font-mono text-xs text-gray-700 dark:text-gray-300">#{{ item.orderNumber }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <span class="block text-gray-900 dark:text-gray-100">{{ item.customerName ?: '—' }}</span>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400">{{ item.customerEmail }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ status_colors[item.status]|default('bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300') }}">
+                        {{ status_labels[item.status]|default(item.status|capitalize) }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <a href="{{ url('/admin/withdrawals/' ~ item.id) }}" class="text-sm font-medium underline text-gray-900 dark:text-gray-100">{{ __('Open') }}</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-4 py-10 text-center text-gray-500 dark:text-gray-400">{{ __('No withdrawal requests yet.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if pagination.total_pages > 1 %}
+<div class="mt-4 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+    <span>{{ __('Page :page of :pages', {':page': pagination.page, ':pages': pagination.total_pages}) }} · {{ __(':total total', {':total': pagination.total}) }}</span>
+    <div class="flex items-center gap-2">
+        {% if pagination.page > 1 %}
+        <a class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5" href="{{ pagination.base_url }}{{ '?' in pagination.base_url ? '&' : '?' }}page={{ pagination.page - 1 }}">← {{ __('Previous') }}</a>
+        {% endif %}
+        {% if pagination.page < pagination.total_pages %}
+        <a class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5" href="{{ pagination.base_url }}{{ '?' in pagination.base_url ? '&' : '?' }}page={{ pagination.page + 1 }}">{{ __('Next') }} →</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

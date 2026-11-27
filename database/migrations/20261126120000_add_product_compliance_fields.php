@@ -45,5 +45,28 @@ final class AddProductComplianceFields extends AbstractMigration
             ->addIndex(['product_id', 'recorded_at'], ['name' => 'idx_price_history_product'])
             ->addIndex(['variation_id', 'recorded_at'], ['name' => 'idx_price_history_variation'])
             ->create();
+
+        $this->table($p . 'withdrawal_requests', ['id' => true, 'signed' => false])
+            ->addColumn('order_id', 'integer', ['signed' => false, 'null' => true, 'default' => null])
+            ->addColumn('order_number', 'string', ['limit' => 64])
+            ->addColumn('customer_name', 'string', ['limit' => 191, 'null' => true, 'default' => null])
+            ->addColumn('customer_email', 'string', ['limit' => 191])
+            ->addColumn('items', 'text', ['null' => true, 'default' => null])
+            ->addColumn('items_note', 'text', ['null' => true, 'default' => null])
+            ->addColumn('reason', 'text', ['null' => true, 'default' => null])
+            ->addColumn('status', 'string', ['limit' => 20, 'default' => 'pending'])
+            ->addColumn('reference', 'string', ['limit' => 32])
+            ->addColumn('locale', 'string', ['limit' => 10, 'default' => 'en'])
+            ->addColumn('source', 'string', ['limit' => 20, 'default' => 'online'])
+            ->addColumn('admin_note', 'text', ['null' => true, 'default' => null])
+            ->addColumn('ip_address', 'string', ['limit' => 64, 'null' => true, 'default' => null])
+            ->addColumn('processed_at', 'datetime', ['null' => true, 'default' => null])
+            ->addColumn('created_at', 'datetime', ['default' => 'CURRENT_TIMESTAMP'])
+            ->addColumn('updated_at', 'datetime', ['null' => true, 'default' => null])
+            ->addIndex(['reference'], ['unique' => true, 'name' => 'uniq_withdrawal_reference'])
+            ->addIndex(['status'], ['name' => 'idx_withdrawal_status'])
+            ->addIndex(['order_number'], ['name' => 'idx_withdrawal_order'])
+            ->addIndex(['created_at'], ['name' => 'idx_withdrawal_created'])
+            ->create();
     }
 }

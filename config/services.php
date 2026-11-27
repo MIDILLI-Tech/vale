@@ -140,6 +140,7 @@ use ValeApp\Domain\Shop\Repository\CouponRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\DownloadRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderLogRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
+use ValeApp\Domain\Shop\Repository\WithdrawalRequestRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductPriceHistoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
@@ -196,6 +197,7 @@ use ValeApp\Infrastructure\Persistence\DbalMembershipPlanRepository;
 use ValeApp\Infrastructure\Persistence\DbalMenuRepository;
 use ValeApp\Infrastructure\Persistence\DbalOrderLogRepository;
 use ValeApp\Infrastructure\Persistence\DbalOrderRepository;
+use ValeApp\Infrastructure\Persistence\DbalWithdrawalRequestRepository;
 use ValeApp\Infrastructure\Persistence\DbalPageviewRepository;
 use ValeApp\Infrastructure\Persistence\DbalPostRepository;
 use ValeApp\Infrastructure\Persistence\DbalProductCategoryRepository;
@@ -1846,6 +1848,10 @@ return [
 
     OrderLogRepositoryInterface::class => factory(function ($c) {
         return new DbalOrderLogRepository($c->get(DbalConnection::class));
+    }),
+
+    WithdrawalRequestRepositoryInterface::class => factory(function ($c) {
+        return new DbalWithdrawalRequestRepository($c->get(DbalConnection::class));
     }),
 
     DownloadRepositoryInterface::class => factory(function ($c) {

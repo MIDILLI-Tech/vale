@@ -37,6 +37,7 @@ use ValeApp\App\Controllers\Front\PwaController;
 use ValeApp\App\Controllers\Front\SeoController;
 use ValeApp\App\Controllers\Front\ShopController;
 use ValeApp\App\Controllers\Front\WebhookController;
+use ValeApp\App\Controllers\Front\WithdrawalController;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Content\RoutingValidator;
 use ValeApp\Infrastructure\Persistence\DbalSettingsRepository;
@@ -107,6 +108,12 @@ return function (App $app): void {
 
     $cartPrefix     = $c->get(DbalSettingsRepository::class)->get('routing_cart_prefix', '/cart');
     $checkoutPrefix = $c->get(DbalSettingsRepository::class)->get('routing_checkout_prefix', '/checkout');
+
+    // Online withdrawal function (EU 2023/2673). The controller 404s unless the
+    // shop and the Legal & Compliance switch are both on.
+    $app->get('/withdrawal', [WithdrawalController::class, 'show'])->setName('withdrawal');
+    $app->post('/withdrawal', [WithdrawalController::class, 'submit'])
+        ->add($c->get('rate_limit.form'));
 
     $app->group('', function (RouteCollectorProxy $group) use ($c, $shopPrefix, $cartPrefix, $checkoutPrefix) {
         $group->get($shopPrefix, [ShopController::class, 'index'])->setName('shop.index');

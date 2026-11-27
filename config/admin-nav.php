@@ -222,6 +222,14 @@ return [
                 'permission' => 'orders.list',
             ],
             [
+                'id'         => 'withdrawals',
+                'type'       => 'link',
+                'label'      => 'Withdrawals',
+                'href'       => '/admin/withdrawals',
+                'icon'       => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6',
+                'permission' => 'orders.list',
+            ],
+            [
                 'id'         => 'coupons',
                 'type'       => 'link',
                 'label'      => 'Coupons',

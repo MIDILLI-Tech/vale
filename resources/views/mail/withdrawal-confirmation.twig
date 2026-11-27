@@ -1,0 +1,46 @@
+{% extends "mail/layout.twig" %}
+
+{% block title %}{{ __('Withdrawal received') }}{% endblock %}
+
+{% block body %}
+<h2>{{ __('Withdrawal received') }}</h2>
+<p>{{ __('We received your withdrawal declaration and recorded it on :date.', {':date': withdrawal.createdAt ? withdrawal.createdAt|date('d M Y, H:i') : ''}) }}</p>
+
+<table style="width:100%; border-collapse:collapse; margin:20px 0;">
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Reference') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">{{ withdrawal.reference }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
+    <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ withdrawal.orderNumber }}</td>
+  </tr>
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Email') }}</td>
+    <td style="padding:8px 0;">{{ withdrawal.customerEmail }}</td>
+  </tr>
+</table>
+
+{% if withdrawal.items is not empty %}
+<p style="font-weight:600; margin:16px 0 6px;">{{ __('Items covered by this withdrawal') }}</p>
+<ul style="margin:0 0 16px 18px; padding:0; font-size:14px; color:{{ email_text }};">
+  {% for item in withdrawal.items %}
+  <li>{{ item.quantity }} × {{ item.product_name }}{% if item.variation %} ({{ item.variation }}){% endif %}</li>
+  {% endfor %}
+</ul>
+{% elseif withdrawal.itemsNote %}
+<p style="margin-top:14px; padding:10px 12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text }};">
+  <strong>{{ __('Items:') }}</strong> {{ withdrawal.itemsNote }}
+</p>
+{% endif %}
+
+{% if withdrawal.reason %}
+<p style="margin-top:14px; padding:10px 12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text }};">
+  <strong>{{ __('Reason:') }}</strong> {{ withdrawal.reason }}
+</p>
+{% endif %}
+
+<p style="margin-top:18px; font-size:14px;">{{ __('This email confirms that your withdrawal declaration reached us before the withdrawal period expired. Keep this confirmation as proof of the date.') }}</p>
+<p style="margin-top:14px; font-size:14px;">{{ __('We will confirm the refund and the return instructions separately. Refunds are issued with the same payment method used for the order.') }}</p>
+<p style="margin-top:20px;">{{ __('Thank you.') }}</p>
+{% endblock %}

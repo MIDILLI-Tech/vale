@@ -115,7 +115,7 @@ return [
             'privacy'        => ['setting' => 'policy_page_privacy'],
             'terms'          => ['setting' => 'policy_page_terms'],
             'returns'        => ['setting' => 'policy_page_returns'],
-            'withdrawal'     => ['available' => false],
+            'withdrawal'     => ['setting' => 'compliance_withdrawal_function'],
             'consent'        => ['setting' => 'consent_enabled', 'fallback_setting' => 'cookie_warning_enabled'],
             'us_optout'      => ['setting' => 'consent_us_optout_enabled'],
             'digital_waiver' => ['setting' => 'compliance_digital_waiver'],

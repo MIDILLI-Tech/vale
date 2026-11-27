@@ -19,7 +19,7 @@
     } %}
     {% set legal_item_notes = {
         imprint:    __('Business name, address, contact details and registration number on a dedicated page.'),
-        withdrawal: __('Vale does not provide a withdrawal page or an online withdrawal function yet.'),
+        withdrawal: __('Adds a public withdrawal page where customers can declare a withdrawal online and receive a confirmation by email.'),
         consent:    __('Consent is only recorded while the cookie consent banner is on.'),
         us_optout:  __('Adds a "Do Not Sell or Share" action and honours Global Privacy Control signals.'),
     } %}
@@ -103,6 +103,22 @@
                         <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Adds a per-product switch for digital content whose purchase waives the withdrawal right. The period comes from Cancellation & Refund Settings.') }}</span>
                     </span>
                 </label>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                <label class="flex items-start gap-3">
+                    <input type="hidden" name="compliance_withdrawal_function" value="0">
+                    <input type="checkbox" name="compliance_withdrawal_function" value="1"
+                           {{ settings.compliance_withdrawal_function|default('0') == '1' ? 'checked' }}
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Online withdrawal function') }}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Publishes a withdrawal page for customers, emails a dated confirmation and lists every declaration under Orders → Withdrawals. Required for online shops selling to consumers in the EU since 19 June 2026.') }}</span>
+                    </span>
+                </label>
+                <p class="mt-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
+                    <a href="{{ url('/withdrawal') }}" target="_blank" rel="noopener" class="underline">{{ __('Open the withdrawal page') }}</a>
+                </p>
             </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -1,0 +1,106 @@
+{% extends "layout.twig" %}
+
+{% block title %}{{ __('Withdrawal') }}{% endblock %}
+{% block meta_description %}{{ __('Declare your withdrawal from a contract online and receive a confirmation by email.') }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-10 max-w-3xl">
+
+    {% if success and withdrawal %}
+    <div class="rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 p-8 text-center">
+        <div class="text-green-600 dark:text-green-400 text-5xl mb-3">✓</div>
+        <h1 class="text-xl font-semibold text-green-800 dark:text-green-300 mb-2">{{ __('Withdrawal received') }}</h1>
+        <p class="text-green-700 dark:text-green-400">{{ __('We received your withdrawal declaration and sent a confirmation to :email.', {':email': withdrawal.customerEmail}) }}</p>
+        <p class="mt-4 text-sm text-green-800 dark:text-green-300">
+            {{ __('Reference') }}: <span class="font-mono font-semibold">{{ withdrawal.reference }}</span>
+        </p>
+        {% if withdrawal.createdAt %}
+        <p class="mt-1 text-sm text-green-800 dark:text-green-300">{{ __('Recorded on :date', {':date': withdrawal.createdAt|date('d M Y, H:i')}) }}</p>
+        {% endif %}
+        {% if withdrawal.orderNumber %}
+        <p class="mt-1 text-sm text-green-800 dark:text-green-300">{{ __('Order') }}: <span class="font-mono">#{{ withdrawal.orderNumber }}</span></p>
+        {% endif %}
+    </div>
+    <div class="mt-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 text-sm text-gray-600 dark:text-gray-400 space-y-2">
+        <p>{{ __('Keep the confirmation email as proof that your declaration reached us before the withdrawal period expired.') }}</p>
+        <p>{{ __('We will confirm the refund and any return instructions separately. Refunds are issued with the same payment method used for the order.') }}</p>
+        <a href="{{ url('withdrawal') }}" class="inline-block mt-2 font-medium text-gray-900 dark:text-gray-100 underline">{{ __('Submit another withdrawal') }}</a>
+    </div>
+    {% else %}
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{{ __('Withdrawal') }}</h1>
+    <p class="text-gray-600 dark:text-gray-400 mb-6">
+        {{ __('Use this form to withdraw from your contract within :days days of receiving the goods. You do not need to give a reason.', {':days': withdrawal_days}) }}
+        {% if return_policy_slug %}
+        <a href="{{ url('/' ~ return_policy_slug) }}" class="underline">{{ __('Read the return policy') }}</a>.
+        {% endif %}
+    </p>
+
+    {% if errors is not empty %}
+    <div class="mb-6 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4">
+        <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+            {% for error in errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url('withdrawal') }}" class="space-y-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+        {{ csrf_field() }}
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label for="withdrawal-order" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Order number') }} *</label>
+                <input id="withdrawal-order" type="text" name="order_number" required maxlength="64"
+                       value="{{ old.order_number|default('') }}"
+                       placeholder="VL-2026-0001"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+            </div>
+            <div>
+                <label for="withdrawal-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Email address') }} *</label>
+                <input id="withdrawal-email" type="email" name="email" required maxlength="191"
+                       value="{{ old.email|default('') }}"
+                       class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+            </div>
+        </div>
+
+        <div>
+            <label for="withdrawal-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Name') }}</label>
+            <input id="withdrawal-name" type="text" name="name" maxlength="191"
+                   value="{{ old.name|default('') }}"
+                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">
+        </div>
+
+        <div>
+            <label for="withdrawal-items" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Which items do you want to withdraw from?') }}</label>
+            <textarea id="withdrawal-items" name="items_note" rows="3" maxlength="2000"
+                      placeholder="{{ __('All items, or list the products and quantities') }}"
+                      class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">{{ old.items_note|default('') }}</textarea>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Leave empty to withdraw from the whole order.') }}</p>
+        </div>
+
+        <div>
+            <label for="withdrawal-reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Reason (optional)') }}</label>
+            <textarea id="withdrawal-reason" name="reason" rows="2" maxlength="2000"
+                      class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-sm">{{ old.reason|default('') }}</textarea>
+        </div>
+
+        <label class="flex items-start gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <input type="checkbox" name="confirm" value="1" required
+                   class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+                {{ __('I hereby withdraw from the contract for the items named above.') }}
+                <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('This declaration becomes effective when you submit it.') }}</span>
+            </span>
+        </label>
+
+        <div class="flex items-center justify-between gap-3 pt-2">
+            <a href="{{ url('/') }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">{{ __('Cancel') }}</a>
+            <button type="submit" class="btn-primary rounded-lg px-5 py-2.5 text-sm font-medium text-white">
+                {{ __('Submit withdrawal') }}
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
