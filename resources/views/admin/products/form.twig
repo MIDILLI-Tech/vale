@@ -133,7 +133,7 @@
                         <div class="flex flex-wrap items-center gap-2 mb-2">
                             <span class="text-xs font-semibold uppercase dark:text-gray-100" x-text="ccode"></span>
                             <select x-model="rules[ccode].mode" @change="updateJson"
-                                    class="flex-1 sm:flex-none sm:w-36 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                    class="flex-1 sm:flex-none sm:w-auto rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
                                 <option value="use_global">{{ __('Use global') }}</option>
                                 <option value="custom">{{ __('Custom rate') }}</option>
                                 <option value="none">{{ __('No VAT') }}</option>
@@ -161,7 +161,7 @@
                                 <option x-bind:value="c" x-text="countryOptionLabel(c)"></option>
                             </template>
                         </select>
-                        <select x-model="newMode" class="flex-1 sm:flex-none sm:w-40 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
+                        <select x-model="newMode" class="flex-1 sm:flex-none sm:w-auto rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
                             <option value="use_global">{{ __('Use global') }}</option>
                             <option value="custom">{{ __('Custom rate') }}</option>
                             <option value="none">{{ __('No VAT') }}</option>
@@ -1064,11 +1064,11 @@
                                         <div class="flex items-center gap-1">
                                             <input type="number" min="1" max="365"
                                                    :name="'variations[' + idx + '][shipping_time_min]'" x-model="item.shipping_time_min"
-                                                   placeholder="{{ __('Min') }}" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                                   placeholder="{{ __('Min') }}" class="w-[5.5rem] rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
                                             <span class="text-xs text-gray-400">-</span>
                                             <input type="number" min="1" max="365"
                                                    :name="'variations[' + idx + '][shipping_time_max]'" x-model="item.shipping_time_max"
-                                                   placeholder="{{ __('Max') }}" class="w-16 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
+                                                   placeholder="{{ __('Max') }}" class="w-[5.5rem] rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1">
                                         </div>
                                     </template>
                                     <template x-if="item.time_mode !== 'custom'">
@@ -1089,7 +1089,7 @@
                                     <template x-for="(rule, ccode) in parseVarOverrides(item.shipping_country_overrides)" :key="ccode">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="text-xs font-semibold uppercase dark:text-gray-100" x-text="ccode"></span>
-                                            <select class="flex-1 sm:flex-none sm:w-36 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200"
+                                            <select class="flex-1 sm:flex-none sm:w-auto rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200"
                                                     :value="rule.class || 'use_global'"
                                                     @change="updateVarOverride(item, ccode, $event.target.value)">
                                                 <option value="use_global">{{ __('Use global') }}</option>
@@ -1128,7 +1128,7 @@
                                                 <option :value="c" x-text="countryOptionLabel(c)"></option>
                                             </template>
                                         </select>
-                                        <select @change="item.ncls = $event.target.value" class="flex-1 sm:flex-none sm:w-36 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                        <select @change="item.ncls = $event.target.value" class="flex-1 sm:flex-none sm:w-auto rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
                                             <option value="use_global">{{ __('Use global') }}</option>
                                             <option value="free">{{ __('Free') }}</option>
                                             <option value="custom">{{ __('Custom') }}</option>
@@ -1456,11 +1456,11 @@
                                 <div class="flex items-center gap-1">
                                     <input type="number" min="1" max="365" name="shipping_time_min"
                                            value="{{ product.shippingTimeMin|default('') }}"
-                                           placeholder="{{ __('Min') }}" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           placeholder="{{ __('Min') }}" class="w-[5.5rem] rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                     <span class="text-xs text-gray-400">-</span>
                                     <input type="number" min="1" max="365" name="shipping_time_max"
                                            value="{{ product.shippingTimeMax|default('') }}"
-                                           placeholder="{{ __('Max') }}" class="w-20 rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                                           placeholder="{{ __('Max') }}" class="w-[5.5rem] rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
                                 </div>
                             </template>
                             <template x-if="timeMode !== 'custom'">
@@ -1534,7 +1534,7 @@
                             <div class="flex flex-wrap items-center gap-2 mb-2" x-data>
                                 <span class="text-xs font-semibold uppercase dark:text-gray-100" x-text="ccode"></span>
                                 <select x-model="rules[ccode].class" @change="updateJson"
-                                        class="flex-1 sm:flex-none sm:w-36 rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
+                                        class="flex-1 sm:flex-none sm:w-auto rounded-sm border-gray-300 dark:border-gray-700 text-xs px-2 py-1 dark:bg-gray-800 dark:text-gray-200">
                                     <option value="use_global">{{ __('Use global') }}</option>
                                     <option value="free">{{ __('Free') }}</option>
                                     <option value="custom">{{ __('Custom') }}</option>
