@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'vat_validation' => [
+        // European Commission VIES REST endpoint. %s = country code, %s = VAT number.
+        'vies_endpoint' => 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/%s/vat/%s',
+    ],
     'requirements' => [
         'min_php'             => '8.3.0',
         'min_mysql'           => '8.4.0',

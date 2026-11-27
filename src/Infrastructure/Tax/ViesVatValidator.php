@@ -19,11 +19,12 @@ use ValeApp\Infrastructure\Http\SafeRemoteFetcher;
  */
 final class ViesVatValidator implements VatNumberValidatorInterface
 {
-    private const ENDPOINT = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/%s/vat/%s';
+    public const DEFAULT_ENDPOINT = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/%s/vat/%s';
 
     public function __construct(
         private readonly SafeRemoteFetcher $fetcher,
         private readonly CacheInterface $cache,
+        private readonly string $endpoint = self::DEFAULT_ENDPOINT,
     ) {
     }
 
@@ -45,7 +46,7 @@ final class ViesVatValidator implements VatNumberValidatorInterface
 
         try {
             $url  = sprintf(
-                self::ENDPOINT,
+                $this->endpoint !== '' ? $this->endpoint : self::DEFAULT_ENDPOINT,
                 rawurlencode($vatNumber->country()),
                 rawurlencode($vatNumber->number()),
             );

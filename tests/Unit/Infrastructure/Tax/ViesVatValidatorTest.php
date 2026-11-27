@@ -63,6 +63,26 @@ final class ViesVatValidatorTest extends TestCase
         self::assertFalse($called);
     }
 
+    public function testConfiguredEndpointIsUsed(): void
+    {
+        $requestedUrl = null;
+        $cache        = $this->createStub(CacheInterface::class);
+        $cache->method('get')->willReturn(null);
+        $cache->method('set')->willReturn(true);
+
+        $validator = new ViesVatValidator(
+            new SafeRemoteFetcher(static function (string $url) use (&$requestedUrl): array {
+                $requestedUrl = $url;
+                return self::streamResponse(['isValid' => true]);
+            }),
+            $cache,
+            'https://ec.europa.eu/custom-vies/%s/%s',
+        );
+
+        self::assertTrue($validator->validate($this->vat('DE123456789'))->isValid());
+        self::assertSame('https://ec.europa.eu/custom-vies/DE/123456789', $requestedUrl);
+    }
+
     public function testCachedResultSkipsTheHttpCall(): void
     {
         $called  = false;

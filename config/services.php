@@ -1513,9 +1513,12 @@ return [
     // Redirect-hardened HTTP client shared by the download proxy and the
     // remote media importer (validates PrivateNetworkGuard on every hop).
     \ValeApp\Domain\Shop\Port\VatNumberValidatorInterface::class => factory(function ($c) {
+        $referenceData = require __DIR__ . '/reference-data.php';
+
         return new \ValeApp\Infrastructure\Tax\ViesVatValidator(
             $c->get(SafeRemoteFetcher::class),
             $c->get(CacheInterface::class),
+            (string) ($referenceData['vat_validation']['vies_endpoint'] ?? \ValeApp\Infrastructure\Tax\ViesVatValidator::DEFAULT_ENDPOINT),
         );
     }),
 

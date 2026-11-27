@@ -231,7 +231,7 @@ final class CheckoutController
         // an empty shipping zone would show a misleading error.
         $savedAddressError            = '';
         $shippingDisabledWithPhysical = $hasPhysicalItems && $this->settings->get('shipping_enabled', '0') !== '1';
-        if ($userId !== null && !$shippingDisabledWithPhysical) {
+        if ($hasPhysicalItems && $userId !== null && !$shippingDisabledWithPhysical) {
             $savedCountry = '';
             if (!empty($userShippingAddress['country'])) {
                 $savedCountry = strtoupper(trim($userShippingAddress['country']));
@@ -241,12 +241,8 @@ final class CheckoutController
             if ($savedCountry !== '') {
                 $allowedCountries = $this->resolveCheckoutCountries($items, true);
                 if (!array_key_exists($savedCountry, $allowedCountries)) {
-                    if ($hasPhysicalItems) {
-                        $savedAddressError = $this->translator->get('Your saved address country is not in our shipping zone. Please update your address or choose a different country below.');
-                    } else {
-                        $savedAddressError = $this->translator->get('We do not sell to your country. Please update your address or choose a different country below.');
-                    }
-                } elseif ($this->settings->get('shipping_enabled', '0') === '1' && $hasPhysicalItems && $this->hasDoNotShipItems($items, $savedCountry)) {
+                    $savedAddressError = $this->translator->get('Your saved address country is not in our shipping zone. Please update your address or choose a different country below.');
+                } elseif ($this->settings->get('shipping_enabled', '0') === '1' && $this->hasDoNotShipItems($items, $savedCountry)) {
                     $blockedNames = [];
                     foreach ($items as $item) {
                         if (!($item['product']->isDigital())) {
@@ -276,6 +272,15 @@ final class CheckoutController
         }
         if ($savedAddressError !== '' && $hasPhysicalItems) {
             $shippingError .= ($shippingError !== '' ? ' ' : '') . $savedAddressError;
+        }
+        if (!$hasPhysicalItems && $shippingError === '') {
+            $initialBillingCountry = strtoupper(trim((string) ($userAddress['country'] ?? $defaultCountry ?? '')));
+            if ($initialBillingCountry !== '') {
+                $allowedCheckout = $this->resolveCheckoutCountries($items, false);
+                if (!array_key_exists($initialBillingCountry, $allowedCheckout)) {
+                    $shippingError = $this->translator->get('We do not sell to your country you selected.');
+                }
+            }
         }
 
         $stripeEnabled       = (bool) $this->settings->get('stripe_enabled', '0');
@@ -472,22 +477,33 @@ final class CheckoutController
             }
         }
 
-        if ($hasPhysicalItems && !$shippingEnabled) {
-            $errors['country'] = $this->translator ? $this->translator->get('Shipping is currently unavailable.') : 'Shipping is currently unavailable.';
-        } elseif ($shippingEnabled) {
-            $allowedCountries = $this->resolveCheckoutCountries($items, true);
-            $errKey           = $sameAsBilling ? 'country' : 'shipping_country';
-            $shippingAllowed  = $shippingCountry === ''
-                || array_key_exists($shippingCountry, $allowedCountries);
-            $shippable        = $shippingCountry === ''
-                || !$this->hasDoNotShipItems($items, $shippingCountry);
-            if (!$shippingAllowed) {
-                $errors[$errKey] = $this->translator->get(
+        if ($hasPhysicalItems) {
+            if (!$shippingEnabled) {
+                $errors['country'] = $this->translator ? $this->translator->get('Shipping is currently unavailable.') : 'Shipping is currently unavailable.';
+            } else {
+                $allowedCountries = $this->resolveCheckoutCountries($items, true);
+                $errKey           = $sameAsBilling ? 'country' : 'shipping_country';
+                $shippingAllowed  = $shippingCountry === ''
+                    || array_key_exists($shippingCountry, $allowedCountries);
+                $shippable        = $shippingCountry === ''
+                    || !$this->hasDoNotShipItems($items, $shippingCountry);
+                if (!$shippingAllowed) {
+                    $errors[$errKey] = $this->translator->get(
+                        'We do not sell to your country you selected.'
+                    );
+                } elseif (!$shippable) {
+                    $errors[$errKey] = $this->translator->get(
+                        'Some items cannot be shipped to selected country.'
+                    );
+                }
+            }
+        } else {
+            // Digital-only carts ignore shipping rules, but the checkout country
+            // allow/block lists still decide where digital sales are permitted.
+            $allowedCheckout = $this->resolveCheckoutCountries($items, false);
+            if ($billingCountry !== '' && !array_key_exists($billingCountry, $allowedCheckout)) {
+                $errors['country'] ??= $this->translator->get(
                     'We do not sell to your country you selected.'
-                );
-            } elseif (!$shippable) {
-                $errors[$errKey] = $this->translator->get(
-                    'Some items cannot be shipped to selected country.'
                 );
             }
         }
@@ -862,6 +878,21 @@ final class CheckoutController
         $total = max(0.0, $subtotal + $shipping - $discount);
         $order->setTotal($total);
 
+        $companyName = trim((string) ($body['company_name'] ?? ''));
+        if (
+            $isBusinessOrder
+            && $this->b2b !== null
+            && $this->b2b->companyNameMismatch($b2bValidation, $companyName)
+        ) {
+            $nameWarning = $this->translator->get(
+                'VIES returned ":name" for this VAT number. Check that the company name matches the registered business name; the VAT number is still valid.',
+                [':name' => (string) $b2bValidation?->traderName()],
+            );
+            $b2bWarning = $b2bWarning !== null && $b2bWarning !== ''
+                ? $b2bWarning . ' ' . $nameWarning
+                : $nameWarning;
+        }
+
         if ($b2bWarning !== null && $b2bWarning !== '') {
             $this->session->flash('warning', $b2bWarning);
         }
@@ -1160,6 +1191,62 @@ final class CheckoutController
         $taxPolicy     = $this->getTaxPolicy($country !== '' ? $country : null);
         $taxAmount     = $this->calculateIncludedTaxFromItems($items, $shipping, $discount, $taxPolicy, $discountLines);
         $itemTaxAmount = $this->calculateIncludedTaxFromItems($items, 0.0, 0.0, $taxPolicy);
+
+        $isBusiness     = ($this->b2b?->isEnabled() ?? false) && !empty($body['is_business']);
+        $reverseCharge  = false;
+        $b2bStatus      = 'not_applicable';
+        $b2bMessage     = '';
+        $b2bResult      = null;
+        if ($isBusiness) {
+            if (trim((string) ($body['company_name'] ?? '')) === '') {
+                $b2bStatus  = 'invalid';
+                $b2bMessage = $this->translator?->get('Company name is required for business orders.')
+                    ?? 'Company name is required for business orders.';
+            } else {
+                $b2bResult = $this->b2b->validate((string) ($body['vat_number'] ?? ''), $country !== '' ? $country : null);
+                if ($b2bResult['error'] !== null) {
+                    $b2bStatus  = 'invalid';
+                    $b2bMessage = $b2bResult['error'];
+                } elseif ($b2bResult['warning'] !== null) {
+                    $b2bStatus  = 'warning';
+                    $b2bMessage = $b2bResult['warning'];
+                } elseif ($this->b2b->reverseChargeApplies($b2bResult['validation'], $country)) {
+                    $reverseCharge = true;
+                    $b2bStatus     = 'applied';
+                    $b2bMessage    = $this->translator->get('VAT number verified. Reverse charge applied: VAT is not charged.');
+                } else {
+                    $shopCountry = strtoupper(trim((string) ($this->settings->get('shop_country', '') ?? '')));
+                    $b2bStatus   = 'domestic';
+                    $b2bMessage  = $shopCountry !== '' && $shopCountry === $country
+                        ? $this->translator->get('VAT number verified. VAT applies because the delivery country is the same as the shop country.')
+                        : $this->translator->get('VAT number verified. Reverse charge does not apply because the shop is outside the EU.');
+                }
+            }
+        }
+
+        $companyName          = trim((string) ($body['company_name'] ?? ''));
+        $registeredName       = ($b2bResult['validation'] ?? null)?->traderName();
+        $nameMismatch         = $isBusiness
+            && $this->b2b !== null
+            && $this->b2b->companyNameMismatch($b2bResult['validation'] ?? null, $companyName);
+        if ($nameMismatch) {
+            $b2bStatus   = 'warning';
+            $nameWarning = $this->translator?->get(
+                'VIES returned ":name" for this VAT number. Check that the company name matches the registered business name; the VAT number is still valid.',
+                [':name' => (string) $registeredName],
+            ) ?? 'VIES returned a different company name for this VAT number. Check that the company name matches the registered business name; the VAT number is still valid.';
+            $b2bMessage = $b2bMessage !== '' ? $b2bMessage . ' ' . $nameWarning : $nameWarning;
+        }
+
+        if ($reverseCharge) {
+            $taxBreakdown  = $this->calculateIncludedTaxBreakdown($items, $shipping, $discount, $taxPolicy, $discountLines);
+            $net           = (new ReverseChargeCalculator())->net($items, $shipping, $discount, $taxBreakdown, $discountLines);
+            $subtotal      = $net['subtotal'];
+            $shipping      = $net['shipping'];
+            $discount      = $net['discount'];
+            $taxAmount     = 0.0;
+            $itemTaxAmount = 0.0;
+        }
         // Track abandoned cart for guests who entered email
         if ($email !== '' && $this->abandonedCart !== null) {
             $this->abandonedCart->touchCart(
@@ -1188,6 +1275,11 @@ final class CheckoutController
             $shippingError = $this->translator ? $this->translator->get('Shipping is currently unavailable.') : 'Shipping is currently unavailable.';
         } elseif ($hasDoNotShip) {
             $shippingError = $this->translator ? $this->translator->get('Some items cannot be shipped to selected country.') : 'Some items cannot be shipped to selected country.';
+        } elseif (!$hasPhysicalItems && $country !== '') {
+            $allowedCheckout = $this->resolveCheckoutCountries($items, false);
+            if (!array_key_exists($country, $allowedCheckout)) {
+                $shippingError = $this->translator ? $this->translator->get('We do not sell to your country you selected.') : 'We do not sell to your country you selected.';
+            }
         }
 
         $estimateCountry     = $shippingCountry !== '' ? $shippingCountry : ($country !== '' ? $country : null);
@@ -1197,6 +1289,12 @@ final class CheckoutController
             'shipping'              => round($shipping, 2),
             'subtotal'              => round($subtotal, 2),
             'subtotal_excl_tax'     => round(max(0.0, $subtotal - $itemTaxAmount), 2),
+            'b2b'                   => [
+                'is_business' => $isBusiness,
+                'applied'     => $reverseCharge,
+                'status'      => $b2bStatus,
+                'message'     => $b2bMessage,
+            ],
             'discount'              => round($discount, 2),
             'tax'                   => round($taxAmount, 2),
             'total'                 => round(max(0.0, $subtotal + $shipping - $discount), 2),
@@ -1204,9 +1302,9 @@ final class CheckoutController
             'free_shipping'         => $freeShipping,
             'shipping_error'        => $shippingError,
             'has_do_not_ship_items' => $hasDoNotShip || ($hasPhysicalItems && !$shippingEnabled),
-            'tax_display_rate'      => $this->resolveCheckoutDisplayVatRate($items, $taxPolicy, $shipping),
-            'tax_mixed'             => $this->hasMixedItemVatRates($items, $taxPolicy, $shipping),
-            'regime'                => $taxPolicy['regime'] ?? 'normal_vat',
+            'tax_display_rate'      => $reverseCharge ? 0.0 : $this->resolveCheckoutDisplayVatRate($items, $taxPolicy, $shipping),
+            'tax_mixed'             => $reverseCharge ? false : $this->hasMixedItemVatRates($items, $taxPolicy, $shipping),
+            'regime'                => $reverseCharge ? 'reverse_charge' : ($taxPolicy['regime'] ?? 'normal_vat'),
             'shipping_estimate'     => $shippingEstimateRow,
         ];
 

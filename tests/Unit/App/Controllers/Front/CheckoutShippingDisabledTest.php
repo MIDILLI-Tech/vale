@@ -168,6 +168,86 @@ final class CheckoutShippingDisabledTest extends TestCase
         $controller->quote($request, $response);
     }
 
+    public function testQuoteRejectsDigitalCartWhenCheckoutCountryIsNotAllowed(): void
+    {
+        $settings = $this->createStub(DbalSettingsRepository::class);
+        $settings->method('get')->willReturnCallback(
+            static function (string $key, ?string $default = null): ?string {
+                if ($key === 'shipping_enabled') {
+                    return '1';
+                }
+                if ($key === 'shop_country') {
+                    return 'BE';
+                }
+                return $default;
+            }
+        );
+
+        $session = $this->createStub(SessionManager::class);
+        $session->method('get')->willReturnCallback(
+            static fn (string $key, mixed $default = null) => $key === 'cart' ? ['1' => 1] : $default
+        );
+
+        $digitalProduct = $this->createStub(Product::class);
+        $digitalProduct->method('getId')->willReturn(22);
+        $digitalProduct->method('getName')->willReturn('Digital Item');
+        $digitalProduct->method('isDigital')->willReturn(true);
+        $digitalProduct->method('getEffectivePrice')->willReturn(59.0);
+        $digitalProduct->method('getWeight')->willReturn(0.0);
+        $digitalProduct->method('getShippingClass')->willReturn('digital');
+
+        $productsRepo = $this->createStub(ProductRepositoryInterface::class);
+        $productsRepo->method('findById')->willReturn($digitalProduct);
+
+        $translator = $this->createStub(Translator::class);
+        $translator->method('get')->willReturnCallback(static fn (string $key, array $params = []) => $key);
+
+        $reflection = new \ReflectionClass(CheckoutController::class);
+        $controller = $reflection->newInstanceWithoutConstructor();
+
+        foreach ([
+            'settings'         => $settings,
+            'session'          => $session,
+            'products'         => $productsRepo,
+            'translator'       => $translator,
+            'countryTaxRates'  => $this->createStub(CountryTaxRateRepositoryInterface::class),
+            'exchangeRates'    => null,
+            'cachedFxRate'     => null,
+            'deliveryEstimate' => null,
+            'couponValidator'  => null,
+            'abandonedCart'    => null,
+            'b2b'              => null,
+        ] as $property => $value) {
+            $prop = $reflection->getProperty($property);
+            $prop->setValue($controller, $value);
+        }
+
+        $responseStream = $this->createMock(StreamInterface::class);
+        $responseStream->expects($this->once())
+            ->method('write')
+            ->with($this->callback(function (string $json): bool {
+                $data = json_decode($json, true);
+                return is_array($data)
+                    && ($data['shipping_error'] ?? null) === 'We do not sell to your country you selected.';
+            }));
+
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($responseStream);
+        $response->method('withHeader')->willReturnSelf();
+        $response->method('withStatus')->willReturnSelf();
+
+        $reqBodyStream = $this->createStub(StreamInterface::class);
+        $reqBodyStream->method('__toString')->willReturn(json_encode([
+            'country'          => 'DE',
+            'shipping_country' => 'DE',
+        ]));
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getBody')->willReturn($reqBodyStream);
+
+        $controller->quote($request, $response);
+    }
+
     public function testProcessValidatesShippingCountryWhenSameAsBillingIsFalse(): void
     {
         $settings = $this->createStub(DbalSettingsRepository::class);

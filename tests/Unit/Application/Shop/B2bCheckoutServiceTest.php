@@ -107,6 +107,40 @@ final class B2bCheckoutServiceTest extends TestCase
         self::assertTrue($this->makeService('both', 'DE')->isEnabled());
     }
 
+    public function testCompanyNameMismatchIsFlaggedWhenViesReturnsAName(): void
+    {
+        $service = $this->makeService('both', 'DE');
+
+        self::assertTrue($service->companyNameMismatch(VatValidation::valid('ACME GmbH'), 'Globex Corporation'));
+    }
+
+    public function testCompanyNameComparisonIgnoresCaseAndLegalSuffixes(): void
+    {
+        $service = $this->makeService('both', 'DE');
+
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid('ACME GmbH'), 'Acme'));
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid('Acme S.A.'), 'ACME SA'));
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid('Acme Trading Ltd'), 'Acme Trading'));
+    }
+
+    public function testMaskedViesNameIsNotCompared(): void
+    {
+        $service = $this->makeService('both', 'DE');
+
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid('---'), 'Anything'));
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid('N/A'), 'Anything'));
+        self::assertFalse($service->companyNameMismatch(VatValidation::valid(), 'Anything'));
+    }
+
+    public function testNameMismatchDoesNotDisableReverseCharge(): void
+    {
+        $service    = $this->makeService('both', 'DE');
+        $validation = VatValidation::valid('ACME GmbH');
+
+        self::assertTrue($service->companyNameMismatch($validation, 'Globex Corporation'));
+        self::assertTrue($service->reverseChargeApplies($validation, 'FR'));
+    }
+
     /**
      * @param array<string, string> $overrides
      */

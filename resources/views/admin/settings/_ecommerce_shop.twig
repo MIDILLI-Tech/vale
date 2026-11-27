@@ -20,18 +20,6 @@
                     </select>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('B2C is the default. Choosing B2B or Both adds the company and VAT number fields to the checkout.') }}</p>
                 </div>
-                <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                    <label class="flex items-start gap-3">
-                        <input type="hidden" name="b2b_vat_validation" value="0">
-                        <input type="checkbox" name="b2b_vat_validation" value="1"
-                               {{ settings.b2b_vat_validation|default('1') == '1' ? 'checked' }}
-                               class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
-                        <span>
-                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Validate EU VAT numbers with VIES') }}</span>
-                            <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('A valid VAT number from another EU country removes VAT from the order (reverse charge). When VIES cannot be reached, VAT is charged.') }}</span>
-                        </span>
-                    </label>
-                </div>
             </div>
 
             {# Line 1: Company Name | VAT Number | Shop Email | Shop Phone #}
@@ -137,6 +125,18 @@
                 <div class="md:col-span-2" id="tax-zero-reason-field" {{ vl.attrs('ecommerce', __('Zero Tax Reason (for invoices/checkout)'), 'tax_zero_reason_default', 'shop', __('Shop'), 'zero tax exempt reason') }}>
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ __('Zero Tax Reason (for invoices/checkout)') }}</label>
                     <input type="text" name="tax_zero_reason_default" value="{{ settings.tax_zero_reason_default|default('') }}" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm" placeholder="{{ __('Required legal reason when VAT is 0%') }}">
+                </div>
+                <div class="md:col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <label class="flex items-start gap-3">
+                        <input type="hidden" name="b2b_vat_validation" value="0">
+                        <input type="checkbox" name="b2b_vat_validation" value="1"
+                               {{ settings.b2b_vat_validation|default('1') == '1' ? 'checked' }}
+                               class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                        <span>
+                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Validate EU VAT numbers with VIES') }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('A valid VAT number from another EU country removes VAT from the order (reverse charge). When VIES cannot be reached, VAT is charged.') }}</span>
+                        </span>
+                    </label>
                 </div>
             </div>
         </div>

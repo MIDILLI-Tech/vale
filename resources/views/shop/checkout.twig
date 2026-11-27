@@ -5,8 +5,8 @@
 
 {% block content %}
 {% set defaultAddress = user_address is defined and user_address is not empty ? user_address : {} %}
-<div class="mx-auto max-w-5xl px-4 py-10">
-    <h1 class="mb-8 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ __('Checkout') }}</h1>
+<div class="mx-auto max-w-5xl px-4 pt-3 pb-10">
+    <h1 class="mb-6 text-3xl font-bold text-gray-900 dark:text-gray-100">{{ __('Checkout') }}</h1>
 
     <form method="post" action="{{ url('checkout') }}" id="checkout-form" @submit="syncCouponCode(); submitting = true"
                x-data="checkoutForm('{{ active_gateway }}', {{ subtotal }}, {{ shipping|default(0) }}, {{ tax_display_rate|default(tax_policy.rate|default(0)) }}, '{{ tax_policy.regime|default('normal_vat')|e('js') }}', {{ tax_mixed|default(false) ? 'true' : 'false' }}, {{ has_physical_items|default(false) ? 'true' : 'false' }}, '{{ shipping_countries_list|json_encode|e('js') }}', {{ shipping_enabled|default(false) ? 'true' : 'false' }})">
@@ -63,7 +63,7 @@
                         {% if b2b_enabled|default(false) %}
                         <div class="col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 p-4" x-data="{ business: {{ old.is_business|default(0) ? 'true' : 'false' }} }">
                             <label class="flex items-start gap-3">
-                                <input type="checkbox" name="is_business" value="1" x-model="business"
+                                <input type="checkbox" name="is_business" value="1" x-model="business" @change="if (!business) refreshQuote()"
                                        class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
                                 <span>
                                     <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('I am buying as a business') }}</span>
@@ -83,6 +83,16 @@
                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm uppercase">
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Include the country code. EU numbers are checked against VIES.') }}</p>
                                     {% if errors.vat_number|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.vat_number }}</p>{% endif %}
+                                </div>
+                                <div class="col-span-full flex flex-wrap items-center gap-3">
+                                    <button type="button" @click="checkBusinessVat()" :disabled="b2bChecking"
+                                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <span x-show="!b2bChecking">{{ __('Check VAT & recalculate') }}</span>
+                                        <span x-show="b2bChecking" x-cloak>{{ __('Checking…') }}</span>
+                                    </button>
+                                    <p x-show="b2bMessage" x-cloak x-text="b2bMessage"
+                                       :class="b2bStatus === 'invalid' ? 'text-red-600 dark:text-red-400' : (b2bStatus === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-green-700 dark:text-green-400')"
+                                       class="text-xs"></p>
                                 </div>
                             </div>
                         </div>
@@ -546,6 +556,9 @@
                         {% if tax_policy.regime|default('normal_vat') != 'normal_vat' and tax_policy.zero_reason|default('') != '' %}
                         <div class="text-xs text-gray-500 dark:text-gray-400">{{ tax_policy.zero_reason }}</div>
                         {% endif %}
+                        <div x-show="taxRegime === 'reverse_charge'" x-cloak class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ __('VAT is not charged (reverse charge).') }}
+                        </div>
                     </div>
 
                     {# Coupon code input #}
@@ -638,7 +651,7 @@
                     {% endif %}
 
                     {% if policy_links.withdrawal is defined %}
-                    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-3 pl-6 text-xs text-gray-500 dark:text-gray-400">
                         {{ __('Right of withdrawal:') }}
                         <a href="{{ policy_links.withdrawal }}" target="_blank" class="underline hover:text-gray-700 dark:hover:text-gray-100 dark:text-gray-300">{{ __('Withdrawal policy') }}</a>
                     </p>
@@ -732,6 +745,9 @@
         taxRate:        parseFloat(taxRate) || 0,
         taxRegime:      (taxRegime || 'normal_vat'),
         taxMixed:       !!taxMixed,
+        b2bChecking:    false,
+        b2bStatus:      '',
+        b2bMessage:     '',
         taxAmount:      parseFloat('{{ tax_amount|default(0) }}') || 0,
         _baseTaxAmount: parseFloat('{{ tax_amount|default(0) }}') || 0,
         _csrfToken:     '{{ csrf_token() }}',
@@ -787,6 +803,9 @@
                     shipping_country: this.effectiveShippingCountry(),
                     coupon_code: this.appliedCode,
                     email: this.getBillingEmail(),
+                    is_business: document.querySelector('[name="is_business"]')?.checked ? 1 : 0,
+                    company_name: document.querySelector('[name="company_name"]')?.value ?? '',
+                    vat_number: document.querySelector('[name="vat_number"]')?.value ?? '',
                 }),
             });
 
@@ -794,25 +813,45 @@
             if (seq !== this._quoteSeq) {
                 return; // a newer quote request superseded this one
             }
-            this._subtotal = parseFloat(data.subtotal ?? this._subtotal) || 0;
-            this.subtotalExclTax = parseFloat(data.subtotal_excl_tax ?? this.subtotalExclTax) || 0;
-            this.shippingAmount = parseFloat(data.shipping ?? this.shippingAmount) || 0;
-            this.taxAmount = parseFloat(data.tax ?? this.taxAmount) || 0;
-            this.couponDiscount = parseFloat(data.discount ?? this.couponDiscount) || 0;
+            const num = (value, fallback) => {
+                const parsed = parseFloat(value);
+                return Number.isFinite(parsed) ? parsed : fallback;
+            };
+            this._subtotal = num(data.subtotal, this._subtotal);
+            this.subtotalExclTax = num(data.subtotal_excl_tax, this.subtotalExclTax);
+            this.shippingAmount = num(data.shipping, this.shippingAmount);
+            this.taxAmount = num(data.tax, this.taxAmount);
+            this.couponDiscount = num(data.discount, this.couponDiscount);
             this.freeShipping   = data.free_shipping ?? false;
             this._baseTotal = Math.max(0, this._subtotal + this.shippingAmount);
             this.shippingError = data.shipping_error || '';
-            this.taxRate = parseFloat(data.tax_display_rate ?? this.taxRate) || 0;
+            this.taxRate = num(data.tax_display_rate, this.taxRate);
             this.taxMixed = !!data.tax_mixed;
             this.taxRegime = data.regime || 'normal_vat';
+            if (data.b2b) {
+                this.b2bStatus  = data.b2b.status || '';
+                this.b2bMessage = data.b2b.message || '';
+            }
             if (data.shipping_estimate) {
                 this.shippingEstimate = data.shipping_estimate;
             }
         },
 
+        async checkBusinessVat() {
+            this.b2bChecking = true;
+            this.b2bMessage  = '';
+            this.b2bStatus   = '';
+            try {
+                await this.refreshQuote();
+            } finally {
+                this.b2bChecking = false;
+            }
+        },
+
         validateShippingCountry() {
             if (!this.hasPhysicalItems) {
-                this.shippingError = '';
+                // Digital-only checkout country errors come from the quote
+                // response; do not clear them here.
                 return;
             }
             if (!this.shippingEnabled) {
