@@ -102,13 +102,13 @@
                     <div><dt class="inline font-medium">v{{ theme.version }}</dt></div>
                     {% endif %}
                     {% if theme.author is defined %}
-                    <div><dt class="inline">By {{ theme.author }}</dt></div>
+                    <div><dt class="inline">{{ __('By :author', {':author': theme.author}) }}</dt></div>
                     {% endif %}
                     {% if theme.license is defined %}
-                    <div><dt class="inline">License: {{ theme.license }}</dt></div>
+                    <div><dt class="inline">{{ __('License') }}: {{ theme.license }}</dt></div>
                     {% endif %}
                     {% if theme.parent is defined %}
-                    <div><dt class="inline">Parent: <span class="text-gray-700 dark:text-gray-400">{{ theme.parent }}</span></dt></div>
+                    <div><dt class="inline">{{ __('Parent Theme') }}: <span class="text-gray-700 dark:text-gray-400">{{ theme.parent }}</span></dt></div>
                     {% endif %}
                 </dl>
             </div>
