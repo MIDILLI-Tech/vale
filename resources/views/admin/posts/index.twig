@@ -18,7 +18,7 @@
     </div>
     <a href="{{ url('/admin/posts/create?content_type=' ~ (type.slug.value|default('post'))) }}"
        class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-        {{ __('Create :type', {':type': type ? type.name : __('Post')}) }}
+        {{ __('Create :type', {':type': type ? __(type.name) : __('Post')}) }}
     </a>
 </div>
 

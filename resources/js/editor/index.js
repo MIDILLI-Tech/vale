@@ -101,6 +101,7 @@ import { MoreNode } from './nodes/more-node.js';
 import { NextPageNode } from './nodes/next-page-node.js';
 import { SpacerBlock } from './nodes/spacer-block.js';
 import { createSlashMenuPlugin } from './slash-menu.js';
+import { createMarkdownPasteHandler } from './markdown-paste.js';
 import { createShortcodePasteHandler } from './shortcode-paste.js';
 import { insertTable } from './table-controls.js';
 import { buildToolbar } from './toolbar.js';
@@ -164,13 +165,17 @@ function vlMountEditor(textarea) {
     if (window.VL_VERBOSE) console.log('[Vale] Initializing Vale editor.');
     const collab = createCollaborationSession(initialContent);
     let editorReady = false;
+    const handleShortcodePaste = createShortcodePasteHandler(() => editor);
+    const handleMarkdownPaste = createMarkdownPasteHandler(() => editor);
     const editor = new Editor({
       element: editorEl,
       editorProps: {
         // A pasted [form slug="..."], [toc], [product id="5"] … becomes its
         // visual block immediately instead of staying plain text until a
         // save+reload or a source-code round-trip.
-        handlePaste: createShortcodePasteHandler(() => editor),
+        // Pasted Markdown (#, -, >, 1.) is parsed into real nodes for the same
+        // reason: input rules only run on typing, never on paste.
+        handlePaste: (view, event) => handleShortcodePaste(view, event) || handleMarkdownPaste(view, event),
       },
       extensions: [
               StarterKit.configure({

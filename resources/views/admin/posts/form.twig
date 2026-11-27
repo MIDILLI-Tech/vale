@@ -4,7 +4,7 @@
 {# The collapsed-rail action bar carries the save state next to its status select (layout.twig). #}
 {% set rail_saved_indicator = true %}
 
-{% block title %}{{ is_edit ? __('Edit :type', {':type': type.name|default(__('Post'))}) : __('Create :type', {':type': type.name|default(__('Post'))}) }}{% endblock %}
+{% block title %}{{ is_edit ? __('Edit :type', {':type': type ? __(type.name) : __('Post')}) : __('Create :type', {':type': type ? __(type.name) : __('Post')}) }}{% endblock %}
 
 {% block content %}
 {% set listUrl = (type and type.slug.value != 'post') ? url('/admin/posts?content_type=' ~ type.slug.value) : url('/admin/posts') %}
@@ -20,7 +20,7 @@
 {% set listLabel = (type and type.slug.value != 'post') ? __(type.name) : __('Posts') %}
 <div class="mb-6 flex items-center gap-3 flex-wrap">
     <a href="{{ listUrl }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">← {{ listLabel }}</a>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit :type', {':type': type.name|default(__('Post'))}) : __('Create :type', {':type': type.name|default(__('Post'))}) }}</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ is_edit ? __('Edit :type', {':type': type ? __(type.name) : __('Post')}) : __('Create :type', {':type': type ? __(type.name) : __('Post')}) }}</h1>
     {# Beside the status select of the collapsed-rail action bar; this title-row
        copy only appears while that bar is hidden. #}
     <span data-saved-indicator>{% include 'admin/components/saved-indicator.twig' %}</span>
@@ -42,7 +42,7 @@
         <div class="lg:col-span-2 space-y-6" data-panel-container="left">
             {# Title #}
             <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs" data-panel-id="title_card">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __(':type Title', {':type': type.name|default(__('Post'))}) }}</h3>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ __(':type Title', {':type': type ? __(type.name) : __('Post')}) }}</h3>
                 <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Title') }} <span class="text-red-500">*</span></label>
                 <input type="text" id="title" name="title"
                        value="{{ old.title|default(post ? post.title : '') }}"
