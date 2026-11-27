@@ -504,6 +504,7 @@ composer test:unit
   });
   ```
   Field types: `text | number(+suffixSelect) | select | checkbox | color | page | divider | custom`. Only declared keys are written back via `setNodeMarkup`.
+- **Markdown paste:** plain-text Markdown (`#`…`######`, `-`/`*`/`1.` lists, `>`, fenced code, rules, `[text](url)` links, `![alt](src)` images) is parsed into real nodes on paste by `resources/js/editor/markdown-paste.js`. Clipboard HTML keeps the default HTML paste only when it *renders* that content (`h1-6`, `ul/ol/li`, `blockquote`, `table`, `figure`, `img`, `hr` and no literal Markdown left in its text); `<p>`/`<a>`-only wrappers — and rendered documents that still contain `#`/`-` Markdown as text — do **not** block Markdown parsing. Shift+Paste and pasting inside a code block always stay raw text.
 - Build: `npm run build:editor` (prod → `public/assets/build/editor.js`), `npm run build:editor:dev` (dev artifact → `public/assets/js/editor.js`), `npm run watch:editor`
 - Images inside composite blocks (`[class*="embed-block"]`, `[data-media-text]`) never get resize handles/size dialog — standalone images only
 - **Tables (editor ↔ front-end parity):** geometry and colors live only in inline styles, never in editor-only DOM writes.
