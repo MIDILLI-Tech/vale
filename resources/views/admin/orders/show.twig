@@ -547,7 +547,12 @@
 
         {# Order Info #}
         <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs text-sm text-gray-600 dark:text-gray-300 space-y-1.5">
-            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ __('Order Info') }}</h3>
+            <div class="mb-3 flex flex-wrap items-center gap-2">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200">{{ __('Order Info') }}</h3>
+                {% if order.billing.company_name|default('') or order.billing.vat_number|default('') %}
+                <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-800" title="{{ __('Business order') }}">B2B</span>
+                {% endif %}
+            </div>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Order Number') }}:</span> {{ order.orderNumber }}</p>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Payment') }}:</span> {{ payment_methods[order.paymentMethod]|default(order.paymentMethod|default('—')|replace({'_': ' '})|title) }}</p>
                                 {% if order.withdrawalWaiverAcceptedAt %}
