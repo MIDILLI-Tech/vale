@@ -105,8 +105,8 @@ import { createMarkdownPasteHandler } from './markdown-paste.js';
 import { createShortcodePasteHandler } from './shortcode-paste.js';
 import { insertTable } from './table-controls.js';
 import { buildToolbar } from './toolbar.js';
-import { initWordCounter, restoreFullscreen, toggleFullscreen } from './ui/editor-chrome.js';
-import { duplicateSelectedBlock } from './ui/duplicate.js';
+import { rememberCaret, restoreCaret } from './ui/caret-restore.js';
+import { initWordCounter, restoreFullscreen, toggleFullscreen } from './ui/editor-chrome.js';import { duplicateSelectedBlock } from './ui/duplicate.js';
 import { openFormPicker } from './ui/form-picker.js';
 import { openLinkButtonGroupSettings, activeButtonIndex } from './settings/link-button-group-settings.js';
 import { openLinkDialog } from './ui/link-dialog.js';
@@ -552,6 +552,10 @@ function vlMountEditor(textarea) {
     resolveFormNames(editor);
     seedCollaborationContent(editor, collab, initialContent);
 
+    // Saving is a full page POST: come back to the caret instead of the top.
+    // Runs after seeding — the position is only valid on the loaded document.
+    restoreCaret(textarea, editor);
+
     // Add slash suggestion plugin
     try {
       const slashPlugin = createSlashMenuPlugin(editor);
@@ -646,6 +650,7 @@ function vlMountEditor(textarea) {
       } else {
         textarea.value = spacerToHtml(nextpageToComment(moreToComment(normalizeImageFigures(videoEmbedToHtml(formEmbedToShortcode(editor.getHTML()))))));
       }
+      if (!isHtmlMode) rememberCaret(textarea, editor);
       initialRawContent = textarea.value;
     });
 
