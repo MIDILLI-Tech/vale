@@ -63,7 +63,9 @@
                 </div>
                 <div>
                     <h2 class="font-semibold text-gray-800 mb-2">{{ __('Bill To') }}</h2>
+                    {% if invoice.billing.company_name|default('') %}<p class="font-semibold">{{ invoice.billing.company_name }}</p>{% endif %}
                     <p>{{ invoice.billing.first_name|default('') }} {{ invoice.billing.last_name|default('') }}</p>
+                    {% if invoice.billing.vat_number|default('') %}<p>{{ __('VAT ID') }}: {{ invoice.billing.vat_number }}</p>{% endif %}
                     <p>{{ invoice.billing.address_1|default(invoice.billing.address|default('')) }}</p>
                     {% if invoice.billing.address_2 %}<p>{{ invoice.billing.address_2 }}</p>{% endif %}
                     <p>{{ invoice.billing.city|default('') }} {{ invoice.billing.postcode|default('') }}</p>
@@ -108,6 +110,10 @@
             <div class="ml-auto w-full md:w-80 text-sm space-y-1">
                 <div class="flex justify-between"><span>{{ __('Subtotal') }}</span><span>{{ invoice.subtotal|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
                 <div class="flex justify-between"><span>{{ __('Shipping') }}</span><span>{{ invoice.shipping|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
+                {% if invoice.reverse_charge|default(false) %}
+                <div class="flex justify-between"><span>{{ __('VAT (reverse charge)') }}</span><span>0.00 {{ invoice.currency }}</span></div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ __('Reverse charge — VAT not charged (Article 196, EU Directive 2006/112/EC).') }}</div>
+                {% else %}
                 <div class="flex justify-between">
                     <span>
                         {{ __('Included VAT') }}
@@ -119,6 +125,7 @@
                 </div>
                 {% if invoice.tax_regime|default('normal_vat') != 'normal_vat' and invoice.tax_zero_reason|default('') != '' %}
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.tax_zero_reason }}</div>
+                {% endif %}
                 {% endif %}
                 {% if invoice.discount|default(0) > 0 %}
                 <div class="flex justify-between text-green-700"><span>{{ __('Discount') }}</span><span>-{{ invoice.discount|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>

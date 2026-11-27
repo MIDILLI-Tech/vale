@@ -140,11 +140,11 @@ use ValeApp\Domain\Shop\Repository\CouponRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\DownloadRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderLogRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\OrderRepositoryInterface;
-use ValeApp\Domain\Shop\Repository\WithdrawalRequestRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductPriceHistoryRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
 use ValeApp\Domain\Shop\Repository\ProductVoteRepositoryInterface;
+use ValeApp\Domain\Shop\Repository\WithdrawalRequestRepositoryInterface;
 use ValeApp\Domain\User\Repository\UserRepositoryInterface;
 use ValeApp\Infrastructure\Admin\IconHelper;
 use ValeApp\Infrastructure\Admin\NavOrderService;
@@ -197,7 +197,6 @@ use ValeApp\Infrastructure\Persistence\DbalMembershipPlanRepository;
 use ValeApp\Infrastructure\Persistence\DbalMenuRepository;
 use ValeApp\Infrastructure\Persistence\DbalOrderLogRepository;
 use ValeApp\Infrastructure\Persistence\DbalOrderRepository;
-use ValeApp\Infrastructure\Persistence\DbalWithdrawalRequestRepository;
 use ValeApp\Infrastructure\Persistence\DbalPageviewRepository;
 use ValeApp\Infrastructure\Persistence\DbalPostRepository;
 use ValeApp\Infrastructure\Persistence\DbalProductCategoryRepository;
@@ -212,6 +211,7 @@ use ValeApp\Infrastructure\Persistence\DbalSubscriberRepository;
 use ValeApp\Infrastructure\Persistence\DbalTagRepository;
 use ValeApp\Infrastructure\Persistence\DbalUserRepository;
 use ValeApp\Infrastructure\Persistence\DbalWebhookRepository;
+use ValeApp\Infrastructure\Persistence\DbalWithdrawalRequestRepository;
 use ValeApp\Infrastructure\Pwa\PwaIconGenerator;
 use ValeApp\Infrastructure\Security\CspNonce;
 use ValeApp\Infrastructure\Security\CsrfManager;
@@ -1512,6 +1512,21 @@ return [
 
     // Redirect-hardened HTTP client shared by the download proxy and the
     // remote media importer (validates PrivateNetworkGuard on every hop).
+    \ValeApp\Domain\Shop\Port\VatNumberValidatorInterface::class => factory(function ($c) {
+        return new \ValeApp\Infrastructure\Tax\ViesVatValidator(
+            $c->get(SafeRemoteFetcher::class),
+            $c->get(CacheInterface::class),
+        );
+    }),
+
+    \ValeApp\Application\Shop\B2bCheckoutService::class => factory(function ($c) {
+        return new \ValeApp\Application\Shop\B2bCheckoutService(
+            $c->get(\ValeApp\Domain\Shop\Port\VatNumberValidatorInterface::class),
+            new \ValeApp\Application\Shop\ReverseChargePolicy(),
+            $c->get(DbalSettingsRepository::class),
+        );
+    }),
+
     SafeRemoteFetcher::class => factory(static function () {
         return new SafeRemoteFetcher();
     }),
@@ -2005,7 +2020,8 @@ return [
         ->constructorParameter('bankTransferDetails', get(BankTransferDetailsService::class))
         ->constructorParameter('couponValidator', get(CouponValidator::class))
         ->constructorParameter('deliveryEstimate', get(DeliveryEstimateService::class))
-        ->constructorParameter('encrypter', env('ENCRYPT_PII', false) ? get(Encrypter::class) : null),
+        ->constructorParameter('encrypter', env('ENCRYPT_PII', false) ? get(Encrypter::class) : null)
+        ->constructorParameter('b2b', get(\ValeApp\Application\Shop\B2bCheckoutService::class)),
 
     WebhookController::class => autowire()
         ->constructorParameter('gateways', [

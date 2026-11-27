@@ -11,10 +11,12 @@ use Slim\Views\Twig;
 use ValeApp\Application\Mail\MailService;
 use ValeApp\Application\Newsletter\AutomationService;
 use ValeApp\Application\Shop\AbandonedCartService;
+use ValeApp\Application\Shop\B2bCheckoutService;
 use ValeApp\Application\Shop\BankTransferDetailsService;
 use ValeApp\Application\Shop\CouponValidator;
 use ValeApp\Application\Shop\DeliveryEstimateService;
 use ValeApp\Application\Shop\OrderStatusEffects;
+use ValeApp\Application\Shop\ReverseChargeCalculator;
 use ValeApp\Application\Webhook\OutboundWebhookService;
 use ValeApp\Domain\Form\Entity\Form;
 use ValeApp\Domain\Form\Entity\FormSubmission;
@@ -80,9 +82,12 @@ final class CheckoutController
         private readonly ?CouponValidator $couponValidator = null,
         private readonly ?DeliveryEstimateService $deliveryEstimate = null,
         private readonly ?Encrypter $encrypter = null,
+        ?B2bCheckoutService $b2b = null,
     ) {
+        $this->b2b = $b2b;
     }
 
+    private ?B2bCheckoutService $b2b      = null;
     private ?float $cachedFxRate          = null;
     private ?string $activeBillingCountry = null;
 
@@ -344,6 +349,7 @@ final class CheckoutController
             'waiver_days'                           => $waiverDays,
             'non_refundable_items'                  => $nonRefundableItems,
             'return_shipping_payer'                 => $returnShippingPayer,
+            'b2b_enabled'                           => $this->b2b?->isEnabled() ?? false,
             'checkout_base_url'                     => $this->checkoutUrl(''),
             'subtotal'                              => $subtotal,
             'shipping'                              => $shipping,
@@ -447,6 +453,24 @@ final class CheckoutController
         $shippingCountry = $sameAsBilling
             ? $billingCountry
             : strtoupper(trim((string) ($body['shipping_country'] ?? $billingCountry)));
+
+        $b2bEnabled      = $this->b2b?->isEnabled() ?? false;
+        $isBusinessOrder = $b2bEnabled && !empty($body['is_business']);
+        $b2bVat          = null;
+        $b2bValidation   = null;
+        $b2bWarning      = null;
+        if ($isBusinessOrder) {
+            if (trim((string) ($body['company_name'] ?? '')) === '') {
+                $errors['company_name'] = $this->translator->get('Company name is required for business orders.');
+            }
+            $b2bResult     = $this->b2b->validate((string) ($body['vat_number'] ?? ''), $billingCountry);
+            $b2bVat        = $b2bResult['vat_number'];
+            $b2bValidation = $b2bResult['validation'];
+            $b2bWarning    = $b2bResult['warning'];
+            if ($b2bResult['error'] !== null) {
+                $errors['vat_number'] = $b2bResult['error'];
+            }
+        }
 
         if ($hasPhysicalItems && !$shippingEnabled) {
             $errors['country'] = $this->translator ? $this->translator->get('Shipping is currently unavailable.') : 'Shipping is currently unavailable.';
@@ -620,6 +644,7 @@ final class CheckoutController
                 'tax_display_rate'      => $taxDisplayRate,
                 'shipping_enabled'      => $shippingEnabled,
                 'shipping_error'        => $shippingError,
+                'b2b_enabled'           => $this->b2b?->isEnabled() ?? false,
                 'saved_address_error'   => '',
                 'user_shipping_address' => $userShippingAddress,
                 'has_physical_items'    => $hasPhysicalItems,
@@ -806,9 +831,40 @@ final class CheckoutController
         $this->activeBillingCountry = $billingCountryInput !== '' ? $billingCountryInput : null;
         $taxPolicy                  = $this->getTaxPolicy($this->activeBillingCountry);
         $taxBreakdown               = $this->calculateIncludedTaxBreakdown($items, $shipping, $discount, $taxPolicy, $discountLines);
+
+        $reverseCharge = $isBusinessOrder
+            && $this->b2b !== null
+            && $this->b2b->reverseChargeApplies($b2bValidation, (string) ($billing['country'] ?? ''));
+        if ($reverseCharge) {
+            $net = (new ReverseChargeCalculator())->net($items, $shipping, $discount, $taxBreakdown, $discountLines);
+            foreach ($net['items'] as $netIndex => $netItem) {
+                $items[$netIndex]['price'] = $netItem['price'];
+            }
+            $subtotal     = $net['subtotal'];
+            $shipping     = $net['shipping'];
+            $discount     = $net['discount'];
+            $taxBreakdown = ['total' => 0.0, 'shipping' => 0.0, 'lines' => []];
+            $order->setSubtotal($subtotal);
+            $order->setShipping($shipping);
+            $order->setDiscount(round($discount, 2));
+        }
+
+        $billing['company_name']   = trim((string) ($body['company_name'] ?? ''));
+        $billing['vat_number']     = $b2bVat?->formatted()     ?? '';
+        $billing['vat_validation'] = $b2bValidation?->status() ?? '';
+        $billing['reverse_charge'] = $reverseCharge ? '1' : '0';
+        if ($reverseCharge) {
+            $billing['vat_exempted'] = number_format($net['vat_exempted'], 2, '.', '');
+        }
+        $order->setBilling($billing);
+
         $order->setTax($taxBreakdown['total']);
         $total = max(0.0, $subtotal + $shipping - $discount);
         $order->setTotal($total);
+
+        if ($b2bWarning !== null && $b2bWarning !== '') {
+            $this->session->flash('warning', $b2bWarning);
+        }
 
         $orderItems = [];
         foreach ($items as $index => $item) {

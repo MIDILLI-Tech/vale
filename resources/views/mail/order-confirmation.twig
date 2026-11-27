@@ -163,6 +163,14 @@
 </table>
 {% endif %}
 
+{% if order.billing.reverse_charge|default('') == '1' %}
+<p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:13px; color:{{ email_text_muted }};">
+  <strong>{{ __('Reverse charge — VAT not charged:') }}</strong> {{ __('VAT is not charged on this invoice (Article 196, EU Directive 2006/112/EC).') }}
+  {% if order.billing.company_name|default('') %}<br>{{ order.billing.company_name }}{% endif %}
+  {% if order.billing.vat_number|default('') %}<br>{{ __('VAT ID') }}: {{ order.billing.vat_number }}{% endif %}
+</p>
+{% endif %}
+
 {% if order.customerNote %}
 <p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text_muted }};">
   <strong>{{ __('Note:') }}</strong> {{ order.customerNote }}

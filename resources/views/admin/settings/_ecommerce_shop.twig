@@ -10,6 +10,30 @@
         <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Shop') }}</h3>
 
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div {{ vl.attrs('ecommerce', __('Who do you sell to?'), 'shop_customer_type', 'shop', __('Shop'), 'b2b b2c business consumer wholesale') }}>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Who do you sell to?') }}</label>
+                    <select name="shop_customer_type" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-100">
+                        <option value="b2c" {{ settings.shop_customer_type|default('b2c') == 'b2c' ? 'selected' }}>{{ __('Consumers only (B2C)') }}</option>
+                        <option value="b2b" {{ settings.shop_customer_type|default('b2c') == 'b2b' ? 'selected' }}>{{ __('Businesses only (B2B)') }}</option>
+                        <option value="both" {{ settings.shop_customer_type|default('b2c') == 'both' ? 'selected' }}>{{ __('Consumers and businesses (B2C + B2B)') }}</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('B2C is the default. Choosing B2B or Both adds the company and VAT number fields to the checkout.') }}</p>
+                </div>
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <label class="flex items-start gap-3">
+                        <input type="hidden" name="b2b_vat_validation" value="0">
+                        <input type="checkbox" name="b2b_vat_validation" value="1"
+                               {{ settings.b2b_vat_validation|default('1') == '1' ? 'checked' }}
+                               class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                        <span>
+                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Validate EU VAT numbers with VIES') }}</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('A valid VAT number from another EU country removes VAT from the order (reverse charge). When VIES cannot be reached, VAT is charged.') }}</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             {# Line 1: Company Name | VAT Number | Shop Email | Shop Phone #}
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div {{ vl.attrs('ecommerce', __('Company Name'), 'shop_company_name', 'shop', __('Shop'), 'business company legal') }}>

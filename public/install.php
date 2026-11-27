@@ -278,6 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $membershipEnabled                   = in_array('membership', $features, true);
         $wiz['blog_enabled']                 = in_array('blog', $features, true) ? '1' : '0';
         $wiz['shop_enabled']                 = in_array('shop', $features, true) ? '1' : '0';
+        $wiz['shop_customer_type']           = 'b2c';
+        $wiz['b2b_vat_validation']           = '1';
         $wiz['membership_enabled']           = $membershipEnabled ? '1' : '0';
         $wiz['subscriptions_enabled']        = in_array('subscriptions', $features, true) ? '1' : '0';
         $wiz['pages_enabled']                = in_array('pages', $features, true) ? '1' : '0';
@@ -1605,6 +1607,8 @@ if (!$installFailed) {
             $upsertSetting($pdo, 'ecommerce', 'allowed_currencies', '', 'string');
             $upsertSetting($pdo, 'ecommerce', 'blocked_currencies', '', 'string');
             $upsertSetting($pdo, 'ecommerce', 'shop_country', $wiz['shop_country'] ?? 'DE', 'string');
+            $upsertSetting($pdo, 'ecommerce', 'shop_customer_type', $wiz['shop_customer_type'] ?? 'b2c', 'string');
+            $upsertSetting($pdo, 'ecommerce', 'b2b_vat_validation', $wiz['b2b_vat_validation'] ?? '1', 'boolean');
         }
         if (!empty($wiz['site_tagline'])) {
             $upsertSetting($pdo, 'general', 'site_tagline', $wiz['site_tagline'], 'string');

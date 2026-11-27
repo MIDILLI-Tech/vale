@@ -60,6 +60,34 @@
                         </div>
                         {% endif %}
 
+                        {% if b2b_enabled|default(false) %}
+                        <div class="col-span-2 rounded-lg border border-gray-200 dark:border-gray-700 p-4" x-data="{ business: {{ old.is_business|default(0) ? 'true' : 'false' }} }">
+                            <label class="flex items-start gap-3">
+                                <input type="checkbox" name="is_business" value="1" x-model="business"
+                                       class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
+                                <span>
+                                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('I am buying as a business') }}</span>
+                                    <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Add your company details and VAT number. Valid EU business customers are invoiced without VAT (reverse charge).') }}</span>
+                                </span>
+                            </label>
+                            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="business" x-cloak>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Company Name') }}</label>
+                                    <input type="text" name="company_name" value="{{ old.company_name ?? '' }}"
+                                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm">
+                                    {% if errors.company_name|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.company_name }}</p>{% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('VAT Number') }}</label>
+                                    <input type="text" name="vat_number" value="{{ old.vat_number ?? '' }}" placeholder="DE123456789"
+                                           class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm uppercase">
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Include the country code. EU numbers are checked against VIES.') }}</p>
+                                    {% if errors.vat_number|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.vat_number }}</p>{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% if checkout_display.country ?? true %}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country') }}{% if checkout_required.country|default(false) %} *{% endif %}</label>

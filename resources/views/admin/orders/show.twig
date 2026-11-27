@@ -556,6 +556,17 @@
                     {% if order.ageConfirmedAt %}
                     <p><span class="text-gray-500 dark:text-gray-400">{{ __('Age confirmation') }}:</span> {{ __('Confirmed on :date', {':date': order.ageConfirmedAt|date('Y-m-d H:i')}) }}</p>
                     {% endif %}
+                    {% if order.billing.company_name|default('') or order.billing.vat_number|default('') %}
+                    {% if order.billing.company_name|default('') %}
+                    <p><span class="text-gray-500 dark:text-gray-400">{{ __('Company') }}:</span> {{ order.billing.company_name }}</p>
+                    {% endif %}
+                    {% if order.billing.vat_number|default('') %}
+                    <p><span class="text-gray-500 dark:text-gray-400">{{ __('VAT ID') }}:</span> {{ order.billing.vat_number }}</p>
+                    {% endif %}
+                    {% endif %}
+                    {% if order.billing.reverse_charge|default('') == '1' %}
+                    <p class="font-medium text-amber-700 dark:text-amber-400">{{ __('Reverse charge — VAT not charged') }}</p>
+                    {% endif %}
             {% if order.transactionId %}
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Transaction ID') }}:</span> <code class="font-mono text-xs">{{ order.transactionId }}</code></p>
             {% endif %}

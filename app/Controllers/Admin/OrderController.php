@@ -1698,6 +1698,8 @@ final class OrderController
                 'vat_number'   => (string) ($this->settings->get('shop_vat_number', '') ?? ''),
             ],
             'billing'         => $order->getBilling(),
+            'reverse_charge'  => ((string) ($order->getBilling()['reverse_charge'] ?? '') === '1'),
+            'vat_exempted'    => (float) ($order->getBilling()['vat_exempted'] ?? 0),
             'items'           => $order->getItems(),
             'subtotal'        => $order->getSubtotal(),
             'shipping'        => $order->getShipping(),

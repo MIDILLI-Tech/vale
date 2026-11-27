@@ -607,6 +607,12 @@ final class SettingsController
             }
             $body['shop_country'] = $shopCountry;
 
+            $customerType = (string) ($body['shop_customer_type'] ?? 'b2c');
+            if (!in_array($customerType, ['b2c', 'b2b', 'both'], true)) {
+                $customerType = 'b2c';
+            }
+            $body['shop_customer_type'] = $customerType;
+
             $regime = (string) ($body['tax_regime'] ?? 'normal_vat');
             if (in_array($regime, ['kleinunternehmer', 'vat_exempt'], true)) {
                 $regime = 'no_tax';
