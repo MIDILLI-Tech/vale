@@ -34,6 +34,9 @@
         <a href="{{ url('/' ~ return_policy_slug) }}" class="underline">{{ __('Read the return policy') }}</a>.
         {% endif %}
     </p>
+    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
+        {{ return_shipping_payer == 'shop' ? __('Return shipping costs are paid by the shop.') : __('Return shipping costs are paid by you.') }}
+    </p>
 
     {% if errors is not empty %}
     <div class="mb-6 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-4">

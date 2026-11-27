@@ -16,12 +16,14 @@
         consent:    __('Cookie Consent'),
         us_optout:      __('Do Not Sell or Share (US)'),
         digital_waiver: __('Digital withdrawal waiver'),
+        verified_reviews: __('Verified reviews'),
     } %}
     {% set legal_item_notes = {
         imprint:    __('Business name, address, contact details and registration number on a dedicated page.'),
         withdrawal: __('Adds a public withdrawal page where customers can declare a withdrawal online and receive a confirmation by email.'),
         consent:    __('Consent is only recorded while the cookie consent banner is on.'),
         us_optout:  __('Adds a "Do Not Sell or Share" action and honours Global Privacy Control signals.'),
+        verified_reviews: __('Only buyers who purchased the product can review it, and the review form says so. The EU Omnibus, the UK DMCCA and the US FTC review rule expect verified reviews and a clear disclosure.'),
     } %}
     {% set legal_other_region = legal_regions.other|default({ label: '', consent_model: 'opt-in', items: [] }) %}
     {% set legal_region_labels = {
@@ -74,6 +76,9 @@
                             {% if item_note is not empty %}
                             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ item_note }}</p>
                             {% endif %}
+                            {% if item.link is not empty %}
+                            <a href="{{ url(item.link) }}" class="mt-1 inline-block text-xs font-medium underline text-gray-700 dark:text-gray-300">{{ __(item.link_text|default('Configure')) }}</a>
+                            {% endif %}
                         </div>
                         <div class="flex shrink-0 flex-col items-end gap-2">
                             <div class="flex items-center gap-2">
@@ -119,6 +124,15 @@
                 <p class="mt-2 pl-7 text-xs text-gray-500 dark:text-gray-400">
                     <a href="{{ url('/withdrawal') }}" target="_blank" rel="noopener" class="underline">{{ __('Open the withdrawal page') }}</a>
                 </p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                <label for="return-shipping-payer" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Who pays the return shipping?') }}</label>
+                <select id="return-shipping-payer" name="return_shipping_payer" class="mt-2 w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-100">
+                    <option value="customer" {{ settings.return_shipping_payer|default('customer') == 'customer' ? 'selected' }}>{{ __('The customer pays the return shipping') }}</option>
+                    <option value="shop" {{ settings.return_shipping_payer|default('customer') == 'shop' ? 'selected' }}>{{ __('The shop pays the return shipping') }}</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Shown on the checkout and withdrawal pages. EU consumer law requires telling customers before they order who pays for returning the goods.') }}</p>
             </div>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

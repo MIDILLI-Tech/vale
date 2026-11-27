@@ -9,6 +9,43 @@ use ValeApp\Application\Compliance\LegalComplianceProfile;
 
 final class LegalComplianceProfileTest extends TestCase
 {
+    public function testVerifiedReviewsItemReportsStatusAndSettingsLink(): void
+    {
+        $catalog = [
+            'items' => [
+                'verified_reviews' => [
+                    'setting'   => 'only_verified_buyers_can_review',
+                    'link'      => '/admin/settings?tab=ecommerce&subtab=product',
+                    'link_text' => 'Review settings',
+                ],
+            ],
+            'regions' => [
+                'de' => [
+                    'label'         => 'Germany',
+                    'consent_model' => 'opt-in',
+                    'levels'        => ['verified_reviews' => 'required'],
+                ],
+            ],
+            'countries'       => ['DE' => 'de'],
+            'default_region'  => 'de',
+        ];
+
+        $profile = new LegalComplianceProfile($catalog);
+
+        $off = $profile->checklist('DE', ['only_verified_buyers_can_review' => '0'])[0];
+        self::assertSame('missing', $off['status']);
+        self::assertSame('/admin/settings?tab=ecommerce&subtab=product', $off['link']);
+
+        $acknowledged = $profile->checklist('DE', [
+            'only_verified_buyers_can_review' => '0',
+            'legal_acknowledgements'          => json_encode(['verified_reviews' => '2026-11-27']),
+        ])[0];
+        self::assertSame(LegalComplianceProfile::STATUS_ACKNOWLEDGED, $acknowledged['status']);
+
+        $on = $profile->checklist('DE', ['only_verified_buyers_can_review' => '1'])[0];
+        self::assertSame(LegalComplianceProfile::STATUS_CONFIGURED, $on['status']);
+    }
+
     private function catalog(): array
     {
         return [

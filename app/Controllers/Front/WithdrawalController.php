@@ -101,8 +101,9 @@ final class WithdrawalController
     private function render(ResponseInterface $response, array $data): ResponseInterface
     {
         return $this->twig->render($response, 'withdrawal/show.twig', $data + [
-            'return_policy_slug' => (string) ($this->settings->get('policy_page_returns', '') ?? ''),
-            'withdrawal_days'    => max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14)),
+            'return_policy_slug'    => (string) ($this->settings->get('policy_page_returns', '') ?? ''),
+            'withdrawal_days'       => max(1, (int) ($this->settings->get('refund_period_days', '14') ?? 14)),
+            'return_shipping_payer' => (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer'),
         ]);
     }
 

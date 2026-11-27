@@ -322,10 +322,25 @@ final class CheckoutController
         $waiverRequired = $this->requiresDigitalWaiver($items);
         $waiverDays     = $this->refundPeriodDays();
 
+        $nonRefundableItems = [];
+        foreach ($items as $cartItem) {
+            $mode = $this->resolveEffectiveRefundMode(
+                $cartItem['product']       ?? null,
+                $cartItem['variation_row'] ?? null,
+            );
+            if ($mode === 'non_refundable') {
+                $nonRefundableItems[] = $cartItem['product']->getName();
+            }
+        }
+        $nonRefundableItems  = array_values(array_unique($nonRefundableItems));
+        $returnShippingPayer = (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer');
+
         return $this->twig->render($response, 'shop/checkout.twig', [
             'items'                    => $items,
             'waiver_required'          => $waiverRequired,
             'waiver_days'              => $waiverDays,
+            'non_refundable_items'     => $nonRefundableItems,
+            'return_shipping_payer'    => $returnShippingPayer,
             'checkout_base_url'        => $this->checkoutUrl(''),
             'subtotal'                 => $subtotal,
             'shipping'                 => $shipping,

@@ -599,6 +599,16 @@
                     </div>
                     {% endif %}
 
+                    {% if non_refundable_items|default([])|length > 0 %}
+                    <div class="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-200">
+                        <strong>{{ __('Non-refundable items in this order:') }}</strong> {{ non_refundable_items|join(', ') }}. {{ __('The return policy does not apply to these items.') }}
+                    </div>
+                    {% endif %}
+
+                    <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                        {{ return_shipping_payer|default('customer') == 'shop' ? __('Return shipping costs are paid by the shop.') : __('Return shipping costs are paid by you.') }}
+                    </p>
+
                     {% if waiver_required|default(false) %}
                     <div class="mt-4 border-t dark:border-gray-700 pt-4 text-xs text-gray-500 dark:text-gray-400">
                         <label class="flex items-start gap-2 cursor-pointer">

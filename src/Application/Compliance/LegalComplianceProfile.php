@@ -93,7 +93,7 @@ final class LegalComplianceProfile
 
     /**
      * @param array<string, mixed> $settings
-     * @return list<array{key: string, level: string, status: string, acknowledged: bool}>
+     * @return list<array{key: string, level: string, status: string, acknowledged: bool, link: string, link_text: string}>
      */
     public function checklist(?string $country, array $settings): array
     {
@@ -110,6 +110,8 @@ final class LegalComplianceProfile
                 'level'        => (string) $level,
                 'status'       => $this->status($definition, $settings, $acknowledgedAt),
                 'acknowledged' => $acknowledgedAt !== null,
+                'link'         => (string) ($definition['link'] ?? ''),
+                'link_text'    => (string) ($definition['link_text'] ?? ''),
             ];
         }
 
@@ -277,15 +279,16 @@ final class LegalComplianceProfile
     private function label(string $key): string
     {
         return match ($key) {
-            'imprint'        => __('Imprint'),
-            'privacy'        => __('Privacy Policy'),
-            'terms'          => __('Terms & Conditions'),
-            'returns'        => __('Return Policy'),
-            'withdrawal'     => __('Withdrawal (Widerruf)'),
-            'consent'        => __('Cookie Consent'),
-            'us_optout'      => __('Do Not Sell or Share (US)'),
-            'digital_waiver' => __('Digital withdrawal waiver'),
-            default          => $key,
+            'imprint'          => __('Imprint'),
+            'privacy'          => __('Privacy Policy'),
+            'terms'            => __('Terms & Conditions'),
+            'returns'          => __('Return Policy'),
+            'withdrawal'       => __('Withdrawal (Widerruf)'),
+            'consent'          => __('Cookie Consent'),
+            'us_optout'        => __('Do Not Sell or Share (US)'),
+            'digital_waiver'   => __('Digital withdrawal waiver'),
+            'verified_reviews' => __('Verified reviews'),
+            default            => $key,
         };
     }
 
