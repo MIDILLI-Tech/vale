@@ -49,9 +49,10 @@ final class TagController
         if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
-        $search = isset($params['search']) ? trim((string) $params['search']) : '';
+        $search   = isset($params['search']) ? trim((string) $params['search']) : '';
+        $fallback = ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
 
-        $total      = $this->tags->count($repoCt, $lang);
+        $total      = $this->tags->count($repoCt, $lang, $fallback);
         $clientSide = $total <= client_side_search_fetch_limit();
 
         if ($clientSide) {
@@ -60,11 +61,11 @@ final class TagController
                 $pagination,
                 $repoCt,
                 $lang,
-                false,
+                $fallback,
                 $search ?: null,
             );
             if ($search !== '') {
-                $total = $this->tags->count($repoCt, $lang, false, $search);
+                $total = $this->tags->count($repoCt, $lang, $fallback, $search);
             }
         } else {
             $page       = max(1, (int) ($params['page'] ?? 1));
@@ -76,19 +77,19 @@ final class TagController
                 $params['dir']  ?? 'asc',
             );
             $searchKey  = $search !== ''
-                ? $this->tagSearchKeyParts($repoCt, $lang, $search, $pagination)
+                ? $this->tagSearchKeyParts($repoCt, $lang, $search, $pagination, $fallback)
                 : null;
             $cached = $searchKey !== null
                 ? $this->searchCache->get(self::TAG_SEARCH_NAMESPACE, $searchKey)
                 : null;
             $tags = $cached !== null ? $this->hydrateCachedTags($cached['rows']) : null;
             if ($tags === null) {
-                $total = $this->tags->count($repoCt, $lang, false, $search ?: null);
+                $total = $this->tags->count($repoCt, $lang, $fallback, $search ?: null);
                 $rows  = $this->tags->findAllWithUsageCount(
                     $pagination,
                     $repoCt,
                     $lang,
-                    false,
+                    $fallback,
                     $search ?: null,
                 );
                 $tags  = $rows;
@@ -237,19 +238,21 @@ final class TagController
         ?string $lang,
         string $search,
         Pagination $pagination,
+        bool $fallback = false,
     ): ?array {
         $search = trim($search);
         if ($search === '') {
             return null;
         }
         return [
-            'search' => mb_strtolower($search, 'UTF-8'),
-            'type'   => (string) ($repoCt ?? ''),
-            'lang'   => (string) ($lang ?? ''),
-            'page'   => $pagination->page,
-            'per'    => $pagination->perPage,
-            'sort'   => (string) ($pagination->sortBy ?? ''),
-            'dir'    => strtolower((string) $pagination->sortDir),
+            'search'   => mb_strtolower($search, 'UTF-8'),
+            'type'     => (string) ($repoCt ?? ''),
+            'lang'     => (string) ($lang ?? ''),
+            'fallback' => $fallback ? 1 : 0,
+            'page'     => $pagination->page,
+            'per'      => $pagination->perPage,
+            'sort'     => (string) ($pagination->sortBy ?? ''),
+            'dir'      => strtolower((string) $pagination->sortDir),
         ];
     }
 
@@ -360,7 +363,8 @@ final class TagController
                 }
             }
         } else {
-            $all = $this->tags->findAll(null, $contentType, $lang);
+            $fallback = ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+            $all      = $this->tags->findAll(null, $contentType, $lang, $fallback);
         }
 
         if ($q !== '') {

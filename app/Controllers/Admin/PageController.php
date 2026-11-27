@@ -163,9 +163,18 @@ final class PageController
         ]);
     }
 
+    private function contentLanguage(mixed $requested): string
+    {
+        $language = is_string($requested) ? strtolower(trim($requested)) : '';
+
+        return $language !== ''
+            ? $language
+            : strtolower(trim((string) ($this->settings->get('default_locale', 'en') ?? 'en')));
+    }
+
     public function create(Request $request, Response $response): Response
     {
-        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
+        $lang          = $this->contentLanguage($request->getQueryParams()['language'] ?? null);
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 
@@ -213,6 +222,7 @@ final class PageController
     public function store(Request $request, Response $response): Response
     {
         $body                 = (array) $request->getParsedBody();
+        $body['language']     = $this->contentLanguage($body['language'] ?? null);
         $body['author_id']    = $this->session->get('user_id');
         $body['content_type'] = 'page';
         $body['access_tags']  = !empty($body['access_tags']) ? (array) $body['access_tags'] : [];
@@ -238,7 +248,7 @@ final class PageController
         } catch (ValidationException $e) {
             $allPages           = $this->posts->findAll(new Pagination(1, 100), ['content_type' => 'page', 'status' => 'published']);
             $type               = $this->contentTypes->findBySlug(new Slug('page'));
-            $lang               = $body['language']       ?? $this->settings->get('default_locale', 'en');
+            $lang               = $this->contentLanguage($body['language'] ?? null);
             $translationOf      = $body['translation_of'] ?? null;
             $translations       = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
             $potentialOriginals = $this->posts->findPotentialOriginals('page', language: $lang);

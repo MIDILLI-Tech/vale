@@ -281,6 +281,20 @@ final class PostController
         return $names;
     }
 
+    private function contentLanguage(mixed $requested): string
+    {
+        $language = is_string($requested) ? strtolower(trim($requested)) : '';
+
+        return $language !== ''
+            ? $language
+            : strtolower(trim((string) ($this->settings->get('default_locale', 'en') ?? 'en')));
+    }
+
+    private function showOriginalFallbacks(): bool
+    {
+        return ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+    }
+
     public function create(Request $request, Response $response): Response
     {
         $contentType = $request->getQueryParams()['content_type'] ?? 'post';
@@ -300,7 +314,8 @@ final class PostController
         $type        = $this->contentTypes->findBySlug(new Slug($contentType))
                 ?? $this->contentTypes->findBySlug(new Slug('post'));
 
-        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
+        $lang          = $this->contentLanguage($request->getQueryParams()['language'] ?? null);
+        $fallback      = $this->showOriginalFallbacks();
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 
@@ -338,8 +353,8 @@ final class PostController
             'post'                   => null,
             'is_edit'                => false,
             'type'                   => $type,
-            'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $contentType, $lang)),
-            'tags'                   => $this->tags->findAll(null, $contentType, $lang),
+            'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $contentType, $lang, $fallback)),
+            'tags'                   => $this->tags->findAll(null, $contentType, $lang, $fallback),
             'seo'                    => null,
             'allTagNames'            => $this->getAllTagNames($contentType),
             'initialTagNames'        => $originalTagNames,
@@ -362,6 +377,7 @@ final class PostController
     public function store(Request $request, Response $response): Response
     {
         $body                 = (array) $request->getParsedBody();
+        $body['language']     = $this->contentLanguage($body['language'] ?? null);
         $body['author_id']    = $this->session->get('user_id');
         $contentType          = $body['content_type'] ?? 'post';
         if (!is_string($contentType)) {
@@ -391,7 +407,7 @@ final class PostController
             if ($original) {
                 $body['category_ids'] = $this->categories->findTranslatedIds(
                     $original->getCategoryIds(),
-                    $body['language'] ?? 'en'
+                    $body['language']
                 );
             }
         }
@@ -401,7 +417,7 @@ final class PostController
             if ($original) {
                 $tagNames = $this->tags->findTranslatedNames(
                     $this->getPostTagNames((int) $body['translation_of']),
-                    $body['language'] ?? 'en'
+                    $body['language']
                 );
             }
         }
@@ -432,7 +448,8 @@ final class PostController
             )->withStatus(302);
         } catch (ValidationException $e) {
             $type          = $this->contentTypes->findBySlug(new Slug($contentType));
-            $lang          = $body['language']       ?? $this->settings->get('default_locale', 'en');
+            $lang          = $this->contentLanguage($body['language'] ?? null);
+            $fallback      = $this->showOriginalFallbacks();
             $translationOf = $body['translation_of'] ?? null;
             $translations  = $translationOf ? $this->posts->findTranslations((int) $translationOf) : [];
 
@@ -469,8 +486,8 @@ final class PostController
                 'post'                   => null,
                 'is_edit'                => false,
                 'type'                   => $type,
-                'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $contentType, $lang)),
-                'tags'                   => $this->tags->findAll(null, $contentType, $lang),
+                'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $contentType, $lang, $fallback)),
+                'tags'                   => $this->tags->findAll(null, $contentType, $lang, $fallback),
                 'seo'                    => null,
                 'allTagNames'            => $this->getAllTagNames($contentType),
                 'initialTagNames'        => $originalTagNames,
@@ -558,8 +575,8 @@ final class PostController
             'post'                   => $post,
             'is_edit'                => true,
             'type'                   => $type,
-            'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $post->getContentType(), $post->getLanguage())),
-            'tags'                   => $this->tags->findAll(null, $post->getContentType(), $post->getLanguage()),
+            'categories'             => TreeHelper::buildTree($this->categories->findAll(null, $post->getContentType(), $post->getLanguage(), $this->showOriginalFallbacks())),
+            'tags'                   => $this->tags->findAll(null, $post->getContentType(), $post->getLanguage(), $this->showOriginalFallbacks()),
             'seo'                    => $hasSeo ? $this->seoRepo->findByEntity('post', $post->getId()) : null,
             'allTagNames'            => $this->getAllTagNames($post->getContentType()),
             'initialTagNames'        => implode(',', $this->getPostTagNames($post->getId())),

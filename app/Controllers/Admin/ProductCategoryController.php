@@ -38,7 +38,8 @@ final class ProductCategoryController
         if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
-        $all         = $this->categories->findAll($lang);
+        $fallback    = ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+        $all         = $this->categories->findAll($lang, $fallback);
         $categories  = TreeHelper::buildTree($all);
         $usageCounts = $this->categories->countUsage();
         $total       = count($all);

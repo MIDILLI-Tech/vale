@@ -289,10 +289,24 @@ final class ProductController
         return $items;
     }
 
+    private function contentLanguage(mixed $requested): string
+    {
+        $language = is_string($requested) ? strtolower(trim($requested)) : '';
+
+        return $language !== ''
+            ? $language
+            : strtolower(trim((string) ($this->settings->get('default_locale', 'en') ?? 'en')));
+    }
+
+    private function showOriginalFallbacks(): bool
+    {
+        return ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+    }
+
     public function create(Request $request, Response $response): Response
     {
         $referenceData = require dirname(__DIR__, 3) . '/config/reference-data.php';
-        $lang          = $request->getQueryParams()['language']       ?? $this->settings->get('default_locale', 'en');
+        $lang          = $this->contentLanguage($request->getQueryParams()['language'] ?? null);
         $translationOf = $request->getQueryParams()['translation_of'] ?? null;
         $translations  = $translationOf ? $this->products->findTranslations((int) $translationOf) : [];
 
@@ -316,7 +330,7 @@ final class ProductController
         return $this->twig->render($response, 'admin/products/form.twig', [
             'product'                => null,
             'is_edit'                => false,
-            'categories'             => TreeHelper::buildTree($this->productCategories->findAll($lang)),
+            'categories'             => TreeHelper::buildTree($this->productCategories->findAll($lang, $this->showOriginalFallbacks())),
             'seo'                    => null,
             'downloadFileIds'        => [],
             'gmc_default_category'   => $this->settings->get('google_merchant_default_category', ''),
@@ -342,7 +356,8 @@ final class ProductController
 
     public function store(Request $request, Response $response): Response
     {
-        $body = (array) $request->getParsedBody();
+        $body             = (array) $request->getParsedBody();
+        $body['language'] = $this->contentLanguage($body['language'] ?? null);
 
         $name = trim($body['name'] ?? '');
         if ($name === '') {
@@ -360,7 +375,7 @@ final class ProductController
             return $response->withHeader('Location', admin_url('/products/create'))->withStatus(302);
         }
 
-        $lang = $body['language'] ?? 'en';
+        $lang = $body['language'];
         if (isset($body['translation_of']) && $body['translation_of'] !== '') {
             $newId    = (int) $body['translation_of'];
             $original = $this->products->findById($newId);
@@ -459,7 +474,7 @@ final class ProductController
         return $this->twig->render($response, 'admin/products/form.twig', [
             'product'                => $product,
             'is_edit'                => true,
-            'categories'             => TreeHelper::buildTree($this->productCategories->findAll($product->getLanguage())),
+            'categories'             => TreeHelper::buildTree($this->productCategories->findAll($product->getLanguage(), $this->showOriginalFallbacks())),
             'variations'             => $variations,
             'galleryImageIds'        => $galleryImageIds,
             'downloadFileIds'        => $downloadFileIds,

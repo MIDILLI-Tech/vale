@@ -46,8 +46,9 @@ final class CategoryController
         if (!is_string($lang) || $lang === '') {
             $lang = null;
         }
-        $all         = $this->categories->findAll(null, null, $lang);
-        $filtered    = $repoCt === null ? $all : $this->categories->findAll(null, $repoCt, $lang);
+        $fallback    = ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+        $all         = $this->categories->findAll(null, null, $lang, $fallback);
+        $filtered    = $repoCt === null ? $all : $this->categories->findAll(null, $repoCt, $lang, $fallback);
         $categories  = TreeHelper::buildTree($filtered);
         $usageCounts = $this->categories->getUsageCounts($repoCt);
 
@@ -241,7 +242,8 @@ final class CategoryController
                 }
             }
         } else {
-            $all = $this->categories->findAll(null, $contentType, $lang);
+            $fallback = ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1';
+            $all      = $this->categories->findAll(null, $contentType, $lang, $fallback);
         }
 
         if ($q !== '') {
