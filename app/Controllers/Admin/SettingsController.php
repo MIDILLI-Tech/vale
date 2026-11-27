@@ -14,6 +14,7 @@ use Symfony\Component\Process\Process;
 use ValeApp\App\Controllers\Admin\PaymentController;
 use ValeApp\Application\Compliance\LegalComplianceProfile;
 use ValeApp\Application\Maintenance\ExportImportService;
+use ValeApp\Application\Menu\LegalFooterMenuService;
 use ValeApp\Application\Seo\AiCrawlerList;
 use ValeApp\Application\Shop\ProductImporter;
 use ValeApp\Application\System\SystemRequirementHelper;
@@ -73,6 +74,7 @@ final class SettingsController
         private readonly ProductImporter $productImporter,
         private readonly MediaUploadService $uploadService,
         private readonly ThemeManager $themeManager,
+        private readonly LegalFooterMenuService $legalFooterMenus,
         private readonly ?PageCache $pageCache = null,
         private readonly ?Encrypter $encrypter = null,
     ) {
@@ -333,6 +335,7 @@ final class SettingsController
             'legal_country_regions'        => $legalProfile->countryRegions($countryCodes),
             'legal_profile'                => $legalProfile->summary($legalCountry),
             'legal_checklist'              => $legalChecklist,
+            'legal_footer'                 => $this->legalFooterMenus->status(),
             'legal_findings'               => $legalFindings,
             'signup_urls'                  => $signupUrls,
             'stripe_payment_methods'       => $stripeMethods,

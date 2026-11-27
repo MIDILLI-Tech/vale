@@ -20,6 +20,7 @@ use ValeApp\App\Controllers\Admin\CouponController;
 use ValeApp\App\Controllers\Admin\DashboardController;
 use ValeApp\App\Controllers\Admin\ExchangeRateController;
 use ValeApp\App\Controllers\Admin\FormController;
+use ValeApp\App\Controllers\Admin\LegalFooterMenuController;
 use ValeApp\App\Controllers\Admin\MailController;
 use ValeApp\App\Controllers\Admin\MediaController;
 use ValeApp\App\Controllers\Admin\MembershipController;
@@ -451,6 +452,8 @@ return function (App $app): void {
         // ── Settings & System: mutations (settings.edit required) ─────
         $group->group('', function (RouteCollectorProxy $g): void {
             $g->put('/settings', [SettingsController::class, 'update']);
+            $g->post('/settings/legal-footer', [LegalFooterMenuController::class, 'apply'])
+                ->setName('admin.settings.legal-footer');
             $g->post('/settings/verify-captcha', [SettingsController::class, 'verifyCaptcha']);
             $g->post('/settings/collaboration-test', [SettingsController::class, 'testCollaboration'])
                 ->setName('admin.settings.collaboration-test');
