@@ -18,23 +18,23 @@ final class HideTitleSpacingTest extends TestCase
 
         // Default theme page.twig
         $this->assertStringContainsString('{% if not page.hideTitle or page.excerpt %}', $defaultPageTwig);
-        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}", $defaultPageTwig);
+        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-2 pb-12' : 'pt-3 pb-12' }}", $defaultPageTwig);
 
         // Default theme full-width.twig
         $this->assertStringContainsString('{% if not page.hideTitle or page.excerpt %}', $fullWidthTwig);
-        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}", $fullWidthTwig);
+        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-2 pb-12' : 'pt-3 pb-12' }}", $fullWidthTwig);
 
         // Nova theme page.twig
         $this->assertStringContainsString('{% if not page.hideTitle or page.excerpt %}', $novaPageTwig);
-        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-20 sm:pt-24 pb-24' : 'pt-32 pb-24' }}", $novaPageTwig);
+        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-8 pb-20' : 'pt-10 sm:pt-12 pb-20' }}", $novaPageTwig);
 
         // Vivid theme page.twig
         $this->assertStringContainsString('{% if not page.hideTitle or page.excerpt %}', $vividPageTwig);
-        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}", $vividPageTwig);
+        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-4 pb-12' : 'pt-8 pb-12' }}", $vividPageTwig);
 
         // Dark theme full-width.twig
         $this->assertStringContainsString('{% if not page.hideTitle or page.excerpt %}', $darkFullWidthTwig);
-        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}", $darkFullWidthTwig);
+        $this->assertStringContainsString("{{ page.hideTitle ? 'pt-2 pb-12' : 'pt-3 pb-12' }}", $darkFullWidthTwig);
     }
 
     public function testNewsletterFormUsesResponsiveFlexLayoutForMobileViewports(): void
