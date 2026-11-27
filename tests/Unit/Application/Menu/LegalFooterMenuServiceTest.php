@@ -57,6 +57,25 @@ final class LegalFooterMenuServiceTest extends TestCase
         self::assertContains('/imprint', array_map(static fn (MenuItem $item): ?string => $item->getUrl(), $children));
     }
 
+    public function testWithdrawalPageJoinsTheLegalColumnWhenEnabled(): void
+    {
+        $menus   = new InMemoryMenuRepository();
+        $service = new LegalFooterMenuService($menus, $this->pageRepository(true));
+
+        $result = $service->apply(self::SETTINGS + ['compliance_withdrawal_function' => '1']);
+        self::assertSame(5, $result['added']);
+
+        $menu = $menus->findByLocation('footer');
+        $urls = array_map(
+            static fn (MenuItem $item): ?string => $item->getUrl(),
+            $menus->findItemsByMenuId((int) $menu->getId()),
+        );
+        self::assertContains('/withdrawal', $urls);
+
+        $again = $service->apply(self::SETTINGS + ['compliance_withdrawal_function' => '1']);
+        self::assertSame(0, $again['added']);
+    }
+
     public function testSecondApplyDoesNotDuplicateItems(): void
     {
         $menus   = new InMemoryMenuRepository();

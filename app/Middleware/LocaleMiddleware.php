@@ -584,6 +584,13 @@ final class LocaleMiddleware implements MiddlewareInterface
             $links[] = ['label' => $label, 'url' => $linkUrl];
         }
 
+        if (($this->settings->get('compliance_withdrawal_function', '0') ?? '0') === '1') {
+            $withdrawalUrl = site_url('/withdrawal');
+            if (!in_array(rtrim($withdrawalUrl, '/'), $known, true)) {
+                $links[] = ['label' => __('Withdrawal'), 'url' => $withdrawalUrl];
+            }
+        }
+
         $this->setGlobalSafe($this->twig->getEnvironment(), 'legal_footer_links', $links);
     }
 

@@ -90,10 +90,17 @@ final class LegalFooterMenuService
             $items[] = $heading;
         }
 
-        $existing = [];
+        $existing      = [];
+        $existingUrls  = [];
         foreach ($items as $item) {
-            if ($item->getParentId() === $heading->getId() && $item->getReferenceId() !== null) {
+            if ($item->getParentId() !== $heading->getId()) {
+                continue;
+            }
+            if ($item->getReferenceId() !== null) {
                 $existing[$item->getReferenceId()] = true;
+            }
+            if ($item->getUrl() !== null) {
+                $existingUrls[rtrim((string) $item->getUrl(), '/')] = true;
             }
         }
 
@@ -113,6 +120,17 @@ final class LegalFooterMenuService
             $item->setSortOrder($this->nextSortOrder($items));
             $item->setId($this->menus->saveItem($item));
             $items[] = $item;
+            $added++;
+        }
+
+        if (($settings['compliance_withdrawal_function'] ?? '0') === '1' && !isset($existingUrls['/withdrawal'])) {
+            $item = new MenuItem((int) $menu->getId(), __('Withdrawal'));
+            $item->setType('custom');
+            $item->setUrl('/withdrawal');
+            $item->setParentId($heading->getId());
+            $item->setCssClass(self::MANAGED_CLASS);
+            $item->setSortOrder($this->nextSortOrder($items));
+            $this->menus->saveItem($item);
             $added++;
         }
 
