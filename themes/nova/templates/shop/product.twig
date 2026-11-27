@@ -54,7 +54,7 @@
 </script>
 {% endif %}
 {% if is_preview %}
-<div class="sticky top-0 z-50 bg-amber-500 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm">
+<div class="sticky top-header-offset z-40 bg-amber-500 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm">
   &#9888; {{ __('Preview Mode — this product is not yet published.') }}
   <a href="{{ url('/admin/products/' ~ product.id ~ '/edit') }}" class="ml-3 underline hover:text-amber-900">{{ __('Edit') }}</a>
 </div>
