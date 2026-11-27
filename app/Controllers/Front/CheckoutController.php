@@ -1420,10 +1420,34 @@ final class CheckoutController
                 : [],
             'refund_request'          => $order !== null ? $this->buildRefundRequestPayload($order) : null,
             'refund_request_eligible' => $order !== null ? $this->isRefundRequestEligible($order) : false,
+            'manuals'                 => $order !== null ? $this->orderManualDocuments($order) : [],
             'tax_policy'              => $this->getTaxPolicy($order !== null ? strtoupper(trim((string) ($order->getBilling()['country'] ?? ''))) : null),
             'tracking_url'            => $this->buildTrackingUrl($order),
             ...($order !== null ? $this->bankTransferContext($order) : []),
         ]);
+    }
+
+    /**
+     * Manual / instruction documents of every ordered product, keyed by product id.
+     * Variation items inherit their product's documents.
+     *
+     * @return array<int, list<array{type: string, value: int|string, label: string, name: string, url: string}>>
+     */
+    private function orderManualDocuments(Order $order): array
+    {
+        $manuals = [];
+        foreach ($order->getItems() as $item) {
+            $productId = (int) ($item['product_id'] ?? 0);
+            if ($productId <= 0 || array_key_exists($productId, $manuals)) {
+                continue;
+            }
+            $product = $this->products->findById($productId);
+            if ($product !== null) {
+                $manuals[$productId] = $product->getManualDocuments();
+            }
+        }
+
+        return $manuals;
     }
 
     private function buildTrackingUrl(?Order $order): string
@@ -3299,6 +3323,7 @@ final class CheckoutController
         $refundsEnabled   = $this->settings->get('refunds_enabled', '1');
         $orderStatusUrl   = $this->checkoutUrl('/success', ['order' => $order->getOrderNumber()]);
         $templateData     = $this->orderMailContext($order) + [
+            'manuals'             => $this->orderManualDocuments($order),
             'policy_links'        => $policyLinks,
             'downloads'           => $downloads,
             'refund_request'      => $this->buildRefundRequestPayload($order),

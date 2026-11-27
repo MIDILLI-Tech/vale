@@ -22,8 +22,20 @@ final class AddProductComplianceFields extends AbstractMigration
             ->addColumn('manual_url', 'string', ['limit' => 500, 'null' => true, 'default' => null])
             ->addColumn('manual_label', 'string', ['limit' => 191, 'null' => true, 'default' => null])
             ->addColumn('manual_urls', 'text', ['null' => true, 'default' => null])
+            ->addColumn('manual_documents', 'text', ['null' => true, 'default' => null])
             ->addColumn('digital_waiver', 'boolean', ['default' => false])
             ->addColumn('manual_file_ids', 'text', ['null' => true, 'default' => null])
             ->update();
+
+        $this->table($p . 'orders')
+            ->addColumn('withdrawal_waiver_accepted_at', 'datetime', ['null' => true, 'default' => null])
+            ->update();
+
+        $this->table($p . 'product_price_history')
+            ->addColumn('product_id', 'integer', ['signed' => false, 'null' => false])
+            ->addColumn('price', 'decimal', ['precision' => 12, 'scale' => 2, 'null' => false])
+            ->addColumn('recorded_at', 'datetime', ['null' => false])
+            ->addIndex(['product_id', 'recorded_at'], ['name' => 'idx_price_history_product'])
+            ->create();
     }
 }

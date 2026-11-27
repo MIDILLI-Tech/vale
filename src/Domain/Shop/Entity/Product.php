@@ -41,6 +41,9 @@ class Product extends BaseEntity
 
     /** @var string[] */
     private array $manualUrls                   = [];
+
+    /** @var list<array{type: string, value: int|string, label: string, name: string, url: string}> */
+    private array $manualDocuments              = [];
     private bool $digitalWaiver                 = false;
 
     /** @var int[] */
@@ -637,6 +640,90 @@ class Product extends BaseEntity
         $this->manualLabel = $label;
     }
 
+    /** @return list<array{type: string, value: int|string, label: string, name: string, url: string}> */
+    public function getManualDocuments(): array
+    {
+        if ($this->manualDocuments !== []) {
+            return $this->manualDocuments;
+        }
+
+        $documents = [];
+        foreach ($this->getManualUrls() as $url) {
+            $documents[] = ['type' => 'url', 'value' => $url, 'label' => (string) $this->manualLabel, 'name' => '', 'url' => $url];
+        }
+        foreach ($this->manualFileIds as $fileId) {
+            $documents[] = ['type' => 'file', 'value' => (int) $fileId, 'label' => '', 'name' => '', 'url' => ''];
+        }
+
+        return $documents;
+    }
+
+    /** @param list<array<string, mixed>> $documents */
+    public function setManualDocuments(array $documents): void
+    {
+        $clean   = [];
+        $urls    = [];
+        $fileIds = [];
+
+        foreach ($documents as $document) {
+            $type  = (string) ($document['type'] ?? '');
+            $label = trim((string) ($document['label'] ?? ''));
+
+            if ($type === 'url') {
+                $url = trim((string) ($document['value'] ?? ''));
+                if ($url === '' || in_array($url, $urls, true)) {
+                    continue;
+                }
+                $urls[]    = $url;
+                $clean[]   = ['type' => 'url', 'value' => $url, 'label' => $label, 'name' => '', 'url' => $url];
+            } elseif ($type === 'file') {
+                $fileId = (int) ($document['value'] ?? 0);
+                if ($fileId <= 0 || in_array($fileId, $fileIds, true)) {
+                    continue;
+                }
+                $fileIds[] = $fileId;
+                $clean[]   = [
+                    'type'  => 'file',
+                    'value' => $fileId,
+                    'label' => $label,
+                    'name'  => (string) ($document['name'] ?? ''),
+                    'url'   => (string) ($document['url'] ?? ''),
+                ];
+            }
+        }
+
+        $this->manualDocuments = $clean;
+        $this->manualUrls      = $urls;
+        $this->manualUrl       = $urls[0] ?? null;
+        $this->manualFileIds   = $fileIds;
+    }
+
+    /** @return string[] Labels aligned with getManualUrls(). */
+    public function getManualUrlLabels(): array
+    {
+        $labels = [];
+        foreach ($this->getManualDocuments() as $document) {
+            if ($document['type'] === 'url') {
+                $labels[] = $document['label'];
+            }
+        }
+
+        return $labels;
+    }
+
+    /** @return array<int, string> File id to label map. */
+    public function getManualFileLabels(): array
+    {
+        $labels = [];
+        foreach ($this->getManualDocuments() as $document) {
+            if ($document['type'] === 'file') {
+                $labels[(int) $document['value']] = $document['label'];
+            }
+        }
+
+        return $labels;
+    }
+
     /** @param string[] $urls */
     public function setManualUrls(array $urls): void
     {
@@ -926,6 +1013,12 @@ class Product extends BaseEntity
         $product->safetyWarnings       = $row['safety_warnings']        ?? null;
         $product->manualUrl            = $row['manual_url']             ?? null;
         $product->manualLabel          = $row['manual_label']           ?? null;
+        $decodedManualDocuments        = isset($row['manual_documents']) && is_string($row['manual_documents']) && $row['manual_documents'] !== ''
+            ? json_decode($row['manual_documents'], true)
+            : null;
+        if (is_array($decodedManualDocuments)) {
+            $product->setManualDocuments($decodedManualDocuments);
+        }
         $decodedManualUrls             = isset($row['manual_urls']) && is_string($row['manual_urls']) && $row['manual_urls'] !== ''
             ? json_decode($row['manual_urls'], true)
             : null;

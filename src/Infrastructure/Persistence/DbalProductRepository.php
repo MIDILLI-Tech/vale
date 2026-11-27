@@ -156,6 +156,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
             'manual_url'                 => $product->getManualUrl(),
             'manual_label'               => $product->getManualLabel(),
             'manual_urls'                => json_encode($product->getManualUrls() ?: new \stdClass()),
+            'manual_documents'           => json_encode($product->getManualDocuments() ?: new \stdClass()),
             'digital_waiver'             => $product->hasDigitalWaiver() ? 1 : 0,
             'manual_file_ids'            => json_encode($product->getManualFileIds() ?: new \stdClass()),
             'featured_image_id'          => $product->getFeaturedImageId(),

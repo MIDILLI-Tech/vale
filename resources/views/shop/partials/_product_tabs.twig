@@ -9,13 +9,12 @@
 } %}
 {% set _amount = product.baseAmount|default('') %}
 {% set _unit = product.unit|default('') %}
-{% set _manual_files = manual_files|default([]) %}
 {% set _manual_label = product.manualLabel|default('') ?: __('Manual / Instructions') %}
-{% set _manual_urls = product.manualUrls|default([]) %}
+{% set _manual_docs = manual_documents|default(product.manualDocuments|default([])) %}
 {% set _has_info = _unit or _amount or product.manufacturerName|default('') or product.manufacturerAddress|default('')
     or product.euResponsibleName|default('') or product.euResponsibleAddress|default('')
     or product.countryOfOrigin|default('') or product.safetyWarnings|default('')
-    or _manual_urls|length or _manual_files|length %}
+    or _manual_docs|length %}
 {% set _tabs = [] %}
 {% if product.description %}{% set _tabs = _tabs|merge(['description']) %}{% endif %}
 {% if _has_info %}{% set _tabs = _tabs|merge(['info']) %}{% endif %}
@@ -69,30 +68,28 @@
                 <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ country_name(product.countryOfOrigin) }} ({{ product.countryOfOrigin }})</dd>
             </div>
             {% endif %}
-            {% if _manual_files|length or _manual_urls|length %}
+            {% if _manual_docs|length %}
             <div>
                 <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ _manual_label }}</dt>
                 <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">
                     <ul class="space-y-1">
-                        {% for file in _manual_files %}
+                        {% for document in _manual_docs %}
+                        {% if document.url %}
                         <li>
-                            <a href="{{ file.url }}" rel="noopener" target="_blank" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline dark:text-blue-400">
+                            <a href="{{ document.url }}" rel="noopener nofollow" target="_blank" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline dark:text-blue-400">
+                                {% if document.type == 'file' %}
                                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-7.5 3h9a2.25 2.25 0 0 0 2.25-2.25V6.108c0-.597-.237-1.169-.659-1.591L15.75 2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v13.5a2.25 2.25 0 0 0 2.25 2.25Z"/>
                                 </svg>
-                                <span>{{ file.name }}</span>
-                            </a>
-                        </li>
-                        {% endfor %}
-                        {% for manual_url in _manual_urls %}
-                        <li>
-                            <a href="{{ manual_url }}" rel="noopener nofollow" target="_blank" class="inline-flex items-center gap-1.5 text-blue-600 hover:underline dark:text-blue-400">
+                                {% else %}
                                 <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
                                 </svg>
-                                <span>{{ manual_url|replace({'https://': '', 'http://': ''})|split('/')|first }}</span>
+                                {% endif %}
+                                <span>{{ document.label ?: (document.type == 'file' ? document.name : document.value|replace({'https://': '', 'http://': ''})|split('/')|first) }}</span>
                             </a>
                         </li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                 </dd>

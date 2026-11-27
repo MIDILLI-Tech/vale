@@ -1011,8 +1011,21 @@ final class OrderController
 
     private function resendOrderConfirmation(Order $order, string $email, Response $response, array $args): Response
     {
+        $manuals = [];
+        foreach ($order->getItems() as $item) {
+            $productId = (int) ($item['product_id'] ?? 0);
+            if ($productId <= 0 || array_key_exists($productId, $manuals)) {
+                continue;
+            }
+            $product = $this->products->findById($productId);
+            if ($product !== null) {
+                $manuals[$productId] = $product->getManualDocuments();
+            }
+        }
+
         $templateData = [
             'order'             => $order,
+            'manuals'           => $manuals,
             'policy_links'      => $this->policyLinks(),
             'downloads'         => $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [],
             'refund_request'    => $this->buildRefundRequestPayload($order),

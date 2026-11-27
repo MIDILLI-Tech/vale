@@ -459,6 +459,24 @@ final class ShopController
             ];
         }
 
+        $manualDocuments = $product->getManualDocuments();
+        $manualFilesById = [];
+        foreach ($manualFiles as $manualFile) {
+            $manualFilesById[(int) $manualFile['id']] = $manualFile;
+        }
+        foreach ($manualDocuments as &$manualDocument) {
+            if ($manualDocument['type'] !== 'file') {
+                continue;
+            }
+            $manualFile = $manualFilesById[(int) $manualDocument['value']] ?? null;
+            if ($manualFile === null) {
+                continue;
+            }
+            $manualDocument['name'] = $manualDocument['name'] !== '' ? $manualDocument['name'] : $manualFile['name'];
+            $manualDocument['url']  = $manualDocument['url']  !== '' ? $manualDocument['url'] : $manualFile['url'];
+        }
+        unset($manualDocument);
+
         $unitPrice = $this->settings->get('compliance_grundpreis', '1') === '1'
             ? $this->unitPriceCalculator->resolve($product->getUnit(), $product->getBaseAmount(), (float) $product->getPrice())
             : null;
@@ -584,6 +602,7 @@ final class ShopController
             'featured_image'                                                                                        => $this->resolveProductImage($product->getFeaturedImageId()),
             'gallery_images'                                                                                        => $galleryImages,
             'manual_files'                                                                                          => $manualFiles,
+            'manual_documents'                                                                                      => $manualDocuments,
             'unit_price'                                                                                            => $unitPrice,
             'lowest_price_30'                                                                                       => $lowestPrice30,
             'variations'                                                                                            => $variations,

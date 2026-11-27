@@ -173,6 +173,18 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                {% set item_manuals = (manuals|default({}))[item.product_id]|default([]) %}
+                {% if item_manuals|length > 0 %}
+                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {% for doc in item_manuals %}
+                    {% if doc.url %}
+                    <a href="{{ doc.url }}" target="_blank" rel="noopener nofollow" class="text-blue-600 hover:underline dark:text-blue-400">
+                        {{ doc.label ?: (doc.type == 'file' ? doc.name : doc.value|replace({'https://': '', 'http://': ''})|split('/')|first) }}
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

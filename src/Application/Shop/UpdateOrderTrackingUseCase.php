@@ -48,7 +48,7 @@ final class UpdateOrderTrackingUseCase
         $this->orderLogs->add(
             $order->getId(),
             'tracking_updated',
-            __('Tracking updated — Carrier: :carrier, Tracking #:tracking', [
+            __('Tracking updated — Carrier: :carrier, Tracking #: :tracking', [
                 ':carrier'  => $carrier !== '' ? $carrier : __('none'),
                 ':tracking' => $trackingNumber,
             ]),

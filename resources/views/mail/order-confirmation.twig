@@ -136,7 +136,19 @@
   <tbody>
     {% for item in order.items %}
     <tr style="border-bottom:1px solid {{ email_border }};">
-      <td style="padding:8px 0; font-size:14px;">{{ item.name }}</td>
+      <td style="padding:8px 0; font-size:14px;">
+        {{ item.name }}
+        {% set item_manuals = (manuals|default({}))[item.product_id]|default([]) %}
+        {% if item_manuals|length > 0 %}
+        <div style="margin-top:4px; font-size:12px; color:{{ email_text_muted }};">
+          {% for doc in item_manuals %}
+          {% if doc.url %}
+          <a href="{{ doc.url }}" style="color:{{ email_text_muted }}; text-decoration:underline; margin-right:10px;">{{ doc.label ?: (doc.type == 'file' ? doc.name : doc.value|replace({'https://': '', 'http://': ''})|split('/')|first) }}</a>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </td>
       <td style="padding:8px 0; text-align:center; font-size:14px;">{{ item.quantity ?? item.qty }}</td>
       <td style="padding:8px 0; text-align:right; font-size:14px;">{{ (item.price * (item.quantity ?? item.qty))|price(order.currency) }}</td>
     </tr>
@@ -154,6 +166,12 @@
 {% if order.customerNote %}
 <p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:14px; color:{{ email_text_muted }};">
   <strong>{{ __('Note:') }}</strong> {{ order.customerNote }}
+</p>
+{% endif %}
+
+{% if order.withdrawalWaiverAcceptedAt %}
+<p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:13px; color:{{ email_text_muted }};">
+  <strong>{{ __('Digital withdrawal waiver:') }}</strong> {{ __('You confirmed that the digital content is delivered immediately and that your right of withdrawal ends once the download starts (:date).', {':date': order.withdrawalWaiverAcceptedAt|date('d M Y, H:i')}) }}
 </p>
 {% endif %}
 
