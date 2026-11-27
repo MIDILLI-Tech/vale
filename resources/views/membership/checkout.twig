@@ -4,7 +4,7 @@
 {% block meta_description %}{{ __('Complete your membership checkout and subscribe securely.') }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-lg px-4 py-14" x-data="membershipCheckout()">
+<div class="mx-auto max-w-lg px-4 pt-3 pb-10" x-data="membershipCheckout()">
     <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-gray-100">{{ __('Subscribe to') }} {{ plan.name }}</h1>
 
     {% if plan.description %}
