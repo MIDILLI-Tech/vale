@@ -115,8 +115,8 @@ final class ShopController
         if (!empty($params['sort'])) {
             $filters['sort'] = $params['sort'];
         }
-        $filters['exclude_stock'] = !isset($params['exclude_stock'])
-            || !in_array((string) $params['exclude_stock'], ['0', 'false', ''], true);
+        $filters['exclude_stock'] = isset($params['exclude_stock'])
+            && !in_array((string) $params['exclude_stock'], ['0', 'false', ''], true);
 
         $pagination = new Pagination($page, $perPage);
         $products   = $this->products->findAll($pagination, $filters);
