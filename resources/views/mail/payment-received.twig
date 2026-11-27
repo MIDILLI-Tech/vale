@@ -131,6 +131,7 @@
 {% if policy_links.terms is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.terms ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
 {% if policy_links.privacy is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.privacy ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
 {% if policy_links.returns is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.returns ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+{% if policy_links.withdrawal is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.withdrawal ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Withdrawal policy') ~ '</a>']) %}{% endif %}
 <div style="margin-top:24px; padding-top:16px; border-top:1px solid {{ email_border }}; font-size:12px; color:{{ email_text_muted }}; text-align:center;">
     {{ _policyMailLinks|join('')|raw }}
 </div>

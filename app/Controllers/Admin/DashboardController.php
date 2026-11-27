@@ -231,7 +231,7 @@ final class DashboardController
             $status[] = [
                 'type'     => 'info',
                 'message'  => __('Choose the country where you operate to see which legal documents and consent settings are expected.'),
-                'link'     => '/admin/settings?tab=ecommerce&subtab=legal',
+                'link'     => '/admin/settings?tab=legal',
                 'linkText' => __('Legal & Compliance'),
             ];
         }
@@ -242,6 +242,10 @@ final class DashboardController
         if ($legalCountry !== '') {
             $legalReference = require dirname(__DIR__, 3) . '/config/reference-data.php';
             $legalCatalog   = is_array($legalReference['legal_compliance'] ?? null) ? $legalReference['legal_compliance'] : [];
+            $legalCatalog   = LegalComplianceProfile::filterCatalog(
+                $legalCatalog,
+                ($this->settings->get('shop_enabled', '1') ?? '1') === '1',
+            );
             $legalSettings  = [];
             $legalKeys      = [
                 'policy_page_imprint', 'policy_page_privacy', 'policy_page_terms', 'policy_page_returns',

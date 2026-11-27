@@ -175,6 +175,12 @@
 </p>
 {% endif %}
 
+{% if order.ageConfirmedAt %}
+<p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:13px; color:{{ email_text_muted }};">
+  <strong>{{ __('Age confirmation:') }}</strong> {{ __('You confirmed that you meet the minimum age for the age-restricted items in this order (:date).', {':date': order.ageConfirmedAt|date('d M Y, H:i')}) }}
+</p>
+{% endif %}
+
 {% if downloads is defined and downloads|length > 0 %}
 <h3 style="margin:28px 0 12px; font-size:16px; color:{{ email_text }};">{{ __('Downloads') }}</h3>
 <p style="margin:0 0 10px; font-size:13px; color:{{ email_text_muted }};">{{ __('You have :count downloadable file(s) in this order.', {':count': downloads|length}) }}</p>
@@ -218,11 +224,19 @@
 <p style="margin-top:8px; font-size:13px; color:{{ email_text_muted }};">{{ __('Cancellation/refund requests can be submitted within :days days from order date and are reviewed by our team.', {':days': _refundDays}) }}</p>
 {% endif %}
 
+{% if policy_links.withdrawal is defined %}
+{% set _withdrawalLinkHtml = '<a href="' ~ policy_links.withdrawal ~ '" style="color:' ~ email_text_muted ~ ';text-decoration:underline;">' ~ __('Withdrawal policy') ~ '</a>' %}
+<p style="margin-top:12px; font-size:13px; color:{{ email_text_muted }};">
+  <strong>{{ __('Right of withdrawal:') }}</strong> {{ __('You may withdraw from this contract within :days days without giving any reason. The full withdrawal policy and the online withdrawal form are available at :link.', {':days': refund_period_days|default(14), ':link': _withdrawalLinkHtml})|raw }}
+</p>
+{% endif %}
+
 {% if policy_links is defined and policy_links|length > 0 %}
 {% set _policyMailLinks = [] %}
 {% if policy_links.terms is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.terms ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Terms and Conditions') ~ '</a>']) %}{% endif %}
 {% if policy_links.privacy is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.privacy ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Privacy Policy') ~ '</a>']) %}{% endif %}
 {% if policy_links.returns is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.returns ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Return Policy') ~ '</a>']) %}{% endif %}
+{% if policy_links.withdrawal is defined %}{% set _policyMailLinks = _policyMailLinks|merge(['<a href="' ~ policy_links.withdrawal ~ '" style="color:{{ email_text_muted }};text-decoration:underline;margin:0 8px;">' ~ __('Withdrawal policy') ~ '</a>']) %}{% endif %}
 <div style="margin-top:24px; padding-top:16px; border-top:1px solid {{ email_border }}; font-size:12px; color:{{ email_text_muted }}; text-align:center;">
     {{ _policyMailLinks|join('')|raw }}
 </div>

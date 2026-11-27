@@ -560,6 +560,28 @@ final class ProductTest extends TestCase
         $product->setPublishScheduled(true);
         $product->setStatus('draft');
         $this->assertFalse($product->isPublishScheduled());
+        $this->assertNull($product->getMinAge());
+        $this->assertNull($product->getBatchNumber());
+    }
+
+    public function testAgeRestrictionAndBatchNumberRoundTrip(): void
+    {
+        $product = Product::fromRow([
+            'id'           => 7,
+            'name'         => 'Age product',
+            'slug'         => 'age-product',
+            'min_age'      => '18',
+            'batch_number' => 'LOT-7',
+        ]);
+
+        $this->assertSame(18, $product->getMinAge());
+        $this->assertSame('LOT-7', $product->getBatchNumber());
+
+        $product->setMinAge(0);
+        $product->setBatchNumber(null);
+
+        $this->assertNull($product->getMinAge());
+        $this->assertNull($product->getBatchNumber());
     }
 
     public function testPublishDoesNotOverwriteExistingPublishedAt(): void
@@ -800,5 +822,15 @@ final class ProductTest extends TestCase
         ], [10, 20, 30]);
 
         $this->assertSame([10, 20, 30], $product->getCategoryIds());
+    }
+
+    public function testResolveBatchNumberFallsBackToProductLot(): void
+    {
+        $product = new Product('Lot Product', new Slug('lot-product'));
+        $product->setBatchNumber('LOT-PARENT');
+
+        $this->assertSame('LOT-PARENT', $product->resolveBatchNumber(null));
+        $this->assertSame('LOT-PARENT', $product->resolveBatchNumber(''));
+        $this->assertSame('CHILD', $product->resolveBatchNumber(' CHILD '));
     }
 }

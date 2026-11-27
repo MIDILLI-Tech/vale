@@ -5,6 +5,7 @@ declare(strict_types=1);
 use DI\Container;
 use ValeApp\Application\Mail\MailService;
 use ValeApp\Application\Webhook\OutboundWebhookService;
+use ValeApp\Application\Webhook\WebhookPayloadBuilder;
 use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
 use ValeApp\Domain\Shop\Entity\Order;
@@ -34,19 +35,7 @@ return static function (Container $container): void {
     $pageCache   = $container->get(PageCache::class);
     $invalidator = $container->get(PageCacheInvalidator::class);
 
-    $buildPayload = static function (Order $order, array $extra = []): array {
-        $billing = $order->getBilling();
-        return array_merge([
-            'order_id'             => $order->getId(),
-            'order_number'         => $order->getOrderNumber(),
-            'order_status'         => $order->getStatus(),
-            'order_total'          => (string) $order->getTotal(),
-            'currency'             => $order->getCurrency(),
-            'order_customer_email' => $billing['email'] ?? '',
-            'order_customer_name'  => trim(($billing['first_name'] ?? '') . ' ' . ($billing['last_name'] ?? '')),
-            'items'                => $order->getItems(),
-        ], $extra);
-    };
+    $payloads = new WebhookPayloadBuilder($productRepo);
 
     $buildPostPayload = static function (Post $post): array {
         return [
@@ -69,8 +58,8 @@ return static function (Container $container): void {
         ];
     };
 
-    $events->addAction('order.paid', static function (Order $order) use ($webhookSvc, $buildPayload): void {
-        $webhookSvc->dispatch('order.paid', $buildPayload($order));
+    $events->addAction('order.paid', static function (Order $order) use ($webhookSvc, $payloads): void {
+        $webhookSvc->dispatch('order.paid', $payloads->order($order));
     });
 
     $events->addAction('order.paid', static function (Order $order) use ($container, $productRepo, $pageCache): void {
@@ -368,8 +357,8 @@ return static function (Container $container): void {
         $shopPrefix = $container->get(DbalSettingsRepository::class)->get('routing_shop_prefix', '/shop');
         $pageCache->invalidate(site_url($shopPrefix));
     });
-    $events->addAction('order.status_changed', static function (Order $order, string $newStatus) use ($webhookSvc, $buildPayload): void {
-        $webhookSvc->dispatch('order.status_changed', $buildPayload($order, ['new_status' => $newStatus]));
+    $events->addAction('order.status_changed', static function (Order $order, string $newStatus) use ($webhookSvc, $payloads): void {
+        $webhookSvc->dispatch('order.status_changed', $payloads->order($order, ['new_status' => $newStatus]));
     });
 
     $events->addAction('post.created', static function (Post $post) use ($webhookSvc, $buildPostPayload): void {
@@ -391,51 +380,13 @@ return static function (Container $container): void {
         $invalidator->forPost($post);
     });
 
-    $buildProductPayload = static function (Product $product) use ($productRepo): array {
-        $variations = [];
-        try {
-            $rows = $productRepo->findVariationsByProductId((int) $product->getId());
-        } catch (\Throwable) {
-            $rows = [];
-        }
-        foreach ($rows as $row) {
-            $attrs = $row['attributes'] ?? [];
-            if (is_string($attrs)) {
-                $decoded = json_decode($attrs, true);
-                $attrs   = is_array($decoded) ? $decoded : [];
-            }
-            $variations[] = [
-                'id'             => (int) ($row['id'] ?? 0),
-                'sku'            => $row['sku'] ?? null,
-                'attributes'     => $attrs,
-                'price'          => (float) ($row['price'] ?? 0),
-                'sale_price'     => isset($row['sale_price']) && $row['sale_price'] !== null
-                    ? (float) $row['sale_price'] : null,
-                'stock_quantity' => (int) ($row['stock_quantity'] ?? 0),
-                'stock_status'   => $row['stock_status'] ?? 'in_stock',
-            ];
-        }
-
-        return [
-            'product_id'         => $product->getId(),
-            'product_name'       => $product->getName(),
-            'product_slug'       => (string) $product->getSlug(),
-            'product_sku'        => $product->getSku(),
-            'product_status'     => $product->getStatus(),
-            'product_price'      => $product->getPrice(),
-            'product_sale_price' => $product->getSalePrice(),
-            'product_stock'      => $product->getStockQuantity(),
-            'variations'         => $variations,
-        ];
-    };
-
-    $events->addAction('product.created', static function (Product $product) use ($webhookSvc, $buildProductPayload, $invalidator): void {
-        $webhookSvc->dispatch('product.created', $buildProductPayload($product));
+    $events->addAction('product.created', static function (Product $product) use ($webhookSvc, $payloads, $invalidator): void {
+        $webhookSvc->dispatch('product.created', $payloads->product($product));
         $invalidator->forProduct($product);
     });
 
-    $events->addAction('product.updated', static function (Product $product) use ($webhookSvc, $buildProductPayload, $invalidator): void {
-        $webhookSvc->dispatch('product.updated', $buildProductPayload($product));
+    $events->addAction('product.updated', static function (Product $product) use ($webhookSvc, $payloads, $invalidator): void {
+        $webhookSvc->dispatch('product.updated', $payloads->product($product));
         $invalidator->forProduct($product);
     });
 

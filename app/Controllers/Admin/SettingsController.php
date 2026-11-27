@@ -97,16 +97,21 @@ final class SettingsController
         $discussion    = $this->settings->getGroup('discussion');
         $seo           = $this->settings->getGroup('seo');
         $ecommerce     = $this->settings->getGroup('ecommerce');
+        $legal         = $this->settings->getGroup('legal');
         $privacy       = $this->settings->getGroup('privacy');
         $analytics     = $this->settings->getGroup('analytics');
         $registration  = $this->settings->getGroup('registration');
         $customScripts = $this->settings->getGroup('custom_scripts');
 
-        $settings = array_merge($general, $content, $discussion, $seo, $ecommerce, $privacy, $analytics, $registration, $customScripts);
+        $settings = array_merge($general, $content, $discussion, $seo, $ecommerce, $legal, $privacy, $analytics, $registration, $customScripts);
 
         $legalCatalog   = is_array($referenceData['legal_compliance'] ?? null) ? $referenceData['legal_compliance'] : [];
+        $legalCatalog   = LegalComplianceProfile::filterCatalog(
+            $legalCatalog,
+            ($this->settings->get('shop_enabled', '1') ?? '1') === '1',
+        );
         $legalProfile   = new LegalComplianceProfile($legalCatalog);
-        $legalCountry   = strtoupper(trim((string) ($ecommerce['legal_profile_country'] ?? '')));
+        $legalCountry   = strtoupper(trim((string) ($settings['legal_profile_country'] ?? '')));
         $legalChecklist = $legalProfile->checklist($legalCountry, $settings);
         $legalFindings  = $legalProfile->findings($legalCountry, $settings);
 
@@ -650,7 +655,7 @@ final class SettingsController
             $body['blocked_currencies'] = implode(',', $blocked);
         }
 
-        if ($group === 'ecommerce' && $subtab === 'legal') {
+        if ($group === 'legal') {
             $legalCodes                    = is_array($refData['country_codes'] ?? null) ? $refData['country_codes'] : [];
             $legalCountry                  = strtoupper(trim((string) ($body['legal_profile_country'] ?? '')));
             $body['legal_profile_country'] = in_array($legalCountry, $legalCodes, true) ? $legalCountry : '';
@@ -660,7 +665,7 @@ final class SettingsController
             $existingAcks = json_decode((string) ($this->settings->get('legal_acknowledgements', '') ?? ''), true);
             $existingAcks = is_array($existingAcks) ? $existingAcks : [];
             $acks         = [];
-            foreach (['imprint', 'privacy', 'terms', 'returns', 'withdrawal', 'consent', 'us_optout'] as $legalKey) {
+            foreach (array_keys((array) ($refData['legal_compliance']['items'] ?? [])) as $legalKey) {
                 $field = 'legal_ack_' . $legalKey;
                 if (($body[$field] ?? '') === '1') {
                     $acks[$legalKey] = (string) ($existingAcks[$legalKey] ?? date('Y-m-d'));

@@ -18,6 +18,13 @@
     </div>
     {% endif %}
 
+    {% if age_required|default(0) > 0 %}
+    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-center gap-2 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+        <span class="text-base leading-none">🔞</span>
+        <span>{{ __('This cart contains items that may only be sold to persons aged :age and over. You will be asked to confirm your age at checkout.', {':age': age_required}) }}</span>
+    </div>
+    {% endif %}
+
     <div class="rounded-xl border bg-white shadow-xs overflow-x-auto mb-6">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">

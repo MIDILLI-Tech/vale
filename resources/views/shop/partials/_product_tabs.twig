@@ -11,9 +11,17 @@
 {% set _unit = product.unit|default('') %}
 {% set _manual_label = product.manualLabel|default('') ?: __('Manual / Instructions') %}
 {% set _manual_docs = manual_documents|default(product.manualDocuments|default([])) %}
+{% set _batch_values = [] %}
+{% if product.batchNumber|default('') %}{% set _batch_values = _batch_values|merge([product.batchNumber]) %}{% endif %}
+{% for _variation in variations|default([]) %}
+    {% if _variation.batch_number|default('') and _variation.batch_number not in _batch_values %}
+        {% set _batch_values = _batch_values|merge([_variation.batch_number]) %}
+    {% endif %}
+{% endfor %}
 {% set _has_info = _unit or _amount or product.manufacturerName|default('') or product.manufacturerAddress|default('')
     or product.euResponsibleName|default('') or product.euResponsibleAddress|default('')
     or product.countryOfOrigin|default('') or product.safetyWarnings|default('')
+    or product.minAge|default(0) or _batch_values|length
     or _manual_docs|length %}
 {% set _tabs = [] %}
 {% if product.description %}{% set _tabs = _tabs|merge(['description']) %}{% endif %}
@@ -66,6 +74,18 @@
             <div>
                 <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ __('Country of Origin') }}</dt>
                 <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ country_name(product.countryOfOrigin) }} ({{ product.countryOfOrigin }})</dd>
+            </div>
+            {% endif %}
+            {% if _batch_values|length %}
+            <div>
+                <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ __('Batch number') }}</dt>
+                <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ _batch_values|join(', ') }}</dd>
+            </div>
+            {% endif %}
+            {% if product.minAge %}
+            <div>
+                <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ __('Age restriction') }}</dt>
+                <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ product.minAge }}+</dd>
             </div>
             {% endif %}
             {% if _manual_docs|length %}

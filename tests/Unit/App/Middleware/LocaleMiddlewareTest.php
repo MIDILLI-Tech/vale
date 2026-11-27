@@ -332,6 +332,85 @@ class LocaleMiddlewareTest extends TestCase
         $this->assertNotContains('Posters', $labels);
     }
 
+    public function testMenuFallsBackToOriginalLanguageAndTranslatesManagedLabels(): void
+    {
+        // "Show originals" is on: a locale without its own footer menu keeps the
+        // original menu instead of losing the footer, and the Legal labels are
+        // translated for the visitor rather than stored in one language.
+        $this->translator->method('getSupportedLocales')->willReturn(['en', 'tr']);
+        $this->translator->method('getLocale')->willReturn('tr');
+        $this->translator->method('get')->willReturnCallback(
+            static fn (string $key): string => match ($key) {
+                'Legal'      => 'Yasal',
+                'Imprint'    => 'Künye',
+                'Withdrawal' => 'Cayma',
+                default      => $key,
+            }
+        );
+        (new \ReflectionProperty(Translator::class, 'instance'))->setValue(null, $this->translator);
+
+        $this->settings->method('get')->willReturnMap([
+            ['multi_language_content', '0', '1'],
+            ['default_locale', 'en', 'tr'],
+            ['i18n_display_originals_fallback', '1', '1'],
+            ['shop_enabled', '1', '1'],
+            ['subscriptions_enabled', '1', '1'],
+        ]);
+
+        $captured = [];
+        $env      = $this->createStub(\Twig\Environment::class);
+        $env->method('addGlobal')->willReturnCallback(function (string $name, mixed $value) use (&$captured): void {
+            $captured[$name] = $value;
+        });
+        $this->twig->method('getEnvironment')->willReturn($env);
+        $this->themeManager->method('getDefinedMenus')->willReturn([]);
+
+        $menu = Menu::fromRow([
+            'id'       => 5,
+            'name'     => 'Footer',
+            'slug'     => 'footer',
+            'location' => 'footer',
+            'language' => 'en',
+        ]);
+
+        $heading = new MenuItem(5, 'Legal');
+        $heading->setId(100);
+        $heading->setCssClass('vl-legal-managed');
+
+        $imprint = new MenuItem(5, 'Imprint');
+        $imprint->setId(101);
+        $imprint->setParentId(100);
+        $imprint->setUrl('/imprint');
+        $imprint->setCssClass('vl-legal-managed');
+
+        $this->menus->method('findAllByLocation')->willReturnCallback(
+            static fn (string $location, ?string $language = null): array
+                => $location === 'footer' && ($language === null || $language === 'en') ? [$menu] : []
+        );
+        $this->menus->method('findItemsByMenuId')->willReturn([$heading, $imprint]);
+
+        $request    = (new ServerRequestFactory())->createServerRequest('GET', '/');
+        $middleware = new LocaleMiddleware(
+            $this->translator,
+            $this->settings,
+            $this->session,
+            $this->twig,
+            $this->menus,
+            $this->themeManager,
+            $this->users,
+            $this->posts
+        );
+        $middleware->process($request, $this->handler);
+
+        $footer = $captured['menu_footer'] ?? null;
+        self::assertIsArray($footer);
+        self::assertCount(2, $footer);
+        self::assertSame(['Yasal', 'Künye'], array_map(
+            static fn (MenuItem $item): string => $item->getLabel(),
+            $footer,
+        ));
+    }
+
     public function testDisabledFeaturesAreFilteredFromMenuItems()
     {
         $this->translator = $this->createStub(Translator::class);

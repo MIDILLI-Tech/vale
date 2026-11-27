@@ -29,6 +29,7 @@ class Order extends BaseEntity
     private ?string $paymentToken                           = null;
     private ?\DateTimeImmutable $paidAt                     = null;
     private ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null;
+    private ?\DateTimeImmutable $ageConfirmedAt             = null;
     private ?string $carrier                                = null;
     private ?string $trackingNumber                         = null;
     private string $orderType                               = 'shop';
@@ -122,6 +123,10 @@ class Order extends BaseEntity
     public function getWithdrawalWaiverAcceptedAt(): ?\DateTimeImmutable
     {
         return $this->withdrawalWaiverAcceptedAt;
+    }
+    public function getAgeConfirmedAt(): ?\DateTimeImmutable
+    {
+        return $this->ageConfirmedAt;
     }
     public function getCarrier(): ?string
     {
@@ -245,6 +250,10 @@ class Order extends BaseEntity
     {
         $this->withdrawalWaiverAcceptedAt = $at;
     }
+    public function setAgeConfirmedAt(?\DateTimeImmutable $at): void
+    {
+        $this->ageConfirmedAt = $at;
+    }
     public function setCarrier(?string $carrier): void
     {
         $this->carrier = $carrier;
@@ -350,6 +359,9 @@ class Order extends BaseEntity
         }
         if (!empty($row['withdrawal_waiver_accepted_at'])) {
             $order->withdrawalWaiverAcceptedAt = new \DateTimeImmutable($row['withdrawal_waiver_accepted_at']);
+        }
+        if (!empty($row['age_confirmed_at'])) {
+            $order->ageConfirmedAt = new \DateTimeImmutable($row['age_confirmed_at']);
         }
         if (!empty($row['created_at'])) {
             $order->createdAt = new \DateTimeImmutable($row['created_at']);

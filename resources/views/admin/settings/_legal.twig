@@ -1,4 +1,4 @@
-    {# ══ Legal & Compliance sub-panel ══ #}
+    {# ══ Legal & Compliance ══ #}
 {% import 'admin/macros/vl-setting.twig' as vl %}
     {% set legal_status_badges = {
         configured:  { label: __('Configured'),   class: 'bg-green-50 text-green-700 ring-green-200 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-800' },
@@ -16,6 +16,7 @@
         consent:    __('Cookie Consent'),
         us_optout:      __('Do Not Sell or Share (US)'),
         digital_waiver: __('Digital withdrawal waiver'),
+        price_history:  __('Lowest price in the last 30 days'),
         verified_reviews: __('Verified reviews'),
     } %}
     {% set legal_item_notes = {
@@ -38,18 +39,17 @@
         anz:  __('Australia / New Zealand'),
         other: __('No specific profile'),
     } %}
-    <div id="ec-tab-legal" class="ec-tab-panel hidden">
+    <div id="tab-legal" class="tab-panel hidden">
     <form method="post" action="{{ url('/admin/settings') }}" class="space-y-6">
         {{ csrf_field() }}
         <input type="hidden" name="_METHOD" value="PUT">
-        <input type="hidden" name="_group" value="ecommerce">
-        <input type="hidden" name="_subtab" value="legal">
+        <input type="hidden" name="_group" value="legal">
 
         <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-5">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Legal & Compliance Profile') }}</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Pick the country where you operate. The list below shows the documents and settings that are commonly expected there. It is a checklist, not legal advice, and it never changes a setting on its own.') }}</p>
 
-            <div class="max-w-sm">
+            <div class="sm:max-w-md">
                 <label for="legal-profile-country" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country of operation') }}</label>
                 <select id="legal-profile-country" name="legal_profile_country" class="w-full rounded-lg border-gray-300 dark:border-gray-700 text-sm dark:bg-gray-800 dark:text-gray-100">
                     <option value=""
@@ -67,6 +67,22 @@
                                 {{ settings.legal_profile_country|default('') == code ? 'selected' }}>{{ country_name(code) }} ({{ code }})</option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested region') }}</p>
+                    <p id="legal-profile-region" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ attribute(legal_region_labels, legal_profile.key)|default(legal_profile.label) }}</p>
+                </div>
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested banner model') }}</p>
+                    <p id="legal-profile-consent-model" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ legal_profile.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}</p>
+                    <button type="submit" name="apply_consent_model" value="1"
+                            class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
+                        {{ __('Use this banner model') }}
+                    </button>
+                    <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Turns the cookie consent banner on and sets the US opt-out control to match this region.') }}</p>
+                </div>
             </div>
 
             <ul class="space-y-2">
@@ -100,6 +116,23 @@
                 {% endfor %}
             </ul>
 
+            {% if legal_findings|default([])|length > 0 %}
+            <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
+                <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('Open items for this profile') }}</h4>
+                <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                    {% for finding in legal_findings %}
+                    <li>
+                        {{ finding.message }}
+                        {% if finding.link is not empty %}
+                        <a href="{{ url(finding.link) }}" class="font-medium underline">{{ finding.link_text }}</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if shop_enabled|default('1') == '1' %}
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                 <label class="flex items-start gap-3">
                     <input type="hidden" name="compliance_digital_waiver" value="0">
@@ -146,7 +179,7 @@
                                {{ settings.compliance_grundpreis|default('1') == '1' ? 'checked' }}
                                class="mt-0.5 rounded border-gray-300 dark:border-gray-600">
                         <span>
-                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit price (Grundpreis)') }}</span>
+                            <span class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Unit price') }}</span>
                             <span class="block text-xs text-gray-500 dark:text-gray-400">{{ __('Shows the price per kg, litre or square metre below the product price, using the content amount. Products sold by the piece never show it.') }}</span>
                         </span>
                     </label>
@@ -164,40 +197,11 @@
                     </label>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested region') }}</p>
-                    <p id="legal-profile-region" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ attribute(legal_region_labels, legal_profile.key)|default(legal_profile.label) }}</p>
-                </div>
-                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested banner model') }}</p>
-                    <p id="legal-profile-consent-model" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ legal_profile.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}</p>
-                    <button type="submit" name="apply_consent_model" value="1"
-                            class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
-                        {{ __('Use this banner model') }}
-                    </button>
-                    <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Turns the cookie consent banner on and sets the US opt-out control to match this region.') }}</p>
-                </div>
-            </div>
-
-            {% if legal_findings|default([])|length > 0 %}
-            <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
-                <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('Open items for this profile') }}</h4>
-                <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
-                    {% for finding in legal_findings %}
-                    <li>
-                        {{ finding.message }}
-                        {% if finding.link is not empty %}
-                        <a href="{{ url(finding.link) }}" class="font-medium underline">{{ finding.link_text }}</a>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
             {% endif %}
+
         </div>
 
+        {% set footer_menu = legal_footer|default({ menu_id: null, menu_name: '', has_heading: false, links: 0 }) %}
         <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs space-y-5">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Legal Pages') }}</h3>
             <div x-data="{ open: false }" class="rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-200">
@@ -222,13 +226,17 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Select existing pages to link as policy documents. Privacy, terms and returns appear on the checkout page and in order confirmation emails; the imprint is linked from the site footer.') }}</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 {% set legal_fields = [
-                    { key: 'policy_page_returns', label: __('Return Policy Page'), seed: pagePickerSeeds.policy_returns|default(null), attrs_key: 'policy_page_returns', keywords: 'returns refund policy' },
                     { key: 'policy_page_privacy', label: __('Privacy Policy Page'), seed: pagePickerSeeds.policy_privacy|default(null), attrs_key: 'policy_page_privacy', keywords: 'privacy gdpr policy' },
                     { key: 'policy_page_terms', label: __('Terms & Conditions Page'), seed: pagePickerSeeds.policy_terms|default(null), attrs_key: 'policy_page_terms', keywords: 'terms conditions tos' },
                     { key: 'policy_page_imprint', label: __('Imprint Page'), seed: pagePickerSeeds.policy_imprint|default(null), attrs_key: 'policy_page_imprint', keywords: 'imprint impressum legal notice' },
                 ] %}
+                {% if shop_enabled|default('1') == '1' %}
+                {% set legal_fields = legal_fields|merge([
+                    { key: 'policy_page_returns', label: __('Return Policy Page'), seed: pagePickerSeeds.policy_returns|default(null), attrs_key: 'policy_page_returns', keywords: 'returns refund policy' },
+                ]) %}
+                {% endif %}
                 {% for field in legal_fields %}
-                <div {{ vl.attrs('ecommerce', field.label, field.attrs_key, 'legal', __('Legal Pages'), field.keywords) }}>
+                <div {{ vl.attrs('legal', field.label, field.attrs_key, '', __('Legal Pages'), field.keywords) }}>
                     <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
                     {% include 'admin/components/page-async-select.twig' with {
                         name: field.key,
@@ -249,41 +257,41 @@
                     {{ __('Create a new page') }} →
                 </a>
             </div>
+
+            <div class="border-t dark:border-gray-700 pt-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('Footer menu') }}</p>
+                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                            {% if footer_menu.menu_id %}
+                                {% if footer_menu.has_heading %}
+                                    {{ __(':menu is the footer menu. The Legal column has :count links.', {':menu': footer_menu.menu_name, ':count': footer_menu.links}) }}
+                                {% else %}
+                                    {{ __(':menu is the footer menu, but it has no Legal column yet.', {':menu': footer_menu.menu_name}) }}
+                                {% endif %}
+                            {% else %}
+                                {{ __('No footer menu is defined yet. The links above are printed as a plain row in the footer until a menu is created.') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        {% if footer_menu.menu_id %}
+                        <a href="{{ url('/admin/menus') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Open menu builder') }}</a>
+                        {% endif %}
+                        <button type="submit" form="legal-footer-form" class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
+                            {{ footer_menu.menu_id ? __('Add Legal section') : __('Create footer menu') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </form>
 
-    {% set footer_menu = legal_footer|default({ menu_id: null, menu_name: '', has_heading: false, links: 0 }) %}
-    <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="min-w-0">
-                <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ __('Footer menu') }}</p>
-                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    {% if footer_menu.menu_id %}
-                        {% if footer_menu.has_heading %}
-                            {{ __(':menu is the footer menu. The Legal column has :count links.', {':menu': footer_menu.menu_name, ':count': footer_menu.links}) }}
-                        {% else %}
-                            {{ __(':menu is the footer menu, but it has no Legal column yet.', {':menu': footer_menu.menu_name}) }}
-                        {% endif %}
-                    {% else %}
-                        {{ __('No footer menu is defined yet. The links above are printed as a plain row in the footer until a menu is created.') }}
-                    {% endif %}
-                </p>
-            </div>
-            <div class="flex shrink-0 items-center gap-2">
-                {% if footer_menu.menu_id %}
-                <a href="{{ url('/admin/menus') }}" class="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">{{ __('Open menu builder') }}</a>
-                {% endif %}
-                <form method="post" action="{{ url('/admin/settings/legal-footer') }}">
-                    {{ csrf_field() }}
-                    <button type="submit" class="rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
-                        {{ footer_menu.menu_id ? __('Add Legal section') : __('Create footer menu') }}
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    </div>{# /ec-tab-legal #}
+    <form id="legal-footer-form" method="post" action="{{ url('/admin/settings/legal-footer') }}" class="hidden">
+        {{ csrf_field() }}
+    </form>
+    </div>{# /tab-legal #}
 <script nonce="{{ csp_nonce }}">
 (function () {
     var select = document.getElementById('legal-profile-country');

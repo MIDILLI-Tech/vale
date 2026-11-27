@@ -251,6 +251,8 @@ final class OrderApiController
                 $vid           = null;
                 $sku           = trim((string) ($row['sku'] ?? '')) ?: null;
                 $variationData = null;
+                $variationRow  = null;
+                $batchNumber   = null;
 
                 if (empty($row['product_id']) && !empty($row['sku'])) {
                     $bySku = $this->products->findBySku(trim((string) $row['sku']));
@@ -313,6 +315,7 @@ final class OrderApiController
                         }
                         $sku = $product->getSku();
                     }
+                    $batchNumber = $product->resolveBatchNumber((string) ($variationRow['batch_number'] ?? ''));
                 } else {
                     if ($name === '') {
                         $errors["items.$index.name"] = ['A name is required for items without a product reference.'];
@@ -336,6 +339,7 @@ final class OrderApiController
                     'variation_id'   => $vid,
                     'name'           => $name,
                     'sku'            => $sku,
+                    'batch_number'   => $batchNumber,
                     'qty'            => $qty,
                     'price'          => $price,
                     'subtotal'       => $lineSubtotal,
@@ -574,22 +578,24 @@ final class OrderApiController
             : null;
 
         return [
-            'id'             => $order->getId(),
-            'order_number'   => $order->getOrderNumber(),
-            'status'         => $order->getStatus(),
-            'currency'       => $order->getCurrency(),
-            'subtotal'       => $order->getSubtotal(),
-            'total'          => $order->getTotal(),
-            'payment_method' => $order->getPaymentMethod(),
-            'paid_at'        => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
-            'created_at'     => $order->getCreatedAt()?->format(\DateTimeInterface::ATOM),
-            'customer_email' => $email !== '' ? $email : null,
-            'items'          => array_map(
+            'id'               => $order->getId(),
+            'order_number'     => $order->getOrderNumber(),
+            'status'           => $order->getStatus(),
+            'currency'         => $order->getCurrency(),
+            'subtotal'         => $order->getSubtotal(),
+            'total'            => $order->getTotal(),
+            'payment_method'   => $order->getPaymentMethod(),
+            'paid_at'          => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
+            'age_confirmed_at' => $order->getAgeConfirmedAt()?->format(\DateTimeInterface::ATOM),
+            'created_at'       => $order->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+            'customer_email'   => $email !== '' ? $email : null,
+            'items'            => array_map(
                 static fn (array $item): array => [
                     'product_id'   => isset($item['product_id']) ? (int) $item['product_id'] : null,
                     'variation_id' => isset($item['variation_id']) ? (int) $item['variation_id'] : null,
                     'name'         => (string) ($item['name'] ?? ''),
-                    'sku'          => $item['sku'] ?? null,
+                    'sku'          => $item['sku']          ?? null,
+                    'batch_number' => $item['batch_number'] ?? null,
                     'quantity'     => (int) ($item['quantity'] ?? $item['qty'] ?? 1),
                 ],
                 $order->getItems()

@@ -11,10 +11,12 @@ use Psr\Http\Server\RequestHandlerInterface;
 use Slim\Psr7\Response;
 use Slim\Views\Twig;
 use Twig\Environment;
+use ValeApp\Application\Menu\LegalFooterMenuService;
 use ValeApp\Domain\Content\Repository\CategoryRepositoryInterface;
 use ValeApp\Domain\Content\Repository\ContentTypeRepositoryInterface;
 use ValeApp\Domain\Content\Repository\PostRepositoryInterface;
 use ValeApp\Domain\Content\RoutingPrefixTypes;
+use ValeApp\Domain\Menu\Entity\MenuItem;
 use ValeApp\Domain\Menu\Repository\MenuRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Domain\Shop\Repository\ProductCategoryRepositoryInterface;
@@ -417,6 +419,20 @@ final class LocaleMiddleware implements MiddlewareInterface
                 if ($contentLang !== $defaultLocale) {
                     $menus = $this->menus->findAllByLocation($location, $defaultLocale);
                 }
+
+                // Menus follow the same rule as content: when "show originals"
+                // is on, an untranslated location keeps the original menu
+                // instead of disappearing from the page.
+                if (empty($menus) && ($this->settings->get('i18n_display_originals_fallback', '1') ?? '1') === '1') {
+                    $candidates = $this->menus->findAllByLocation($location);
+                    if ($candidates !== []) {
+                        $originalLanguage = $candidates[0]->getLanguage();
+                        $menus            = array_values(array_filter(
+                            $candidates,
+                            static fn ($candidate): bool => $candidate->getLanguage() === $originalLanguage,
+                        ));
+                    }
+                }
             }
 
             $allItems       = [];
@@ -445,6 +461,8 @@ final class LocaleMiddleware implements MiddlewareInterface
                 // Resolve content paths dynamically and localize menu item URLs if relative
                 $validItems = [];
                 foreach ($items as $item) {
+                    $this->translateManagedLabel($item);
+
                     $type  = $item->getType();
                     $refId = $item->getReferenceId();
 
@@ -537,6 +555,18 @@ final class LocaleMiddleware implements MiddlewareInterface
         }
 
         $this->injectLegalFooterLinks($footerUrls);
+    }
+
+    /**
+     * Legal footer items carry canonical English labels so one menu can serve
+     * every language; the visitor's locale is applied here, at render time.
+     * Custom labels that are not translation keys stay untouched.
+     */
+    private function translateManagedLabel(MenuItem $item): void
+    {
+        if ($item->getCssClass() === LegalFooterMenuService::MANAGED_CLASS) {
+            $item->setLabel(__($item->getLabel()));
+        }
     }
 
     /**

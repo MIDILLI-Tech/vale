@@ -69,7 +69,12 @@
                             </div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-mono">{{ item.sku|default('—') }}</td>
+                        <td class="px-6 py-4 text-xs text-gray-500 dark:text-gray-400 font-mono">
+                            {{ item.sku|default('—') }}
+                            {% if item.batch_number|default('') %}
+                            <div class="mt-0.5 text-[11px] font-sans text-gray-500 dark:text-gray-400">{{ __('Batch number') }}: {{ item.batch_number }}</div>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4 text-sm text-center text-gray-700 dark:text-gray-300">{{ item.quantity|default(item.qty)|default(1) }}</td>
                         <td class="px-6 py-4 text-sm text-right text-gray-700 dark:text-gray-300">
                             {{ item.price|price(order.currency) }}
@@ -545,9 +550,12 @@
             <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-3">{{ __('Order Info') }}</h3>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Order Number') }}:</span> {{ order.orderNumber }}</p>
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Payment') }}:</span> {{ payment_methods[order.paymentMethod]|default(order.paymentMethod|default('—')|replace({'_': ' '})|title) }}</p>
-            {% if order.withdrawalWaiverAcceptedAt %}
-            <p><span class="text-gray-500 dark:text-gray-400">{{ __('Digital withdrawal waiver') }}:</span> {{ __('Accepted on :date', {':date': order.withdrawalWaiverAcceptedAt|date('Y-m-d H:i')}) }}</p>
-            {% endif %}
+                                {% if order.withdrawalWaiverAcceptedAt %}
+                    <p><span class="text-gray-500 dark:text-gray-400">{{ __('Digital withdrawal waiver') }}:</span> {{ __('Accepted on :date', {':date': order.withdrawalWaiverAcceptedAt|date('Y-m-d H:i')}) }}</p>
+                    {% endif %}
+                    {% if order.ageConfirmedAt %}
+                    <p><span class="text-gray-500 dark:text-gray-400">{{ __('Age confirmation') }}:</span> {{ __('Confirmed on :date', {':date': order.ageConfirmedAt|date('Y-m-d H:i')}) }}</p>
+                    {% endif %}
             {% if order.transactionId %}
             <p><span class="text-gray-500 dark:text-gray-400">{{ __('Transaction ID') }}:</span> <code class="font-mono text-xs">{{ order.transactionId }}</code></p>
             {% endif %}

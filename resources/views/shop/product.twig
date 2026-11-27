@@ -9,6 +9,40 @@
 {% block og_type %}product{% endblock %}
 
 {% block content %}
+{% if product.minAge|default(0) > 0 %}
+<div id="vl-age-gate" class="fixed inset-0 z-[60] flex items-center justify-center bg-white px-4 dark:bg-gray-950">
+    <div class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-lg dark:border-gray-700 dark:bg-gray-900">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ __('Age verification') }}</h2>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ __('This product may only be sold to persons aged :age and over. Please confirm your age to continue.', {':age': product.minAge}) }}</p>
+        <button type="button" id="vl-age-yes"
+                class="mt-4 w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium">
+            {{ __('Yes, I am :age or older', {':age': product.minAge}) }}
+        </button>
+        <a href="{{ url('/') }}" class="mt-2 block text-xs text-gray-500 underline dark:text-gray-400">{{ __('No, take me back') }}</a>
+    </div>
+</div>
+<script nonce="{{ csp_nonce }}">
+(function () {
+    var gate = document.getElementById('vl-age-gate');
+    var key = 'vl_age_ok_' + {{ product.minAge }};
+
+    function unlock() {
+        document.documentElement.style.overflow = '';
+        if (gate) { gate.remove(); }
+    }
+
+    try {
+        if (window.localStorage.getItem(key) === '1') { unlock(); return; }
+    } catch (e) {}
+
+    document.documentElement.style.overflow = 'hidden';
+    document.getElementById('vl-age-yes').addEventListener('click', function () {
+        try { window.localStorage.setItem(key, '1'); } catch (e) {}
+        unlock();
+    });
+})();
+</script>
+{% endif %}
 {% if is_preview %}
 <div class="sticky top-0 z-50 bg-amber-400 py-2 text-center text-sm font-semibold text-amber-900 shadow-sm">
   &#9888; {{ __('Preview Mode — this product is not yet published.') }}
@@ -124,7 +158,7 @@
 
         {# Details #}
         <div {% if variations|default([])|length > 0 %}x-data="productVariations()"{% endif %}>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ product.name }}</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ product.name }}{% if product.minAge %} <span class="align-middle rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950 dark:text-red-300 dark:ring-red-800">{{ product.minAge }}+</span>{% endif %}</h1>
 
             {# Star rating display #}
             {% if product.voteStatus == 'enabled' or (product.voteStatus == 'use_global' and (global_star_ratings_enabled ?? true)) %}

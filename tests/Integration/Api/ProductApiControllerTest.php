@@ -335,4 +335,137 @@ final class ProductApiControllerTest extends TestCase
 
         self::assertSame(422, $response->getStatusCode());
     }
+
+    public function testStorePersistsComplianceFieldsAndVariationBatch(): void
+    {
+        $this->productRepo = $this->createMock(ProductRepositoryInterface::class);
+        $this->controller  = $this->buildController();
+
+        $saved = null;
+        $this->productRepo->expects(self::once())->method('save')->willReturnCallback(
+            static function (Product $p) use (&$saved): Product {
+                $p->setId(8);
+                $saved = $p;
+                return $p;
+            }
+        );
+        $savedVariations = [];
+        $this->productRepo->expects(self::once())->method('saveVariations')->willReturnCallback(
+            static function (int $productId, array $variations) use (&$savedVariations): void {
+                $savedVariations = $variations;
+            }
+        );
+        $this->productRepo->method('findGalleryImageIds')->willReturn([]);
+        $this->productRepo->method('findDownloadFileIds')->willReturn([]);
+        $this->productRepo->method('findVariationsByProductId')->willReturn([]);
+        $this->slugService->method('unique')->willReturn(new Slug('compliant-device'));
+
+        $request = (new RequestFactory())->createRequest('POST', '/api/v1/products')
+            ->withParsedBody([
+                'name'                   => 'Compliant Device',
+                'unit'                   => 'kg',
+                'base_amount'            => '1.5',
+                'manufacturer_name'      => 'ACME',
+                'manufacturer_address'   => 'Street 1',
+                'eu_responsible_name'    => 'ACME EU',
+                'eu_responsible_address' => 'EU Street 1',
+                'country_of_origin'      => 'de',
+                'safety_warnings'        => 'Keep dry',
+                'manual_url'             => 'https://example.com/manual.pdf',
+                'manual_label'           => 'Manual',
+                'digital_waiver'         => true,
+                'min_age'                => 18,
+                'batch_number'           => 'LOT-9',
+                'variations'             => [[
+                    'sku'              => 'C-1',
+                    'price'            => 10,
+                    'attributes'       => ['Size' => 'M'],
+                    'batch_number'     => 'LOT-9-A',
+                    'unit'             => 'kg',
+                    'base_amount'      => '2.5',
+                    'manual_documents' => [
+                        ['type' => 'url', 'value' => 'https://example.com/v-manual.pdf', 'label' => 'Datasheet'],
+                        ['type' => 'url', 'value' => 'javascript:alert(1)', 'label' => 'Bad'],
+                    ],
+                ]],
+            ])
+            ->withAttribute('api_user_id', 1);
+
+        $response = $this->controller->store($request, (new ResponseFactory())->createResponse());
+
+        self::assertSame(201, $response->getStatusCode());
+        self::assertNotNull($saved);
+        self::assertSame('kg', $saved->getUnit());
+        self::assertSame(1.5, $saved->getBaseAmount());
+        self::assertSame('ACME', $saved->getManufacturerName());
+        self::assertSame('Street 1', $saved->getManufacturerAddress());
+        self::assertSame('ACME EU', $saved->getEuResponsibleName());
+        self::assertSame('EU Street 1', $saved->getEuResponsibleAddress());
+        self::assertSame('DE', $saved->getCountryOfOrigin());
+        self::assertSame('Keep dry', $saved->getSafetyWarnings());
+        self::assertSame('Manual', $saved->getManualLabel());
+        self::assertTrue($saved->hasDigitalWaiver());
+        self::assertSame(18, $saved->getMinAge());
+        self::assertSame('LOT-9', $saved->getBatchNumber());
+        self::assertSame('LOT-9-A', $savedVariations[0]['batch_number']);
+        self::assertSame('kg', $savedVariations[0]['unit']);
+        self::assertSame(2.5, $savedVariations[0]['base_amount']);
+        self::assertCount(1, $savedVariations[0]['manual_documents']);
+        self::assertSame('Datasheet', $savedVariations[0]['manual_documents'][0]['label']);
+        self::assertSame('https://example.com/v-manual.pdf', $savedVariations[0]['manual_documents'][0]['url']);
+
+        $body = json_decode((string) $response->getBody(), true);
+        self::assertSame('kg', $body['data']['unit']);
+        self::assertSame('ACME', $body['data']['manufacturer_name']);
+        self::assertSame('DE', $body['data']['country_of_origin']);
+        self::assertTrue($body['data']['digital_waiver']);
+    }
+
+    public function testShowByIdReturnsVariationComplianceFields(): void
+    {
+        $product = new Product('Test', new Slug('test'));
+        $product->setId(123);
+        $this->productRepo->method('findById')->willReturn($product);
+        $this->productRepo->method('findGalleryImageIds')->willReturn([]);
+        $this->productRepo->method('findDownloadFileIds')->willReturn([]);
+        $this->productRepo->method('findVariationsByProductId')->willReturn([[
+            'id'                         => 11,
+            'sku'                        => 'V-1',
+            'price'                      => '10.00',
+            'sale_price'                 => null,
+            'sale_price_start'           => null,
+            'sale_price_end'             => null,
+            'stock_quantity'             => 3,
+            'stock_status'               => 'in_stock',
+            'image_id'                   => null,
+            'attributes'                 => '{"Size":"M"}',
+            'download_mode'              => 'use_parent',
+            'download_url'               => null,
+            'download_limit'             => 0,
+            'download_expiry_days'       => 0,
+            'shipping_class'             => 'use_parent',
+            'shipping_cost'              => null,
+            'shipping_country_overrides' => '{}',
+            'vat_mode'                   => 'use_parent',
+            'vat_rate'                   => null,
+            'refund_mode'                => 'use_parent',
+            'batch_number'               => 'LOT-V',
+            'unit'                       => 'kg',
+            'base_amount'                => '2.5',
+            'manual_documents'           => json_encode([
+                ['type' => 'url', 'value' => 'https://example.com/m.pdf', 'label' => 'Manual', 'name' => '', 'url' => 'https://example.com/m.pdf'],
+            ]),
+        ]]);
+
+        $request  = (new RequestFactory())->createRequest('GET', '/api/v1/products/id/123');
+        $response = $this->controller->showById($request, (new ResponseFactory())->createResponse(), ['id' => '123']);
+
+        self::assertSame(200, $response->getStatusCode());
+        $variation = json_decode((string) $response->getBody(), true)['data']['variations'][0];
+        self::assertSame('LOT-V', $variation['batch_number']);
+        self::assertSame('kg', $variation['unit']);
+        self::assertSame(2.5, $variation['base_amount']);
+        self::assertSame('Manual', $variation['manual_documents'][0]['label']);
+        self::assertSame('https://example.com/m.pdf', $variation['manual_documents'][0]['url']);
+    }
 }

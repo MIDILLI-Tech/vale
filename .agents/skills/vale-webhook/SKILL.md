@@ -39,10 +39,10 @@ Two distinct flows. **Always ask which direction first.**
 
 | Event | data payload |
 |---|---|
-| `order.paid` | `order_id, order_number, order_status, order_total, currency, order_customer_email, order_customer_name, items[] (product_id, name, sku, price, qty, subtotal, variation_id, variation_data)` |
+| `order.paid` | `order_id, order_number, order_status, order_total, currency, order_customer_email, order_customer_name, age_confirmed_at, items[] (product_id, name, sku, batch_number, price, qty, subtotal, variation_id, variation_data)` |
 | `order.status_changed` | same fields plus `new_status` |
 | `post.created` / `post.published` / `post.updated` | post fields |
-| `product.created` / `product.updated` / `product.deleted` | product fields (id, name, sku, price, stock, ...) + `variations[]` (`id, sku, attributes, price, sale_price, stock_quantity, stock_status`) on created/updated; deleted carries only `{id, sku, slug}`. One delivery per product (3 products = 3 requests). No image URLs in the payload. |
+| `product.created` / `product.updated` / `product.deleted` | product fields (id, name, sku, price, stock, `product_min_age`, `product_batch_number`, ...) + `variations[]` (`id, sku, attributes, price, sale_price, stock_quantity, stock_status, batch_number`) on created/updated; deleted carries only `{id, sku, slug}`. One delivery per product (3 products = 3 requests). No image URLs in the payload. |
 | `user.registered` | user fields |
 | `form.submitted` | `{form_id, form_name, form_slug, submission_id, fields, ip_address, user_agent, submitted_at}` |
 | `subscriber.created` | `{id, email, name, status, tier, tags}` |

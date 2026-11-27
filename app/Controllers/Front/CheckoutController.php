@@ -171,6 +171,8 @@ final class CheckoutController
         }
         unset($item);
 
+        $hasShippableItems = $this->hasShippableItems($items, $defaultCountry);
+
         $userAddress         = [];
         $userShippingAddress = [];
         if ($this->session->get('user_id') && $this->db !== null) {
@@ -336,65 +338,67 @@ final class CheckoutController
         $returnShippingPayer = (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer');
 
         return $this->twig->render($response, 'shop/checkout.twig', [
-            'items'                    => $items,
-            'waiver_required'          => $waiverRequired,
-            'waiver_days'              => $waiverDays,
-            'non_refundable_items'     => $nonRefundableItems,
-            'return_shipping_payer'    => $returnShippingPayer,
-            'checkout_base_url'        => $this->checkoutUrl(''),
-            'subtotal'                 => $subtotal,
-            'shipping'                 => $shipping,
-            'total'                    => $total,
-            'shipping_estimate'        => $shippingEstimate,
-            'active_gateway'           => $activeGateway,
-            'stripe_enabled'           => $stripeEnabled,
-            'paypal_enabled'           => $paypalEnabled,
-            'mollie_enabled'           => $mollieEnabled,
-            'twocheckout_enabled'      => $twocheckoutEnabled,
-            'checkoutcom_enabled'      => $checkoutcomEnabled,
-            'banktransfer_enabled'     => $banktransferEnabled,
-            'stripe_key'               => $stripeKey,
-            'stripe_label'             => $stripeLabel,
-            'stripe_via'               => $stripeVia,
-            'paypal_label'             => $paypalLabel,
-            'paypal_via'               => $paypalVia,
-            'mollie_label'             => $mollieLabel,
-            'mollie_via'               => $mollieVia,
-            'twocheckout_label'        => $twocheckoutLabel,
-            'twocheckout_via'          => $twocheckoutVia,
-            'checkoutcom_label'        => $checkoutcomLabel,
-            'checkoutcom_via'          => $checkoutcomVia,
-            'banktransfer_label'       => $banktransferLabel,
-            'banktransfer_bank'        => $banktransferBank,
-            'banktransfer_iban'        => $banktransferIban,
-            'banktransfer_holder'      => $banktransferHolder,
-            'banktransfer_swift'       => $banktransferSwift,
-            'banktransfer_routing'     => $banktransferRouting,
-            'banktransfer_branch'      => $banktransferBranch,
-            'banktransfer_desc'        => $banktransferDesc,
-            'banktransfer_max_days'    => $banktransferMaxDays,
-            'countries'                => $billingCountries,
-            'shipping_country_options' => $shippingOptions,
-            'shipping_countries_list'  => $this->resolveCheckoutCountries($items, true),
-            'default_country'          => $defaultCountry,
-            'policy_links'             => $this->policyLinks(),
-            'checkout_display'         => $checkoutDisplay,
-            'checkout_required'        => $checkoutRequired,
-            'checkout_form'            => $checkoutForm,
-            'checkout_fields'          => $checkoutFields,
-            'checkout_form_missing'    => $checkoutForm === null,
-            'tax_policy'               => $taxPolicy,
-            'tax_amount'               => $taxAmount,
-            'subtotal_excl_tax'        => $subtotalExclTax,
-            'tax_mixed'                => $taxMixed,
-            'tax_display_rate'         => $taxDisplayRate,
-            'shipping_enabled'         => $shippingEnabled,
-            'shipping_error'           => $shippingError,
-            'saved_address_error'      => $savedAddressError,
-            'user_address'             => $userAddress,
-            'user_shipping_address'    => $userShippingAddress,
-            'has_physical_items'       => $hasPhysicalItems,
-        ]);
+            'items'                                 => $items,
+            'waiver_required'                       => $waiverRequired,
+            'age_required'                          => $this->requiredAgeForItems($items),
+            'waiver_days'                           => $waiverDays,
+            'non_refundable_items'                  => $nonRefundableItems,
+            'return_shipping_payer'                 => $returnShippingPayer,
+            'checkout_base_url'                     => $this->checkoutUrl(''),
+            'subtotal'                              => $subtotal,
+            'shipping'                              => $shipping,
+            'total'                                 => $total,
+            'shipping_estimate'                     => $shippingEstimate,
+            'active_gateway'                        => $activeGateway,
+            'stripe_enabled'                        => $stripeEnabled,
+            'paypal_enabled'                        => $paypalEnabled,
+            'mollie_enabled'                        => $mollieEnabled,
+            'twocheckout_enabled'                   => $twocheckoutEnabled,
+            'checkoutcom_enabled'                   => $checkoutcomEnabled,
+            'banktransfer_enabled'                  => $banktransferEnabled,
+            'stripe_key'                            => $stripeKey,
+            'stripe_label'                          => $stripeLabel,
+            'stripe_via'                            => $stripeVia,
+            'paypal_label'                          => $paypalLabel,
+            'paypal_via'                            => $paypalVia,
+            'mollie_label'                          => $mollieLabel,
+            'mollie_via'                            => $mollieVia,
+            'twocheckout_label'                     => $twocheckoutLabel,
+            'twocheckout_via'                       => $twocheckoutVia,
+            'checkoutcom_label'                     => $checkoutcomLabel,
+            'checkoutcom_via'                       => $checkoutcomVia,
+            'banktransfer_label'                    => $banktransferLabel,
+            'banktransfer_bank'                     => $banktransferBank,
+            'banktransfer_iban'                     => $banktransferIban,
+            'banktransfer_holder'                   => $banktransferHolder,
+            'banktransfer_swift'                    => $banktransferSwift,
+            'banktransfer_routing'                  => $banktransferRouting,
+            'banktransfer_branch'                   => $banktransferBranch,
+            'banktransfer_desc'                     => $banktransferDesc,
+            'banktransfer_max_days'                 => $banktransferMaxDays,
+            'countries'                             => $billingCountries,
+            'shipping_country_options'              => $shippingOptions,
+            'shipping_countries_list'               => $this->resolveCheckoutCountries($items, true),
+            'default_country'                       => $defaultCountry,
+            'policy_links'                          => $this->policyLinks(),
+            'checkout_display'                      => $checkoutDisplay,
+            'checkout_required'                     => $checkoutRequired,
+            'checkout_form'                         => $checkoutForm,
+            'checkout_fields'                       => $checkoutFields,
+            'checkout_form_missing'                 => $checkoutForm === null,
+            'tax_policy'                            => $taxPolicy,
+            'tax_amount'                            => $taxAmount,
+            'subtotal_excl_tax'                     => $subtotalExclTax,
+            'tax_mixed'                             => $taxMixed,
+            'tax_display_rate'                      => $taxDisplayRate,
+            'shipping_enabled'                      => $shippingEnabled,
+            'shipping_error'                        => $shippingError,
+                            'saved_address_error'   => $savedAddressError,
+                'user_address'                      => $userAddress,
+                'user_shipping_address'             => $userShippingAddress,
+                'has_physical_items'                => $hasPhysicalItems,
+                'has_shippable_items'               => $hasShippableItems,
+            ]);
     }
 
     /** POST /checkout — create the order, redirect to payment */
@@ -563,6 +567,7 @@ final class CheckoutController
             return $this->twig->render($response->withStatus(422), 'shop/checkout.twig', [
                 'items'                 => $items,
                 'waiver_required'       => $this->requiresDigitalWaiver($items),
+                'age_required'          => $this->requiredAgeForItems($items),
                 'waiver_days'           => $this->refundPeriodDays(),
                 'checkout_base_url'     => $this->checkoutUrl(''),
                 'subtotal'              => $subtotal,
@@ -618,6 +623,10 @@ final class CheckoutController
                 'saved_address_error'   => '',
                 'user_shipping_address' => $userShippingAddress,
                 'has_physical_items'    => $hasPhysicalItems,
+                'has_shippable_items'   => $this->hasShippableItems(
+                    $items,
+                    $shippingCountry !== '' ? $shippingCountry : $billingCountry,
+                ),
             ]);
         }
 
@@ -715,9 +724,18 @@ final class CheckoutController
             return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
         }
 
+        $requiredAge = $this->requiredAgeForItems($items);
+        if ($requiredAge > 0 && empty($body['age_confirmed'])) {
+            $this->session->set('flash_error', $this->translator->get('Please confirm that you meet the minimum age for the items in your order.'));
+            return $response->withHeader('Location', $this->checkoutUrl())->withStatus(302);
+        }
+
         $order = new Order($this->orders->generateOrderNumber(), $billing, $this->session->get('user_id'));
         if ($waiverRequired) {
             $order->setWithdrawalWaiverAcceptedAt(new \DateTimeImmutable());
+        }
+        if ($requiredAge > 0) {
+            $order->setAgeConfirmedAt(new \DateTimeImmutable());
         }
         $order->setLocale($this->translator?->getLocale() ?? 'en');
         $this->session->set('last_billing_country', strtoupper(trim((string) ($billing['country'] ?? ''))));
@@ -796,12 +814,13 @@ final class CheckoutController
         foreach ($items as $index => $item) {
             $variationSku = trim((string) ($item['variation_row']['sku'] ?? ''));
             $orderItem    = [
-                'product_id' => $item['product']->getId(),
-                'name'       => $item['product']->getName(),
-                'sku'        => $variationSku !== '' ? $variationSku : ($item['product']->getSku() ?? ''),
-                'price'      => $item['price'],
-                'qty'        => $item['qty'],
-                'subtotal'   => $item['price'] * $item['qty'],
+                'product_id'   => $item['product']->getId(),
+                'name'         => $item['product']->getName(),
+                'sku'          => $variationSku !== '' ? $variationSku : ($item['product']->getSku() ?? ''),
+                'batch_number' => $item['product']->resolveBatchNumber((string) ($item['variation_row']['batch_number'] ?? '')),
+                'price'        => $item['price'],
+                'qty'          => $item['qty'],
+                'subtotal'     => $item['price'] * $item['qty'],
             ];
             $lineTax = $taxBreakdown['lines'][$index] ?? null;
             if ($lineTax !== null) {
@@ -2261,6 +2280,23 @@ final class CheckoutController
         return [$shClass, $shCost];
     }
 
+    /**
+     * Whether the order contains anything that has to be shipped. All-digital
+     * carts have no delivery, so the checkout must not talk about return
+     * shipping for them.
+     */
+    private function hasShippableItems(array $items, ?string $billingCountry): bool
+    {
+        foreach ($items as $item) {
+            [$shClass] = $this->resolveEffectiveShipping($item, $billingCountry);
+            if ($shClass !== 'digital') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function hasDoNotShipItems(array $items, ?string $billingCountry): bool
     {
         if (empty($billingCountry)) {
@@ -3340,6 +3376,20 @@ final class CheckoutController
 
     /** @param array<string, scalar> $queryParams */
     /** @param array<int, array<string, mixed>> $items */
+    private function requiredAgeForItems(array $items): int
+    {
+        $age = 0;
+
+        foreach ($items as $item) {
+            $product = $item['product'] ?? null;
+            if ($product instanceof Product && $product->getMinAge() !== null) {
+                $age = max($age, (int) $product->getMinAge());
+            }
+        }
+
+        return $age;
+    }
+
     private function requiresDigitalWaiver(array $items): bool
     {
         if ($this->settings->get('compliance_digital_waiver', '0') !== '1') {
@@ -3782,6 +3832,9 @@ final class CheckoutController
             if ($slug !== '') {
                 $links[$label] = $base . '/' . $slug;
             }
+        }
+        if (($this->settings->get('compliance_withdrawal_function', '0') ?? '0') === '1') {
+            $links['withdrawal'] = $base . '/withdrawal';
         }
         return $links;
     }

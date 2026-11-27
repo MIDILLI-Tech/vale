@@ -19,6 +19,8 @@ final class AddProductComplianceFields extends AbstractMigration
             ->addColumn('eu_responsible_address', 'text', ['null' => true, 'default' => null])
             ->addColumn('country_of_origin', 'string', ['limit' => 2, 'null' => true, 'default' => null])
             ->addColumn('safety_warnings', 'text', ['null' => true, 'default' => null])
+            ->addColumn('min_age', 'integer', ['null' => true, 'default' => null])
+            ->addColumn('batch_number', 'string', ['limit' => 191, 'null' => true, 'default' => null])
             ->addColumn('manual_url', 'string', ['limit' => 500, 'null' => true, 'default' => null])
             ->addColumn('manual_label', 'string', ['limit' => 191, 'null' => true, 'default' => null])
             ->addColumn('manual_urls', 'text', ['null' => true, 'default' => null])
@@ -29,12 +31,18 @@ final class AddProductComplianceFields extends AbstractMigration
 
         $this->table($p . 'orders')
             ->addColumn('withdrawal_waiver_accepted_at', 'datetime', ['null' => true, 'default' => null])
+            ->addColumn('age_confirmed_at', 'datetime', ['null' => true, 'default' => null])
+            ->update();
+
+        $this->table($p . 'order_items')
+            ->addColumn('batch_number', 'string', ['limit' => 191, 'null' => true, 'default' => null])
             ->update();
 
         $this->table($p . 'product_variations')
             ->addColumn('unit', 'string', ['limit' => 16, 'null' => true, 'default' => null])
             ->addColumn('base_amount', 'decimal', ['precision' => 12, 'scale' => 3, 'null' => true, 'default' => null])
             ->addColumn('manual_documents', 'text', ['null' => true, 'default' => null])
+            ->addColumn('batch_number', 'string', ['limit' => 191, 'null' => true, 'default' => null])
             ->update();
 
         $this->table($p . 'product_price_history')

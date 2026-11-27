@@ -144,11 +144,12 @@ final class OrderApiControllerTest extends TestCase
     private function makeProduct(): Product
     {
         return Product::fromRow([
-            'id'    => 7,
-            'name'  => 'LumiFind Pro',
-            'slug'  => 'lumifind-pro',
-            'sku'   => 'LUMI-PRO',
-            'price' => '49.00',
+            'id'           => 7,
+            'name'         => 'LumiFind Pro',
+            'slug'         => 'lumifind-pro',
+            'sku'          => 'LUMI-PRO',
+            'price'        => '49.00',
+            'batch_number' => 'LOT-PARENT',
         ]);
     }
 
@@ -159,11 +160,12 @@ final class OrderApiControllerTest extends TestCase
     {
         return [
             [
-                'id'         => 11,
-                'sku'        => 'LUMI-PRO-RED',
-                'price'      => '59.00',
-                'sale_price' => null,
-                'attributes' => json_encode(['Color' => 'Red']),
+                'id'           => 11,
+                'sku'          => 'LUMI-PRO-RED',
+                'price'        => '59.00',
+                'sale_price'   => null,
+                'attributes'   => json_encode(['Color' => 'Red']),
+                'batch_number' => 'LOT-VAR',
             ],
         ];
     }
@@ -190,7 +192,9 @@ final class OrderApiControllerTest extends TestCase
         self::assertSame('processing', $body['data']['status']);
         self::assertSame('buyer@example.com', $body['data']['customer_email']);
         self::assertSame('LUMI-PRO', $body['data']['items'][0]['sku']);
+        self::assertSame('LOT-ITEM', $body['data']['items'][0]['batch_number']);
         self::assertSame(1, $body['data']['items'][0]['quantity']);
+        self::assertSame('2026-11-27T10:00:00+00:00', $body['data']['age_confirmed_at']);
     }
 
     public function testShowReturns404IfNotFound(): void
@@ -378,6 +382,7 @@ final class OrderApiControllerTest extends TestCase
         self::assertSame('Ada@Example.com', $order->getBilling()['email']);
         self::assertSame('LumiFind Pro', $order->getItems()[0]['name']);
         self::assertSame('LUMI-PRO', $order->getItems()[0]['sku']);
+        self::assertSame('LOT-PARENT', $order->getItems()[0]['batch_number']);
 
         $body = json_decode((string) $response->getBody(), true);
         self::assertSame('Order created', $body['message']);
@@ -404,6 +409,7 @@ final class OrderApiControllerTest extends TestCase
         self::assertSame(59.0, $item['price']);
         self::assertSame('LUMI-PRO-RED', $item['sku']);
         self::assertSame(11, $item['variation_id']);
+        self::assertSame('LOT-VAR', $item['batch_number']);
         self::assertSame(['Color' => 'Red'], json_decode((string) $item['variation_data'], true));
     }
 
@@ -671,10 +677,12 @@ final class OrderApiControllerTest extends TestCase
                 'variation_id' => null,
                 'name'         => 'LumiFind Pro',
                 'sku'          => 'LUMI-PRO',
+                'batch_number' => 'LOT-ITEM',
                 'quantity'     => 1,
                 'price'        => '49.00',
             ],
         ]);
+        $order->setAgeConfirmedAt(new \DateTimeImmutable('2026-11-27T10:00:00+00:00'));
 
         return $order;
     }

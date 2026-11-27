@@ -131,6 +131,13 @@
                     <div class="flex justify-between font-bold border-t pt-2"><span>{{ __('Net Paid') }}</span><span>{{ invoice.net_paid|number_format(2, '.', ',') }} {{ invoice.currency }}</span></div>
                 {% endif %}
             </div>
+
+            {% set _ageConfirmed = invoice.age_confirmed_at|default('') ?: (order.ageConfirmedAt ? order.ageConfirmedAt|date('Y-m-d H:i') : '') %}
+            {% if _ageConfirmed %}
+            <p class="border-t border-gray-200 pt-3 text-xs text-gray-500 dark:text-gray-400">
+                {{ __('Age confirmation') }}: {{ _ageConfirmed }}
+            </p>
+            {% endif %}
         </div>
     </div>
 </body>

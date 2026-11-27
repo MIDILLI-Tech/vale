@@ -357,6 +357,52 @@ final class ProductApiController
         if (isset($data['dimensions'])) {
             $p->setDimensions(self::normalizeDimensions($data['dimensions']));
         }
+        if (array_key_exists('min_age', $data)) {
+            $minAge = (int) $data['min_age'];
+            $p->setMinAge(in_array($minAge, [16, 18], true) ? $minAge : null);
+        }
+        if (array_key_exists('batch_number', $data)) {
+            $p->setBatchNumber(trim((string) $data['batch_number']) ?: null);
+        }
+
+        // Compliance: unit price basis and GPSR contact details.
+        $allowedUnits = ['piece', 'g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl_oz', 'gal', 'm', 'm2', 'ft', 'ft2'];
+        if (array_key_exists('unit', $data)) {
+            $unit = (string) $data['unit'];
+            $p->setUnit(in_array($unit, $allowedUnits, true) ? $unit : null);
+        }
+        if (array_key_exists('base_amount', $data)) {
+            $baseAmount = trim((string) $data['base_amount']);
+            $p->setBaseAmount($baseAmount !== '' ? max(0.0, (float) str_replace(',', '.', $baseAmount)) : null);
+        }
+        if (array_key_exists('manufacturer_name', $data)) {
+            $p->setManufacturerName(trim((string) $data['manufacturer_name']) ?: null);
+        }
+        if (array_key_exists('manufacturer_address', $data)) {
+            $p->setManufacturerAddress(trim((string) $data['manufacturer_address']) ?: null);
+        }
+        if (array_key_exists('eu_responsible_name', $data)) {
+            $p->setEuResponsibleName(trim((string) $data['eu_responsible_name']) ?: null);
+        }
+        if (array_key_exists('eu_responsible_address', $data)) {
+            $p->setEuResponsibleAddress(trim((string) $data['eu_responsible_address']) ?: null);
+        }
+        if (array_key_exists('country_of_origin', $data)) {
+            $origin = strtoupper(trim((string) $data['country_of_origin']));
+            $p->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
+        }
+        if (array_key_exists('safety_warnings', $data)) {
+            $p->setSafetyWarnings(trim((string) $data['safety_warnings']) ?: null);
+        }
+        if (array_key_exists('manual_url', $data)) {
+            $p->setManualUrl(trim((string) $data['manual_url']) ?: null);
+        }
+        if (array_key_exists('manual_label', $data)) {
+            $p->setManualLabel(trim((string) $data['manual_label']) ?: null);
+        }
+        if (array_key_exists('digital_waiver', $data)) {
+            $p->setDigitalWaiver((bool) $data['digital_waiver']);
+        }
         if (isset($data['shipping_class'])) {
             $p->setShippingClass($data['shipping_class']);
         }
@@ -536,7 +582,8 @@ final class ProductApiController
 
     private function saveVariations(Product $p, array $variationsData, int $userId): void
     {
-        $variations = [];
+        $allowedUnits = ['piece', 'g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl_oz', 'gal', 'm', 'm2', 'ft', 'ft2'];
+        $variations   = [];
         foreach ($variationsData as $vData) {
             $v = [
                 'id'                         => $vData['id']                         ?? null,
@@ -559,6 +606,12 @@ final class ProductApiController
                 'vat_mode'                   => $vData['vat_mode']                   ?? 'use_parent',
                 'vat_rate'                   => isset($vData['vat_rate']) ? (float) $vData['vat_rate'] : null,
                 'refund_mode'                => $vData['refund_mode']                ?? 'use_parent',
+                'batch_number'               => trim((string) ($vData['batch_number'] ?? '')) ?: null,
+                'unit'                       => in_array((string) ($vData['unit'] ?? ''), $allowedUnits, true)
+                    ? (string) $vData['unit'] : null,
+                'base_amount'                => isset($vData['base_amount']) && $vData['base_amount'] !== ''
+                    ? max(0.0, (float) str_replace(',', '.', (string) $vData['base_amount'])) : null,
+                'manual_documents'           => $this->normalizeManualDocuments($vData['manual_documents'] ?? []),
             ];
 
             if (isset($vData['image'])) {
@@ -591,6 +644,67 @@ final class ProductApiController
             $variations[] = $v;
         }
         $this->products->saveVariations((int) $p->getId(), $variations);
+    }
+
+    /**
+     * @return list<array{type: string, value: int|string, label: string, name: string, url: string}>
+     */
+    private function normalizeManualDocuments(mixed $input): array
+    {
+        if (!is_array($input)) {
+            return [];
+        }
+
+        $documents = [];
+        foreach ($input as $document) {
+            if (!is_array($document)) {
+                continue;
+            }
+            $type  = (string) ($document['type'] ?? '');
+            $label = trim((string) ($document['label'] ?? ''));
+
+            if ($type === 'url') {
+                $url    = trim((string) ($document['url'] ?? $document['value'] ?? ''));
+                $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+                if ($url === '' || !in_array($scheme, ['http', 'https'], true)) {
+                    continue;
+                }
+                $documents[] = ['type' => 'url', 'value' => $url, 'label' => $label, 'name' => '', 'url' => $url];
+                continue;
+            }
+
+            if ($type === 'file') {
+                $fileId = (int) ($document['value'] ?? 0);
+                if ($fileId <= 0) {
+                    continue;
+                }
+                $media = $this->mediaRepo->findById($fileId);
+                if ($media === null) {
+                    continue;
+                }
+                $documents[] = [
+                    'type'  => 'file',
+                    'value' => $fileId,
+                    'label' => $label,
+                    'name'  => $media->getOriginalName() ?: $media->getFilename(),
+                    'url'   => $media->getUrl(site_url('/uploads')),
+                ];
+            }
+        }
+
+        return $documents;
+    }
+
+    /** @return list<array{type: string, value: int|string, label: string, name: string, url: string}> */
+    private function decodeManualDocuments(mixed $documents): array
+    {
+        if (is_string($documents)) {
+            $decoded = json_decode($documents, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($documents) ? $documents : [];
     }
 
     private function importImage(string $input, int $userId): ?int
@@ -739,9 +853,13 @@ final class ProductApiController
                 'shipping_country_overrides' => is_string($v['shipping_country_overrides'])
                     ? json_decode($v['shipping_country_overrides'], true)
                     : $v['shipping_country_overrides'],
-                'vat_mode'                   => $v['vat_mode'] ?? 'use_parent',
-                'vat_rate'                   => isset($v['vat_rate']) ? (float) $v['vat_rate'] : null,
-                'refund_mode'                => $v['refund_mode'] ?? 'use_parent',
+                'vat_mode'                                   => $v['vat_mode'] ?? 'use_parent',
+                'vat_rate'                                   => isset($v['vat_rate']) ? (float) $v['vat_rate'] : null,
+                                'refund_mode'                => $v['refund_mode']  ?? 'use_parent',
+                'batch_number'                               => $v['batch_number'] ?? null,
+                'unit'                                       => $v['unit']         ?? null,
+                'base_amount'                                => isset($v['base_amount']) ? (float) $v['base_amount'] : null,
+                'manual_documents'                           => $this->decodeManualDocuments($v['manual_documents'] ?? null),
             ];
         }, $this->products->findVariationsByProductId((int) $p->getId()));
 
@@ -805,6 +923,19 @@ final class ProductApiController
             'shipping_cost'              => $p->getShippingCost(),
             'weight'                     => $p->getWeight(),
             'dimensions'                 => $p->getDimensions(),
+            'min_age'                    => $p->getMinAge(),
+            'batch_number'               => $p->getBatchNumber(),
+            'unit'                       => $p->getUnit(),
+            'base_amount'                => $p->getBaseAmount(),
+            'manufacturer_name'          => $p->getManufacturerName(),
+            'manufacturer_address'       => $p->getManufacturerAddress(),
+            'eu_responsible_name'        => $p->getEuResponsibleName(),
+            'eu_responsible_address'     => $p->getEuResponsibleAddress(),
+            'country_of_origin'          => $p->getCountryOfOrigin(),
+            'safety_warnings'            => $p->getSafetyWarnings(),
+            'manual_url'                 => $p->getManualUrl(),
+            'manual_label'               => $p->getManualLabel(),
+            'digital_waiver'             => $p->hasDigitalWaiver(),
             'shipping_country_overrides' => $p->getShippingCountryOverrides(),
             'vat_country_overrides'      => $p->getVatCountryOverrides(),
             'created_at'                 => $p->getCreatedAt()?->format(\DateTimeInterface::ATOM),

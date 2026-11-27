@@ -200,7 +200,7 @@ final class LegalComplianceProfileTest extends TestCase
 
         self::assertCount(1, $missing);
         self::assertSame('warning', $missing[0]['severity']);
-        self::assertSame('/admin/settings?tab=ecommerce&subtab=legal', $missing[0]['link']);
+        self::assertSame('/admin/settings?tab=legal', $missing[0]['link']);
     }
 
     public function testAuditsAreLimitedToTheirRegions(): void
@@ -248,5 +248,26 @@ final class LegalComplianceProfileTest extends TestCase
         self::assertCount(1, $banner);
         self::assertSame('/admin/settings?tab=privacy&subtab=consent', $banner[0]['link']);
         self::assertSame('warning', $banner[0]['severity']);
+    }
+
+    public function testFilterCatalogDropsShopItemsWhenShopIsOff(): void
+    {
+        $catalog = [
+            'items' => [
+                'imprint'    => ['setting' => 'policy_page_imprint'],
+                'withdrawal' => ['setting' => 'compliance_withdrawal_function', 'feature' => 'shop'],
+            ],
+            'regions' => [
+                'eu' => ['levels' => ['imprint' => 'required', 'withdrawal' => 'required']],
+            ],
+        ];
+
+        $filtered = LegalComplianceProfile::filterCatalog($catalog, false);
+
+        self::assertArrayHasKey('imprint', $filtered['items']);
+        self::assertArrayNotHasKey('withdrawal', $filtered['items']);
+        self::assertArrayHasKey('imprint', $filtered['regions']['eu']['levels']);
+        self::assertArrayNotHasKey('withdrawal', $filtered['regions']['eu']['levels']);
+        self::assertSame($catalog, LegalComplianceProfile::filterCatalog($catalog, true));
     }
 }

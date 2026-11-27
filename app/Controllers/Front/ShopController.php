@@ -751,12 +751,21 @@ final class ShopController
         $country          = strtoupper((string) ($this->session->get('last_billing_country') ?? ''));
         $shippingEstimate = $this->deliveryEstimate->estimateForOrder($products, $country !== '' ? $country : null);
 
+        $requiredAge = 0;
+        foreach ($products as $cartRow) {
+            $cartProduct = $cartRow['product'] ?? null;
+            if ($cartProduct instanceof Product && $cartProduct->getMinAge() !== null) {
+                $requiredAge = max($requiredAge, (int) $cartProduct->getMinAge());
+            }
+        }
+
         return $this->twig->render($response, 'shop/cart.twig', [
             'items'             => $products,
             'tax_policy'        => $taxPolicy,
             'cart_tax_amount'   => $this->calculateIncludedTaxForCartRows($products, $taxPolicy),
             'upsells'           => $upsells,
             'shipping_estimate' => $shippingEstimate,
+            'age_required'      => $requiredAge,
         ]);
     }
 

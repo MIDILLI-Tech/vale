@@ -31,6 +31,45 @@ final class LegalComplianceProfile
         $this->catalog = $catalog;
     }
 
+    /**
+     * Drops the items that only matter while the shop is enabled: a site
+     * without a shop must not be warned about return policies, withdrawal,
+     * paid reviews or unit prices. Enabling the shop again re-checks them.
+     *
+     * @param array<string, mixed> $catalog
+     * @return array<string, mixed>
+     */
+    public static function filterCatalog(array $catalog, bool $shopEnabled): array
+    {
+        if ($shopEnabled) {
+            return $catalog;
+        }
+
+        $shopItems = [];
+        foreach ((array) ($catalog['items'] ?? []) as $key => $item) {
+            $definition = (array) $item;
+            if (($definition['feature'] ?? '') === 'shop') {
+                $shopItems[] = (string) $key;
+            }
+        }
+
+        if ($shopItems === []) {
+            return $catalog;
+        }
+
+        foreach ($shopItems as $key) {
+            unset($catalog['items'][$key]);
+        }
+
+        foreach ((array) ($catalog['regions'] ?? []) as $regionKey => $region) {
+            foreach ($shopItems as $key) {
+                unset($catalog['regions'][$regionKey]['levels'][$key]);
+            }
+        }
+
+        return $catalog;
+    }
+
     public function regionFor(?string $country): string
     {
         $country = strtoupper(trim((string) $country));
@@ -142,7 +181,7 @@ final class LegalComplianceProfile
                 'id'        => 'missing_documents',
                 'severity'  => 'warning',
                 'message'   => __('Compliance steps missing: :items.', [':items' => implode(', ', $missing)]),
-                'link'      => '/admin/settings?tab=ecommerce&subtab=legal',
+                'link'      => '/admin/settings?tab=legal',
                 'link_text' => __('Legal & Compliance'),
             ];
         }
@@ -287,6 +326,7 @@ final class LegalComplianceProfile
             'consent'          => __('Cookie Consent'),
             'us_optout'        => __('Do Not Sell or Share (US)'),
             'digital_waiver'   => __('Digital withdrawal waiver'),
+            'price_history'    => __('Lowest price in the last 30 days'),
             'verified_reviews' => __('Verified reviews'),
             default            => $key,
         };

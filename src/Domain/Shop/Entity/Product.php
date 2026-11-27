@@ -45,6 +45,8 @@ class Product extends BaseEntity
     /** @var list<array{type: string, value: int|string, label: string, name: string, url: string}> */
     private array $manualDocuments              = [];
     private bool $digitalWaiver                 = false;
+    private ?int $minAge                        = null;
+    private ?string $batchNumber                = null;
 
     /** @var int[] */
     private array $manualFileIds                = [];
@@ -224,6 +226,24 @@ class Product extends BaseEntity
     public function getSafetyWarnings(): ?string
     {
         return $this->safetyWarnings;
+    }
+    public function getMinAge(): ?int
+    {
+        return $this->minAge;
+    }
+    public function getBatchNumber(): ?string
+    {
+        return $this->batchNumber;
+    }
+
+    /**
+     * Variation batch numbers override the product lot; an empty value inherits it.
+     */
+    public function resolveBatchNumber(?string $variationBatch): ?string
+    {
+        $variationBatch = trim((string) $variationBatch);
+
+        return $variationBatch !== '' ? $variationBatch : $this->batchNumber;
     }
     public function getManualUrl(): ?string
     {
@@ -630,6 +650,14 @@ class Product extends BaseEntity
     public function setSafetyWarnings(?string $warnings): void
     {
         $this->safetyWarnings = $warnings;
+    }
+    public function setMinAge(?int $age): void
+    {
+        $this->minAge = $age !== null && $age > 0 ? $age : null;
+    }
+    public function setBatchNumber(?string $number): void
+    {
+        $this->batchNumber = $number;
     }
     public function setManualUrl(?string $url): void
     {
@@ -1086,6 +1114,9 @@ class Product extends BaseEntity
         $product->vatCountryOverrides = isset($row['vat_country_overrides']) && is_string($row['vat_country_overrides'])
             ? (json_decode($row['vat_country_overrides'], true) ?: [])
             : [];
+
+        $product->minAge      = isset($row['min_age'])      && $row['min_age']           !== null ? (int) $row['min_age'] : null;
+        $product->batchNumber = isset($row['batch_number']) && $row['batch_number']      !== '' ? (string) $row['batch_number'] : null;
 
         $product->categoryIds      = $categoryIds;
 

@@ -1036,6 +1036,9 @@ final class ProductController
         $origin = strtoupper(trim((string) ($body['country_of_origin'] ?? '')));
         $product->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
         $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
+        $minAge = (int) ($body['min_age'] ?? 0);
+        $product->setMinAge(in_array($minAge, [16, 18], true) ? $minAge : null);
+        $product->setBatchNumber(trim((string) ($body['batch_number'] ?? '')) ?: null);
         $product->setManualLabel(trim((string) ($body['manual_label'] ?? '')) ?: null);
         $product->setDigitalWaiver(!empty($body['digital_waiver']));
         $product->setManualDocuments($this->buildComplianceDocuments($body));
@@ -1544,6 +1547,7 @@ final class ProductController
                 'vat_rate'             => $varVatMode === 'custom' ? max(0.0, (float) str_replace(',', '.', (string) ($v['vat_rate'] ?? 0.0))) : null,
                 'unit'                 => $varUnit,
                 'base_amount'          => $varBaseAmount,
+                'batch_number'         => trim((string) ($v['batch_number'] ?? '')) ?: null,
                 'manual_documents'     => $this->buildComplianceDocuments($v),
                 'refund_mode'          => $varRefundMode,
                 'weight'               => isset($v['weight']) && $v['weight'] !== '' ? (float) str_replace(',', '.', (string) $v['weight']) : null,
@@ -1676,6 +1680,8 @@ final class ProductController
             'eu_responsible_address'     => $product->getEuResponsibleAddress(),
             'country_of_origin'          => $product->getCountryOfOrigin(),
             'safety_warnings'            => $product->getSafetyWarnings(),
+            'min_age'                    => $product->getMinAge(),
+            'batch_number'               => $product->getBatchNumber(),
             'manual_url'                 => $product->getManualUrl(),
             'manual_label'               => $product->getManualLabel(),
             'manual_urls'                => $product->getManualUrls(),

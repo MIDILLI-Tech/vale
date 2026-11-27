@@ -341,6 +341,8 @@ Protected fields rejected with `422`: `subtotal`, `shipping`, `discount`, `total
     "product_price": 199.90,
     "product_sale_price": 149.90,
     "product_stock": 50,
+    "product_min_age": null,
+    "product_batch_number": "LOT-2026-04",
     "variations": [
       {
         "id": 1,
@@ -349,7 +351,8 @@ Protected fields rejected with `422`: `subtotal`, `shipping`, `discount`, `total
         "price": 199.90,
         "sale_price": 149.90,
         "stock_quantity": 25,
-        "stock_status": "in_stock"
+        "stock_status": "in_stock",
+        "batch_number": "LOT-VAR"
       }
     ]
   }
@@ -370,11 +373,13 @@ Protected fields rejected with `422`: `subtotal`, `shipping`, `discount`, `total
     "currency": "USD",
     "order_customer_email": "john.doe@example.com",
     "order_customer_name": "John Doe",
+    "age_confirmed_at": null,
     "items": [
       {
         "product_id": 101,
         "name": "Awesome Product",
         "sku": "AP-100",
+        "batch_number": "LOT-2026-04",
         "price": 199.90,
         "qty": 2,
         "subtotal": 299.80,
@@ -386,7 +391,7 @@ Protected fields rejected with `422`: `subtotal`, `shipping`, `discount`, `total
 }
 ```
 
-`sku` is the variation SKU for variation items, otherwise the parent product SKU. `variation_id` / `variation_data` only appear for variation items. Receivers commonly write the fulfillment result back with `POST /api/v1/orders/{id}/notes` (see section 1C).
+`sku` is the variation SKU for variation items, otherwise the parent product SKU. `variation_id` / `variation_data` only appear for variation items. `batch_number` is the lot snapshotted at order time (absent when the product has none) and `age_confirmed_at` is null unless the order required an age confirmation. Receivers commonly write the fulfillment result back with `POST /api/v1/orders/{id}/notes` (see section 1C).
 
 ### C. User Registered (`user.registered`)
 

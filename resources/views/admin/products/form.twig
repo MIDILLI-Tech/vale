@@ -488,7 +488,7 @@
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2" data-compliance-relations>
             {# Product compliance #}
-            <div x-data="{ open: {{ (is_edit and (product.unit|default('') or product.baseAmount|default('') or product.manufacturerName|default('') or product.euResponsibleName|default('') or product.countryOfOrigin|default('') or product.safetyWarnings|default('') or product.manualUrl|default('') or product.manualFileIds|default([])|length)) ? 'true' : 'false' }} }" class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
+            <div x-data="{ open: {{ (is_edit and (product.unit|default('') or product.baseAmount|default('') or product.manufacturerName|default('') or product.euResponsibleName|default('') or product.countryOfOrigin|default('') or product.safetyWarnings|default('') or product.minAge|default(0) or product.batchNumber|default('') or product.manualUrl|default('') or product.manualFileIds|default([])|length)) ? 'true' : 'false' }} }" class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xs">
                 <div class="flex items-center gap-2" :class="open ? 'mb-4' : ''">
                     <button type="button" @click="open = !open" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs leading-none select-none w-4 text-center">
                         <span x-show="open">▼</span>
@@ -529,7 +529,7 @@
                                value="{{ product.baseAmount|default('') }}"
                                class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
                                placeholder="{{ __('e.g. 500 for 500 g') }}">
-                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('How much the product contains in the unit above.') }}</p>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('How much the product contains in the selected unit.') }}</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Country of Origin') }}</label>
@@ -566,6 +566,25 @@
                         <textarea name="eu_responsible_address" rows="2"
                                   class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
                                   placeholder="{{ __('Street, city, country') }}">{{ product.euResponsibleAddress|default('') }}</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Minimum age') }}</label>
+                        <select name="min_age" class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm">
+                            <option value="">{{ __('No age restriction') }}</option>
+                            <option value="16" {{ product.minAge|default(0) == 16 ? 'selected' }}>16+</option>
+                            <option value="18" {{ product.minAge|default(0) == 18 ? 'selected' }}>18+</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Shown as an age gate on the product page and required as a confirmation at checkout.') }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Batch number') }}</label>
+                        <input type="text" name="batch_number" value="{{ product.batchNumber|default('') }}"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm"
+                               placeholder="{{ __('e.g. LOT-2026-04') }}">
+                        <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Optional. Copied to each order item when the order is placed.') }}</p>
                     </div>
                 </div>
 
@@ -1213,6 +1232,14 @@
                             </template>
                         </div>
 
+                        <div class="mt-3 border-t border-gray-200 pt-3">
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ __('Batch number') }}</label>
+                            <input type="text" :name="'variations[' + idx + '][batch_number]'" x-model="item.batch_number"
+                                   placeholder="{{ __('Leave empty to inherit from the product')|e('html_attr') }}"
+                                   class="w-full rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs px-2 py-1">
+                            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Overrides the product batch number for this variation.') }}</p>
+                        </div>
+
                     </div>  {# /collapsed #}
                     </div>
                 </template>
@@ -1427,8 +1454,9 @@
                         </div>
                     </div>
 
+                    <div class="mt-3 grid grid-cols-1 gap-4 border-t pt-3 sm:grid-cols-2">
                     {# Weight #}
-                    <div class="mt-3 border-t pt-3" x-data="{ open: {{ product.weight|default('') ? 'true' : 'false' }} }">
+                    <div x-data="{ open: {{ product.weight|default('') ? 'true' : 'false' }} }">
                         <div class="flex items-center gap-2" :class="open ? 'mb-2' : ''">
                             <button type="button" @click="open = !open" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs leading-none select-none w-4 text-center">
                                 <span x-show="open">▼</span>
@@ -1445,7 +1473,7 @@
                     </div>
 
                     {# Dimensions #}
-                    <div class="mt-3 border-t pt-3" x-data="{ open: {{ (product.length|default('') or product.width|default('') or product.height|default('')) ? 'true' : 'false' }} }">
+                    <div x-data="{ open: {{ (product.length|default('') or product.width|default('') or product.height|default('')) ? 'true' : 'false' }} }">
                         <div class="flex items-center gap-2" :class="open ? 'mb-2' : ''">
                             <button type="button" @click="open = !open" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xs leading-none select-none w-4 text-center">
                                 <span x-show="open">▼</span>
@@ -1478,6 +1506,7 @@
                             </div>
                         </div>
                         </div>
+                    </div>
                     </div>
 
                     {# Country Overrides #}
@@ -2352,6 +2381,7 @@ function variationsManager() {
                 time_mode: (v.shipping_time_min || v.shipping_time_max) ? 'custom' : 'use_parent',
                 vat_mode: v.vat_mode || 'use_parent',
                 vat_rate: v.vat_rate || '',
+                batch_number: v.batch_number || '',
                 unit_mode: v.unit ? 'custom' : 'use_parent',
                 unit: v.unit || '',
                 base_amount: v.base_amount || '',
@@ -2557,6 +2587,7 @@ function variationsManager() {
                 time_mode: 'use_parent',
                 vat_mode: 'use_parent',
                 vat_rate: '',
+                batch_number: '',
                 unit_mode: 'use_parent',
                 unit: '',
                 base_amount: '',

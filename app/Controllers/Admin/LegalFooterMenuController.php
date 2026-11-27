@@ -23,7 +23,10 @@ final class LegalFooterMenuController
 
     public function apply(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $result = $this->service->apply($this->settings->getGroup('ecommerce'));
+        $result = $this->service->apply(array_merge(
+            $this->settings->getGroup('ecommerce'),
+            $this->settings->getGroup('legal'),
+        ));
 
         if ($result['added'] === 0) {
             $this->session->flash('info', $this->translator->get('The Legal column already has every selected page.'));
@@ -35,7 +38,7 @@ final class LegalFooterMenuController
         }
 
         return $response
-            ->withHeader('Location', admin_url('/settings?tab=ecommerce&subtab=legal'))
+            ->withHeader('Location', admin_url('/settings?tab=legal'))
             ->withStatus(302);
     }
 }

@@ -55,6 +55,7 @@
         <button type="button" data-tab="seo" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.seo" x-cloak>SEO</button>
         <button type="button" data-tab="mail" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Mail') }}</button>
         <button type="button" data-tab="privacy" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Privacy & Security') }}</button>
+        <button type="button" data-tab="legal" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Legal & Compliance') }}</button>
         <button type="button" data-tab="analytics" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" x-show="$store.vlFeatures.analytics" x-cloak>{{ __('Analytics') }}</button>
         <span class="self-center pb-2 text-gray-300 dark:text-gray-600 select-none">|</span>
         <button type="button" data-tab="maintenance" class="tab-btn border-b-2 border-transparent pb-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{{ __('Maintenance') }}</button>
@@ -69,6 +70,7 @@
 {{ include('admin/settings/_seo.twig') }}
 {{ include('admin/settings/_discussion.twig') }}
 {{ include('admin/settings/_privacy.twig') }}
+{{ include('admin/settings/_legal.twig') }}
 {{ include('admin/settings/_analytics.twig') }}
 {{ include('admin/settings/_maintenance.twig') }}
 {{ include('admin/settings/_ecommerce.twig') }}

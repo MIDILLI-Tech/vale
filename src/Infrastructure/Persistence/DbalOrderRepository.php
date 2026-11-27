@@ -103,6 +103,7 @@ final class DbalOrderRepository implements OrderRepositoryInterface
             'payment_token'                 => $order->getPaymentToken(),
             'paid_at'                       => $order->getPaidAt()?->format('Y-m-d H:i:s'),
             'withdrawal_waiver_accepted_at' => $order->getWithdrawalWaiverAcceptedAt()?->format('Y-m-d H:i:s'),
+            'age_confirmed_at'              => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
             'carrier'                       => $order->getCarrier(),
             'tracking_number'               => $order->getTrackingNumber(),
             'order_type'                    => $order->getOrderType(),
@@ -136,6 +137,7 @@ final class DbalOrderRepository implements OrderRepositoryInterface
                     'variation_id'   => $item['variation_id']   ?? null,
                     'name'           => $item['name']           ?? '',
                     'sku'            => $item['sku']            ?? null,
+                    'batch_number'   => $item['batch_number']   ?? null,
                     'quantity'       => $item['qty']            ?? 1,
                     'price'          => $item['price']          ?? 0,
                     'tax_rate'       => isset($item['tax_rate']) && $item['tax_rate'] !== null

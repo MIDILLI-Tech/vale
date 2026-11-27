@@ -1225,6 +1225,9 @@ final class OrderController
                 $links[$label] = $base . '/' . $slug;
             }
         }
+        if (($this->settings->get('compliance_withdrawal_function', '0') ?? '0') === '1') {
+            $links['withdrawal'] = $base . '/withdrawal';
+        }
         return $links;
     }
 
@@ -1678,10 +1681,11 @@ final class OrderController
         $taxZeroReason  = $taxPolicy['zero_reason'];
 
         return [
-            'invoice_number' => 'INV-' . $order->getOrderNumber(),
-            'issued_at'      => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
-            'currency'       => $order->getCurrency(),
-            'shop'           => [
+            'invoice_number'   => 'INV-' . $order->getOrderNumber(),
+            'issued_at'        => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'currency'         => $order->getCurrency(),
+            'age_confirmed_at' => $order->getAgeConfirmedAt()?->format('Y-m-d H:i:s'),
+            'shop'             => [
                 'company_name' => (string) ($this->settings->get('shop_company_name', '') ?? ''),
                 'address_1'    => (string) ($this->settings->get('shop_address_1', '') ?? ''),
                 'address_2'    => (string) ($this->settings->get('shop_address_2', '') ?? ''),

@@ -81,7 +81,7 @@ final class LegalFooterMenuService
         $heading = $this->findHeading($items);
 
         if ($heading === null) {
-            $heading = new MenuItem((int) $menu->getId(), __('Legal'));
+            $heading = new MenuItem((int) $menu->getId(), 'Legal');
             $heading->setType('custom');
             $heading->setUrl(null);
             $heading->setCssClass(self::MANAGED_CLASS);
@@ -111,7 +111,7 @@ final class LegalFooterMenuService
                 continue;
             }
 
-            $item = new MenuItem((int) $menu->getId(), __($label));
+            $item = new MenuItem((int) $menu->getId(), $label);
             $item->setType('page');
             $item->setReferenceId($page->getId());
             $item->setUrl('/' . ltrim($this->posts->buildPagePath($page), '/'));
@@ -124,7 +124,7 @@ final class LegalFooterMenuService
         }
 
         if (($settings['compliance_withdrawal_function'] ?? '0') === '1' && !isset($existingUrls['/withdrawal'])) {
-            $item = new MenuItem((int) $menu->getId(), __('Withdrawal'));
+            $item = new MenuItem((int) $menu->getId(), 'Withdrawal');
             $item->setType('custom');
             $item->setUrl('/withdrawal');
             $item->setParentId($heading->getId());
@@ -142,7 +142,14 @@ final class LegalFooterMenuService
         ];
     }
 
-    /** @param MenuItem[] $items */
+    /**
+     * Legal items are stored with their canonical English label: a single menu
+     * serves every language, and LocaleMiddleware translates the label at
+     * render time. Storing a translated label here would freeze the menu in
+     * whatever language the admin happened to use when clicking the button.
+     *
+     * @param MenuItem[] $items
+     */
     private function findHeading(array $items): ?MenuItem
     {
         foreach ($items as $item) {
