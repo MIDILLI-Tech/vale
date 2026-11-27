@@ -1761,7 +1761,6 @@
     "IBAN / Account Number": "IBAN / Hesap Numarası",
     "IBAN for EU/TR, Account Number for other regions.": "AB/TR için IBAN, diğer bölgeler için Hesap Numarası.",
     "ID": "Kimlik",
-    "Include the country code. EU numbers are checked against VIES.": "Ülke kodunu ekleyin. AB numaraları VIES üzerinden kontrol edilir.",
     "INS Secret Word": "INS Gizli Kelimesi",
     "IP Address": "IP Adresi",
     "IP Address Privacy": "IP Adresi Gizliliği",

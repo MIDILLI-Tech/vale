@@ -74,20 +74,28 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Company Name') }} *</label>
                                     <input type="text" name="company_name" value="{{ old.company_name ?? '' }}" :required="business"
+                                           @keydown.enter.prevent="checkBusinessVat()"
                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm">
                                     {% if errors.company_name|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.company_name }}</p>{% endif %}
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('VAT Number') }} *</label>
                                     <input type="text" name="vat_number" value="{{ old.vat_number ?? '' }}" placeholder="DE123456789" data-vl-vat :required="business"
+                                           @keydown.enter.prevent="checkBusinessVat()"
                                            class="w-full rounded-lg border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm uppercase">
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Include the country code. EU numbers are checked against VIES.') }}</p>
                                     {% if errors.vat_number|default('') %}<p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ errors.vat_number }}</p>{% endif %}
                                 </div>
                                 <div class="sm:col-span-2 md:col-span-1 md:pt-6">
                                     <button type="button" @click="checkBusinessVat()" :disabled="b2bChecking" :aria-busy="b2bChecking"
-                                            class="inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed md:w-auto">
-                                        {{ __('Check') }}
+                                            class="inline-grid w-full justify-items-center whitespace-nowrap rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed md:w-auto">
+                                        <span class="col-start-1 row-start-1 inline-flex items-center gap-2" :class="b2bChecking ? 'invisible' : ''">{{ __('Check') }}</span>
+                                        <span class="invisible col-start-1 row-start-1 inline-flex items-center gap-2" :class="b2bChecking ? '' : 'invisible'">
+                                            <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                            </svg>
+                                            {{ __('Checking…') }}
+                                        </span>
                                     </button>
                                 </div>
                                 <div class="sm:col-span-2 md:col-span-3" x-show="b2bMessage" x-cloak>
@@ -839,6 +847,7 @@
         },
 
         async checkBusinessVat() {
+            if (this.b2bChecking) return;
             this.b2bChecking = true;
             this.b2bMessage  = '';
             this.b2bStatus   = '';

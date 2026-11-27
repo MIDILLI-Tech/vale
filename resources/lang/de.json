@@ -1761,7 +1761,6 @@
     "IBAN / Account Number": "IBAN / Kontonummer",
     "IBAN for EU/TR, Account Number for other regions.": "IBAN für EU/TR, Kontonummer für andere Regionen.",
     "ID": "ID",
-    "Include the country code. EU numbers are checked against VIES.": "Ländercode angeben. EU-Nummern werden über VIES geprüft.",
     "INS Secret Word": "INS-Secret-Word",
     "IP Address": "IP-Adresse",
     "IP Address Privacy": "Datenschutz der IP-Adressen",

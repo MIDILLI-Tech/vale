@@ -1833,7 +1833,6 @@
     "Inactive": "Inactive",
     "Include secrets (API keys, payment secrets)": "Include secrets (API keys, payment secrets)",
     "Include secrets in export file (API keys, payment secrets)": "Include secrets in export file (API keys, payment secrets)",
-    "Include the country code. EU numbers are checked against VIES.": "Include the country code. EU numbers are checked against VIES.",
     "Included Tax": "Included Tax",
     "Included VAT": "Included VAT",
     "Includes tag": "Includes tag",
