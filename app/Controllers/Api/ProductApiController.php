@@ -359,7 +359,7 @@ final class ProductApiController
         }
         if (array_key_exists('min_age', $data)) {
             $minAge = (int) $data['min_age'];
-            $p->setMinAge(in_array($minAge, [16, 18], true) ? $minAge : null);
+            $p->setMinAge($minAge >= 1 && $minAge <= 99 ? $minAge : null);
         }
         if (array_key_exists('batch_number', $data)) {
             $p->setBatchNumber(trim((string) $data['batch_number']) ?: null);

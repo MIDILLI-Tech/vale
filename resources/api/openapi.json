@@ -1680,7 +1680,7 @@
           "shipping_cost": { "type": ["number", "null"] },
           "weight": { "type": ["number", "null"] },
           "dimensions": { "type": ["string", "null"] },
-          "min_age": { "type": ["integer", "null"], "enum": [16, 18, null] },
+          "min_age": { "type": ["integer", "null"], "minimum": 1, "maximum": 99, "description": "Age gate in years (e.g. 16, 18, 21); `null` for no restriction." },
           "batch_number": { "type": ["string", "null"] },
           "unit": { "type": ["string", "null"], "enum": ["piece", "g", "kg", "oz", "lb", "ml", "l", "fl_oz", "gal", "m", "m2", "ft", "ft2", null] },
           "base_amount": { "type": ["number", "null"] },
@@ -1734,7 +1734,12 @@
           "cross_sell_ids": { "type": "array", "items": { "type": "integer" } },
           "weight": { "type": "number" },
           "dimensions": { "type": ["string", "object"], "description": "String or `{length,width,height}`, normalized to `L x W x H`." },
-          "min_age": { "type": ["integer", "null"], "enum": [16, 18, null], "description": "Age gate: `16`, `18` or `null` for no restriction." },
+          "min_age": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "maximum": 99,
+            "description": "Age gate in years, e.g. `16`, `18` or `21`; anything outside 1–99 (and `null` / `0`) means no restriction."
+          },
           "batch_number": { "type": ["string", "null"], "description": "Lot/batch identifier, copied to order items when an order is placed." },
           "unit": { "type": "string", "enum": ["piece", "g", "kg", "oz", "lb", "ml", "l", "fl_oz", "gal", "m", "m2", "ft", "ft2"], "description": "Unit-price basis; unknown values are stored as `null`." },
           "base_amount": { "type": ["number", "null"], "description": "Reference quantity for the unit price." },

@@ -3614,7 +3614,7 @@
     "Show warning when stock is at or below this number and send an email to admin.": "Show warning when stock is at or below this number and send an email to admin.",
     "Showing :count items": "Showing :count items",
     "Showing :from-:to of :total": "Showing :from-:to of :total",
-    "Shown as an age gate on the product page and required as a confirmation at checkout.": "Shown as an age gate on the product page and required as a confirmation at checkout.",
+    "Shown as an age gate on the product page and required as a confirmation at checkout. Leave empty for no restriction.": "Shown as an age gate on the product page and required as a confirmation at checkout. Leave empty for no restriction.",
     "Shown as hint": "Shown as hint",
     "Shown instead of your account name on your author page.": "Shown instead of your account name on your author page.",
     "Shown on the checkout and withdrawal pages. EU consumer law requires telling customers before they order who pays for returning the goods.": "Shown on the checkout and withdrawal pages. EU consumer law requires telling customers before they order who pays for returning the goods.",

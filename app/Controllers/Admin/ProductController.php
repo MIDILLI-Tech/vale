@@ -1054,7 +1054,7 @@ final class ProductController
         $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
         $product->setWarrantyMonths($this->normalizeWarrantyMonths($body['warranty_months'] ?? null));
         $minAge = (int) ($body['min_age'] ?? 0);
-        $product->setMinAge(in_array($minAge, [16, 18], true) ? $minAge : null);
+        $product->setMinAge($minAge >= 1 && $minAge <= 99 ? $minAge : null);
         $product->setBatchNumber(trim((string) ($body['batch_number'] ?? '')) ?: null);
         $product->setManualLabel(trim((string) ($body['manual_label'] ?? '')) ?: null);
         $product->setDigitalWaiver(!empty($body['digital_waiver']));

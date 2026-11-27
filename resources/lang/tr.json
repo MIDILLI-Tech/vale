@@ -3316,7 +3316,7 @@
     "SEO redirect setting is disabled. If you change this URL path, old links may stop working.": "SEO yönlendirme ayarı devre dışı. Bu URL yolunu değiştirirseniz eski bağlantılar çalışmayabilir.",
     "SEO redirect setting is disabled. If you change this slug, old links may stop working.": "SEO yönlendirme ayarı devre dışı. Bu slug'ı değiştirirseniz eski bağlantılar çalışmayabilir.",
     "SG.xxx...": "SG.xxx...",
-    "Shown as an age gate on the product page and required as a confirmation at checkout.": "Ürün sayfasında yaş kapısı olarak gösterilir ve ödeme sırasında onay olarak istenir.",
+    "Shown as an age gate on the product page and required as a confirmation at checkout. Leave empty for no restriction.": "Ürün sayfasında yaş kapısı olarak gösterilir ve ödeme sırasında onay olarak istenir. Kısıtlama olmaması için boş bırakın.",
     "SKU": "SKU",
     "SKU:": "SKU:",
     "SSO Providers for Registration": "Kayıt için SSO Sağlayıcıları",
