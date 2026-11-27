@@ -254,7 +254,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
         $price = (float) $product->getPrice();
         $last  = $this->db->fetchOne(
             'SELECT price FROM ' . VL_DB_PREFIX . 'product_price_history'
-            . ' WHERE product_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1',
+            . ' WHERE product_id = ? AND variation_id IS NULL ORDER BY recorded_at DESC, id DESC LIMIT 1',
             [$productId],
             [ParameterType::INTEGER],
         );
@@ -454,6 +454,8 @@ final class DbalProductRepository implements ProductRepositoryInterface
                     : json_encode($v['shipping_country_overrides'] ?? new \stdClass()),
                 'vat_mode'             => $v['vat_mode'] ?? 'use_parent',
                 'vat_rate'             => !empty($v['vat_rate']) ? (float) $v['vat_rate'] : null,
+                'unit'                 => !empty($v['unit']) ? (string) $v['unit'] : null,
+                'base_amount'          => isset($v['base_amount']) && $v['base_amount'] !== '' ? (float) $v['base_amount'] : null,
                 'refund_mode'          => $v['refund_mode'] ?? 'use_parent',
                 'weight'               => !empty($v['weight']) ? (float) $v['weight'] : null,
                 'length'               => !empty($v['length']) ? (float) $v['length'] : null,
@@ -476,12 +478,35 @@ final class DbalProductRepository implements ProductRepositoryInterface
                 $variationId = (int) $this->db->lastInsertId();
                 $this->saveVariationDownloadFileIds($variationId, $downloadFileIds);
             }
+
+            $this->recordVariationPriceHistory($productId, $variationId, (float) ($data['price'] ?? 0));
         }
     }
 
     public function deleteVariation(int $variationId): void
     {
+        $this->db->delete(VL_DB_PREFIX . 'product_price_history', ['variation_id' => $variationId]);
         $this->db->delete(VL_DB_PREFIX . 'product_variations', ['id' => $variationId]);
+    }
+
+    private function recordVariationPriceHistory(int $productId, int $variationId, float $price): void
+    {
+        $last = $this->db->fetchOne(
+            'SELECT price FROM ' . VL_DB_PREFIX . 'product_price_history'
+            . ' WHERE variation_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1',
+            [$variationId],
+            [ParameterType::INTEGER],
+        );
+        if ($last !== false && $last !== null && abs((float) $last - $price) < 0.005) {
+            return;
+        }
+
+        $this->db->insert(VL_DB_PREFIX . 'product_price_history', [
+            'product_id'   => $productId,
+            'variation_id' => $variationId,
+            'price'        => $price,
+            'recorded_at'  => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+        ], ['product_id' => ParameterType::INTEGER, 'variation_id' => ParameterType::INTEGER]);
     }
 
     /** @return int[] */

@@ -420,6 +420,28 @@ final class ShopController
             $v['attributes']        = is_string($v['attributes'] ?? null) ? json_decode($v['attributes'], true) : ($v['attributes'] ?? []);
             $v['image_url']         = $this->resolveProductImage(!empty($v['image_id']) ? (int) $v['image_id'] : null);
             $v['shipping_estimate'] = $this->deliveryEstimate->estimateForProduct($product, $v);
+
+            $variationUnit   = !empty($v['unit']) ? (string) $v['unit'] : $product->getUnit();
+            $variationAmount = isset($v['base_amount']) && $v['base_amount'] !== null
+                ? (float) $v['base_amount']
+                : $product->getBaseAmount();
+            $v['unit_price'] = $this->settings->get('compliance_grundpreis', '1') === '1'
+                ? $this->unitPriceCalculator->resolve($variationUnit, $variationAmount, VariationPrice::resolve($v))
+                : null;
+            $v['lowest_price_30'] = null;
+            if ($this->settings->get('compliance_price_history', '1') === '1' && !empty($v['sale_price'])) {
+                $saleStart = !empty($v['sale_price_start']) ? new \DateTimeImmutable((string) $v['sale_price_start']) : null;
+                $saleEnd   = !empty($v['sale_price_end']) ? new \DateTimeImmutable((string) $v['sale_price_end']) : null;
+                $saleNow   = new \DateTimeImmutable();
+                if (($saleStart === null || $saleNow >= $saleStart) && ($saleEnd === null || $saleNow < $saleEnd)) {
+                    $v['lowest_price_30'] = $this->priceHistory->lowestBetween(
+                        (int) $product->getId(),
+                        (int) $v['id'],
+                        new \DateTimeImmutable('-30 days'),
+                        $saleNow,
+                    );
+                }
+            }
         }
         unset($v);
 
@@ -485,6 +507,7 @@ final class ShopController
         if ($this->settings->get('compliance_price_history', '1') === '1' && $product->isSaleActive()) {
             $lowestPrice30 = $this->priceHistory->lowestBetween(
                 (int) $product->getId(),
+                null,
                 new \DateTimeImmutable('-30 days'),
                 new \DateTimeImmutable(),
             );

@@ -111,7 +111,11 @@
                     </div>
                 </template>
                 <template x-if="selectedPrice">
-                    <span class="text-3xl font-bold text-white" x-text="new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(selectedPrice) * {{ fx_rate }})"></span>
+                    <div>
+                        <span class="text-3xl font-bold text-white" x-text="new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(selectedPrice) * {{ fx_rate }})"></span>
+                        <p x-show="selectedUnitPrice" x-text="selectedUnitPrice" class="mt-1 text-xs text-slate-400"></p>
+                        <p x-show="selectedLowestPrice" x-text="selectedLowestPrice" class="mt-1 text-xs text-slate-400"></p>
+                    </div>
                 </template>
                 {% else %}
                 {% if product.salePrice %}
@@ -130,10 +134,10 @@
                     {% endif %}
                 {% endif %}
                 {% if unit_price is defined and unit_price %}
-                <p class="mt-1 text-xs text-slate-400">{{ (unit_price.price * fx_rate)|price(current_currency) }} / {{ unit_price.label }}</p>
+                <p class="mt-1 text-xs text-slate-400" x-show="!selectedPrice" x-cloak>{{ (unit_price.price * fx_rate)|price(current_currency) }} / {{ unit_price.label }}</p>
                 {% endif %}
                 {% if lowest_price_30 is defined and lowest_price_30 %}
-                <p class="mt-1 text-xs text-slate-400">{{ __('Lowest price in the last 30 days: :price', {':price': (lowest_price_30 * fx_rate)|price(current_currency)}) }}</p>
+                <p class="mt-1 text-xs text-slate-400" x-show="!selectedPrice" x-cloak>{{ __('Lowest price in the last 30 days: :price', {':price': (lowest_price_30 * fx_rate)|price(current_currency)}) }}</p>
                 {% endif %}
             </div>
 
@@ -422,6 +426,8 @@ function productVariations() {
         selectedAttrs: { ...initAttrs },
         selectedVariationId: 0,
         selectedPrice: null,
+        selectedUnitPrice: null,
+        selectedLowestPrice: null,
         selectedStockStatus: null,
         selectedStockQty: null,
         selectedDownloadMode: null,
@@ -579,6 +585,11 @@ function productVariations() {
             if (match) {
                 this.selectedVariationId = match.id;
                 this.selectedPrice = match.sale_price || match.price;
+                const fmtPrice = (val) => new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) * {{ fx_rate }});
+                this.selectedUnitPrice = match.unit_price ? fmtPrice(match.unit_price.price) + ' / ' + match.unit_price.label : null;
+                this.selectedLowestPrice = match.lowest_price_30
+                    ? '{{ __('Lowest price in the last 30 days: :price', {':price': '__PRICE__'})|e('js') }}'.replace('__PRICE__', fmtPrice(match.lowest_price_30))
+                    : null;
                 this.selectedStockQty = match.stock_quantity != null ? parseInt(match.stock_quantity) : 0;
                 const rawStatus = match.stock_status || '';
                 this.selectedStockStatus = rawStatus !== '' ? rawStatus : (this.selectedStockQty === 0 ? 'out_of_stock' : 'in_stock');
@@ -589,6 +600,8 @@ function productVariations() {
             } else {
                 this.selectedVariationId = 0;
                 this.selectedPrice = null;
+                this.selectedUnitPrice = null;
+                this.selectedLowestPrice = null;
                 this.selectedStockStatus = null;
                 this.selectedStockQty = null;
                 this.selectedDownloadMode = null;

@@ -26,14 +26,22 @@ final class DbalProductPriceHistoryRepository implements ProductPriceHistoryRepo
         ]);
     }
 
-    public function lowestBetween(int $productId, \DateTimeImmutable $from, \DateTimeImmutable $to): ?float
+    public function lowestBetween(int $productId, ?int $variationId, \DateTimeImmutable $from, \DateTimeImmutable $to): ?float
     {
-        $value = $this->db->fetchOne(
-            'SELECT MIN(price) FROM ' . VL_DB_PREFIX . 'product_price_history'
-            . ' WHERE product_id = ? AND recorded_at >= ? AND recorded_at <= ?',
-            [$productId, $from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')],
-            [ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING],
-        );
+        $sql    = 'SELECT MIN(price) FROM ' . VL_DB_PREFIX . 'product_price_history'
+            . ' WHERE product_id = ? AND recorded_at >= ? AND recorded_at <= ?';
+        $params = [$productId, $from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')];
+        $types  = [ParameterType::INTEGER, ParameterType::STRING, ParameterType::STRING];
+
+        if ($variationId === null) {
+            $sql .= ' AND variation_id IS NULL';
+        } else {
+            $sql      .= ' AND variation_id = ?';
+            $params[] = $variationId;
+            $types[]  = ParameterType::INTEGER;
+        }
+
+        $value = $this->db->fetchOne($sql, $params, $types);
 
         return $value === false || $value === null ? null : (float) $value;
     }

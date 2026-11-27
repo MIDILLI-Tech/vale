@@ -155,6 +155,8 @@
                         <template x-if="selectedOriginalPrice">
                             <span class="ml-2 text-xl text-gray-400 line-through" x-text="new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(selectedOriginalPrice) * {{ fx_rate }})"></span>
                         </template>
+                        <p x-show="selectedUnitPrice" x-text="selectedUnitPrice" class="mt-1 text-xs text-gray-500"></p>
+                        <p x-show="selectedLowestPrice" x-text="selectedLowestPrice" class="mt-1 text-xs text-gray-500"></p>
                     </div>
                 </template>
                 {% else %}
@@ -174,10 +176,10 @@
                     {% endif %}
                 {% endif %}
                 {% if unit_price is defined and unit_price %}
-                <p class="mt-1 text-xs text-gray-500">{{ (unit_price.price * fx_rate)|price(current_currency) }} / {{ unit_price.label }}</p>
+                <p class="mt-1 text-xs text-gray-500" x-show="!selectedPrice" x-cloak>{{ (unit_price.price * fx_rate)|price(current_currency) }} / {{ unit_price.label }}</p>
                 {% endif %}
                 {% if lowest_price_30 is defined and lowest_price_30 %}
-                <p class="mt-1 text-xs text-gray-500">{{ __('Lowest price in the last 30 days: :price', {':price': (lowest_price_30 * fx_rate)|price(current_currency)}) }}</p>
+                <p class="mt-1 text-xs text-gray-500" x-show="!selectedPrice" x-cloak>{{ __('Lowest price in the last 30 days: :price', {':price': (lowest_price_30 * fx_rate)|price(current_currency)}) }}</p>
                 {% endif %}
             </div>
 
@@ -490,6 +492,8 @@ function productVariations() {
         selectedAttrs: { ...initAttrs },
         selectedVariationId: 0,
         selectedPrice: null,
+        selectedUnitPrice: null,
+        selectedLowestPrice: null,
         selectedOriginalPrice: null,
         selectedStockStatus: null,
         selectedStockQty: null,
@@ -671,6 +675,11 @@ function productVariations() {
                 const saleActive = match.sale_price && (!vStart || now >= vStart) && (!vEnd || now < vEnd);
                 this.selectedPrice = saleActive ? match.sale_price : match.price;
                 this.selectedOriginalPrice = saleActive ? match.price : null;
+                const fmtPrice = (val) => new Intl.NumberFormat(document.documentElement.lang || 'en', { style: 'currency', currency: '{{ current_currency|e('js') }}', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) * {{ fx_rate }});
+                this.selectedUnitPrice = match.unit_price ? fmtPrice(match.unit_price.price) + ' / ' + match.unit_price.label : null;
+                this.selectedLowestPrice = match.lowest_price_30
+                    ? '{{ __('Lowest price in the last 30 days: :price', {':price': '__PRICE__'})|e('js') }}'.replace('__PRICE__', fmtPrice(match.lowest_price_30))
+                    : null;
                 this.selectedStockQty = match.stock_quantity != null ? parseInt(match.stock_quantity) : 0;
                 const rawStatus = match.stock_status || '';
                 this.selectedStockStatus = rawStatus !== '' ? rawStatus : (this.selectedStockQty === 0 ? 'out_of_stock' : 'in_stock');
@@ -683,6 +692,8 @@ function productVariations() {
                 this.selectedVariationId = 0;
                 this.selectedPrice = null;
                 this.selectedOriginalPrice = null;
+                this.selectedUnitPrice = null;
+                this.selectedLowestPrice = null;
                 this.selectedStockStatus = null;
                 this.selectedStockQty = null;
                 this.selectedDownloadMode = null;

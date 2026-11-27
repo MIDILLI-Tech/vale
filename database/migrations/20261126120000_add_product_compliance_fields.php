@@ -31,11 +31,18 @@ final class AddProductComplianceFields extends AbstractMigration
             ->addColumn('withdrawal_waiver_accepted_at', 'datetime', ['null' => true, 'default' => null])
             ->update();
 
+        $this->table($p . 'product_variations')
+            ->addColumn('unit', 'string', ['limit' => 16, 'null' => true, 'default' => null])
+            ->addColumn('base_amount', 'decimal', ['precision' => 12, 'scale' => 3, 'null' => true, 'default' => null])
+            ->update();
+
         $this->table($p . 'product_price_history')
             ->addColumn('product_id', 'integer', ['signed' => false, 'null' => false])
+            ->addColumn('variation_id', 'integer', ['signed' => false, 'null' => true, 'default' => null])
             ->addColumn('price', 'decimal', ['precision' => 12, 'scale' => 2, 'null' => false])
             ->addColumn('recorded_at', 'datetime', ['null' => false])
             ->addIndex(['product_id', 'recorded_at'], ['name' => 'idx_price_history_product'])
+            ->addIndex(['variation_id', 'recorded_at'], ['name' => 'idx_price_history_variation'])
             ->create();
     }
 }

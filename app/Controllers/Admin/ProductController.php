@@ -1455,6 +1455,15 @@ final class ProductController
                 $varVatMode = 'use_parent';
             }
 
+            $allowedUnits     = ['piece', 'g', 'kg', 'oz', 'lb', 'ml', 'l', 'fl_oz', 'gal', 'm', 'm2', 'ft', 'ft2'];
+            $varUnitMode      = ($v['unit_mode'] ?? 'use_parent') === 'custom' ? 'custom' : 'use_parent';
+            $varUnit          = $varUnitMode                      === 'custom' && in_array((string) ($v['unit'] ?? ''), $allowedUnits, true)
+                ? (string) $v['unit']
+                : null;
+            $varBaseAmount    = $varUnitMode === 'custom' && isset($v['base_amount']) && $v['base_amount'] !== ''
+                ? max(0.0, (float) str_replace(',', '.', (string) $v['base_amount']))
+                : null;
+
             $allowedRefundModes = ['use_parent', 'allow', 'non_refundable'];
             $varRefundMode      = $v['refund_mode'] ?? 'use_parent';
             if (!in_array($varRefundMode, $allowedRefundModes, true)) {
@@ -1517,6 +1526,8 @@ final class ProductController
                 })(),
                 'vat_mode'             => $varVatMode,
                 'vat_rate'             => $varVatMode === 'custom' ? max(0.0, (float) str_replace(',', '.', (string) ($v['vat_rate'] ?? 0.0))) : null,
+                'unit'                 => $varUnit,
+                'base_amount'          => $varBaseAmount,
                 'refund_mode'          => $varRefundMode,
                 'weight'               => isset($v['weight']) && $v['weight'] !== '' ? (float) str_replace(',', '.', (string) $v['weight']) : null,
                 'length'               => isset($v['length']) && $v['length'] !== '' ? (float) str_replace(',', '.', (string) $v['length']) : null,
@@ -1612,6 +1623,8 @@ final class ProductController
                     : ($v['shipping_country_overrides'] ?: new \stdClass()),
                 'vat_mode'                   => $v['vat_mode'] ?? 'use_parent',
                 'vat_rate'                   => isset($v['vat_rate']) ? (float) $v['vat_rate'] : null,
+                'unit'                       => $v['unit'] ?? null,
+                'base_amount'                => isset($v['base_amount']) ? (float) $v['base_amount'] : null,
             ];
         }
 
