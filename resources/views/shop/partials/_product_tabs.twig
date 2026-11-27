@@ -18,10 +18,24 @@
         {% set _batch_values = _batch_values|merge([_variation.batch_number]) %}
     {% endif %}
 {% endfor %}
+{# Warranty in months: the variation overrides the product, which overrides the shop default; 0 hides the line. #}
+{% set _product_warranty = product.warrantyMonths is defined and product.warrantyMonths is not null
+    ? product.warrantyMonths : settings.product_warranty_default|default(0) %}
+{% set _warranty_months = [] %}
+{% if _product_warranty > 0 %}{% set _warranty_months = _warranty_months|merge([_product_warranty]) %}{% endif %}
+{% for _variation in variations|default([]) %}
+    {% set _variation_warranty = _variation.warranty_months|default(null) %}
+    {% if _variation_warranty is not null and _variation_warranty > 0 and _variation_warranty not in _warranty_months %}
+        {% set _warranty_months = _warranty_months|merge([_variation_warranty]) %}
+    {% endif %}
+{% endfor %}
+{% set _warranty_values = _warranty_months|map(months => months == 1
+    ? __('1 month warranty') : __(':months months warranty', {':months': months})) %}
 {% set _has_info = _unit or _amount or product.manufacturerName|default('') or product.manufacturerAddress|default('')
     or product.euResponsibleName|default('') or product.euResponsibleAddress|default('')
     or product.countryOfOrigin|default('') or product.safetyWarnings|default('')
     or product.minAge|default(0) or _batch_values|length
+    or _warranty_values|length
     or _manual_docs|length %}
 {% set _tabs = [] %}
 {% if product.description %}{% set _tabs = _tabs|merge(['description']) %}{% endif %}
@@ -80,6 +94,12 @@
             <div>
                 <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ __('Batch number') }}</dt>
                 <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ _batch_values|join(', ') }}</dd>
+            </div>
+            {% endif %}
+            {% if _warranty_values|length %}
+            <div>
+                <dt class="font-medium {{ _dark ? 'text-slate-200' : 'text-gray-900' }}">{{ __('Warranty') }}</dt>
+                <dd class="{{ _dark ? 'text-slate-400' : 'text-gray-600' }}">{{ _warranty_values|join(', ') }}</dd>
             </div>
             {% endif %}
             {% if product.minAge %}

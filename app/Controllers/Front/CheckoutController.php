@@ -912,10 +912,14 @@ final class CheckoutController
         foreach ($items as $index => $item) {
             $variationSku = trim((string) ($item['variation_row']['sku'] ?? ''));
             $orderItem    = [
-                'product_id'   => $item['product']->getId(),
-                'name'         => $item['product']->getName(),
-                'sku'          => $variationSku !== '' ? $variationSku : ($item['product']->getSku() ?? ''),
-                'batch_number' => $item['product']->resolveBatchNumber((string) ($item['variation_row']['batch_number'] ?? '')),
+                'product_id'      => $item['product']->getId(),
+                'name'            => $item['product']->getName(),
+                'sku'             => $variationSku !== '' ? $variationSku : ($item['product']->getSku() ?? ''),
+                'batch_number'    => $item['product']->resolveBatchNumber((string) ($item['variation_row']['batch_number'] ?? '')),
+                'warranty_months' => $item['product']->resolveWarrantyMonths(
+                    isset($item['variation_row']['warranty_months']) ? (int) $item['variation_row']['warranty_months'] : null,
+                    (int) ($this->settings->get('product_warranty_default', '0') ?? 0),
+                ),
                 'price'        => $item['price'],
                 'qty'          => $item['qty'],
                 'subtotal'     => $item['price'] * $item['qty'],

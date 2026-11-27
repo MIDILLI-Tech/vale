@@ -394,6 +394,9 @@ final class ProductApiController
         if (array_key_exists('safety_warnings', $data)) {
             $p->setSafetyWarnings(trim((string) $data['safety_warnings']) ?: null);
         }
+        if (array_key_exists('warranty_months', $data)) {
+            $p->setWarrantyMonths($this->normalizeWarrantyMonths($data['warranty_months']));
+        }
         if (array_key_exists('manual_url', $data)) {
             $p->setManualUrl(trim((string) $data['manual_url']) ?: null);
         }
@@ -607,6 +610,7 @@ final class ProductApiController
                 'vat_rate'                   => isset($vData['vat_rate']) ? (float) $vData['vat_rate'] : null,
                 'refund_mode'                => $vData['refund_mode']                ?? 'use_parent',
                 'batch_number'               => trim((string) ($vData['batch_number'] ?? '')) ?: null,
+                'warranty_months'            => $this->normalizeWarrantyMonths($vData['warranty_months'] ?? null),
                 'unit'                       => in_array((string) ($vData['unit'] ?? ''), $allowedUnits, true)
                     ? (string) $vData['unit'] : null,
                 'base_amount'                => isset($vData['base_amount']) && $vData['base_amount'] !== ''
@@ -649,6 +653,20 @@ final class ProductApiController
     /**
      * @return list<array{type: string, value: int|string, label: string, name: string, url: string}>
      */
+    /**
+     * Warranty months shared with the admin UI: an empty value means "inherit"
+     * (NULL), 0 means no warranty information, and the upper bound mirrors the
+     * admin normaliser.
+     */
+    private function normalizeWarrantyMonths(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return max(0, min(1200, (int) $value));
+    }
+
     private function normalizeManualDocuments(mixed $input): array
     {
         if (!is_array($input)) {
@@ -857,6 +875,8 @@ final class ProductApiController
                 'vat_rate'                                   => isset($v['vat_rate']) ? (float) $v['vat_rate'] : null,
                                 'refund_mode'                => $v['refund_mode']  ?? 'use_parent',
                 'batch_number'                               => $v['batch_number'] ?? null,
+                'warranty_months'                            => isset($v['warranty_months']) && $v['warranty_months'] !== null
+                    ? (int) $v['warranty_months'] : null,
                 'unit'                                       => $v['unit']         ?? null,
                 'base_amount'                                => isset($v['base_amount']) ? (float) $v['base_amount'] : null,
                 'manual_documents'                           => $this->decodeManualDocuments($v['manual_documents'] ?? null),
@@ -933,6 +953,7 @@ final class ProductApiController
             'eu_responsible_address'     => $p->getEuResponsibleAddress(),
             'country_of_origin'          => $p->getCountryOfOrigin(),
             'safety_warnings'            => $p->getSafetyWarnings(),
+            'warranty_months'            => $p->getWarrantyMonths(),
             'manual_url'                 => $p->getManualUrl(),
             'manual_label'               => $p->getManualLabel(),
             'digital_waiver'             => $p->hasDigitalWaiver(),

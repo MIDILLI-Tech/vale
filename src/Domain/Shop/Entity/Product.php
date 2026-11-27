@@ -36,6 +36,7 @@ class Product extends BaseEntity
     private ?string $euResponsibleAddress       = null;
     private ?string $countryOfOrigin            = null;
     private ?string $safetyWarnings             = null;
+    private ?int $warrantyMonths                = null;
     private ?string $manualUrl                  = null;
     private ?string $manualLabel                = null;
 
@@ -227,6 +228,15 @@ class Product extends BaseEntity
     {
         return $this->safetyWarnings;
     }
+
+    /**
+     * Warranty duration in months. Null inherits the next level up
+     * (variation → product → shop-wide default); 0 means "no warranty shown".
+     */
+    public function getWarrantyMonths(): ?int
+    {
+        return $this->warrantyMonths;
+    }
     public function getMinAge(): ?int
     {
         return $this->minAge;
@@ -234,6 +244,24 @@ class Product extends BaseEntity
     public function getBatchNumber(): ?string
     {
         return $this->batchNumber;
+    }
+
+    /**
+     * Warranty months for an order line: the variation overrides the product,
+     * which overrides the shop-wide default. Null means "inherit", 0 means no
+     * warranty information.
+     */
+    public function resolveWarrantyMonths(?int $variationMonths, ?int $shopDefault): int
+    {
+        if ($variationMonths !== null) {
+            return max(0, $variationMonths);
+        }
+
+        if ($this->warrantyMonths !== null) {
+            return max(0, $this->warrantyMonths);
+        }
+
+        return max(0, (int) $shopDefault);
     }
 
     /**
@@ -651,6 +679,11 @@ class Product extends BaseEntity
     {
         $this->safetyWarnings = $warnings;
     }
+
+    public function setWarrantyMonths(?int $months): void
+    {
+        $this->warrantyMonths = $months === null ? null : max(0, min(1200, $months));
+    }
     public function setMinAge(?int $age): void
     {
         $this->minAge = $age !== null && $age > 0 ? $age : null;
@@ -1039,6 +1072,9 @@ class Product extends BaseEntity
         $product->euResponsibleAddress = $row['eu_responsible_address'] ?? null;
         $product->countryOfOrigin      = $row['country_of_origin']      ?? null;
         $product->safetyWarnings       = $row['safety_warnings']        ?? null;
+        $product->warrantyMonths       = isset($row['warranty_months']) && $row['warranty_months'] !== null
+            ? (int) $row['warranty_months']
+            : null;
         $product->manualUrl            = $row['manual_url']             ?? null;
         $product->manualLabel          = $row['manual_label']           ?? null;
         $decodedManualDocuments        = isset($row['manual_documents']) && is_string($row['manual_documents']) && $row['manual_documents'] !== ''

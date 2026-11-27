@@ -120,6 +120,18 @@
             </div>
         </div>
 
+        <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Warranty') }}</h3>
+
+            <div {{ vl.attrs('ecommerce', __('Warranty'), 'product_warranty_default', 'product', __('Warranty'), 'warranty guarantee months duration') }}>
+                <label for="product-warranty-default" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Shop-wide warranty (months)') }}</label>
+                <input type="number" id="product-warranty-default" name="product_warranty_default" min="0" max="1200" step="1"
+                       value="{{ settings.product_warranty_default|default(0) }}"
+                       class="w-full max-w-xs rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm dark:bg-gray-800 dark:text-gray-100">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ __('Warranty duration in months, shown in the additional information tab on the product page. 0 hides the line; the statutory warranty applies regardless. Products and variations can override it in their compliance section.') }}</p>
+            </div>
+        </div>
+
         <div class="rounded-xl border dark:border-gray-800 bg-white dark:bg-gray-900 dark:bg-gray-900 p-6 shadow-xs space-y-5"
              x-data="{ refundsEnabled: {{ settings.refunds_enabled|default('1') == '1' ? 'true' : 'false' }} }">
             <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 border-b pb-3">{{ __('Cancellation & Refund Settings') }}</h3>

@@ -6,6 +6,7 @@ namespace ValeApp\Tests\Unit\Application\Webhook;
 
 use PHPUnit\Framework\TestCase;
 use ValeApp\Application\Webhook\WebhookPayloadBuilder;
+use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 use ValeApp\Domain\Shared\ValueObject\Slug;
 use ValeApp\Domain\Shop\Entity\Order;
 use ValeApp\Domain\Shop\Entity\Product;
@@ -20,28 +21,36 @@ final class WebhookPayloadBuilderTest extends TestCase
         $product->setSku('DEV-1');
         $product->setMinAge(18);
         $product->setBatchNumber('LOT-PARENT');
+        $product->setWarrantyMonths(24);
 
         $products = $this->createStub(ProductRepositoryInterface::class);
         $products->method('findVariationsByProductId')->willReturn([
             [
-                'id'             => 11,
-                'sku'            => 'DEV-1-RED',
-                'attributes'     => json_encode(['Color' => 'Red']),
-                'price'          => '19.90',
-                'sale_price'     => null,
-                'stock_quantity' => 4,
-                'stock_status'   => 'in_stock',
-                'batch_number'   => 'LOT-VAR',
+                'id'              => 11,
+                'sku'             => 'DEV-1-RED',
+                'attributes'      => json_encode(['Color' => 'Red']),
+                'price'           => '19.90',
+                'sale_price'      => null,
+                'stock_quantity'  => 4,
+                'stock_status'    => 'in_stock',
+                'batch_number'    => 'LOT-VAR',
+                'warranty_months' => 36,
             ],
         ]);
 
-        $payload = (new WebhookPayloadBuilder($products))->product($product);
+        $settings = $this->createStub(SettingsRepositoryInterface::class);
+        $settings->method('get')->willReturn('12');
+
+        $payload = (new WebhookPayloadBuilder($products, $settings))->product($product);
 
         self::assertSame(7, $payload['product_id']);
         self::assertSame(18, $payload['product_min_age']);
         self::assertSame('LOT-PARENT', $payload['product_batch_number']);
         self::assertSame('LOT-VAR', $payload['variations'][0]['batch_number']);
         self::assertSame(['Color' => 'Red'], $payload['variations'][0]['attributes']);
+        self::assertSame(24, $payload['product_warranty_months']);
+        self::assertSame(24, $payload['product_warranty_months_resolved']);
+        self::assertSame(36, $payload['variations'][0]['warranty_months']);
     }
 
     public function testOrderPayloadCarriesAgeConfirmationAndItemBatch(): void
@@ -63,21 +72,24 @@ final class WebhookPayloadBuilderTest extends TestCase
         $order->setAgeConfirmedAt(new \DateTimeImmutable('2026-11-27T10:00:00+00:00'));
         $order->setItems([
             [
-                'product_id'   => 7,
-                'name'         => 'Compliant Device',
-                'sku'          => 'DEV-1',
-                'batch_number' => 'LOT-VAR',
-                'price'        => 49.00,
-                'qty'          => 1,
-                'subtotal'     => 49.00,
+                'product_id'      => 7,
+                'name'            => 'Compliant Device',
+                'sku'             => 'DEV-1',
+                'batch_number'    => 'LOT-VAR',
+                'warranty_months' => 24,
+                'price'           => 49.00,
+                'qty'             => 1,
+                'subtotal'        => 49.00,
             ],
         ]);
 
         $products = $this->createStub(ProductRepositoryInterface::class);
-        $payload  = (new WebhookPayloadBuilder($products))->order($order, ['new_status' => 'shipped']);
+        $settings = $this->createStub(SettingsRepositoryInterface::class);
+        $payload  = (new WebhookPayloadBuilder($products, $settings))->order($order, ['new_status' => 'shipped']);
 
         self::assertSame('2026-11-27T10:00:00+00:00', $payload['age_confirmed_at']);
         self::assertSame('LOT-VAR', $payload['items'][0]['batch_number']);
+        self::assertSame(24, $payload['items'][0]['warranty_months']);
         self::assertSame('Ada Lovelace', $payload['order_customer_name']);
         self::assertSame('shipped', $payload['new_status']);
     }

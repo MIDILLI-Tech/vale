@@ -779,6 +779,7 @@ final class ProductController
             'eu_responsible_address'  => !empty($body['eu_responsible_address']) ? trim((string) $body['eu_responsible_address']) : $product->getEuResponsibleAddress(),
             'country_of_origin'       => $body['country_of_origin'] ?? $product->getCountryOfOrigin(),
             'safety_warnings'         => !empty($body['safety_warnings']) ? trim((string) $body['safety_warnings']) : $product->getSafetyWarnings(),
+            'warranty_months'         => $this->normalizeWarrantyMonths($body['warranty_months'] ?? $product->getWarrantyMonths()),
             'manual_url'              => !empty($body['manual_url']) ? trim((string) $body['manual_url']) : $product->getManualUrl(),
             'manual_label'            => !empty($body['manual_label']) ? trim((string) $body['manual_label']) : $product->getManualLabel(),
             'manual_urls'             => json_encode($product->getManualUrls() ?: new \stdClass()),
@@ -1051,6 +1052,7 @@ final class ProductController
         $origin = strtoupper(trim((string) ($body['country_of_origin'] ?? '')));
         $product->setCountryOfOrigin(preg_match('/^[A-Z]{2}$/', $origin) === 1 ? $origin : null);
         $product->setSafetyWarnings(trim((string) ($body['safety_warnings'] ?? '')) ?: null);
+        $product->setWarrantyMonths($this->normalizeWarrantyMonths($body['warranty_months'] ?? null));
         $minAge = (int) ($body['min_age'] ?? 0);
         $product->setMinAge(in_array($minAge, [16, 18], true) ? $minAge : null);
         $product->setBatchNumber(trim((string) ($body['batch_number'] ?? '')) ?: null);
@@ -1563,6 +1565,7 @@ final class ProductController
                 'unit'                 => $varUnit,
                 'base_amount'          => $varBaseAmount,
                 'batch_number'         => trim((string) ($v['batch_number'] ?? '')) ?: null,
+                'warranty_months'      => $this->normalizeWarrantyMonths($v['warranty_months'] ?? null),
                 'manual_documents'     => $this->buildComplianceDocuments($v),
                 'refund_mode'          => $varRefundMode,
                 'weight'               => isset($v['weight']) && $v['weight'] !== '' ? (float) str_replace(',', '.', (string) $v['weight']) : null,
@@ -1572,6 +1575,20 @@ final class ProductController
             ];
         }
         return $variations;
+    }
+
+    /**
+     * Warranty months are shared by the shop-wide default, the product and each
+     * variation: an empty value means "inherit" (NULL), 0 means no warranty
+     * information, and the upper bound keeps typos from overflowing the column.
+     */
+    private function normalizeWarrantyMonths(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return max(0, min(1200, (int) $value));
     }
 
     public function exportCsv(Request $request, Response $response, array $args): Response
@@ -1695,6 +1712,7 @@ final class ProductController
             'eu_responsible_address'     => $product->getEuResponsibleAddress(),
             'country_of_origin'          => $product->getCountryOfOrigin(),
             'safety_warnings'            => $product->getSafetyWarnings(),
+            'warranty_months'            => $product->getWarrantyMonths(),
             'min_age'                    => $product->getMinAge(),
             'batch_number'               => $product->getBatchNumber(),
             'manual_url'                 => $product->getManualUrl(),

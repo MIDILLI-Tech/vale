@@ -136,12 +136,14 @@ final class DbalOrderRepository implements OrderRepositoryInterface
             // Persist order items on first save
             foreach ($order->getItems() as $item) {
                 $this->db->insert(VL_DB_PREFIX . 'order_items', [
-                    'order_id'       => $order->getId(),
-                    'product_id'     => $item['product_id']     ?? null,
-                    'variation_id'   => $item['variation_id']   ?? null,
-                    'name'           => $item['name']           ?? '',
-                    'sku'            => $item['sku']            ?? null,
-                    'batch_number'   => $item['batch_number']   ?? null,
+                    'order_id'        => $order->getId(),
+                    'product_id'      => $item['product_id']     ?? null,
+                    'variation_id'    => $item['variation_id']   ?? null,
+                    'name'            => $item['name']           ?? '',
+                    'sku'             => $item['sku']            ?? null,
+                    'batch_number'    => $item['batch_number']   ?? null,
+                    'warranty_months' => isset($item['warranty_months']) && $item['warranty_months'] !== null
+                        ? (int) $item['warranty_months'] : null,
                     'quantity'       => $item['qty']            ?? 1,
                     'price'          => $item['price']          ?? 0,
                     'tax_rate'       => isset($item['tax_rate']) && $item['tax_rate'] !== null

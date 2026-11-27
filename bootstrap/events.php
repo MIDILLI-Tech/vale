@@ -8,6 +8,7 @@ use ValeApp\Application\Webhook\OutboundWebhookService;
 use ValeApp\Application\Webhook\WebhookPayloadBuilder;
 use ValeApp\Domain\Content\Entity\Post;
 use ValeApp\Domain\Shared\Event\EventDispatcherInterface;
+use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 use ValeApp\Domain\Shop\Entity\Order;
 use ValeApp\Domain\Shop\Entity\Product;
 use ValeApp\Domain\Shop\Repository\DownloadRepositoryInterface;
@@ -35,7 +36,7 @@ return static function (Container $container): void {
     $pageCache   = $container->get(PageCache::class);
     $invalidator = $container->get(PageCacheInvalidator::class);
 
-    $payloads = new WebhookPayloadBuilder($productRepo);
+    $payloads = new WebhookPayloadBuilder($productRepo, $container->get(SettingsRepositoryInterface::class));
 
     $buildPostPayload = static function (Post $post): array {
         return [

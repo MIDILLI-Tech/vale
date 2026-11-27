@@ -595,6 +595,15 @@
                               placeholder="{{ __('Warnings required by product safety rules') }}">{{ product.safetyWarnings|default('') }}</textarea>
                 </div>
 
+                <div class="mt-4">
+                    <label for="product-warranty" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Warranty (months)') }}</label>
+                    <input type="number" id="product-warranty" name="warranty_months" min="0" max="1200" step="1"
+                           value="{{ product.warrantyMonths is not null ? product.warrantyMonths : '' }}"
+                           placeholder="{{ __('Inherit from the shop-wide warranty') }}"
+                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-xs text-sm dark:bg-gray-800 dark:text-gray-100">
+                    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ __('Shown in the additional information tab on the product page. Leave empty to inherit the shop-wide warranty; 0 hides the line.') }}</p>
+                </div>
+
                 <div class="mt-4" x-data="{
                     manualSource: '{{ product.manualFileIds|default([])|length ? 'internal' : (product.manualUrls|default([])|length ? 'external' : 'none') }}',
                     manualUrls: {{ product.manualUrls|default([])|json_encode|e('html_attr') }},
@@ -1238,6 +1247,14 @@
                                    placeholder="{{ __('Leave empty to inherit from the product')|e('html_attr') }}"
                                    class="w-full rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs px-2 py-1">
                             <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Overrides the product batch number for this variation.') }}</p>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{{ __('Warranty (months)') }}</label>
+                            <input type="number" :name="'variations[' + idx + '][warranty_months]'" x-model="item.warranty_months" min="0" max="1200" step="1"
+                                   placeholder="{{ __('Inherit from the product')|e('html_attr') }}"
+                                   class="w-full rounded-sm border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs px-2 py-1">
+                            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Overrides the product warranty for this variation. Leave empty to inherit it; 0 hides the line.') }}</p>
                         </div>
 
                     </div>  {# /collapsed #}
@@ -2382,6 +2399,7 @@ function variationsManager() {
                 vat_mode: v.vat_mode || 'use_parent',
                 vat_rate: v.vat_rate || '',
                 batch_number: v.batch_number || '',
+                warranty_months: v.warranty_months ?? '',
                 unit_mode: v.unit ? 'custom' : 'use_parent',
                 unit: v.unit || '',
                 base_amount: v.base_amount || '',
@@ -2588,6 +2606,7 @@ function variationsManager() {
                 vat_mode: 'use_parent',
                 vat_rate: '',
                 batch_number: '',
+                warranty_months: '',
                 unit_mode: 'use_parent',
                 unit: '',
                 base_amount: '',

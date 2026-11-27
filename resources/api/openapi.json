@@ -1603,6 +1603,7 @@
           "vat_rate": { "type": ["number", "null"] },
           "refund_mode": { "type": "string" },
           "batch_number": { "type": ["string", "null"], "description": "Variation-specific lot; empty means the product batch number is inherited." },
+          "warranty_months": { "type": ["integer", "null"], "minimum": 0, "maximum": 1200, "description": "Warranty duration in months for this variation; `null` inherits the product value, `0` hides the warranty line." },
           "unit": { "type": ["string", "null"], "enum": ["piece", "g", "kg", "oz", "lb", "ml", "l", "fl_oz", "gal", "m", "m2", "ft", "ft2", null] },
           "base_amount": { "type": ["number", "null"] },
           "manual_documents": {
@@ -1689,6 +1690,12 @@
           "eu_responsible_address": { "type": ["string", "null"] },
           "country_of_origin": { "type": ["string", "null"], "description": "ISO-3166 alpha-2." },
           "safety_warnings": { "type": ["string", "null"] },
+          "warranty_months": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 1200,
+            "description": "Warranty duration in months; `null` inherits the shop-wide default from E-Commerce → Product → Warranty, `0` hides the warranty line."
+          },
           "manual_url": { "type": ["string", "null"] },
           "manual_label": { "type": ["string", "null"] },
           "digital_waiver": { "type": "boolean" },
@@ -1737,6 +1744,12 @@
           "eu_responsible_address": { "type": "string" },
           "country_of_origin": { "type": ["string", "null"], "description": "ISO-3166 alpha-2, upper-cased; other values are stored as `null`." },
           "safety_warnings": { "type": "string" },
+          "warranty_months": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 1200,
+            "description": "Warranty duration in months. Omitting the field (or sending `null` / an empty value) keeps the shop-wide default from E-Commerce → Product → Warranty; `0` hides the warranty line."
+          },
           "manual_url": { "type": "string" },
           "manual_label": { "type": "string" },
           "digital_waiver": { "type": "boolean", "description": "Customer waived the withdrawal right for digital content." },
@@ -1804,6 +1817,11 @@
           "name": { "type": "string" },
           "sku": { "type": ["string", "null"] },
           "batch_number": { "type": ["string", "null"] },
+          "warranty_months": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Warranty duration in months resolved when the order was placed (variation → product → shop default); `null` for legacy orders."
+          },
           "quantity": { "type": "integer" }
         }
       },

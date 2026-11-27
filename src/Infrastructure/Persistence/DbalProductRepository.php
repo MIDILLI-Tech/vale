@@ -153,6 +153,7 @@ final class DbalProductRepository implements ProductRepositoryInterface
             'eu_responsible_address'     => $product->getEuResponsibleAddress(),
             'country_of_origin'          => $product->getCountryOfOrigin(),
             'safety_warnings'            => $product->getSafetyWarnings(),
+            'warranty_months'            => $product->getWarrantyMonths(),
             'min_age'                    => $product->getMinAge(),
             'batch_number'               => $product->getBatchNumber(),
             'manual_url'                 => $product->getManualUrl(),
@@ -459,6 +460,8 @@ final class DbalProductRepository implements ProductRepositoryInterface
                 'unit'                 => !empty($v['unit']) ? (string) $v['unit'] : null,
                 'base_amount'          => isset($v['base_amount']) && $v['base_amount'] !== '' ? (float) $v['base_amount'] : null,
                 'batch_number'         => !empty($v['batch_number']) ? (string) $v['batch_number'] : null,
+                'warranty_months'      => isset($v['warranty_months']) && $v['warranty_months'] !== '' && $v['warranty_months'] !== null
+                    ? (int) $v['warranty_months'] : null,
                 'manual_documents'     => !empty($v['manual_documents']) ? json_encode($v['manual_documents']) : null,
                 'refund_mode'          => $v['refund_mode'] ?? 'use_parent',
                 'weight'               => !empty($v['weight']) ? (float) $v['weight'] : null,

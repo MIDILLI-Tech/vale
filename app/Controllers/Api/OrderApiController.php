@@ -315,7 +315,11 @@ final class OrderApiController
                         }
                         $sku = $product->getSku();
                     }
-                    $batchNumber = $product->resolveBatchNumber((string) ($variationRow['batch_number'] ?? ''));
+                    $batchNumber    = $product->resolveBatchNumber((string) ($variationRow['batch_number'] ?? ''));
+                    $warrantyMonths = $product->resolveWarrantyMonths(
+                        isset($variationRow['warranty_months']) ? (int) $variationRow['warranty_months'] : null,
+                        (int) ($this->settings->get('product_warranty_default', '0') ?? 0),
+                    );
                 } else {
                     if ($name === '') {
                         $errors["items.$index.name"] = ['A name is required for items without a product reference.'];
@@ -335,15 +339,16 @@ final class OrderApiController
                 $lineSubtotal = round($price * $qty, 2);
                 $subtotal    += $lineSubtotal;
                 $items[]      = [
-                    'product_id'     => $pid,
-                    'variation_id'   => $vid,
-                    'name'           => $name,
-                    'sku'            => $sku,
-                    'batch_number'   => $batchNumber,
-                    'qty'            => $qty,
-                    'price'          => $price,
-                    'subtotal'       => $lineSubtotal,
-                    'variation_data' => $variationData,
+                    'product_id'      => $pid,
+                    'variation_id'    => $vid,
+                    'name'            => $name,
+                    'sku'             => $sku,
+                    'batch_number'    => $batchNumber,
+                    'warranty_months' => $warrantyMonths,
+                    'qty'             => $qty,
+                    'price'           => $price,
+                    'subtotal'        => $lineSubtotal,
+                    'variation_data'  => $variationData,
                 ];
             }
         }
@@ -591,11 +596,13 @@ final class OrderApiController
             'customer_email'   => $email !== '' ? $email : null,
             'items'            => array_map(
                 static fn (array $item): array => [
-                    'product_id'   => isset($item['product_id']) ? (int) $item['product_id'] : null,
-                    'variation_id' => isset($item['variation_id']) ? (int) $item['variation_id'] : null,
-                    'name'         => (string) ($item['name'] ?? ''),
-                    'sku'          => $item['sku']          ?? null,
-                    'batch_number' => $item['batch_number'] ?? null,
+                    'product_id'      => isset($item['product_id']) ? (int) $item['product_id'] : null,
+                    'variation_id'    => isset($item['variation_id']) ? (int) $item['variation_id'] : null,
+                    'name'            => (string) ($item['name'] ?? ''),
+                    'sku'             => $item['sku']          ?? null,
+                    'batch_number'    => $item['batch_number'] ?? null,
+                    'warranty_months' => isset($item['warranty_months']) && $item['warranty_months'] !== null
+                        ? (int) $item['warranty_months'] : null,
                     'quantity'     => (int) ($item['quantity'] ?? $item['qty'] ?? 1),
                 ],
                 $order->getItems()

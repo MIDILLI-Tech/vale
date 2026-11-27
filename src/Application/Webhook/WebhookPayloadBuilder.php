@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ValeApp\Application\Webhook;
 
+use ValeApp\Domain\Shared\Repository\SettingsRepositoryInterface;
 use ValeApp\Domain\Shop\Entity\Order;
 use ValeApp\Domain\Shop\Entity\Product;
 use ValeApp\Domain\Shop\Repository\ProductRepositoryInterface;
@@ -15,6 +16,7 @@ final class WebhookPayloadBuilder
 {
     public function __construct(
         private readonly ProductRepositoryInterface $products,
+        private readonly SettingsRepositoryInterface $settings,
     ) {
     }
 
@@ -57,24 +59,37 @@ final class WebhookPayloadBuilder
                 'price'          => (float) ($row['price'] ?? 0),
                 'sale_price'     => isset($row['sale_price']) && $row['sale_price'] !== null
                     ? (float) $row['sale_price'] : null,
-                'stock_quantity' => (int) ($row['stock_quantity'] ?? 0),
-                'stock_status'   => $row['stock_status'] ?? 'in_stock',
-                'batch_number'   => $row['batch_number'] ?? null,
+                'stock_quantity'  => (int) ($row['stock_quantity'] ?? 0),
+                'stock_status'    => $row['stock_status'] ?? 'in_stock',
+                'batch_number'    => $row['batch_number'] ?? null,
+                'warranty_months' => isset($row['warranty_months']) && $row['warranty_months'] !== null
+                    ? (int) $row['warranty_months'] : null,
             ];
         }
 
         return [
-            'product_id'           => $product->getId(),
-            'product_name'         => $product->getName(),
-            'product_slug'         => (string) $product->getSlug(),
-            'product_sku'          => $product->getSku(),
-            'product_status'       => $product->getStatus(),
-            'product_price'        => $product->getPrice(),
-            'product_sale_price'   => $product->getSalePrice(),
-            'product_stock'        => $product->getStockQuantity(),
-            'product_min_age'      => $product->getMinAge(),
-            'product_batch_number' => $product->getBatchNumber(),
-            'variations'           => $variations,
+            'product_id'                       => $product->getId(),
+            'product_name'                     => $product->getName(),
+            'product_slug'                     => (string) $product->getSlug(),
+            'product_sku'                      => $product->getSku(),
+            'product_status'                   => $product->getStatus(),
+            'product_price'                    => $product->getPrice(),
+            'product_sale_price'               => $product->getSalePrice(),
+            'product_stock'                    => $product->getStockQuantity(),
+            'product_min_age'                  => $product->getMinAge(),
+            'product_batch_number'             => $product->getBatchNumber(),
+            'product_warranty_months'          => $product->getWarrantyMonths(),
+            'product_warranty_months_resolved' => $product->resolveWarrantyMonths(null, $this->shopWarrantyDefault()),
+            'variations'                       => $variations,
         ];
+    }
+
+    private function shopWarrantyDefault(): int
+    {
+        try {
+            return max(0, (int) ($this->settings->get('product_warranty_default', '0') ?? 0));
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 }
