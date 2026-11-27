@@ -566,7 +566,7 @@
                     <p><span class="text-gray-500 dark:text-gray-400">{{ __('Company') }}:</span> {{ order.billing.company_name }}</p>
                     {% endif %}
                     {% if order.billing.vat_number|default('') %}
-                    <p><span class="text-gray-500 dark:text-gray-400">{{ __('VAT ID') }}:</span> {{ order.billing.vat_number }}</p>
+                    <p><span class="text-gray-500 dark:text-gray-400">{{ (order.billing.country|default('')|upper) in eu_countries ? __('VAT ID') : __('Tax ID') }}:</span> {{ order.billing.vat_number }}</p>
                     {% endif %}
                     {% endif %}
                     {% if order.billing.reverse_charge|default('') == '1' %}

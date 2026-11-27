@@ -7,6 +7,7 @@ namespace ValeApp\Tests\Integration\Persistence;
 use Doctrine\DBAL\Connection as DbalConnection;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
+use ValeApp\Domain\Shared\ValueObject\Pagination;
 use ValeApp\Domain\Shop\Entity\Order;
 use ValeApp\Infrastructure\Persistence\DbalOrderRepository;
 use ValeApp\Infrastructure\Security\Encrypter;
@@ -171,6 +172,43 @@ final class DbalOrderRepositoryEncryptionTest extends TestCase
         $loaded = $repo->findById((int) $order->getId());
         self::assertNotNull($loaded);
         self::assertSame('Jane', $loaded->getBilling()['first_name']);
+    }
+
+    public function testBusinessFilterMatchesCompanyOrTaxNumber(): void
+    {
+        $db   = $this->db();
+        $repo = new DbalOrderRepository($db, $this->encrypter());
+
+        $company = new Order('ORD-B2B-1', self::$billing + ['company_name' => 'Acme GmbH']);
+        $company->setStatus('completed');
+        $company->setPaymentMethod('stripe');
+        $repo->save($company);
+
+        $taxOnly = new Order('ORD-B2B-2', self::$billing + ['vat_number' => 'US123456789']);
+        $taxOnly->setStatus('completed');
+        $taxOnly->setPaymentMethod('stripe');
+        $repo->save($taxOnly);
+
+        $private = new Order('ORD-B2B-3', self::$billing + ['company_name' => '', 'vat_number' => '']);
+        $private->setStatus('completed');
+        $private->setPaymentMethod('stripe');
+        $repo->save($private);
+
+        $pagination = new Pagination(1, 100);
+        $numbers    = static fn (array $orders): array => array_map(
+            static fn (Order $order): string => $order->getOrderNumber(),
+            $orders,
+        );
+
+        $businessNumbers = $numbers($repo->findAll($pagination, ['business' => true]));
+        self::assertContains('ORD-B2B-1', $businessNumbers);
+        self::assertContains('ORD-B2B-2', $businessNumbers);
+        self::assertNotContains('ORD-B2B-3', $businessNumbers);
+
+        $privateNumbers = $numbers($repo->findAll($pagination, ['business' => false]));
+        self::assertContains('ORD-B2B-3', $privateNumbers);
+        self::assertNotContains('ORD-B2B-1', $privateNumbers);
+        self::assertNotContains('ORD-B2B-2', $privateNumbers);
     }
 
     public function testPlaintextRowIsEncryptedOnNextSave(): void

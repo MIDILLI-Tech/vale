@@ -91,6 +91,9 @@ final class OrderController
         if (!empty($params['product_id'])) {
             $filters['product_id'] = (int) $params['product_id'];
         }
+        if (isset($params['business']) && $params['business'] !== '') {
+            $filters['business'] = $params['business'] === '1';
+        }
 
         $baseCount  = $this->orders->count($filters);
         $clientSide = $baseCount <= client_side_search_fetch_limit() && empty($params['search']);
@@ -124,6 +127,9 @@ final class OrderController
             }
         }
 
+        $b2bEnabled         = in_array((string) ($this->settings->get('shop_customer_type', 'both') ?? 'both'), ['both', 'b2b'], true);
+        $showBusinessFilter = $b2bEnabled && $this->orders->count(['business' => true]) > 0;
+
         $carry             = array_diff_key($params, array_flip(['page', 'sort', 'dir', 'search', 'per_page']));
         $filterProductName = null;
         if (!empty($filters['product_id'])) {
@@ -143,16 +149,17 @@ final class OrderController
         $removeCouponUrl = admin_url('/orders') . ($carryWithoutCoupon ? '?' . http_build_query($carryWithoutCoupon) : '');
 
         return $this->twig->render($response, 'admin/orders/index.twig', [
-            'orders'             => $orders,
-            'total'              => $total,
-            'filters'            => $params,
-            'client_side'        => $clientSide,
-            'page'               => $clientSide ? 1 : $pagination->page,
-            'per_page'           => $clientSide ? 20 : $pagination->perPage,
-            'base_url'           => $baseUrl,
-            'filterProductName'  => $filterProductName,
-            'removeProductUrl'   => $removeProductUrl,
-            'removeCouponUrl'    => $removeCouponUrl,
+            'orders'               => $orders,
+            'total'                => $total,
+            'filters'              => $params,
+            'client_side'          => $clientSide,
+            'page'                 => $clientSide ? 1 : $pagination->page,
+            'per_page'             => $clientSide ? 20 : $pagination->perPage,
+            'base_url'             => $baseUrl,
+            'filterProductName'    => $filterProductName,
+            'removeProductUrl'     => $removeProductUrl,
+            'removeCouponUrl'      => $removeCouponUrl,
+            'show_business_filter' => $showBusinessFilter,
         ]);
     }
 
@@ -1397,6 +1404,7 @@ final class OrderController
         return $this->twig->render($response, 'admin/orders/invoice.twig', [
             'order'          => $order,
             'invoice'        => $snapshot,
+            'logo_data_uri'  => $this->invoiceLogoDataUri(),
             'pdf_available'  => $this->pdfGenerator?->isAvailable() ?? false,
             'is_latest'      => $isLatest,
             'latest_invoice' => $isLatest ? null : $latest['snapshot'],
@@ -1433,6 +1441,7 @@ final class OrderController
         $html = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
             'order'          => $order,
             'invoice'        => $snapshot,
+            'logo_data_uri'  => $this->invoiceLogoDataUri(),
             'is_latest'      => $isLatest,
             'latest_invoice' => $isLatest ? null : $latest['snapshot'],
             'prev_number'    => $this->previousInvoiceNumber($snapshot),
@@ -1485,13 +1494,20 @@ final class OrderController
             $pdfAvailable = $this->pdfGenerator !== null && $this->pdfGenerator->isAvailable();
 
             if ($mailDriver !== 'log' && $pdfAvailable) {
-                $pdfHtml = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
-                    'order'          => $order,
-                    'invoice'        => $snapshot,
-                    'is_latest'      => true,
-                    'latest_invoice' => null,
-                    'prev_number'    => $this->previousInvoiceNumber($snapshot),
-                ]);
+                $originalLocale = $this->translator->getLocale();
+                $this->translator->setLocale($order->getLocale());
+                try {
+                    $pdfHtml = $this->twig->getEnvironment()->render('pdf/invoice.twig', [
+                        'order'          => $order,
+                        'invoice'        => $snapshot,
+                        'logo_data_uri'  => $this->invoiceLogoDataUri(),
+                        'is_latest'      => true,
+                        'latest_invoice' => null,
+                        'prev_number'    => $this->previousInvoiceNumber($snapshot),
+                    ]);
+                } finally {
+                    $this->translator->setLocale($originalLocale);
+                }
                 $pdfBinary     = $this->pdfGenerator->generate($pdfHtml);
                 $attachments[] = [
                     'name'    => preg_replace('/[^A-Za-z0-9._-]+/', '', (string) ($snapshot['invoice_number'] ?? 'invoice')) . '.pdf',
@@ -1679,6 +1695,37 @@ final class OrderController
     }
 
     /** @param array<int, OrderLog> $logs */
+    /** Inline the site logo so Dompdf needs no remote fetch and the invoice stays offline-safe. */
+    private function invoiceLogoDataUri(): ?string
+    {
+        $logo = (string) ($this->settings->get('site_logo', '') ?? '');
+        if ($logo === '') {
+            return null;
+        }
+
+        $path = (string) (parse_url($logo, PHP_URL_PATH) ?? '');
+        $pos  = strpos($path, 'uploads/');
+        if ($pos === false) {
+            return null;
+        }
+
+        $relative = substr($path, $pos);
+        $file     = storage_path($relative);
+        if (!is_file($file)) {
+            $file = public_path($relative);
+        }
+        if (!is_file($file)) {
+            return null;
+        }
+
+        $mime = (string) (@mime_content_type($file) ?: '');
+        if (!str_starts_with($mime, 'image/')) {
+            return null;
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($file));
+    }
+
     private function buildInvoiceSnapshot(Order $order, array $logs): array
     {
         $refunds       = $this->collectRefundLinesFromLogs($logs, $order->getCurrency());

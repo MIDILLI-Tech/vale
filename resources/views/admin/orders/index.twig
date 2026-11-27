@@ -28,6 +28,13 @@
             <option value="{{ s }}" {{ filters.status|default('') == s ? 'selected' }}>{{ __(s)|capitalize }}</option>
             {% endfor %}
         </select>
+        {% if show_business_filter|default(false) %}
+        <select name="business" class="rounded-lg border-gray-300 dark:border-gray-700 text-sm">
+            <option value="">{{ __('All') }}</option>
+            <option value="1" {{ filters.business|default('') == '1' ? 'selected' }}>{{ __('Business order') }}</option>
+            <option value="0" {{ filters.business|default('') == '0' ? 'selected' }}>{{ __('Private order') }}</option>
+        </select>
+        {% endif %}
         <input type="date" name="from" x-ref="fromInput" value="{{ filters.from|default('') }}"
                class="rounded-lg border border-gray-300 dark:border-gray-700 px-2 py-2 text-sm w-36">
         <input type="date" name="to" x-ref="toInput" value="{{ filters.to|default('') }}"
@@ -80,6 +87,9 @@
             <tr data-row-id="{{ o.id }}" data-sort="{{ {order_number: o.orderNumber, total: o.total, status: o.status, created_at: o.createdAt ? o.createdAt.format('Y-m-d H:i:s') : '', coupon_code: o.couponCode}|json_encode|e('html_attr') }}">
                 <td class="px-6 py-4 text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
                     <a href="{{ url('/admin/orders/' ~ o.id ~ '') }}" class="text-gray-900 dark:text-gray-100 hover:underline">{{ o.orderNumber }}</a>
+                    {% if o.billing.company_name|default('') or o.billing.vat_number|default('') %}
+                    <span class="ml-1.5 inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 align-middle font-sans text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:ring-indigo-800" title="{{ __('Business order') }}">B2B</span>
+                    {% endif %}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                     {% set billing = o.billing %}

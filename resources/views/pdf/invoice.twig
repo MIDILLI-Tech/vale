@@ -7,6 +7,10 @@
   @page { margin: 20mm; }
   body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #1f2937; line-height: 1.5; margin: 0; padding: 0; }
   .header { border-bottom: 2px solid #1f2937; padding-bottom: 8pt; margin-bottom: 20pt; }
+  .header table { width: 100%; border-collapse: collapse; }
+  .header td { vertical-align: top; padding: 0; }
+  .header td.logo { width: 120pt; text-align: right; }
+  .header td.logo img { max-width: 110pt; max-height: 45pt; }
   .header h1 { font-size: 18pt; margin: 0 0 4pt; }
   .header p { margin: 0; font-size: 9pt; color: #6b7280; }
   .addresses { margin-bottom: 20pt; font-size: 9pt; }
@@ -31,9 +35,18 @@
 <body>
 
 <div class="header">
-  <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}{{ __('Invoice') }}{% endif %}</h1>
-  <p>{{ __('Invoice #:number', {':number': invoice.invoice_number|default('')}) }}</p>
-  <p>{{ __('Issued: :date', {':date': invoice.issued_at|default('')}) }}</p>
+  <table>
+    <tr>
+      <td>
+        <h1>{% if invoice.shop.company_name %}{{ invoice.shop.company_name }}{% else %}{{ __('Invoice') }}{% endif %}</h1>
+        <p>{{ __('Invoice #:number', {':number': invoice.invoice_number|default('')}) }}</p>
+        <p>{{ __('Issued: :date', {':date': invoice.issued_at|default('')}) }}</p>
+      </td>
+      {% if logo_data_uri|default('') %}
+      <td class="logo"><img src="{{ logo_data_uri }}" alt=""></td>
+      {% endif %}
+    </tr>
+  </table>
 </div>
 
 {% if is_latest is defined and not is_latest and latest_invoice is defined and latest_invoice %}
@@ -59,7 +72,9 @@
   </td>
   <td>
     <h2>{{ __('Bill To') }}</h2>
+    {% if invoice.billing.company_name|default('') %}<p>{{ invoice.billing.company_name }}</p>{% endif %}
     <p>{{ invoice.billing.first_name|default('') }} {{ invoice.billing.last_name|default('') }}</p>
+    {% if invoice.billing.vat_number|default('') %}<p>{{ (invoice.billing.country|default('')|upper) in eu_countries ? __('VAT ID') : __('Tax ID') }}: {{ invoice.billing.vat_number }}</p>{% endif %}
     <p>{{ invoice.billing.address_1|default(invoice.billing.address|default('')) }}</p>
     {% if invoice.billing.address_2 %}<p>{{ invoice.billing.address_2 }}</p>{% endif %}
     <p>{{ invoice.billing.city|default('') }} {{ invoice.billing.postcode|default('') }}</p>

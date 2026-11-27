@@ -114,6 +114,18 @@
     <td style="padding:8px 0;">{{ order.billing.address }}, {{ order.billing.city }} {{ order.billing.postcode }}</td>
   </tr>
   {% endif %}
+  {% if order.billing.company_name|default('') %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Company') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.company_name }}</td>
+  </tr>
+  {% endif %}
+  {% if order.billing.vat_number|default('') %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ (order.billing.country|default('')|upper) in eu_countries ? __('VAT ID') : __('Tax ID') }}</td>
+    <td style="padding:8px 0;">{{ order.billing.vat_number }}</td>
+  </tr>
+  {% endif %}
   {% set sa = order.shippingAddress %}
   {% if sa is not empty and sa.first_name|default('') != '' %}
   <tr style="border-bottom:1px solid {{ email_border }};">
@@ -173,7 +185,7 @@
 <p style="margin-top:16px; padding:12px; background:{{ email_bg }}; border-radius:6px; font-size:13px; color:{{ email_text_muted }};">
   <strong>{{ __('Reverse charge — VAT not charged:') }}</strong> {{ __('VAT is not charged on this invoice (Article 196, EU Directive 2006/112/EC).') }}
   {% if order.billing.company_name|default('') %}<br>{{ order.billing.company_name }}{% endif %}
-  {% if order.billing.vat_number|default('') %}<br>{{ __('VAT ID') }}: {{ order.billing.vat_number }}{% endif %}
+  {% if order.billing.vat_number|default('') %}<br>{{ (order.billing.country|default('')|upper) in eu_countries ? __('VAT ID') : __('Tax ID') }}: {{ order.billing.vat_number }}{% endif %}
 </p>
 {% endif %}
 

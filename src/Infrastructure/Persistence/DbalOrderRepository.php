@@ -632,6 +632,21 @@ final class DbalOrderRepository implements OrderRepositoryInterface
             $types[]      = ParameterType::INTEGER;
         }
 
+        // Company name and tax number are stored in plaintext inside the
+        // billing JSON, so a business order is any row carrying a non-empty one.
+        if (isset($filters['business']) && $filters['business'] !== '') {
+            $business     = '((billing LIKE ? AND billing NOT LIKE ?) OR (billing LIKE ? AND billing NOT LIKE ?))';
+            $conditions[] = $filters['business'] ? $business : 'NOT ' . $business;
+            $params[]     = '%"company_name":"%';
+            $params[]     = '%"company_name":""%';
+            $params[]     = '%"vat_number":"%';
+            $params[]     = '%"vat_number":""%';
+            $types[]      = ParameterType::STRING;
+            $types[]      = ParameterType::STRING;
+            $types[]      = ParameterType::STRING;
+            $types[]      = ParameterType::STRING;
+        }
+
         $where = $conditions ? ' WHERE ' . implode(' AND ', $conditions) : '';
         return [$where, $params, $types];
     }

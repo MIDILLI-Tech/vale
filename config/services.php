@@ -569,6 +569,7 @@ return [
             'consent_allowed',
             static fn (string $category): bool => $consentService->isAllowed($category),
         ));
+        $env->addGlobal('eu_countries', \ValeApp\Domain\Shop\ValueObject\VatNumber::euCountries());
         $env->addGlobal('shop_enabled', $settings->get('shop_enabled', '1'));
         $env->addGlobal('membership_enabled', $settings->get('membership_enabled', '1'));
         $env->addGlobal('subscriptions_enabled', $settings->get('subscriptions_enabled', '1'));
