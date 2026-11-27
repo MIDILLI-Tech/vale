@@ -49,6 +49,18 @@
   <div class="footer">
     &copy; {{ 'now'|date('Y') }} {{ site_name|default('Vale') }}. {{ __('All rights reserved.') }}
     {% block footer_extra %}{% endblock %}
+    {% if shop_company_name|default('') is not empty %}
+    <div style="margin-top:10px; line-height:1.6;">
+      {{ shop_company_name }}
+      {% if shop_address_1|default('') is not empty %}<br>{{ shop_address_1 }}{% if shop_address_2|default('') is not empty %}, {{ shop_address_2 }}{% endif %}{% endif %}
+      {% if shop_postcode|default('') is not empty or shop_city|default('') is not empty %}<br>{{ shop_postcode|default('') }} {{ shop_city|default('') }}{% endif %}
+      {% if shop_state|default('') is not empty %}<br>{{ shop_state }}{% endif %}
+      {% if shop_country|default('') is not empty %}<br>{{ shop_country }}{% endif %}
+      {% if shop_phone|default('') is not empty %}<br>{{ shop_phone }}{% endif %}
+      {% if shop_email|default('') is not empty %}<br>{{ shop_email }}{% endif %}
+      {% if shop_vat_number|default('') is not empty %}<br>{{ __('VAT ID') }}: {{ shop_vat_number }}{% endif %}
+    </div>
+    {% endif %}
   </div>
 </div>
 </body>

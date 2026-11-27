@@ -64,6 +64,12 @@
     <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Number') }}</td>
     <td style="padding:8px 0; font-weight:600; font-family:monospace;">#{{ order.orderNumber }}</td>
   </tr>
+  {% if order.createdAt %}
+  <tr style="border-bottom:1px solid {{ email_border }};">
+    <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Order Date') }}</td>
+    <td style="padding:8px 0; font-weight:600;">{{ order.createdAt|date('d M Y') }}</td>
+  </tr>
+  {% endif %}
   <tr style="border-bottom:1px solid {{ email_border }};">
     <td style="padding:8px 0; color:{{ email_text_muted }}; font-size:14px;">{{ __('Status') }}</td>
     <td style="padding:8px 0; font-weight:600; color:#059669; text-transform:capitalize;">{{ order.status ? __(order.status) : '—' }}</td>
@@ -236,6 +242,12 @@
 {% set _withdrawalLinkHtml = '<a href="' ~ policy_links.withdrawal ~ '" style="color:' ~ email_text_muted ~ ';text-decoration:underline;">' ~ __('Withdrawal policy') ~ '</a>' %}
 <p style="margin-top:12px; font-size:13px; color:{{ email_text_muted }};">
   <strong>{{ __('Right of withdrawal:') }}</strong> {{ __('You may withdraw from this contract within :days days without giving any reason. The full withdrawal policy and the online withdrawal form are available at :link.', {':days': refund_period_days|default(14), ':link': _withdrawalLinkHtml})|raw }}
+</p>
+{% endif %}
+
+{% if return_shipping_payer is defined and has_shippable_items|default(false) %}
+<p style="margin-top:8px; font-size:13px; color:{{ email_text_muted }};">
+  {{ return_shipping_payer == 'shop' ? __('Return shipping costs are paid by the shop.') : __('Return shipping costs are paid by you.') }}
 </p>
 {% endif %}
 

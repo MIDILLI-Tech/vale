@@ -55,10 +55,22 @@ final class MailService
 
         // Add common variables to all mail templates
         $siteName = $this->settings->get('site_name', 'Vale');
+        // Shop identity for the mail footer: distance-selling confirmations have
+        // to identify the trader, not just the site name.
         $context  = array_merge([
-            'site_name'       => $siteName,
-            'site_logo'       => $this->emailLogoUrl(),
-            'vl_email_colors' => $this->getEmailColorContext(),
+            'site_name'         => $siteName,
+            'site_logo'         => $this->emailLogoUrl(),
+            'vl_email_colors'   => $this->getEmailColorContext(),
+            'shop_company_name' => (string) ($this->settings->get('shop_company_name', '') ?? ''),
+            'shop_vat_number'   => (string) ($this->settings->get('shop_vat_number', '') ?? ''),
+            'shop_email'        => (string) ($this->settings->get('shop_email', '') ?? ''),
+            'shop_phone'        => (string) ($this->settings->get('shop_phone', '') ?? ''),
+            'shop_address_1'    => (string) ($this->settings->get('shop_address_1', '') ?? ''),
+            'shop_address_2'    => (string) ($this->settings->get('shop_address_2', '') ?? ''),
+            'shop_city'         => (string) ($this->settings->get('shop_city', '') ?? ''),
+            'shop_state'        => (string) ($this->settings->get('shop_state', '') ?? ''),
+            'shop_postcode'     => (string) ($this->settings->get('shop_postcode', '') ?? ''),
+            'shop_country'      => (string) ($this->settings->get('shop_country', '') ?? ''),
         ], $this->getEmailFlatColors(), $context);
 
         $originalLocale = $this->translator->getLocale();

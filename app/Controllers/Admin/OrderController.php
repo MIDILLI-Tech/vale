@@ -1062,14 +1062,25 @@ final class OrderController
             $manuals[$key] = $documents;
         }
 
+        $hasShippableItems = false;
+        foreach ($order->getItems() as $item) {
+            $product = $this->products->findById((int) ($item['product_id'] ?? 0));
+            if ($product !== null && !$product->isDigital()) {
+                $hasShippableItems = true;
+                break;
+            }
+        }
+
         $templateData = [
-            'order'             => $order,
-            'manuals'           => $manuals,
-            'policy_links'      => $this->policyLinks(),
-            'downloads'         => $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [],
-            'refund_request'    => $this->buildRefundRequestPayload($order),
-            'shipping_estimate' => $this->orderShippingEstimate($order),
-            'order_status_url'  => absolute_url('/checkout/success', [], ['lang' => $order->getLocale(), 'order' => $order->getOrderNumber()]),
+            'order'                  => $order,
+            'manuals'                => $manuals,
+            'policy_links'           => $this->policyLinks(),
+            'downloads'              => $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [],
+            'refund_request'         => $this->buildRefundRequestPayload($order),
+            'shipping_estimate'      => $this->orderShippingEstimate($order),
+            'order_status_url'       => absolute_url('/checkout/success', [], ['lang' => $order->getLocale(), 'order' => $order->getOrderNumber()]),
+            'has_shippable_items'    => $hasShippableItems,
+            'return_shipping_payer'  => (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer'),
         ];
 
         try {

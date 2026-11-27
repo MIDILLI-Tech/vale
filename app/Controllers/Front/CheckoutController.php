@@ -3575,22 +3575,32 @@ final class CheckoutController
         if ($this->mail === null) {
             return;
         }
-        $billing          = $order->getBilling();
-        $email            = $billing['email'] ?? null;
-        $policyLinks      = $this->policyLinks();
-        $downloads        = $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [];
-        $refundPeriod     = $this->settings->get('refund_period_days', '14')           ?? '14';
-        $refundPeriodDays = max(1, (int) $refundPeriod);
-        $refundsEnabled   = $this->settings->get('refunds_enabled', '1');
-        $orderStatusUrl   = $this->checkoutUrl('/success', ['order' => $order->getOrderNumber()]);
+        $billing           = $order->getBilling();
+        $email             = $billing['email'] ?? null;
+        $policyLinks       = $this->policyLinks();
+        $downloads         = $this->downloadRepo?->findGrantsByOrderId($order->getId()) ?? [];
+        $refundPeriod      = $this->settings->get('refund_period_days', '14')           ?? '14';
+        $refundPeriodDays  = max(1, (int) $refundPeriod);
+        $refundsEnabled    = $this->settings->get('refunds_enabled', '1');
+        $orderStatusUrl    = $this->checkoutUrl('/success', ['order' => $order->getOrderNumber()]);
+        $hasShippableItems = false;
+        foreach ($order->getItems() as $item) {
+            $product = $this->products->findById((int) ($item['product_id'] ?? 0));
+            if ($product !== null && !$product->isDigital()) {
+                $hasShippableItems = true;
+                break;
+            }
+        }
         $templateData     = $this->orderMailContext($order) + [
-            'manuals'             => $this->orderManualDocuments($order),
-            'policy_links'        => $policyLinks,
-            'downloads'           => $downloads,
-            'refund_request'      => $this->buildRefundRequestPayload($order),
-            'refund_period_days'  => $refundPeriodDays,
-            'refunds_enabled'     => $refundsEnabled,
-            'order_status_url'    => $orderStatusUrl,
+            'manuals'               => $this->orderManualDocuments($order),
+            'policy_links'          => $policyLinks,
+            'downloads'             => $downloads,
+            'refund_request'        => $this->buildRefundRequestPayload($order),
+            'refund_period_days'    => $refundPeriodDays,
+            'refunds_enabled'       => $refundsEnabled,
+            'order_status_url'      => $orderStatusUrl,
+            'has_shippable_items'   => $hasShippableItems,
+            'return_shipping_payer' => (string) ($this->settings->get('return_shipping_payer', 'customer') ?? 'customer'),
         ];
 
         if (BankTransferDetailsService::isBankTransferMethod($order->getPaymentMethod())) {
