@@ -17,7 +17,7 @@
 {% include 'partials/_fallback_notice.twig' with {entity_label: 'page'} %}
 
 {% if has_access is defined and not has_access %}
-<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}">
+<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-2 pb-12' : 'pt-3 pb-12' }}">
     <article>
         {% if not page.hideTitle or page.excerpt %}
         <header class="mb-8">
@@ -42,7 +42,7 @@
 {% elseif page.pageTemplate != 'standard' %}
   {% include 'page-templates/' ~ page.pageTemplate ~ '.twig' %}
 {% else %}
-<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}">
+<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-2 pb-12' : 'pt-3 pb-12' }}">
     <article>
         {% if not page.hideTitle or page.excerpt %}
         <header class="mb-8">

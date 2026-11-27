@@ -13,9 +13,9 @@
 {% endblock %}
 
 {% block content %}
-<section class="pt-32 pb-24">
+<section class="pt-10 pb-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="mb-16">
+        <div class="mb-10">
             {% if archive_type is defined and archive_type and archive_entity is defined %}
             <h1 class="text-3xl sm:text-4xl lg:text-6xl font-display font-bold text-white mb-6 break-words">
                 {% if archive_type == 'category' %}{{ __('Category') }}: {{ archive_entity.name }}

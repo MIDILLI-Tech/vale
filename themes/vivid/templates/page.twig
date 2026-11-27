@@ -21,7 +21,7 @@
 </div>
 {% endif %}
 
-<div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-6 sm:pt-8 pb-12' : 'py-12' }}">
+<div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 {{ page.hideTitle ? 'pt-4 pb-12' : 'pt-8 pb-12' }}">
     {% include 'partials/_fallback_notice.twig' with {entity_label: 'page'} %}
 
     {% if has_access is defined and not has_access %}
