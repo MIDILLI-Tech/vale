@@ -2,6 +2,7 @@ import { GridLayoutManager } from './grid-layout.js'
 import { initTwigEditor } from './twig-editor.js'
 import { initPanelReorder, PanelReorderManager } from './panel-reorder.js'
 import { initRightRail, vlPublishNow } from './right-rail.js'
+import './vat-input.js'
 
 // App chunk for the admin panel. Third-party libraries (Alpine,
 // collapse, Sortable) live in admin-vendor.js, which MUST load before

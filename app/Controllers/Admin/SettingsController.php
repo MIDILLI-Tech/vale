@@ -399,6 +399,10 @@ final class SettingsController
         $subtab = $body['_subtab'] ?? '';
         unset($body['_csrf_token'], $body['_METHOD'], $body['_group'], $body['_subtab']);
 
+        if (isset($body['shop_vat_number']) && is_string($body['shop_vat_number'])) {
+            $body['shop_vat_number'] = strtoupper(preg_replace('/\s+/', '', $body['shop_vat_number']) ?? '');
+        }
+
         // Route prefix validation (atomic: simultaneous edits validate against each other)
         $routingKeys = [
             'blog', 'shop', 'category', 'tag', 'checkout', 'cart', 'membership', 'account', 'page',

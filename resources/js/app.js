@@ -1,3 +1,5 @@
+import './vat-input.js';
+
 // App chunk for the storefront: lightbox + visitor timezone only.
 // Third-party libraries (Alpine, collapse) live in app-vendor.js, which
 // MUST load before this file — in bundle mode and in CDN mode alike —
