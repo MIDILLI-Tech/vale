@@ -155,6 +155,7 @@ class InitialSeeder extends AbstractSeed
                 ['group_name' => 'content', 'key' => 'i18n_fallback_content_notice', 'value' => '1', 'type' => 'boolean', 'is_autoload' => true],
                 ['group_name' => 'ecommerce', 'key' => 'currency', 'value' => 'EUR', 'type' => 'string', 'is_autoload' => true],
                 ['group_name' => 'ecommerce', 'key' => 'shop_country', 'value' => 'DE', 'type' => 'string', 'is_autoload' => true],
+                ['group_name' => 'ecommerce', 'key' => 'refund_period_days', 'value' => '14', 'type' => 'integer', 'is_autoload' => true],
                 ['group_name' => 'ecommerce', 'key' => 'shop_customer_type', 'value' => 'b2c', 'type' => 'string', 'is_autoload' => true],
                 ['group_name' => 'ecommerce', 'key' => 'b2b_vat_validation', 'value' => '1', 'type' => 'boolean', 'is_autoload' => true],
                 ['group_name' => 'ecommerce', 'key' => 'tax_enabled', 'value' => '1', 'type' => 'boolean', 'is_autoload' => true],

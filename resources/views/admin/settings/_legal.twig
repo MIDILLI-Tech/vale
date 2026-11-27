@@ -76,14 +76,32 @@
                 </div>
                 <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3">
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Suggested banner model') }}</p>
-                    <p id="legal-profile-consent-model" class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ legal_profile.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}</p>
-                    <button type="submit" name="apply_consent_model" value="1"
-                            class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
-                        {{ __('Use this banner model') }}
-                    </button>
+                    <div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+                        <p id="legal-profile-consent-model" class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ legal_profile.consent_model == 'opt-out' ? __('Opt-out (US style)') : __('Opt-in (EU/UK style)') }}</p>
+                        <button type="submit" name="apply_consent_model" value="1"
+                                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white transition-colors">
+                            {{ __('Use this banner model') }}
+                        </button>
+                    </div>
                     <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ __('Turns the cookie consent banner on and sets the US opt-out control to match this region.') }}</p>
                 </div>
             </div>
+
+            {% if legal_findings|default([])|length > 0 %}
+            <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
+                <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('Open items for this profile') }}</h4>
+                <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                    {% for finding in legal_findings %}
+                    <li>
+                        {{ finding.message }}
+                        {% if finding.link is not empty %}
+                        <a href="{{ url(finding.link) }}" class="font-medium underline">{{ finding.link_text }}</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
 
             <ul class="space-y-2">
                 {% for item in legal_checklist|default([]) %}
@@ -115,22 +133,6 @@
                     </li>
                 {% endfor %}
             </ul>
-
-            {% if legal_findings|default([])|length > 0 %}
-            <div class="rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4">
-                <h4 class="text-sm font-semibold text-amber-900 dark:text-amber-200">{{ __('Open items for this profile') }}</h4>
-                <ul class="mt-2 space-y-1.5 text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
-                    {% for finding in legal_findings %}
-                    <li>
-                        {{ finding.message }}
-                        {% if finding.link is not empty %}
-                        <a href="{{ url(finding.link) }}" class="font-medium underline">{{ finding.link_text }}</a>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
 
             {% if shop_enabled|default('1') == '1' %}
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
