@@ -29,7 +29,7 @@
 {% set _tabs = _tabs|merge(['reviews']) %}
 
 <div class="mb-12"
-     x-data="{ tab: (window.location.hash.indexOf('#comment-') === 0 ? 'reviews' : '{{ _tabs|first }}') }"
+     x-data="{ tab: ((['#reviews', '#comments'].indexOf(window.location.hash) !== -1 || window.location.hash.indexOf('#comment-') === 0) ? 'reviews' : '{{ _tabs|first }}') }"
      @vl-open-reviews.window="tab = 'reviews'">
     <div class="flex flex-wrap gap-x-6 gap-y-2 border-b {{ _dark ? 'border-slate-700' : 'border-gray-200' }} mb-6">
         {% for key in _tabs %}
@@ -125,7 +125,7 @@
     </div>
     {% endif %}
 
-    <div x-show="tab === 'reviews'" x-cloak>
+    <div id="reviews" x-show="tab === 'reviews'" x-cloak class="scroll-mt-20">
         {% if comments_ctx is defined %}{% include 'partials/comments.twig' with comments_ctx %}{% endif %}
     </div>
 </div>
@@ -135,10 +135,12 @@
 (function () {
     function openReviewFromHash() {
         var hash = window.location.hash;
-        if (hash.indexOf('#comment-') !== 0) return;
+        if (hash !== '#reviews' && hash !== '#comments' && hash.indexOf('#comment-') !== 0) return;
         window.dispatchEvent(new CustomEvent('vl-open-reviews'));
         setTimeout(function () {
-            var el = document.getElementById(hash.slice(1));
+            var el = (hash === '#reviews' || hash === '#comments')
+                ? document.getElementById('reviews')
+                : document.getElementById(hash.slice(1));
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 80);
     }

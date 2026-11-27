@@ -4,10 +4,12 @@
     product   — Product entity (has .slug, .id, .voteEnabled)
     vote      — {avg: float, count: int}  (null if no votes yet)
     user_vote — ProductVote entity or null
+    comments_total — approved review count (optional, defaults to 0)
 #}
 
 {% set avg = vote ? vote.avg|default(0) : 0 %}
 {% set count = vote ? vote.count|default(0) : 0 %}
+{% set reviews = comments_total|default(0) %}
 {% set user_rating = user_vote ? user_vote.rating : 0 %}
 
 <div class="mb-4">
@@ -23,13 +25,19 @@
             {% endfor %}
         </div>
         {% if count > 0 %}
-        <span class="text-sm text-gray-600 dark:text-gray-400">{{ avg|number_format(1) }} <a href="#comments" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">({{ count }} {{ count == 1 ? 'rating' : 'ratings' }})</a></span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ avg|number_format(1) }} <a href="#reviews" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">({{ count }} {{ count == 1 ? 'rating' : 'ratings' }})</a></span>
+        {% elseif reviews > 0 %}
+        <span class="text-sm">
+            <a href="#reviews"
+               class="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
+                {{ __('Reviews') }} ({{ reviews }})
+            </a>
+        </span>
         {% else %}
         <span class="text-sm">
-            <a href="#comments"
-               onclick="event.preventDefault(); document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' }); return false;"
+            <a href="#reviews"
                class="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
-                No ratings yet
+                {{ __('No ratings yet') }}
             </a>
         </span>
         {% endif %}
@@ -40,8 +48,7 @@
     <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Your rating') }}: {{ user_vote.rating }}/5</p>
     {% else %}
     <p class="text-xs">
-        <a href="#comments"
-           onclick="event.preventDefault(); document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' }); return false;"
+        <a href="#reviews"
            class="cursor-pointer text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:underline">
             {{ __('Leave a comment below to rate this product.') }}
         </a>

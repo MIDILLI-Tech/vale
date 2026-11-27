@@ -18,26 +18,35 @@
                 class="mt-4 w-full rounded-lg btn-primary px-4 py-2.5 text-sm font-medium">
             {{ __('Yes, I am :age or older', {':age': product.minAge}) }}
         </button>
-        <a href="{{ url('/') }}" class="mt-2 block text-xs text-gray-500 underline dark:text-gray-400">{{ __('No, take me back') }}</a>
+        <a href="{{ url(routing_shop_prefix) }}" class="mt-2 block text-xs text-gray-500 underline dark:text-gray-400">{{ __('No, take me back') }}</a>
     </div>
 </div>
 <script nonce="{{ csp_nonce }}">
 (function () {
     var gate = document.getElementById('vl-age-gate');
-    var key = 'vl_age_ok_' + {{ product.minAge }};
+    var minAge = {{ product.minAge }};
+    var key = 'vl_age_ok';
+
+    function confirmedAge() {
+        try {
+            return parseInt(window.localStorage.getItem(key) || '0', 10) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
 
     function unlock() {
         document.documentElement.style.overflow = '';
         if (gate) { gate.remove(); }
     }
 
-    try {
-        if (window.localStorage.getItem(key) === '1') { unlock(); return; }
-    } catch (e) {}
+    if (confirmedAge() >= minAge) { unlock(); return; }
 
     document.documentElement.style.overflow = 'hidden';
     document.getElementById('vl-age-yes').addEventListener('click', function () {
-        try { window.localStorage.setItem(key, '1'); } catch (e) {}
+        try {
+            window.localStorage.setItem(key, String(Math.max(confirmedAge(), minAge)));
+        } catch (e) {}
         unlock();
     });
 })();
@@ -162,7 +171,7 @@
 
             {# Star rating display #}
             {% if product.voteStatus == 'enabled' or (product.voteStatus == 'use_global' and (global_star_ratings_enabled ?? true)) %}
-            {% include 'partials/vote-widget.twig' with {product: product, vote: vote, user_vote: user_vote} %}
+            {% include 'partials/vote-widget.twig' with {product: product, vote: vote, user_vote: user_vote, comments_total: comments_total|default(0)} %}
             {% endif %}
 
             <div class="mt-4 mb-6">

@@ -156,14 +156,14 @@
         <span class="text-gray-500">{{ total_count }} {{ __('total') }}</span>
         <div class="flex gap-2">
             {% if cpage > 1 %}
-            <a href="?cpage={{ cpage - 1 }}#comments"
+            <a href="?cpage={{ cpage - 1 }}#reviews"
                class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50 transition-colors">
                 &larr; {{ __('Previous') }}
             </a>
             {% endif %}
             <span class="px-3 py-1.5 text-gray-500">{{ cpage }} / {{ comments_total_pages }}</span>
             {% if cpage < comments_total_pages %}
-            <a href="?cpage={{ cpage + 1 }}#comments"
+            <a href="?cpage={{ cpage + 1 }}#reviews"
                class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50 transition-colors">
                 {{ __('Next') }} &rarr;
             </a>
@@ -335,7 +335,7 @@
 
     {% set indent_class = depth > 0 and depth < 3 ? 'ml-2 sm:ml-6 md:ml-10 mt-4 sm:mt-6 pl-2 sm:pl-0 border-l-2 border-gray-100 sm:border-l-0' : (depth > 0 ? 'mt-4 sm:mt-6' : '') %}
     <div id="comment-{{ c.id }}" class="flex gap-2.5 sm:gap-4 {{ indent_class }}"
-         x-data="{ editing: false, deleting: false, body: {{ js_body }}, _orig: {{ js_body }}, rating: {{ c_rating }}, _orig_rating: {{ c_rating }}, notify: {{ js_notify }}, cancelEdit() { this.editing = false; this.body = this._orig; this.rating = this._orig_rating; this.notify = {{ js_notify }}; } }">
+         x-data="{ editing: false, deleting: false, body: {{ js_body|raw }}, _orig: {{ js_body|raw }}, rating: {{ c_rating }}, _orig_rating: {{ c_rating }}, notify: {{ js_notify }}, cancelEdit() { this.editing = false; this.body = this._orig; this.rating = this._orig_rating; this.notify = {{ js_notify }}; } }">
         <div class="shrink-0 w-8 h-8 sm:w-9 sm:h-9 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-semibold text-xs shadow-xs">
             {% set c_avatar = c.userId ? user_avatar_url(c.userId) : null %}
             {% if c_avatar %}
